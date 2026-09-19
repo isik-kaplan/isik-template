@@ -1,0 +1,18 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-json
+        # cookiecutter.json's values are Jinja expressions, not the JSON they'll eventually
+        # render to - a stock JSON validator has no trouble with that (they're still valid JSON
+        # strings), so no exclude is needed here, unlike the generated project's own check-yaml.
+      - id: check-added-large-files
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format

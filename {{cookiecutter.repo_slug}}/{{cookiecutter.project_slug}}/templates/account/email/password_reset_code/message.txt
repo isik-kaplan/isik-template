@@ -1,0 +1,13 @@
+{% raw -%}
+{% extends "account/email/base/base.txt" %}
+
+{% block content %}
+    {% autoescape off %}
+        {% blocktrans %}Your password reset code is below. Enter it in your open browser window.{% endblocktrans %}
+
+        {{ code }}
+
+        {% blocktrans %}This email can be safely ignored if you did not request this.{% endblocktrans %}
+    {% endautoescape %}
+{% endblock content %}
+{%- endraw %}

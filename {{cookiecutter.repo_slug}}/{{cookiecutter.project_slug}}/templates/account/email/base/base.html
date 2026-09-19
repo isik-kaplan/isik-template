@@ -1,0 +1,28 @@
+{% raw -%}
+<mjml>
+  <mj-head>
+    <mj-attributes>
+      <mj-all font-family="Helvetica, Arial, sans-serif" color="#52525b" />
+      <mj-text font-size="15px" line-height="150%" />
+      <mj-button background-color="#18181b" color="#fafafa" font-size="15px" font-weight="600" padding="14px 28px" border-radius="0" />
+    </mj-attributes>
+  </mj-head>
+
+  <mj-body background-color="#f4f4f5">
+    <mj-section background-color="#ffffff" border="1px solid #e4e4e7" padding="32px 24px">
+      <mj-column>
+        <mj-text font-size="20px" font-weight="700" color="#18181b" align="left">
+          {{ site_name }}
+        </mj-text>
+        <mj-divider border-color="#e4e4e7" border-width="1px" padding="16px 0" />
+        {% block content %}
+        {% endblock %}
+        <mj-divider border-color="#e4e4e7" border-width="1px" padding="16px 0" />
+        <mj-text font-size="13px" color="#a1a1aa">
+          {% blocktrans %}Thank you for using {{ site_name }}.{% endblocktrans %}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
+{%- endraw %}

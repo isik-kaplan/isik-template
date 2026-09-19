@@ -1,0 +1,7 @@
+{% raw -%}
+{% extends "account/email/base_notification/base_notification.txt" %}
+
+{% block notification_message %}
+    {% blocktrans %}Your password was changed.{% endblocktrans %}
+{% endblock notification_message %}
+{%- endraw %}

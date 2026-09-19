@@ -1,0 +1,17 @@
+# Every mutant `mutmut run` reports as "survived" or "no tests" has to be either killed by a real
+# behavioral test, or explained here - never silently accepted. Keyed by function (not by mutant
+# number), so an entry covers every mutant of that function, including ones added later.
+#
+# scripts/check_mutants.py enforces this file against `mutmut results` in CI.
+
+["hooks._validate.x_validate_answers"]
+reason = """Equivalent, verified by hand: this mutant drops `domain=domain` from the
+validate_required_fields(...) call inside validate_answers, so a blank/whitespace-only domain no
+longer fails there. It still fails one line later regardless - validate_domain(domain) is always
+called next with the same domain value, and its own "needs at least one dot" check independently
+rejects both "" and "   " (normalized to "" either way), confirmed directly:
+  validate_domain("") -> "'domain' ('') needs at least one dot, ..."
+  validate_domain("   ") -> "'domain' ('   ') needs at least one dot, ..."
+No required-field check on domain, plus validate_domain's own checks, produces the exact same
+accept/reject behavior as with it - only the error message differs "required" or "no dot" or
+"can't be localhost", not whether validate_answers raises."""

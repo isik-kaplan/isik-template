@@ -1,0 +1,15 @@
+{% raw -%}
+{% extends "account/email/base/base.txt" %}
+
+{% block content %}
+    {% autoescape off %}
+        {% blocktrans %}You're receiving this email because you, or someone else, tried to access an account with the email address {{ email }}. We have no record of an account with that address.{% endblocktrans %}
+
+        {% blocktrans %}This email can be safely ignored if you did not initiate this action.{% endblocktrans %}
+
+        {% blocktrans %}If it was you, you can sign up for an account using the link below.{% endblocktrans %}
+
+        {{ signup_url }}
+    {% endautoescape %}
+{% endblock content %}
+{%- endraw %}

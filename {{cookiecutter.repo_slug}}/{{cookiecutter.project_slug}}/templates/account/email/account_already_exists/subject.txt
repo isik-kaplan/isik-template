@@ -1,0 +1,3 @@
+{% raw -%}
+{% autoescape off %}{% blocktrans %}Account already exists{% endblocktrans %}{% endautoescape %}
+{%- endraw %}

@@ -1,0 +1,7 @@
+{% raw -%}
+{% extends "account/email/base_notification/base_notification.txt" %}
+
+{% block notification_message %}
+    {% blocktrans with provider=provider.name %}{{ provider }} can no longer be used to sign in to your account.{% endblocktrans %}
+{% endblock notification_message %}
+{%- endraw %}

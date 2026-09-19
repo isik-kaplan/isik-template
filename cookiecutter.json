@@ -1,0 +1,21 @@
+{
+  "project_name": "",
+  "project_slug": "{{ cookiecutter.project_name.strip().lower().replace(' ', '_').replace('-', '_') }}",
+  "repo_slug": "{{ cookiecutter.project_name.strip().lower().replace(' ', '-').replace('_', '-') }}",
+  "config_prefix": "{{ cookiecutter.project_slug.upper() }}",
+  "description": "",
+  "author_name": "",
+  "author_email": "",
+  "domain": "",
+  "social_login_providers": "",
+  "social_login_provider_icons": "",
+  "license": ["MIT", "Apache-2.0", "BSD-3-Clause", "GPL-3.0", "Unlicense", "Proprietary"],
+  "python_version": "3.14",
+  "node_version": "22",
+  "isik_version": "0.7.0",
+  "isikk_core_version": "0.7.0",
+  "_copy_without_render": [
+    "*/e2e/authentik-blueprints/*"
+  ],
+  "_extensions": ["jinja2_time.TimeExtension"]
+}

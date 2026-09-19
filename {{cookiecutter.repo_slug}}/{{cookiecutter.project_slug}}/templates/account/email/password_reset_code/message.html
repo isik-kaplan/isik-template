@@ -1,0 +1,11 @@
+{% raw -%}
+{% extends "account/email/base/base.html" %}
+
+{% block content %}
+    {% autoescape off %}
+        <mj-text>{% blocktrans %}Your password reset code is below. Enter it in your open browser window.{% endblocktrans %}</mj-text>
+        <mj-text font-size="24px" font-weight="700" color="#18181b">{{ code }}</mj-text>
+        <mj-text>{% blocktrans %}This email can be safely ignored if you did not request this.{% endblocktrans %}</mj-text>
+    {% endautoescape %}
+{% endblock content %}
+{%- endraw %}

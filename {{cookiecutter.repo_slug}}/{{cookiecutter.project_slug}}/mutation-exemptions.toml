@@ -1,0 +1,44 @@
+# Every mutant `mutmut run` reports as "survived" or "no tests" has to be either killed by a real
+# behavioral test, or explained here - never silently accepted. Keyed by function (not by mutant
+# number), so an entry covers every mutant of that function, including ones added later.
+#
+# "survived" means a test exercises the mutated code but doesn't assert anything a real behavior
+# change to it would break - the fix is almost always a stronger assertion, not an entry here.
+#
+# "no tests" is mutmut's own trampoline reporting zero test attribution for a function, which is
+# not the same claim as "no test calls it" - checked by hand each time before an entry is added.
+#
+# `fingerprint` is a hash of the function's AST as scripts/mutation_fingerprint.py last saw it. A
+# mutant's number is its position inside its own function, so editing the function moves every
+# number after the edit and an entry without this would keep excusing a mutation its reason no
+# longer describes. ast.dump() is not stable across Python versions (an f-string reparsed under a
+# different one hashes differently), so recompute inside the container CI runs, not the host:
+#   docker compose run --rm --no-deps backend python -c \
+#     "from scripts.mutation_fingerprint import fingerprint; print(fingerprint('<name>'))"
+#
+# scripts/check_mutants.py and scripts/confirm_survivors.py enforce this file in CI.
+
+["{{ cookiecutter.project_slug }}.settings.x__social_app_config"]
+fingerprint = "82c510c5b5de"
+reason = """Genuinely covered, not equivalent: apps' tests/test_settings.py calls this function
+directly and asserts on its return value for every branch (default provider, missing env vars,
+the openid_connect-only fields). Manually breaking the function (e.g. changing "key": "" to
+"key": "x") makes those tests fail, confirmed by hand.
+
+mutmut's own trampoline never attributes any hit here to a test, though. The only call site inside
+this module is SOCIALACCOUNT_PROVIDERS' dict comprehension, which runs once during Django's own
+settings-module import (django.setup(), inside pytest-django's pytest_configure hook) - before
+mutmut's per-test attribution in pytest_runtest_teardown has anywhere to attach the hit to. Calling
+the function again from a test does execute its trampoline, but the mutmut version pinned here
+(3.7.x) still reports "no tests" for it - a tooling limitation with Django settings modules, not a
+real coverage gap. Revisit if a mutmut upgrade changes this."""
+
+["apps.users.adapters.xǁSocialAccountAdapterǁpopulate_user"]
+fingerprint = "3ea9d6ccd68a"
+reason = """Genuinely equivalent, not uncovered: the surviving mutant replaces the `request` argument
+to `super().populate_user(request, sociallogin, data)` with `None`. allauth's own
+DefaultSocialAccountAdapter.populate_user() never reads its request parameter at all (confirmed by
+reading its source directly) - it only touches `data` and `sociallogin.user` - so no test, however
+written, can observe a difference between passing the real request and passing None here. The
+method's own test (test_adapters.py) covers everything this override actually does (the
+created_at/updated_at backfill) by asserting on the real timezone.now() value."""

@@ -1,0 +1,28 @@
+{
+  "printWidth": 120,
+  "semi": false,
+  "singleQuote": true,
+  "trailingComma": "es5",
+  "plugins": ["@trivago/prettier-plugin-sort-imports"],
+  "importOrder": [
+    ".*\\.css$",
+    "^~(?:\/.*)?$",
+    "^next(?:\/.*)?$",
+    "^react(?:\/.*)?$",
+    "^lucide-react(?:\/.*)?$",
+    "^@/components(?:\/.*)?$",
+    "^@(?:\/.*)?$",
+    "^@{{ cookiecutter.repo_slug }}/.*$",
+    "<THIRD_PARTY_MODULES>"
+  ],
+  "importOrderSeparation": true,
+  "importOrderSortSpecifiers": true,
+  "overrides": [
+    {
+      "files": "*.css",
+      "options": {
+        "singleQuote": false
+      }
+    }
+  ]
+}

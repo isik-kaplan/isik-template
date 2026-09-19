@@ -1,0 +1,20 @@
+{% raw -%}
+{% extends "account/email/base/base.html" %}
+{% load account %}
+
+{% block content %}
+    {% autoescape off %}
+        {% user_display user as user_display %}
+        <mj-text>{% blocktrans %}You're receiving this email because user {{ user_display }} gave this address to register an account on {{ site_url }}.{% endblocktrans %}</mj-text>
+        {% if code %}
+            <mj-text>{% blocktrans %}Your verification code is below. Enter it in your open browser window.{% endblocktrans %}</mj-text>
+            <mj-text font-size="24px" font-weight="700" color="#18181b">{{ code }}</mj-text>
+        {% else %}
+            <mj-text>{% blocktrans %}To confirm this is correct, click the button below.{% endblocktrans %}</mj-text>
+            <mj-button href="{{ activate_url }}">{% blocktrans %}Confirm your email{% endblocktrans %}</mj-button>
+            <mj-text>{% blocktrans %}If the button doesn't work, copy and paste this URL into your browser:{% endblocktrans %}</mj-text>
+            <mj-text>{{ activate_url }}</mj-text>
+        {% endif %}
+    {% endautoescape %}
+{% endblock content %}
+{%- endraw %}

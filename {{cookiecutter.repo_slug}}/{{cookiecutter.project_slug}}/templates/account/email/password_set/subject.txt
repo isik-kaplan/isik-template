@@ -1,0 +1,3 @@
+{% raw -%}
+{% autoescape off %}{% blocktrans %}Password set{% endblocktrans %}{% endautoescape %}
+{%- endraw %}

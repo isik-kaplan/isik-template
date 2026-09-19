@@ -1,0 +1,15 @@
+{% raw -%}
+{% extends "account/email/base/base.txt" %}
+
+{% block content %}
+    {% autoescape off %}
+        {% blocktrans %}You're receiving this email because you or someone else tried to sign up for an account using this email address:{% endblocktrans %}
+
+        {{ email }}
+
+        {% blocktrans %}An account with that email address already exists. If this was you, use the password reset link below to recover it.{% endblocktrans %}
+
+        {{ password_reset_url }}
+    {% endautoescape %}
+{% endblock content %}
+{%- endraw %}

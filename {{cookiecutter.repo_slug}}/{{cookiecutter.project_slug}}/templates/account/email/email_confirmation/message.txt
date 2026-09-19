@@ -1,0 +1,19 @@
+{% raw -%}
+{% extends "account/email/base/base.txt" %}
+{% load account %}
+
+{% block content %}
+    {% autoescape off %}
+        {% user_display user as user_display %}
+        {% blocktrans %}You're receiving this email because user {{ user_display }} gave this address to register an account on {{ site_url }}.{% endblocktrans %}
+
+        {% if code %}
+            {% blocktrans %}Your verification code is below. Enter it in your open browser window.{% endblocktrans %}
+
+            {{ code }}
+        {% else %}
+            {% blocktrans %}To confirm this is correct, go to {{ activate_url }}{% endblocktrans %}
+        {% endif %}
+    {% endautoescape %}
+{% endblock content %}
+{%- endraw %}

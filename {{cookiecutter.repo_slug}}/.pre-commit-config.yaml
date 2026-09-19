@@ -1,0 +1,37 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-yaml
+        # Authentik blueprints use its own !Find/!KeyOf tags, which no plain YAML loader can
+        # construct. Excluded rather than passing --unsafe, which would weaken every other file.
+        exclude: ^e2e/authentik-blueprints/
+      - id: check-added-large-files
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # Both go through a script rather than an inline entry: one needs to pick between `exec` and
+  # `run` depending on whether the stack is up, the other has to change directory first. Neither
+  # takes paths, so `files` only decides whether they run at all.
+  - repo: local
+    hooks:
+      - id: migration-check
+        name: migration-check
+        entry: scripts/pre-commit/migration_check.sh
+        language: script
+        pass_filenames: false
+        files: ^{{ cookiecutter.project_slug }}/.*\.py$
+
+      - id: lint-frontend
+        name: lint-frontend
+        entry: scripts/pre-commit/lint_frontend.sh
+        language: script
+        pass_filenames: false
+        files: ^{{ cookiecutter.project_slug }}-frontend/.*\.(ts|tsx|js|jsx|mjs|css|json|md)$

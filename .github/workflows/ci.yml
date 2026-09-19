@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  structure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv sync
+      - run: uv run pytest tests/test_bake_structure.py tests/test_pre_gen_validate.py
+
+  pre-gen-validate-mutation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv sync
+      # mutmut itself exits 0 regardless of survivors - check_mutants.py is what actually fails
+      # the build on one, unless it's an explained entry in mutation-exemptions.toml.
+      - name: Run mutation tests
+        run: uv run mutmut run
+      - name: Check for unexplained survivors
+        run: uv run python scripts/check_mutants.py
+
+  docker-compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv sync
+      - run: uv run pytest tests/test_docker_compose.py
+
+  backend-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv sync
+      - run: uv run pytest tests/test_backend_build.py
+
+  # Separate from backend-build: this is the one test that proves the *generated* project's own
+  # backend-mutation CI job actually works, not just that the code it would run imports cleanly -
+  # every other bake test runs the coverage suite or e2e, never mutmut.
+  backend-mutation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv sync
+      - run: uv run pytest tests/test_backend_mutation.py
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: uv sync
+      - run: uv run pytest tests/test_frontend_build.py
+
+  # Bakes its own project and boots the full compose stack (database, broker, backend, worker,
+  # scheduler, frontend, server, dns, mailpit, authentik, playwright) independently of the jobs
+  # above - no artifacts are shared between jobs, so this runs in parallel with them rather than
+  # after, even though it's the slowest tier. See tests/test_e2e.py's own docstring for why it
+  # stays unconditional rather than opt-in.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv sync
+      - run: uv run pytest tests/test_e2e.py

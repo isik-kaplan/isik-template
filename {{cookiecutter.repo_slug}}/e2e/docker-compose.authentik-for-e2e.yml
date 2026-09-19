@@ -1,0 +1,109 @@
+# The customer IdP this stack stands in for. A real Authentik rather than a fake, so the OIDC
+# social-login spec drives a genuine round trip - the openid_connect SocialApp otherwise points at
+# a real IdP with no live server behind it during local dev.
+#
+# Appended to COMPOSE_FILE in e2e/.env, so relative paths resolve against the repo root (the
+# directory of the *first* file in that list), same as docker-compose.e2e.yml.
+services:
+  authentik-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: authentik
+      POSTGRES_USER: authentik
+      POSTGRES_PASSWORD: authentik-e2e-only
+    networks:
+      # Fixed, outside server/dns's .10/.11 reservations - IPAM does not know about a declared
+      # static IP until that service claims it, so an unclaimed range would get handed out from
+      # under it.
+      internal:
+        ipv4_address: 172.30.0.20
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "authentik"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  authentik-redis:
+    image: redis:7-alpine
+    networks:
+      internal:
+        ipv4_address: 172.30.0.21
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  authentik-server:
+    image: ghcr.io/goauthentik/server:2026.2
+    command: server
+    environment: &authentik-environment
+      AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: authentik-e2e-only
+      AUTHENTIK_REDIS__HOST: authentik-redis
+      AUTHENTIK_SECRET_KEY: e2e-only-authentik-secret-key-not-a-real-secret
+      # Skips the manual setup wizard entirely - the akadmin token isn't used by anything here
+      # today (the blueprint below handles all setup declaratively) but is set for any future
+      # scripted use.
+      AUTHENTIK_BOOTSTRAP_PASSWORD: e2e-only-akadmin-password
+      AUTHENTIK_BOOTSTRAP_TOKEN: e2e-only-akadmin-token-not-a-real-secret
+      AUTHENTIK_BOOTSTRAP_EMAIL: akadmin@example.com
+    volumes:
+      - ./e2e/authentik-blueprints:/blueprints/custom:ro
+    networks:
+      internal:
+        ipv4_address: 172.30.0.22
+    depends_on:
+      authentik-postgres:
+        condition: service_healthy
+      authentik-redis:
+        condition: service_healthy
+    healthcheck:
+      # Neither curl nor wget - this image is multi-arch, and its amd64 build (what every hosted CI
+      # runner is) carries neither, confirmed directly with `docker run --platform linux/amd64
+      # ... which curl` returning nothing. A Mac's own arm64 pull of the same tag genuinely does
+      # have curl, which is exactly why this passed locally through every earlier version of this
+      # check - the command itself only ever worked on the architecture nobody's CI runs on. What
+      # every build of the image does carry is its own bundled Python, so this uses that instead of
+      # depending on either external binary at all.
+      test:
+        [
+          "CMD",
+          "/ak-root/.venv/bin/python3",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:9000/-/health/live/', timeout=3)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:2026.2
+    command: worker
+    environment: *authentik-environment
+    volumes:
+      - ./e2e/authentik-blueprints:/blueprints/custom:ro
+    networks:
+      internal:
+        ipv4_address: 172.30.0.23
+    depends_on:
+      authentik-postgres:
+        condition: service_healthy
+      authentik-redis:
+        condition: service_healthy
+
+  # Authentik has to be reachable before the backend/frontend/playwright are considered ready -
+  # the openid_connect provider resolves its issuer's /.well-known/openid-configuration on first
+  # use, and a social-login spec clicking through before Authentik is live would fail with a
+  # confusing connection-refused rather than a clear "still starting up".
+  backend:
+    depends_on:
+      authentik-server:
+        condition: service_healthy
+
+  playwright:
+    depends_on:
+      authentik-server:
+        condition: service_healthy

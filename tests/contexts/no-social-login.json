@@ -1,0 +1,9 @@
+{
+  "project_name": "No Social Login Project",
+  "description": "Validates the empty-provider-list edge case.",
+  "author_name": "Test Author",
+  "author_email": "test@example.test",
+  "domain": "nosociallogin.test",
+  "social_login_providers": "",
+  "license": "Apache-2.0"
+}

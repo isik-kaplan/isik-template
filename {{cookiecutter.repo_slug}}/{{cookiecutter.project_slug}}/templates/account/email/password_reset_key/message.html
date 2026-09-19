@@ -1,0 +1,17 @@
+{% raw -%}
+{% extends "account/email/base/base.html" %}
+
+{% block content %}
+    {% autoescape off %}
+        <mj-text>{% blocktrans %}You're receiving this email because you or someone else requested a password reset for your account.{% endblocktrans %}</mj-text>
+        <mj-text>{% blocktrans %}It can be safely ignored if you did not request this.{% endblocktrans %}</mj-text>
+        <mj-text>{% blocktrans %}Click the button below to reset your password.{% endblocktrans %}</mj-text>
+        <mj-button href="{{ password_reset_url }}">{% blocktrans %}Reset password{% endblocktrans %}</mj-button>
+        <mj-text>{% blocktrans %}If the button doesn't work, copy and paste this URL into your browser:{% endblocktrans %}</mj-text>
+        <mj-text>{{ password_reset_url }}</mj-text>
+        {% if username %}
+            <mj-text>{% blocktrans %}In case you forgot, your username is {{ username }}.{% endblocktrans %}</mj-text>
+        {% endif %}
+    {% endautoescape %}
+{% endblock content %}
+{%- endraw %}

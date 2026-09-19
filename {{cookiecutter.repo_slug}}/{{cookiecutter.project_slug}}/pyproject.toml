@@ -1,0 +1,102 @@
+[project]
+name = "{{ cookiecutter.project_slug }}"
+version = "0.1.0"
+description = "{{ cookiecutter.description }}"
+requires-python = ">={{ cookiecutter.python_version }}"
+dependencies = [
+    "django>=6.0",
+    "psycopg[binary]>=3.2.0",
+    "isik[django,drf,sentry]>={{ cookiecutter.isik_version }}",
+    "pyuwsgi>=2.0.28",
+    "python-dotenv>=1.0.0",
+    "drf-spectacular>=0.27.0",
+    "django-hosts>=6.0",
+    "django-allauth>=65.0.0",
+    # Not pulled in by django-allauth itself unless installed with its "socialaccount"/"headless"
+    # extra - needed for the openid_connect provider's id_token verification specifically
+    # (allauth.socialaccount.internal.jwtkit). Every other provider works without it.
+    "pyjwt[crypto]>=2.13.0",
+    "django-cors-headers>=4.4.0",
+    "requests>=2.32.0",
+    "celery>=5.5.0",
+    "django-celery-beat>=2.9.0",
+    "django-celery-results>=2.6.0",
+]
+
+[tool.uv]
+package = false
+dev-dependencies = [
+    "pytest>=8.0.0",
+    "pytest-django>=4.9.0",
+    "pytest-cov>=5.0.0",
+    "pytest-xdist>=3.6.0",
+    "hypothesis>=6.130.0",
+    # Pinned exactly: 3.8.0 renamed the internals scripts/mutation_run.py calls directly (Config.
+    # ensure_loaded, the PytestRunner class) without a deprecation period. Bump deliberately, together
+    # with that file, not by widening this.
+    "mutmut==3.7.0",
+    "ruff>=0.9.0",
+    "pre-commit>=3.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 120
+fix = true
+extend-exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.isort]
+lines-after-imports = 2
+known-first-party = ["{{ cookiecutter.project_slug }}"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "{{ cookiecutter.project_slug }}.settings"
+addopts = "-n auto --dist loadfile --cov --cov-report=term-missing --strict-markers"
+
+[tool.coverage.run]
+source = ["apps", "{{ cookiecutter.project_slug }}"]
+branch = true
+# wsgi.py (and asgi.py, once one exists) is pure deployment glue - only ever imported by uwsgi
+# itself, never by the test suite - so it's excluded the same way migrations are, not chased with
+# a dedicated test.
+omit = ["*/migrations/*", "*/wsgi.py", "*/asgi.py", "*/celery.py"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 100
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]
+
+[tool.mutmut]
+source_paths = ["apps", "{{ cookiecutter.project_slug }}"]
+# Migrations are generated and tests are the oracle - mutating either measures nothing. wsgi/asgi/
+# celery.py are deployment glue never exercised by the suite, same reason they're omitted from
+# coverage above.
+do_not_mutate = ["*/migrations/*", "*/tests/*", "*/conftest.py", "*/wsgi.py", "*/asgi.py", "*/celery.py"]
+# None of these are under source_paths, so mutmut wouldn't otherwise put them in the copied tree
+# it runs tests against - without conftest.py the cache-clearing fixture stops applying there,
+# without templates/ every allauth email test fails on a missing template rather than on a
+# mutation, and without scripts/ pytest_add_cli_args' own -p plugin below fails to import inside
+# the tree every mutant actually runs in. Copied rather than mutated: do_not_mutate can only exempt
+# a source_paths file, and scripts/ isn't one - see scripts/mutation_test_order.py's own docstring.
+also_copy = ["conftest.py", "templates", "scripts"]
+# --no-cov: the trampolines mutmut instruments add statements our 100% coverage gate can't account
+# for. -n 0: xdist workers would share one test database and race each other; mutmut's own
+# --max-children handles process isolation between mutants instead. -p scripts.mutation_test_order:
+# runs each mutant's cheapest and likeliest-to-kill tests first instead of in mutmut's own set order.
+pytest_add_cli_args = ["--no-cov", "-n", "0", "-p", "scripts.mutation_test_order"]
+# mutmut's defaults (10s floor, 2x the clean-run time) are sized on whatever ran them last, so a
+# number copied from another project's CI machine either times out fine mutants here or lets a truly
+# hung one ride out a much longer wait than the wall-clock is worth. Raise these only against a
+# measured false timeout, and re-measure rather than reusing a figure from a different run.

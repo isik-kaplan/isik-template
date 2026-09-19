@@ -1,0 +1,60 @@
+services:
+  # Local-only resolver so the browser (running inside the playwright container) and the app's own
+  # containers can reach {{ cookiecutter.domain }} and its subdomains without touching a real
+  # domain or the host's /etc/hosts.
+  dns:
+    build:
+      # Relative to the project directory (repo root), not this file's own directory - same
+      # resolution rule as env_file above.
+      context: ./e2e/dnsmasq
+    networks:
+      internal:
+        ipv4_address: 172.30.0.11
+    restart: unless-stopped
+
+  server:
+    networks:
+      internal:
+        # Fixed, not an alias: dnsmasq's address=/.../<ip> directive needs a literal IP to answer
+        # with, not a name it would have to resolve itself.
+        ipv4_address: 172.30.0.10
+
+  backend:
+    dns:
+      - 172.30.0.11
+    # A second env_file, not a replacement - concatenated with the base compose's env_file: .env,
+    # so both apply (later entries win on key conflicts). Written "e2e/.env", not ".env": relative
+    # env_file paths resolve against the *project directory* (the first file listed in
+    # COMPOSE_FILE, i.e. the repo root), not against whichever compose file declared them - a bare
+    # ".env" here would silently re-read the root .env a second time instead of this directory's.
+    env_file: [e2e/.env]
+
+  worker:
+    env_file: [e2e/.env]
+
+  scheduler:
+    env_file: [e2e/.env]
+
+  frontend:
+    dns:
+      - 172.30.0.11
+
+  playwright:
+    build:
+      context: ./e2e/playwright
+    networks:
+      - internal
+    dns:
+      - 172.30.0.11
+    depends_on:
+      server:
+        condition: service_healthy
+    volumes:
+      - ./e2e/playwright/playwright-report:/e2e/playwright-report
+      - ./e2e/playwright/test-results:/e2e/test-results
+
+networks:
+  internal:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24

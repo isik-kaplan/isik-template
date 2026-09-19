@@ -1,0 +1,3 @@
+{% raw -%}
+{% autoescape off %}{% blocktrans %}Your password reset code{% endblocktrans %}{% endautoescape %}
+{%- endraw %}

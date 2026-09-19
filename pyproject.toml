@@ -1,0 +1,57 @@
+[project]
+name = "isik-template"
+version = "0.1.0"
+description = "Cookiecutter template for isik/@isikk/core-based Django + Next.js apps."
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv]
+package = false
+dev-dependencies = [
+    "cookiecutter>=2.6.0",
+    "jinja2-time>=0.2.0",
+    "pytest>=8.0.0",
+    "pytest-cookies>=0.7.0",
+    "ruff>=0.9.0",
+    "pre-commit>=3.0.0",
+    "mutmut>=3.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 120
+fix = true
+# The generated-project directory is a Jinja template, not valid Python - unrendered
+# `{{ cookiecutter.x }}` expressions in its .py files would otherwise fail to parse.
+extend-exclude = ["{{cookiecutter.repo_slug}}"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+fixable = ["ALL"]
+
+[tool.ruff.lint.isort]
+lines-after-imports = 2
+known-first-party = ["hooks"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# So `from hooks._validate import ...` resolves hooks/ as a package from the repo root.
+pythonpath = ["."]
+
+[tool.mutmut]
+# The real validation logic lives in hooks/_validate.py, a plain importable module, mutated and
+# tested in-process by test_pre_gen_validate.py. pre_gen_project.py/post_gen_project.py themselves
+# are Jinja-templated subprocess entry points (cookiecutter renders each to a tempfile and runs it
+# with the new project's own dir as cwd) - mutmut's trampoline instrumentation can't report hits
+# back across that process boundary, so test_bake_structure.py's real, subprocess-based bakes stay
+# the (already 100%-covering, see test_pre_gen_validation_rejects) behavioral suite for those two
+# thin wrappers, run normally by CI rather than under mutmut.
+source_paths = ["hooks"]
+# Real bakes (test_bake_structure.py) are what exercise these two below - the subprocess-boundary
+# problem above means mutmut can't attribute mutants there to anything, so scoring is limited to
+# _validate.py's own real logic.
+do_not_mutate = ["hooks/pre_gen_project.py", "hooks/post_gen_project.py"]
+pytest_add_cli_args = ["tests/test_pre_gen_validate.py"]
