@@ -33,11 +33,12 @@ import re
 import signal
 import subprocess
 import sys
-import tomllib
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from queue import SimpleQueue
 from threading import Lock
+
+import tomllib
 
 from scripts.mutation_fingerprint import drifted, mangled_function
 

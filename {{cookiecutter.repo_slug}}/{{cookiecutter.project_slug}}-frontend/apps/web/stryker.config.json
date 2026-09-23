@@ -5,7 +5,7 @@
   "vitest": { "configFile": "vitest.config.mts" },
   "reporters": ["progress", "clear-text", "html"],
   "coverageAnalysis": "perTest",
-  "mutate": ["src/**/*.ts", "src/**/*.tsx", "!src/**/index.ts", "!src/**/*.d.ts"],
+  "mutate": ["src/**/*.ts", "src/**/*.tsx", "!src/**/index.ts", "!src/**/*.d.ts", "!src/__tests__/**"],
   "thresholds": { "high": 100, "low": 90, "break": 100 },
   "htmlReporter": { "fileName": "reports/mutation/index.html" },
   "tempDirName": ".stryker-tmp",

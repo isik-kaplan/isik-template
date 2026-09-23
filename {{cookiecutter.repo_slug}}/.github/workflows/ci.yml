@@ -181,11 +181,20 @@ jobs:
       # The verdict. Fails on a mutant that survived the whole suite, on one that reached no verdict,
       # and on one the report never mentions - a mutant phase two did not reach is absent rather than
       # unsettled, so the queue is handed over too, or a partial report would read as a complete one.
+      #
+      # --summary writes inside the bind mount rather than straight to $GITHUB_STEP_SUMMARY: that path
+      # only exists on the runner, and this command runs inside the backend container, which never has
+      # it mounted - passing it through crashed the script before it reached its own verdict, which
+      # failed the job on every run regardless of how many mutants actually survived.
       - name: Check phase two settled everything
         if: always()
         run: |
           docker compose run --rm --no-deps backend python -m scripts.check_mutants \
-            --confirmed mutants/mutmut-confirmed.json --queue unsettled.txt --summary "$GITHUB_STEP_SUMMARY"
+            --confirmed mutants/mutmut-confirmed.json --queue unsettled.txt --summary mutants/summary.md
+
+      - name: Add the mutation table to the job summary
+        if: always()
+        run: cat {{ cookiecutter.project_slug }}/mutants/summary.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
 
       # Where the registry's claims get re-tested, since the phases above skipped them: one that now
       # dies is an entry whose reasoning stopped being true. A prompt to revisit it, not a reason to
@@ -212,6 +221,15 @@ jobs:
             exit 1
           fi
           echo "every exemption still holds"
+
+      # The backend image has no USER, so mutmut/pytest wrote this directory as root - left alone,
+      # actions/cache/save can't tar files it doesn't have permission to read, and fails silently
+      # (continue-on-error below), leaving the cache never actually saved.
+      - name: Reclaim ownership of the mutation cache
+        if: always()
+        run: |
+          docker run --rm -v "$(pwd)/{{ cookiecutter.project_slug }}/mutants:/x" alpine \
+            chown -R "$(id -u):$(id -g)" /x
 
       - name: Save the mutation cache
         if: always()

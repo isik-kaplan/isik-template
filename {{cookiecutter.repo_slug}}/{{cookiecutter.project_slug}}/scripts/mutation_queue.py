@@ -14,8 +14,9 @@ minus the exempt set, not an intersection with a shard's own scope first.
 
 import fnmatch
 import sys
-import tomllib
 from pathlib import Path
+
+import tomllib
 
 from scripts.mutation_fingerprint import mangled_function
 

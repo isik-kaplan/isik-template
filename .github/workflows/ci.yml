@@ -50,8 +50,10 @@ jobs:
   bake-real-ci:
     runs-on: ubuntu-latest
     # Backstop against a hung sandbox run: the script itself polls with no upper bound, so this is
-    # what actually caps it - comfortably above the slowest single job (backend-mutation) seen so far.
-    timeout-minutes: 60
+    # what actually caps it - frontend-mutation (a cold Stryker run against the whole suite) is the
+    # slowest job observed so far, comfortably under an hour but not by a wide enough margin to cap
+    # at 60.
+    timeout-minutes: 90
     concurrency:
       group: bake-real-ci
       cancel-in-progress: true

@@ -76,13 +76,16 @@ def find_run(push_sha):
     deadline = time.monotonic() + APPEAR_TIMEOUT
     while time.monotonic() < deadline:
         result = subprocess.run(
-            ["gh", "run", "list", "--repo", SANDBOX_REPO, "--json", "databaseId,headSha", "-L", "20"],
+            ["gh", "run", "list", "--repo", SANDBOX_REPO, "--json", "databaseId,headSha,event", "-L", "20"],
             capture_output=True,
             text=True,
             check=True,
         )
         for run in json.loads(result.stdout):
-            if run["headSha"] == push_sha:
+            # event filter matters: a brand-new repo's first push also gets a same-sha "dynamic"
+            # run from GitHub's own onboarding, which is unrelated to ci.yml and finishes first -
+            # matching on headSha alone picks that one up instead and reports a false pass.
+            if run["headSha"] == push_sha and run["event"] == "push":
                 return run["databaseId"]
         time.sleep(5)
     return None
