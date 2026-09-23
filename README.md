@@ -38,14 +38,19 @@ result at increasing cost:
 
 - `test_bake_structure.py`, `test_docker_compose.py`, `test_pre_gen_validate.py` - fast, structural
   (no Docker/npm needed).
-- `test_backend_build.py`, `test_frontend_build.py` - build the real images, run the real backend
-  test suite (100% coverage required) and the real frontend lint/type/build/test pipeline.
-- `test_backend_mutation.py` - runs the generated project's own two-phase mutmut pipeline
-  (template-cloned database, phase one, phase two, the survivor gate) against a real Postgres, the
-  same commands its own `backend-mutation` CI job runs.
-- `test_e2e.py` - boots the full compose stack (including a disposable Authentik instance) and runs
-  the Playwright suite against it. Slow (minutes), but always runs - this is the tier that has
-  caught every real bug this template has shipped; skips only if `docker` itself isn't available.
+- `test_e2e.py` - bakes the "no-social-login" context, boots the full compose stack (including a
+  disposable Authentik instance) and runs the Playwright suite against it - the one context whose
+  login/signup page ("default"'s never exercises this) is otherwise untested. Slow (minutes); skips
+  only if `docker` itself isn't available.
+
+The "default" context's backend build/coverage, backend-mutation, frontend build/lint/test,
+frontend-mutation and e2e are no longer hand-mirrored here at all: `scripts/bake_and_trigger_real_ci.py`
+bakes it, force-pushes the result to a dedicated sandbox repo, and waits for *that* repo's own real
+`ci.yml` to run - catching bugs in the workflow file itself (trigger conditions, job graph,
+cache/action syntax) that replaying commands by hand never could. CI-only: it needs a
+`BAKE_SANDBOX_TOKEN` secret (a PAT scoped to the sandbox repo - the default `GITHUB_TOKEN` is
+deliberately blocked from triggering workflow runs it pushes itself), so it isn't part of
+`uv run pytest`.
 
 `hooks/_validate.py` (the bake-time validation `pre_gen_project.py` calls) has its own mutmut run
 too, checked in `pre-gen-validate-mutation`, so both this repo's own tooling and the generated

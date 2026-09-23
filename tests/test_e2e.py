@@ -31,15 +31,16 @@ def _reclaim_ownership(project_path):
     )
 
 
-@pytest.mark.parametrize("context_name", ["default", "no-social-login"])
-def test_generated_project_passes_its_own_e2e_suite(cookies, context_name):
+def test_generated_project_passes_its_own_e2e_suite(cookies):
     """The one test that proves the auth flows the template ships (signup, verify-email, login,
     logout, password reset) actually work end to end in a browser, not just that the code compiles
     - this is exactly the suite that first caught the CORS/CSRF/key-encoding bugs this template
-    used to ship with. Parametrized over no-social-login too: that config renders a different
-    login/signup page (no provider buttons, no divider above the form) that "default" never
-    exercises here - it's how a bare "or" divider with nothing above it once shipped unnoticed."""
-    result = cookies.bake(extra_context=load_context(context_name))
+    used to ship with. Only the "no-social-login" context: it renders a different login/signup page
+    (no provider buttons, no divider above the form) that a "default" bake never exercises - it's
+    how a bare "or" divider with nothing above it once shipped unnoticed. The "default" context's
+    own e2e coverage now runs for real instead, via bake-real-ci - see
+    scripts/bake_and_trigger_real_ci.py."""
+    result = cookies.bake(extra_context=load_context("no-social-login"))
     assert result.exit_code == 0
     e2e_path = result.project_path / "e2e"
 

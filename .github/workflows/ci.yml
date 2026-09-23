@@ -41,48 +41,37 @@ jobs:
       - run: uv sync
       - run: uv run pytest tests/test_docker_compose.py
 
-  backend-build:
+  # Bakes the default context, force-pushes it to a dedicated sandbox repo, and waits for that
+  # repo's own GitHub Actions to run the *real* generated ci.yml - lint, backend, backend-mutation,
+  # frontend, frontend-mutation and e2e, exactly as a real user's push would trigger them. This
+  # replaces separately hand-mirroring each of those jobs' commands here: a real run also catches
+  # bugs in the workflow file itself (trigger conditions, job graph, cache/action syntax) that no
+  # amount of replaying commands by hand ever could - see scripts/bake_and_trigger_real_ci.py.
+  bake-real-ci:
     runs-on: ubuntu-latest
+    # Backstop against a hung sandbox run: the script itself polls with no upper bound, so this is
+    # what actually caps it - comfortably above the slowest single job (backend-mutation) seen so far.
+    timeout-minutes: 60
+    concurrency:
+      group: bake-real-ci
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
       - run: uv sync
-      - run: uv run pytest tests/test_backend_build.py
+      - name: Bake and trigger the generated project's real CI
+        env:
+          BAKE_SANDBOX_TOKEN: ${{ secrets.BAKE_SANDBOX_TOKEN }}
+          GH_TOKEN: ${{ secrets.BAKE_SANDBOX_TOKEN }}
+        run: uv run python scripts/bake_and_trigger_real_ci.py
 
-  # Separate from backend-build: this is the one test that proves the *generated* project's own
-  # backend-mutation CI job actually works, not just that the code it would run imports cleanly -
-  # every other bake test runs the coverage suite or e2e, never mutmut.
-  backend-mutation:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
-        with:
-          enable-cache: true
-      - run: uv sync
-      - run: uv run pytest tests/test_backend_mutation.py
-
-  frontend-build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
-        with:
-          enable-cache: true
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - run: uv sync
-      - run: uv run pytest tests/test_frontend_build.py
-
-  # Bakes its own project and boots the full compose stack (database, broker, backend, worker,
-  # scheduler, frontend, server, dns, mailpit, authentik, playwright) independently of the jobs
-  # above - no artifacts are shared between jobs, so this runs in parallel with them rather than
-  # after, even though it's the slowest tier. See tests/test_e2e.py's own docstring for why it
-  # stays unconditional rather than opt-in.
-  e2e:
+  # The "no-social-login" context renders a different login/signup page (no provider buttons, no
+  # divider above the form) that bake-real-ci's "default" bake never exercises - it's how a bare
+  # "or" divider with nothing above it once shipped unnoticed. Everything else about that job's e2e
+  # coverage (default context, every other spec) now runs for real via bake-real-ci instead.
+  e2e-no-social-login:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
