@@ -279,6 +279,45 @@ jobs:
         working-directory: {{ cookiecutter.project_slug }}-frontend/apps/web
         run: npm run test:mutation
 
+{% if cookiecutter.include_mobile %}
+  # No device/emulator e2e here (Detox/Maestro would need a real Android emulator, and a macOS
+  # runner for iOS) - unit/component coverage only, same bar as apps/web, until that's worth the
+  # added CI cost and flakiness.
+  mobile:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: {{ cookiecutter.project_slug }}-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "{{ cookiecutter.node_version }}"
+      - run: npm install
+      - run: npm run build:packages
+      - name: Type-check and test
+        working-directory: {{ cookiecutter.project_slug }}-frontend/apps/mobile
+        run: |
+          npm run lint:types
+          npm run test
+
+  mobile-mutation:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: {{ cookiecutter.project_slug }}-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "{{ cookiecutter.node_version }}"
+      - run: npm install
+      - run: npm run build:packages
+      - name: Run mutation tests
+        working-directory: {{ cookiecutter.project_slug }}-frontend/apps/mobile
+        run: npm run test:mutation
+
+{% endif %}
   e2e:
     runs-on: ubuntu-latest
     needs: [backend, frontend]

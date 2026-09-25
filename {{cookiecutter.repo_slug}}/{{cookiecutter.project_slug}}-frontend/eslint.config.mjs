@@ -10,6 +10,9 @@ const WEB = ['apps/web/**/*.{js,jsx,mjs,ts,tsx}']
 // its rules against a plain .mjs is a hard config error rather than a no-op.
 const WEB_TYPESCRIPT = ['apps/web/**/*.{ts,tsx}']
 const PACKAGES = ['packages/*/**/*.{ts,mts}']
+// Matches zero files (and lints nothing) when include_mobile is off - the directory simply isn't
+// there, same as every other glob-scoped config in this file.
+const MOBILE = ['apps/mobile/**/*.{ts,tsx}']
 
 // Shared because both halves load @typescript-eslint - core-web-vitals already carries
 // next/typescript, so apps/web does not need nextTs spread in on top of it.
@@ -52,7 +55,15 @@ export default defineConfig([
   },
 
   {
-    files: [...WEB, ...PACKAGES],
+    // nextTs, not nextVitals: core-web-vitals assumes a DOM (img/anchor rules etc.) that React
+    // Native doesn't have - the plain TypeScript+React ruleset packages/ already uses fits here too.
+    files: MOBILE,
+    extends: [nextTs],
+    rules: TYPESCRIPT_RULES,
+  },
+
+  {
+    files: [...WEB, ...PACKAGES, ...MOBILE],
     extends: [prettierConfig],
     plugins: { prettier: prettierPlugin },
     rules: {

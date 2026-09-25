@@ -1,6 +1,6 @@
+import { createOpenApiClient } from './httpClient'
 import type { paths } from './schema'
 import Cookies from 'js-cookie'
-import createClient from 'openapi-fetch'
 
 export type ApiOptions = {
   csrfCookieName?: string
@@ -19,7 +19,7 @@ export class Api {
   private csrfCookieName: string
   private cookieHeader?: string
   private baseFetch: typeof fetch
-  client: ReturnType<typeof createClient<paths>>
+  client: ReturnType<typeof createOpenApiClient<paths>>
 
   constructor(baseUrl: string, { csrfCookieName = 'csrftoken', cookieHeader, baseFetch }: ApiOptions = {}) {
     this.csrfCookieName = csrfCookieName
@@ -27,7 +27,7 @@ export class Api {
     // .bind(globalThis), not a bare reference - calling the browser's native fetch off of some
     // other object throws "Illegal invocation".
     this.baseFetch = baseFetch ?? fetch.bind(globalThis)
-    this.client = createClient<paths>({ baseUrl, fetch: this.fetch })
+    this.client = createOpenApiClient<paths>({ baseUrl, fetch: this.fetch })
   }
 
   private fetch = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {

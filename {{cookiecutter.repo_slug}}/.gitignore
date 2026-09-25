@@ -24,6 +24,9 @@ next-env.d.ts
 .stryker-tmp/
 reports/mutation/
 
+# Expo
+.expo/
+
 # Playwright
 test-results/
 playwright-report/

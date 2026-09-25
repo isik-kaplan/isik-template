@@ -12,6 +12,21 @@ def test_bake_succeeds(cookies, context_name):
     assert result.project_path.is_dir()
 
 
+def test_include_mobile_controls_whether_apps_mobile_exists(cookies):
+    # default.json has include_mobile: true; no-social-login.json omits it, so it takes
+    # cookiecutter.json's own default (false) - one bake exercises each side for free.
+    with_mobile = cookies.bake(extra_context=load_context("default"))
+    assert with_mobile.exit_code == 0
+    mobile_dir = with_mobile.project_path / f"{with_mobile.context['project_slug']}-frontend/apps/mobile"
+    assert mobile_dir.is_dir()
+    assert (mobile_dir / "package.json").is_file()
+
+    without_mobile = cookies.bake(extra_context=load_context("no-social-login"))
+    assert without_mobile.exit_code == 0
+    no_mobile_dir = without_mobile.project_path / f"{without_mobile.context['project_slug']}-frontend/apps/mobile"
+    assert not no_mobile_dir.exists()
+
+
 def test_repo_slug_derived_from_project_name(cookies):
     result = cookies.bake(extra_context={**load_context("default"), "project_name": "My Cool App"})
     assert result.exit_code == 0

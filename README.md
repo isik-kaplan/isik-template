@@ -6,9 +6,9 @@ A cookiecutter template for single-tenant Django + Next.js applications, built o
 established across several prior Django + Next.js projects built the same way.
 
 Stack: Django + django-hosts + django-allauth (headless) + drf-spectacular + django-pghistory/
-pgtrigger + Celery/RabbitMQ, Next.js + shadcn/ui, all wired together in Docker Compose with a
-Playwright e2e suite (mailpit, plus a disposable Authentik instance for social login) covering the
-full auth surface end to end.
+pgtrigger + Celery/RabbitMQ, Next.js + shadcn/ui (optionally an Expo/React Native app alongside it),
+all wired together in Docker Compose with a Playwright e2e suite (mailpit, plus a disposable
+Authentik instance for social login) covering the full auth surface end to end.
 
 ## Usage
 
@@ -25,6 +25,12 @@ for (google, apple, github, microsoft, facebook, slack, twitter_oauth2, linkedin
 other provider (there are ~100) stays text-only unless you point `social_login_provider_icons` at
 one - `provider_id=url-or-path` pairs, comma-separated, e.g.
 `openid_connect=/icons/my-idp.svg` for a file dropped into `apps/web/public/`, or any full URL.
+
+`include_mobile` (default `n`) adds an Expo/React Native app (`apps/mobile`) alongside the web
+frontend - a minimal auth-only skeleton (login, signup, session check, logout) against the
+backend's existing `allauth.headless` app client (token-based, no cookies), not full parity with
+`apps/web`. Unlike everything else in this template, it's opt-in: most generated projects don't
+want a companion mobile app, unlike (say) Celery, which nearly all of them eventually do.
 
 ## Developing this template
 
@@ -43,8 +49,10 @@ result at increasing cost:
   login/signup page ("default"'s never exercises this) is otherwise untested. Slow (minutes); skips
   only if `docker` itself isn't available.
 
-The "default" context's backend build/coverage, backend-mutation, frontend build/lint/test,
-frontend-mutation and e2e are no longer hand-mirrored here at all: `scripts/bake_and_trigger_real_ci.py`
+The "default" context (`include_mobile: true`, alongside its full `social_login_providers` list -
+the "everything on" configuration) has its backend build/coverage, backend-mutation, frontend
+build/lint/test, frontend-mutation, mobile lint/test, mobile-mutation and e2e no longer
+hand-mirrored here at all: `scripts/bake_and_trigger_real_ci.py`
 bakes it, force-pushes the result to a dedicated sandbox repo, and waits for *that* repo's own real
 `ci.yml` to run - catching bugs in the workflow file itself (trigger conditions, job graph,
 cache/action syntax) that replaying commands by hand never could. CI-only: it needs a

@@ -1,6 +1,6 @@
+import { createOpenApiClient } from './httpClient'
 import type { paths } from './schema'
 import Cookies from 'js-cookie'
-import createClient from 'openapi-fetch'
 
 export type AuthApiOptions = {
   csrfCookieName?: string
@@ -26,7 +26,7 @@ export class AuthApi {
   private isServerSide: boolean
   private baseFetch: typeof fetch
   private baseUrl: string
-  client: ReturnType<typeof createClient<paths>>
+  client: ReturnType<typeof createOpenApiClient<paths>>
 
   constructor(baseUrl: string, options: AuthApiOptions = {}) {
     const { csrfCookieName = 'csrftoken', cookieHeader, baseFetch } = options
@@ -35,7 +35,7 @@ export class AuthApi {
     this.cookieHeader = cookieHeader
     this.isServerSide = 'cookieHeader' in options
     this.baseFetch = baseFetch ?? fetch.bind(globalThis)
-    this.client = createClient<paths>({ baseUrl, fetch: this.fetch })
+    this.client = createOpenApiClient<paths>({ baseUrl, fetch: this.fetch })
   }
 
   private fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
