@@ -29,6 +29,30 @@ def load_context(name):
     return json.loads((TEMPLATE_ROOT / "tests" / "contexts" / f"{name}.json").read_text())
 
 
+def clear_stale_caches():
+    """Every sandbox push is a disconnected, unrelated commit (force-pushed, no shared history
+    with whatever was there before) - but backend-mutation's own GitHub Actions cache is keyed
+    partly on a git SHA and falls back to restoring *any* prior cache with a matching prefix
+    (`restore-keys`), which normally means "resume this same commit's own interrupted progress".
+    Here it instead hands mutmut a cached tree from a completely unrelated previous commit -
+    confirmed directly: with that stale cache in place, phase one discovers zero mutants to run
+    at all (mutation_queue.py's tree-scan silently picks up the cached copy of the tree sitting
+    inside the same source path it walks), and the exemption registry looks entirely obsolete as
+    a result. A real user's normal incremental commits share actual git ancestry, so this is a
+    property of how this sandbox is exercised, not a bug in the generated project's own caching
+    design - clearing every cache before each push keeps this rig from ever hitting it, without
+    touching that design at all.
+    """
+    result = subprocess.run(
+        ["gh", "cache", "list", "--repo", SANDBOX_REPO, "--json", "id", "-L", "100"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    for entry in json.loads(result.stdout):
+        subprocess.run(["gh", "cache", "delete", str(entry["id"]), "--repo", SANDBOX_REPO], check=False)
+
+
 def bake_and_push(token):
     with tempfile.TemporaryDirectory() as tmp:
         project_path = Path(
@@ -116,6 +140,7 @@ def main():
         )
         sys.exit(1)
 
+    clear_stale_caches()
     push_sha = bake_and_push(token)
 
     run_id = find_run(push_sha)
