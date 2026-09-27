@@ -1,3 +1,4 @@
+{% raw %}
 {
   "emailPlaceholder": "Email",
   "passwordPlaceholder": "Password",
@@ -76,3 +77,4 @@
   "profileConnectionsEmpty": "No connected accounts yet.",
   "profileConnectionsDisconnect": "Disconnect"
 }
+{%- endraw %}

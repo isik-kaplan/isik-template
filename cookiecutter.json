@@ -16,8 +16,7 @@
   "isik_version": "0.7.0",
   "isikk_core_version": "0.8.0",
   "_copy_without_render": [
-    "*/e2e/authentik-blueprints/*",
-    "*/apps/mobile/lib/locales/*"
+    "*/e2e/authentik-blueprints/*"
   ],
   "_extensions": ["jinja2_time.TimeExtension"]
 }
