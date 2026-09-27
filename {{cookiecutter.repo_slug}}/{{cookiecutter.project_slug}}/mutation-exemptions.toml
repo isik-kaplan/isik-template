@@ -42,3 +42,22 @@ reading its source directly) - it only touches `data` and `sociallogin.user` - s
 written, can observe a difference between passing the real request and passing None here. The
 method's own test (test_adapters.py) covers everything this override actually does (the
 created_at/updated_at backfill) by asserting on the real timezone.now() value."""
+
+["{{ cookiecutter.project_slug }}.celery_task.xǁOnCommitTaskǁapply_async"]
+fingerprint = "a833261df934"
+reason = """Genuinely covered, not equivalent. Manually breaking apply_async (dropping the
+transaction.on_commit wrapping; replacing the headers dict with just
+{history_context_header: self.history_cause()}, dropping the caller's own headers) makes
+test_project/tests/test_celery_task.py fail, confirmed by hand for both - the same file's other
+tests (dispatch waits for the transaction, a task nobody asked for is the system's, the worker
+writes inside the cause it was given) exercise the rest of this method and OnCommitTask's inherited
+__call__.
+
+mutmut's own trampoline still reports "no tests" for every mutant here, a tooling limitation like
+x__social_app_config above rather than a real coverage gap. The likely reason differs though:
+`ping` (apps/users/tasks/health_check.py) is a `celery.local.Proxy` - @shared_task defers binding
+to a real Task instance until the current Celery app is resolved, rather than naming one directly -
+so every call through it (ping.delay(), ping.apply_async(), ping() itself) reaches apply_async by a
+level of indirection mutmut's call-attribution apparently doesn't see through, unlike a plain
+viewset method called directly off an instance. Revisit if a mutmut upgrade changes this, or if a
+task stops being dispatched through a bare Proxy."""

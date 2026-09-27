@@ -10,6 +10,10 @@ pgtrigger + Celery/RabbitMQ, Next.js + shadcn/ui (optionally an Expo/React Nativ
 all wired together in Docker Compose with a Playwright e2e suite (mailpit, plus a disposable
 Authentik instance for social login) covering the full auth surface end to end.
 
+`User` is tracked with `@track_events()`, exposed at `/v0/users/{id}/history/` and
+`/v0/users/history/` (password changes recorded, never served) and named by whoever caused
+them - a request's session, or, via `HistoryContextTask`, a Celery task the request dispatched.
+
 ## Usage
 
 ```

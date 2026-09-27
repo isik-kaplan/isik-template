@@ -38,6 +38,48 @@ export interface paths {
       }
     }
   }
+  '/v0/users/{id}/history/': {
+    get: {
+      parameters: {
+        path: { id: string }
+        query?: components['schemas']['UserHistoryQuery'] & { object_id?: string }
+      }
+      responses: {
+        200: {
+          content: {
+            'application/json': {
+              count: number
+              page_size: number
+              total_pages: number
+              results: components['schemas']['UserHistoryEvent'][]
+            }
+          }
+        }
+      }
+    }
+  }
+  '/v0/users/history/': {
+    get: {
+      parameters: {
+        // Every instance's history at once, restricted to superusers by default (HistoryMixin's
+        // own history_list_permission_classes) - object_id narrows it back to one, same as the
+        // per-object endpoint above, just without a path segment to imply that already.
+        query?: components['schemas']['UserHistoryQuery'] & { object_id?: string }
+      }
+      responses: {
+        200: {
+          content: {
+            'application/json': {
+              count: number
+              page_size: number
+              total_pages: number
+              results: components['schemas']['UserHistoryEvent'][]
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 export interface components {
@@ -50,6 +92,39 @@ export interface components {
       last_name: string
       created_at: string
       updated_at: string
+    }
+    UserHistoryQuery: {
+      action?: 'insert' | 'update' | 'delete'
+      // A string, not a number - User.id is a uuid7, not HistoryMixin's own assumed integer pk
+      // (UserViewSet overrides the built-in actor filter's type to match - see its own comment).
+      actor?: string
+      created_after?: string
+      created_before?: string
+      page?: number
+      page_size?: number
+    }
+    // One event from a tracked model's history (see isik's generic_history_serializer()) - every
+    // tracked User field flattened at the top level, plus event metadata. "password" is tracked
+    // but withheld (UserViewSet.history_withhold): absent here, its change still shows in `changes`
+    // as [null, null].
+    UserHistoryEvent: {
+      id: string
+      username: string
+      email: string
+      first_name: string
+      last_name: string
+      is_staff: boolean
+      is_active: boolean
+      is_superuser: boolean
+      last_login: string | null
+      date_joined: string
+      created_at: string
+      updated_at: string
+      event_id: number
+      event_created_at: string
+      action: 'insert' | 'update' | 'delete'
+      changes: Record<string, [unknown, unknown]> | null
+      actor_id: string | null
     }
   }
 }

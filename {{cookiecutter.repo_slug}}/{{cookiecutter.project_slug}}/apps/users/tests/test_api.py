@@ -1,4 +1,5 @@
 import pytest
+from django.conf import settings
 
 from apps.users.models.user import User
 
@@ -36,3 +37,79 @@ def test_me_returns_the_logged_in_user(client):
     response = client.get("/v0/users/me/")
     assert response.status_code == 200
     assert response.json()["username"] == "alice"
+
+
+@pytest.mark.django_db
+def test_a_users_history_records_its_creation(client):
+    user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
+
+    response = client.get(f"/v0/users/{user.id}/history/")
+
+    assert response.status_code == 200
+    (event,) = response.json()["results"]
+    assert event["action"] == "insert"
+    assert event["username"] == "alice"
+
+
+@pytest.mark.django_db
+def test_a_password_change_is_recorded_but_never_served(client):
+    # UserSerializer doesn't expose "password" at all - changed straight on the model here rather
+    # than through a real password-change request (test_auth.py's own job to cover end to end).
+    user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
+    user.set_password("a-new-password")
+    user.save()
+
+    response = client.get(f"/v0/users/{user.id}/history/")
+    update = response.json()["results"][0]
+    assert "password" not in update
+    assert update["changes"]["password"] == [None, None]
+
+
+@pytest.mark.django_db
+def test_the_cross_user_history_requires_a_superuser(client):
+    user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
+    client.force_login(user)
+
+    response = client.get("/v0/users/history/")
+
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_a_superuser_can_read_the_cross_user_history(client):
+    superuser = User.objects.create_superuser(username="root", email="root@example.test", password="x")
+    User.objects.create_user(username="alice", email="alice@example.test", password="x")
+    client.force_login(superuser)
+
+    response = client.get("/v0/users/history/")
+
+    assert response.status_code == 200
+    # root's own creation plus alice's - across every user, not just one.
+    assert response.json()["count"] >= 2
+
+
+@pytest.mark.django_db
+def test_the_cross_user_history_filters_by_actor(client):
+    # HistoryMixin's own default "actor" filter assumes an integer pk - User.id is a uuid7, so
+    # this also proves UserViewSet's own filter_cls override is what's actually wired in, not just
+    # that the endpoint exists (a plain int filter would 400 on a UUID query value instead).
+    host = f"auth.{settings.PARENT_HOST}"
+    superuser = User.objects.create_superuser(username="root", email="root@example.test", password="x")
+    alice = User.objects.create_user(username="alice", email="alice@example.test", password="old-password")
+    client.force_login(alice)
+    client.get("/v0/browser/v1/auth/session", HTTP_HOST=host)  # primes the csrftoken cookie
+    client.post(
+        "/v0/browser/v1/account/password/change",
+        data={"current_password": "old-password", "new_password": "a-new-password"},
+        content_type="application/json",
+        HTTP_HOST=host,
+        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+    )
+    client.force_login(superuser)
+
+    response = client.get(f"/v0/users/history/?actor={alice.id}")
+
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert results and all(event["actor_id"] == str(alice.id) for event in results)
+    assert any(event["action"] == "update" for event in results)

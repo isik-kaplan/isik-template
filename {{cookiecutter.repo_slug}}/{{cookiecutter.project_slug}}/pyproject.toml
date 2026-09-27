@@ -6,7 +6,7 @@ requires-python = ">={{ cookiecutter.python_version }}"
 dependencies = [
     "django>=6.0",
     "psycopg[binary]>=3.2.0",
-    "isik[django,drf,sentry]>={{ cookiecutter.isik_version }}",
+    "isik[django,drf,sentry,celery]>={{ cookiecutter.isik_version }}",
     "pyuwsgi>=2.0.28",
     "python-dotenv>=1.0.0",
     "drf-spectacular>=0.27.0",

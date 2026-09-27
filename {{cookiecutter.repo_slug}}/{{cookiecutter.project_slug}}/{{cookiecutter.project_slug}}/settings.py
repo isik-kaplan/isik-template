@@ -98,6 +98,10 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    # After AuthenticationMiddleware/AccountMiddleware, whose request.user it reads - opens the
+    # pghistory context every tracked write in this request stamps its actor from, and what a
+    # Celery task dispatched from here reads via open_history_context() to carry that actor along.
+    "isik.django.apps.common.middleware.HistoryContextMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Last, mirroring HostsRequestMiddleware - django-hosts' own required pairing.
@@ -309,7 +313,9 @@ REST_FRAMEWORK = {
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ],
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # isik's own AutoSchema, not drf-spectacular's - fixes HistoryMixin's own schema gaps (colliding
+    # operation ids between its two actions, both untyped as paginated lists otherwise).
+    "DEFAULT_SCHEMA_CLASS": "isik.django.drf.spectacular.AutoSchema",
     "DEFAULT_PERMISSION_CLASSES": [
         "isik.django.drf.permissions.ReadOnly",
     ],
