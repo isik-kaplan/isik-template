@@ -13,6 +13,7 @@ import { formatUserAgent } from '@/lib/formatUserAgent'
 
 import { AuthApi, extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
+import { toDate } from '@isikk/core'
 import { toast } from 'sonner'
 
 type Session = {
@@ -74,7 +75,7 @@ export function SessionsList({ initialSessions }: SessionsListProps) {
                 <span className="text-sm text-muted-foreground tabular-nums">
                   {t('auth:profileSessionsMeta', {
                     ip: session.ip,
-                    date: new Date(session.created_at * 1000).toLocaleDateString(undefined, {
+                    date: toDate(session.created_at, 'seconds').toLocaleDateString(undefined, {
                       day: 'numeric',
                       month: 'short',
                       year: 'numeric',

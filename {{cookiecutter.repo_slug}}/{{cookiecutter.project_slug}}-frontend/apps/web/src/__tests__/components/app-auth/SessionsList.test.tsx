@@ -66,9 +66,9 @@ describe('SessionsList', () => {
     render(<SessionsList initialSessions={[currentSession]} />)
 
     expect(screen.getByText(/127\.0\.0\.1/)).toBeTruthy()
-    // created_at is Unix seconds - multiplied by 1000 for Date's milliseconds, this lands on
-    // Nov 14, 2023; dividing instead would land in 1970, and dropping the day/month/year format
-    // options would print a locale-default (numeric month/day) string instead.
+    // created_at is Unix seconds - toDate(x, 'seconds') lands on Nov 14, 2023; passing
+    // 'milliseconds' (or omitting the unit) would land in 1970, and dropping the day/month/year
+    // format options would print a locale-default (numeric month/day) string instead.
     expect(screen.getByText(/Nov 14, 2023/)).toBeTruthy()
   })
 

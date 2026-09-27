@@ -12,6 +12,10 @@ type ApiResult = { data?: unknown; error?: unknown; response: Response }
  * `useApiSubmit`, composed rather than reimplemented - EmailsList's row actions (make primary,
  * resend verification, remove) are the same server-refusal handling with no form behind them, and
  * use it directly.
+ *
+ * Not `@isikk/core/hooks`' own `useValidatedFormState` (0.8.0+) - see `useApiSubmit.ts`'s own
+ * comment for why: it composes that library's DRF-shaped `useApiSubmit`, and every form here is
+ * allauth-shaped instead.
  */
 export function useValidatedFormState<S extends z.ZodObject>(schema: S, initialState: z.infer<S>) {
   const form = useFormState<z.infer<S>>(initialState)
