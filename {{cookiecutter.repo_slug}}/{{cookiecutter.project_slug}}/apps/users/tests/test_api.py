@@ -40,6 +40,42 @@ def test_me_returns_the_logged_in_user(client):
 
 
 @pytest.mark.django_db
+def test_patching_me_requires_authentication(client):
+    response = client.patch("/v0/users/me/", {"language": "tr"}, content_type="application/json")
+    assert response.status_code in (401, 403)
+
+
+@pytest.mark.django_db
+def test_a_user_can_set_their_own_language_preference(client):
+    user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
+    client.force_login(user)
+
+    response = client.patch("/v0/users/me/", {"language": "tr"}, content_type="application/json")
+
+    assert response.status_code == 200
+    assert response.json()["language"] == "tr"
+    user.refresh_from_db()
+    assert user.language == "tr"
+
+
+@pytest.mark.django_db
+def test_patching_me_cannot_change_username_or_email(client):
+    user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
+    client.force_login(user)
+
+    response = client.patch(
+        "/v0/users/me/",
+        {"username": "mallory", "email": "mallory@example.test"},
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    user.refresh_from_db()
+    assert user.username == "alice"
+    assert user.email == "alice@example.test"
+
+
+@pytest.mark.django_db
 def test_a_users_history_records_its_creation(client):
     user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
 

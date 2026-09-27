@@ -10,6 +10,7 @@ vi.mock('@/components/app-auth/VerifyEmailButton', () => ({
     return null
   },
 }))
+vi.mock('@/lib/getSession', () => ({ getLanguage: async () => 'en' }))
 
 describe('VerifyEmailPage', () => {
   it('renders the title', async () => {

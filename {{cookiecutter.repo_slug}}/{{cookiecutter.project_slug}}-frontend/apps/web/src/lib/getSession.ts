@@ -3,15 +3,19 @@ import { redirect, unstable_rethrow } from 'next/navigation'
 
 import { cache } from 'react'
 
+import type { Language } from '@/i18n/config'
+
 import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
 import type { Session } from './SessionContext'
 import { isLocalDevHost } from './isLocalDevHost'
+import { resolveLanguage } from './resolveLanguage'
 import { getRequestOrigin } from '@isikk/core/next/request'
 
 type SessionState = {
   session: Session
   pendingProviderSignup: boolean
+  language: Language
 }
 
 // Called independently from the root layout and everything under it, so without cache() one page
@@ -24,10 +28,15 @@ const fetchSessionState = cache(async (): Promise<SessionState> => {
   const requestHeaders = await headers()
   const authOrigin = getRequestOrigin(requestHeaders, { isLocalDevHost }).replace('://', '://auth.')
   const authApi = new AuthApi(authOrigin, { cookieHeader: requestHeaders.get('cookie') ?? undefined })
+  const acceptLanguageHeader = requestHeaders.get('accept-language')
   try {
     const { data, error } = await authApi.session()
     if (data) {
-      return { session: { user: data.data.user }, pendingProviderSignup: false }
+      return {
+        session: { user: data.data.user },
+        pendingProviderSignup: false,
+        language: resolveLanguage(data.data.user.language, acceptLanguageHeader),
+      }
     }
     // "provider_signup" - a first-ever login via a social provider, with SOCIALACCOUNT_AUTO_SIGNUP
     // off, lands here rather than being signed in immediately.
@@ -35,17 +44,21 @@ const fetchSessionState = cache(async (): Promise<SessionState> => {
     // "?." throws instead of short-circuiting to undefined when that link is missing - but the
     // catch block below turns any thrown error into the exact same pendingProviderSignup: false.
     const pendingProviderSignup = error?.data?.flows?.some((flow) => flow.id === 'provider_signup') ?? false
-    return { session: null, pendingProviderSignup }
+    return { session: null, pendingProviderSignup, language: resolveLanguage(null, acceptLanguageHeader) }
   } catch (thrown) {
     unstable_rethrow(thrown)
     // An unreachable backend is not "not logged in", but this runs in the root layout, so
     // failing the render would take down every page.
-    return { session: null, pendingProviderSignup: false }
+    return { session: null, pendingProviderSignup: false, language: resolveLanguage(null, acceptLanguageHeader) }
   }
 })
 
 export async function getSession(): Promise<Session> {
   return (await fetchSessionState()).session
+}
+
+export async function getLanguage(): Promise<Language> {
+  return (await fetchSessionState()).language
 }
 
 // Exposed separately from getSession() for callback-complete/page.tsx, the one place that needs

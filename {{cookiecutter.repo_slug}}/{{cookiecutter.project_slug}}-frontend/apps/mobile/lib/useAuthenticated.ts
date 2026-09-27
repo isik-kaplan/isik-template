@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 
+import { setLanguage } from './i18n'
 import { getAuthApi } from './session'
 import { useIsMounted } from '@isikk/core/hooks'
 
@@ -16,9 +17,13 @@ export function useAuthenticated(): boolean | null {
   // Stryker disable ArrayDeclaration,ConditionalExpression
   useEffect(() => {
     getAuthApi()
-      .isAuthenticated()
-      .then((result) => {
-        if (isMounted()) setAuthenticated(result)
+      .session()
+      .then(({ data, error }) => {
+        if (!isMounted()) return
+        setAuthenticated(data?.meta.is_authenticated ?? error?.meta?.is_authenticated ?? false)
+        // A signed-in user's saved preference overrides the device locale i18n.ts already
+        // started with - nothing to do for a user with no preference set (language is absent).
+        if (data?.data?.user.language) setLanguage(data.data.user.language)
       })
   }, [isMounted])
   // Stryker restore ArrayDeclaration,ConditionalExpression

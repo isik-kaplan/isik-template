@@ -54,3 +54,27 @@ def test_a_password_change_names_the_session_that_made_it(client):
     assert update["actor_id"] == str(user.id)
     assert "password" not in update
     assert update["changes"]["password"] == [None, None]
+
+
+@pytest.mark.django_db
+def test_the_session_carries_the_users_saved_language(client):
+    # apps/users/headless.py's own reason for existing: the frontend resolves its language from
+    # this same session payload it already fetches, with no extra request.
+    user = User.objects.create_user(username="alice", email="alice@example.test", password="x", language="tr")
+    client.force_login(user)
+
+    response = client.get("/v0/browser/v1/auth/session", HTTP_HOST=f"auth.{settings.PARENT_HOST}")
+
+    assert response.json()["data"]["user"]["language"] == "tr"
+
+
+@pytest.mark.django_db
+def test_the_session_omits_language_when_the_user_has_no_preference(client):
+    user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
+    client.force_login(user)
+
+    response = client.get("/v0/browser/v1/auth/session", HTTP_HOST=f"auth.{settings.PARENT_HOST}")
+
+    # Matches how allauth's own DefaultHeadlessAdapter drops every other empty/None field
+    # (email, username, ...) from this same payload rather than serving it as "".
+    assert "language" not in response.json()["data"]["user"]

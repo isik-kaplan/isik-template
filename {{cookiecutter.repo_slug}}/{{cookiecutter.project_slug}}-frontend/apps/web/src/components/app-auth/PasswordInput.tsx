@@ -8,7 +8,7 @@ import { EyeIcon, EyeOffIcon } from 'lucide-react'
 import { Button } from '@/components/base/button'
 import { Input } from '@/components/base/input'
 
-import { useClientTranslation } from '@/i18n'
+import { useClientTranslation } from '@/i18n/client'
 import { cn } from '@/lib/utils'
 
 export function PasswordInput({ className, ...props }: React.ComponentProps<typeof Input>) {

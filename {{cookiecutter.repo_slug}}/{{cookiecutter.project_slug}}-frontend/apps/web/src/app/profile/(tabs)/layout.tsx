@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import type React from 'react'
 
+import { LanguageSwitcher } from '@/components/app-auth/LanguageSwitcher'
 import { LogoutButton } from '@/components/app-auth/LogoutButton'
 import { ProfileTabsList } from '@/components/app-auth/ProfileTabsList'
 import { ThemeToggle } from '@/components/app/ThemeToggle'
@@ -34,7 +35,8 @@ export default async function ProfileTabsLayout({ children }: { children: React.
     // form does) and produces a differently-sized card - and differently-squeezed rows within it
     // (see ProfileDetailsPage's dt/dd, docs/screenshots/profile/details.png) - on every tab.
     <div className="flex w-full max-w-sm flex-col items-center gap-6">
-      <div className="fixed top-4 right-4">
+      <div className="fixed top-4 right-4 flex items-center gap-2">
+        <LanguageSwitcher />
         <ThemeToggle />
       </div>
       <div className="flex flex-col items-center gap-3">

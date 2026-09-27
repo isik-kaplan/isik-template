@@ -1,11 +1,14 @@
 import pytest
 
 from hooks._validate import (
+    KNOWN_LANGUAGES,
     AnswersInvalid,
+    parse_requested_languages,
     parse_requested_providers,
     validate_answers,
     validate_domain,
     validate_provider_icons,
+    validate_requested_languages,
     validate_requested_providers,
     validate_required_fields,
 )
@@ -20,6 +23,7 @@ def valid_answers(**overrides: str) -> dict:
         "domain": "example.test",
         "social_login_providers": "google",
         "social_login_provider_icons": "",
+        "languages": "en",
         **overrides,
     }
 
@@ -229,3 +233,75 @@ def test_accepts_an_icon_when_no_providers_were_requested_at_all():
     # An empty requested_providers list is falsy, so the "not listed in social_login_providers"
     # check - which only applies to a concrete list - never runs; nothing to be "not listed" in.
     validate_provider_icons("slack=https://example.test/slack.svg", [])  # does not raise
+
+
+def test_validate_answers_rejects_an_unknown_language_too():
+    # Exercises the same check as test_rejects_an_unknown_language, through the top-level entry
+    # point - proving languages is actually parsed from the raw string and forwarded.
+    with pytest.raises(AnswersInvalid, match="Unknown languages"):
+        validate_answers(**valid_answers(languages="en,not-a-real-language"))
+
+
+def test_validate_answers_accepts_the_default_english_only_languages():
+    validate_answers(**valid_answers())  # does not raise
+
+
+def test_parses_requested_languages_from_a_comma_separated_string():
+    assert parse_requested_languages("en, tr ,,fr") == ["en", "tr", "fr"]
+
+
+def test_rejects_an_empty_language_list():
+    with pytest.raises(AnswersInvalid) as excinfo:
+        validate_requested_languages(parse_requested_languages(""))
+    assert str(excinfo.value) == "'languages' must list at least one language code, e.g. 'en' or 'en,tr'."
+
+
+def test_accepts_english_only():
+    validate_requested_languages(["en"])  # does not raise
+
+
+def test_accepts_english_plus_other_known_languages():
+    validate_requested_languages(["en", "tr", "fr"])  # does not raise
+
+
+def test_rejects_languages_not_starting_with_english():
+    with pytest.raises(AnswersInvalid) as excinfo:
+        validate_requested_languages(["tr", "en"])
+    assert str(excinfo.value) == (
+        "'languages' (tr, en) must start with 'en' - every string in this template is authored in "
+        "English first; other languages are translated from it, never instead of it."
+    )
+
+
+def test_rejects_a_language_list_missing_english_entirely():
+    with pytest.raises(AnswersInvalid, match="must start with 'en'"):
+        validate_requested_languages(["tr"])
+
+
+def test_rejects_an_unknown_language():
+    with pytest.raises(AnswersInvalid) as excinfo:
+        validate_requested_languages(["en", "not-a-real-language"])
+    assert str(excinfo.value) == (
+        f"Unknown languages: not-a-real-language. Valid values: {', '.join(sorted(KNOWN_LANGUAGES))}."
+    )
+
+
+def test_rejects_multiple_unknown_languages_joined_with_a_real_separator():
+    # A single unknown language above doesn't exercise the "unknown" list's own join separator -
+    # nothing to join between one item.
+    with pytest.raises(AnswersInvalid) as excinfo:
+        validate_requested_languages(["en", "not-real", "also-not-real"])
+    message = str(excinfo.value)
+    assert message.startswith("Unknown languages: also-not-real, not-real. Valid values:")
+
+
+def test_rejects_a_duplicated_language():
+    with pytest.raises(AnswersInvalid) as excinfo:
+        validate_requested_languages(["en", "tr", "tr"])
+    assert str(excinfo.value) == "'languages' lists the same language more than once: tr."
+
+
+def test_rejects_multiple_duplicated_languages_joined_with_a_real_separator():
+    with pytest.raises(AnswersInvalid) as excinfo:
+        validate_requested_languages(["en", "tr", "tr", "fr", "fr"])
+    assert str(excinfo.value) == "'languages' lists the same language more than once: fr, tr."

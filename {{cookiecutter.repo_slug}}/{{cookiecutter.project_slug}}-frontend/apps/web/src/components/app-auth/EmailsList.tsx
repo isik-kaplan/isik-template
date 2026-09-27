@@ -9,7 +9,7 @@ import { Badge } from '@/components/base/badge'
 import { Button } from '@/components/base/button'
 import { Input } from '@/components/base/input'
 
-import { useClientTranslation } from '@/i18n'
+import { useClientTranslation } from '@/i18n/client'
 import { authOrigin } from '@/lib/authOrigin'
 import type { EmailAddress } from '@/lib/useEmailRowActions'
 import { useEmailRowActions } from '@/lib/useEmailRowActions'

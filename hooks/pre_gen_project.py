@@ -30,6 +30,7 @@ try:
         domain="{{ cookiecutter.domain }}",
         social_login_providers="{{ cookiecutter.social_login_providers }}",
         social_login_provider_icons="{{ cookiecutter.social_login_provider_icons }}",
+        languages="{{ cookiecutter.languages }}",
     )
 except AnswersInvalid as error:
     print(f"ERROR: {error}", file=sys.stderr)

@@ -6,5 +6,6 @@
   "domain": "testproject.test",
   "social_login_providers": "google,github,openid_connect",
   "license": "MIT",
-  "include_mobile": true
+  "include_mobile": true,
+  "languages": "en,tr"
 }

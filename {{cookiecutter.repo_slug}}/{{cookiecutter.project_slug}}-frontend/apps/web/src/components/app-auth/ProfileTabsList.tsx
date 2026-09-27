@@ -6,7 +6,7 @@ import { KeyRoundIcon, Link2Icon, MailIcon, MonitorSmartphoneIcon, UserIcon } fr
 
 import { Tabs, TabsList, TabsTrigger } from '@/components/base/tabs'
 
-import { useClientTranslation } from '@/i18n'
+import { useClientTranslation } from '@/i18n/client'
 
 const TABS = [
   { segment: 'details', icon: UserIcon },

@@ -18,4 +18,8 @@ describe('getConfig', () => {
   it('scopes to the given namespaces when some are given', () => {
     expect(getConfig(['auth']).ns).toEqual(['auth'])
   })
+
+  it('uses the given language instead of the default', () => {
+    expect(getConfig(undefined, 'en').lng).toBe('en')
+  })
 })

@@ -17,6 +17,9 @@ type User = {
   id: string
   username: string
   email: string
+  // Absent when unset (allauth's own DefaultHeadlessAdapter drops empty/None fields rather than
+  // serving "" - see the backend's apps/users/headless.py), not just "" - browser fallback applies.
+  language?: string
 }
 
 type Session = {

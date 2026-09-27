@@ -6,7 +6,7 @@ import type React from 'react'
 
 import { Button } from '@/components/base/button'
 
-import { useClientTranslation } from '@/i18n'
+import { useClientTranslation } from '@/i18n/client'
 import { authOrigin } from '@/lib/authOrigin'
 import { broadcastSessionCleared } from '@/lib/sessionChannel'
 

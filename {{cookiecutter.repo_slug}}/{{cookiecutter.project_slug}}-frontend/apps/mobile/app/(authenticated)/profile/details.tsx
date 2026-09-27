@@ -10,7 +10,7 @@ import { Text } from 'react-native'
 
 export default function ProfileDetails() {
   const { t } = useTranslation()
-  const [user, setUser] = useState<{ username: string; email: string } | undefined>()
+  const [user, setUser] = useState<{ username: string; email: string; language?: string } | undefined>()
   const isMounted = useIsMounted()
 
   // Equivalent mutant either way, both the guard and the deps array - see
@@ -35,6 +35,13 @@ export default function ProfileDetails() {
       <ListRow testID="profile-details-email-row">
         <Text>{t('profileDetailsEmailLabel')}</Text>
         <Text testID="profile-details-email">{user?.email}</Text>
+      </ListRow>
+      {/* Read-only here - this app has no client for the main API yet (every other screen only
+          ever talks to allauth's headless endpoints), so changing this happens on web for now;
+          this app still picks up whatever's saved there (see lib/useAuthenticated.ts). */}
+      <ListRow testID="profile-details-language-row">
+        <Text>{t('profileDetailsLanguageLabel')}</Text>
+        <Text testID="profile-details-language">{user?.language || t('profileDetailsLanguageDefault')}</Text>
       </ListRow>
     </Screen>
   )

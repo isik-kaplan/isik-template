@@ -54,6 +54,16 @@ buttons render (when `social_login_providers` includes `google`/`apple`) but the
 will fail to open.
 {% endif %}
 {% endif %}
+{% if cookiecutter.languages.split(',')|length > 1 %}
+## Translations
+
+Every string is authored in English; `languages` also named {{ cookiecutter.languages.split(',')[1:]|map('trim')|join(', ') }}, so `post_gen_project.py` already scaffolded real, empty catalogs for
+{{ 'them' if cookiecutter.languages.split(',')|length > 2 else 'it' }} at generation time (its own
+printout named the exact files) - fill in the backend `locale/<lang>/LC_MESSAGES/django.po` and the
+frontend `locales/<lang>/*.json` files before shipping that language. A signed-in user's language
+preference (`User.language`, editable from the profile page) picks between whatever `LANGUAGES`
+ends up configured with; a visitor with no preference gets their browser's own language instead.
+{% endif %}
 ## Testing
 
 ```

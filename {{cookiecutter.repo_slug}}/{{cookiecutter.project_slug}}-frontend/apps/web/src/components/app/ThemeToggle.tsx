@@ -4,7 +4,7 @@ import { MoonIcon, SunIcon } from 'lucide-react'
 
 import { Button } from '@/components/base/button'
 
-import { useClientTranslation } from '@/i18n'
+import { useClientTranslation } from '@/i18n/client'
 
 import { useTheme } from 'next-themes'
 

@@ -37,6 +37,22 @@ export interface paths {
         }
       }
     }
+    patch: {
+      // username/email are read-only past creation (UserSerializer's own create_only_fields) -
+      // not offered here even though the backend silently ignores them if sent anyway.
+      requestBody: {
+        content: {
+          'application/json': Partial<Pick<components['schemas']['User'], 'first_name' | 'last_name' | 'language'>>
+        }
+      }
+      responses: {
+        200: {
+          content: {
+            'application/json': components['schemas']['User']
+          }
+        }
+      }
+    }
   }
   '/v0/users/{id}/history/': {
     get: {
@@ -90,6 +106,9 @@ export interface components {
       email: string
       first_name: string
       last_name: string
+      // "" (never omitted, unlike the session payload's own version of this - see
+      // apps/users/headless.py) means no preference; the browser's language is used instead.
+      language: string
       created_at: string
       updated_at: string
     }
@@ -113,6 +132,7 @@ export interface components {
       email: string
       first_name: string
       last_name: string
+      language: string
       is_staff: boolean
       is_active: boolean
       is_superuser: boolean

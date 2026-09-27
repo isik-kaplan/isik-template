@@ -10,6 +10,7 @@ vi.mock('@/components/app-auth/ResetPasswordForm', () => ({
     return null
   },
 }))
+vi.mock('@/lib/getSession', () => ({ getLanguage: async () => 'en' }))
 
 describe('PasswordResetPage', () => {
   it('renders the title', async () => {

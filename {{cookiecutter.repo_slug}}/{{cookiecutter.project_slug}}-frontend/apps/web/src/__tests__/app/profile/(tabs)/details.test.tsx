@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 const requireSession = vi.fn()
-vi.mock('@/lib/getSession', () => ({ requireSession: () => requireSession() }))
+vi.mock('@/lib/getSession', () => ({ requireSession: () => requireSession(), getLanguage: async () => 'en' }))
 
 describe('ProfileDetailsPage', () => {
   it("renders the visitor's username and email", async () => {

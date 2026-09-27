@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }))
+vi.mock('@/lib/getSession', () => ({ getLanguage: async () => 'en' }))
 
 describe('ForgotPasswordPage', () => {
   it('renders the title, description and form', async () => {

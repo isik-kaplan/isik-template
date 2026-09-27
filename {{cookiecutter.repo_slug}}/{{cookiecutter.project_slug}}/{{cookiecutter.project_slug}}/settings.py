@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import sentry_sdk
+from django.conf.locale import LANG_INFO
 
 from .config import CONFIG as config  # Django thinks CONFIG is a setting if it is all caps  # NOQA
 
@@ -98,6 +99,9 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    # After AuthenticationMiddleware, whose request.user it reads - the signed-in user's saved
+    # language wins over the browser's, so this can't just be Django's own LocaleMiddleware.
+    "apps.common.middleware.language.UserLanguageMiddleware",
     # After AuthenticationMiddleware/AccountMiddleware, whose request.user it reads - opens the
     # pghistory context every tracked write in this request stamps its actor from, and what a
     # Celery task dispatched from here reads via open_history_context() to carry that actor along.
@@ -187,6 +191,9 @@ USERSESSIONS_TRACK_ACTIVITY = False
 
 HEADLESS_ONLY = True
 HEADLESS_SERVE_SPECIFICATION = True
+# Adds "language" to the session/user payload the frontend already fetches on every page load -
+# see apps/users/headless.py for why this needs the adapter, not a plain serializer field.
+HEADLESS_ADAPTER = "apps.users.headless.HeadlessAdapter"
 
 FRONTEND_SCHEME = "http" if DEBUG else "https"
 FRONTEND_ORIGIN = f"{FRONTEND_SCHEME}://{config.DOMAIN}"
@@ -262,7 +269,18 @@ SOCIALACCOUNT_PROVIDERS = {
     provider_id: {"APPS": [_social_app_config(provider_id)]} for provider_id in SOCIAL_LOGIN_PROVIDER_IDS
 }
 
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "en"
+# Names come from Django's own LANG_INFO, not hand-typed here, so this list can't drift from what
+# LocaleMiddleware/get_language_from_request actually recognize.
+LANGUAGES = [
+    (code, LANG_INFO[code]["name"])
+    for code in [
+{%- for code in cookiecutter.languages.split(',') %}
+        "{{ code.strip() }}",
+{%- endfor %}
+    ]
+]
+LOCALE_PATHS = [BASE_DIR / "locale"]
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True

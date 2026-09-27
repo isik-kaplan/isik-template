@@ -1,7 +1,9 @@
 import ProviderErrorPage from '@/app/auth/provider-error/page'
 
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+vi.mock('@/lib/getSession', () => ({ getLanguage: async () => 'en' }))
 
 describe('ProviderErrorPage', () => {
   it('shows the generic error and a link back to login by default', async () => {

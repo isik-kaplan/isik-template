@@ -36,7 +36,23 @@ describe('getSession', () => {
     expect(await getSessionState()).toEqual({
       session: { user: { id: '1', username: 'jane', email: 'j@test.test' } },
       pendingProviderSignup: false,
+      language: 'en',
     })
+  })
+
+  it("resolves language from the session user's own saved preference", async () => {
+    sessionMock.mockResolvedValue({ data: { data: { user: { id: '1', username: 'jane', language: 'en' } } } })
+    const { getLanguage } = await freshGetSession()
+
+    expect(await getLanguage()).toBe('en')
+  })
+
+  it('resolves language from the Accept-Language header when there is no session', async () => {
+    headersMock.mockReturnValue(new Headers({ cookie: 'sessionid=abc', 'accept-language': 'en' }))
+    sessionMock.mockResolvedValue({ error: { data: {} } })
+    const { getLanguage } = await freshGetSession()
+
+    expect(await getLanguage()).toBe('en')
   })
 
   it('resolves the auth origin with the local-dev-host detector', async () => {
@@ -83,42 +99,42 @@ describe('getSession', () => {
     })
     const { getSessionState } = await freshGetSession()
 
-    expect(await getSessionState()).toEqual({ session: null, pendingProviderSignup: true })
+    expect(await getSessionState()).toEqual({ session: null, pendingProviderSignup: true, language: 'en' })
   })
 
   it('does not report a pending provider signup for an unrelated flow', async () => {
     sessionMock.mockResolvedValue({ error: { data: { flows: [{ id: 'something_else' }] } } })
     const { getSessionState } = await freshGetSession()
 
-    expect(await getSessionState()).toEqual({ session: null, pendingProviderSignup: false })
+    expect(await getSessionState()).toEqual({ session: null, pendingProviderSignup: false, language: 'en' })
   })
 
   it('does not report a pending provider signup when there is no error at all', async () => {
     sessionMock.mockResolvedValue({ error: undefined })
     const { getSessionState } = await freshGetSession()
 
-    expect(await getSessionState()).toEqual({ session: null, pendingProviderSignup: false })
+    expect(await getSessionState()).toEqual({ session: null, pendingProviderSignup: false, language: 'en' })
   })
 
   it('does not report a pending provider signup when the refusal has no data', async () => {
     sessionMock.mockResolvedValue({ error: {} })
     const { getSessionState } = await freshGetSession()
 
-    expect(await getSessionState()).toEqual({ session: null, pendingProviderSignup: false })
+    expect(await getSessionState()).toEqual({ session: null, pendingProviderSignup: false, language: 'en' })
   })
 
   it('does not report a pending provider signup when the refusal has no flows', async () => {
     sessionMock.mockResolvedValue({ error: { data: {} } })
     const { getSessionState } = await freshGetSession()
 
-    expect(await getSessionState()).toEqual({ session: null, pendingProviderSignup: false })
+    expect(await getSessionState()).toEqual({ session: null, pendingProviderSignup: false, language: 'en' })
   })
 
   it('treats an unreachable backend as logged out rather than failing the render', async () => {
     sessionMock.mockRejectedValue(new Error('network down'))
     const { getSessionState } = await freshGetSession()
 
-    expect(await getSessionState()).toEqual({ session: null, pendingProviderSignup: false })
+    expect(await getSessionState()).toEqual({ session: null, pendingProviderSignup: false, language: 'en' })
     expect(unstable_rethrow).toHaveBeenCalled()
   })
 

@@ -4,7 +4,10 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 const getSession = vi.fn()
-vi.mock('@/lib/getSession', () => ({ getSession: (...args: unknown[]) => getSession(...args) }))
+vi.mock('@/lib/getSession', () => ({
+  getSession: (...args: unknown[]) => getSession(...args),
+  getLanguage: async () => 'en',
+}))
 vi.mock('@/app/monkeypatches', () => ({ default: () => <div data-testid="monkeypatches" /> }))
 vi.mock('@/config/public', () => ({ PublicConfigScript: () => <div data-testid="public-config-script" /> }))
 

@@ -15,4 +15,16 @@ describe('useTranslation (server)', () => {
 
     expect(first.i18n).not.toBe(second.i18n)
   })
+
+  it('defaults to English when no language is given', async () => {
+    const { t } = await useTranslation(['auth'])
+
+    expect(t('auth:loginTitle')).toBe('Log in')
+  })
+
+  it('honors an explicitly given language', async () => {
+    const { t } = await useTranslation(['auth'], 'en')
+
+    expect(t('auth:loginTitle')).toBe('Log in')
+  })
 })

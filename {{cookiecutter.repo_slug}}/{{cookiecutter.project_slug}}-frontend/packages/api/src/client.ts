@@ -45,6 +45,10 @@ export class Api {
     return this.client.GET('/v0/users/me/')
   }
 
+  async updateMe(data: paths['/v0/users/me/']['patch']['requestBody']['content']['application/json']) {
+    return this.client.PATCH('/v0/users/me/', { body: data })
+  }
+
   async users(params?: { page?: number; page_size?: number }) {
     return this.client.GET('/v0/users/', { params: { query: params } })
   }

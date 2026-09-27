@@ -14,6 +14,13 @@ Authentik instance for social login) covering the full auth surface end to end.
 `/v0/users/history/` (password changes recorded, never served) and named by whoever caused
 them - a request's session, or, via `HistoryContextTask`, a Celery task the request dispatched.
 
+Every string is authored in English and everything (backend error/admin copy, web, mobile) is
+translatable via `LANGUAGES`/`LocaleMiddleware`-equivalent wiring and i18next; the active language
+is a signed-in `User.language` preference, falling back to the browser's own `Accept-Language` -
+never a URL segment. `languages` (cookiecutter) names which languages a generated project ships;
+`en` is always first and any others get real, empty catalogs scaffolded (not machine-translated) -
+see the generated project's own `post_gen_project.py` printout for exactly which files to fill in.
+
 ## Usage
 
 ```
@@ -23,6 +30,11 @@ uvx cookiecutter gh:isik-kaplan/isik-template
 You'll be prompted for `project_name`, `description`, `author_name`, `author_email`, `domain`, and
 `social_login_providers` - none of these have defaults; they're the choices that actually shape the
 generated project. See `cookiecutter.json` for every field.
+
+`languages` (default `en`) is a comma-separated list of ISO codes, `en` always first - e.g.
+`en,tr`. It drives the backend's `LANGUAGES`, the frontend's i18next resources, and which languages
+a signed-in user can pick between; see the generated project's own `README.md` for what an extra
+language actually needs filled in before it ships.
 
 Login/signup/connections buttons get a real brand icon for the providers the frontend bundles one
 for (google, apple, github, microsoft, facebook, slack, twitter_oauth2, linkedin_oauth2); every
@@ -34,8 +46,9 @@ one - `provider_id=url-or-path` pairs, comma-separated, e.g.
 frontend, against the backend's existing `allauth.headless` app client (token-based, no cookies) -
 login/signup/session/logout, password reset, a `profile/` section (account details, emails,
 password, connected accounts, active sessions), native Sign in with Google/Apple where
-`social_login_providers` configures them, and i18n infrastructure (English only for now, via
-i18next/react-i18next). The two screens web reaches only via an email link
+`social_login_providers` configures them, and i18next/react-i18next wired to the device's own
+locale (falling back to English), same `languages` list as the backend and web. The two screens
+web reaches only via an email link
 (`password-reset/[key]`, `verify-email/[key]`) are deliberately not mirrored here - allauth's
 `HEADLESS_FRONTEND_URLS` points every such link at the web app's fixed origin regardless of which
 client requested it, so a mobile version of those routes would never actually be opened. Unlike

@@ -18,6 +18,13 @@ class UserViewSet(HistoryMixin, BaseModelViewSet):
     # HistoryMixin's own default assumes an integer actor pk - User.id is a uuid7.
     extra_history_filters = {"actor": context_filter("user", filter_cls=CharFilter)}
 
-    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=["get", "patch"], permission_classes=[IsAuthenticated])
     def me(self, request):
+        # PATCH is how a user changes their own language preference (or name) - username/email
+        # stay untouchable here too, via UserSerializer's own create_only_fields.
+        if request.method == "PATCH":
+            serializer = self.get_serializer(request.user, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
         return Response(self.get_serializer(request.user).data)

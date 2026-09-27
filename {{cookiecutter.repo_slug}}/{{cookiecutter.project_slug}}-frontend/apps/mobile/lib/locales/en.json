@@ -47,6 +47,8 @@
   "profileDetailsHeading": "Account details",
   "profileDetailsUsernameLabel": "Username",
   "profileDetailsEmailLabel": "Email",
+  "profileDetailsLanguageLabel": "Language",
+  "profileDetailsLanguageDefault": "Device default",
 
   "profilePasswordHeading": "Change password",
   "profilePasswordCurrentPlaceholder": "Current password",

@@ -34,6 +34,20 @@ KNOWN_PROVIDERS = {
     "zoom",
 }
 
+# django.conf.locale.LANG_INFO keys (Django 5.2) - the generated project's own settings.py builds
+# its LANGUAGES display names from that same dict, but this hook's environment has no Django
+# installed to import it from, so the codes are mirrored here instead, same as KNOWN_PROVIDERS above.
+KNOWN_LANGUAGES = {
+    "af", "ar", "ar-dz", "ast", "az", "be", "bg", "bn", "br", "bs", "ca", "ckb", "cs", "cy", "da",
+    "de", "dsb", "el", "en", "en-au", "en-gb", "eo", "es", "es-ar", "es-co", "es-mx", "es-ni",
+    "es-ve", "et", "eu", "fa", "fi", "fr", "fy", "ga", "gd", "gl", "he", "hi", "hr", "hsb", "ht",
+    "hu", "hy", "ia", "id", "ig", "io", "is", "it", "ja", "ka", "kab", "kk", "km", "kn", "ko", "ky",
+    "lb", "lt", "lv", "mk", "ml", "mn", "mr", "ms", "my", "nb", "ne", "nl", "nn", "no", "os", "pa",
+    "pl", "pt", "pt-br", "ro", "ru", "sk", "sl", "sq", "sr", "sr-latn", "sv", "sw", "ta", "te",
+    "tg", "th", "tk", "tr", "tt", "udm", "ug", "uk", "ur", "uz", "vi", "zh-cn", "zh-hans",
+    "zh-hant", "zh-hk", "zh-mo", "zh-my", "zh-sg", "zh-tw",
+}
+
 
 def validate_required_fields(**fields: str) -> None:
     for field_name, value in fields.items():
@@ -115,6 +129,28 @@ def validate_provider_icons(social_login_provider_icons: str, requested_provider
             )
 
 
+def parse_requested_languages(languages: str) -> list[str]:
+    return [code.strip() for code in languages.split(",") if code.strip()]
+
+
+def validate_requested_languages(requested_languages: list[str]) -> None:
+    if not requested_languages:
+        raise AnswersInvalid("'languages' must list at least one language code, e.g. 'en' or 'en,tr'.")
+    if requested_languages[0] != "en":
+        raise AnswersInvalid(
+            f"'languages' ({', '.join(requested_languages)}) must start with 'en' - every string in this "
+            "template is authored in English first; other languages are translated from it, never instead of it."
+        )
+    duplicates = sorted({code for code in requested_languages if requested_languages.count(code) > 1})
+    if duplicates:
+        raise AnswersInvalid(f"'languages' lists the same language more than once: {', '.join(duplicates)}.")
+    unknown = sorted(set(requested_languages) - KNOWN_LANGUAGES)
+    if unknown:
+        raise AnswersInvalid(
+            f"Unknown languages: {', '.join(unknown)}. Valid values: {', '.join(sorted(KNOWN_LANGUAGES))}."
+        )
+
+
 def validate_answers(
     *,
     project_name: str,
@@ -124,6 +160,7 @@ def validate_answers(
     domain: str,
     social_login_providers: str,
     social_login_provider_icons: str,
+    languages: str = "en",
 ) -> None:
     validate_required_fields(
         project_name=project_name,
@@ -139,3 +176,4 @@ def validate_answers(
     requested_providers = parse_requested_providers(social_login_providers)
     validate_requested_providers(requested_providers)
     validate_provider_icons(social_login_provider_icons, requested_providers)
+    validate_requested_languages(parse_requested_languages(languages))

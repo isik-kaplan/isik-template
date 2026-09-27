@@ -1,6 +1,6 @@
 'use client'
 
-import { useClientTranslation } from '@/i18n'
+import { useClientTranslation } from '@/i18n/client'
 import { SOCIAL_PROVIDERS } from '@/lib/socialProviders'
 
 import { AutoFormButton } from './AutoFormButton'

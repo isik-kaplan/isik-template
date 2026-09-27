@@ -4,7 +4,10 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 const getSession = vi.fn()
-vi.mock('@/lib/getSession', () => ({ getSession: (...args: unknown[]) => getSession(...args) }))
+vi.mock('@/lib/getSession', () => ({
+  getSession: (...args: unknown[]) => getSession(...args),
+  getLanguage: async () => 'en',
+}))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }))
 
 describe('HomePage', () => {

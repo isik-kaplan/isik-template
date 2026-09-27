@@ -7,7 +7,7 @@ import { useState } from 'react'
 import { Badge } from '@/components/base/badge'
 import { Button } from '@/components/base/button'
 
-import { useClientTranslation } from '@/i18n'
+import { useClientTranslation } from '@/i18n/client'
 import { authOrigin } from '@/lib/authOrigin'
 import { formatUserAgent } from '@/lib/formatUserAgent'
 
