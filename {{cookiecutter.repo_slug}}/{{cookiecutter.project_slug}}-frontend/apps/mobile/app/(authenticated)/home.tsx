@@ -1,30 +1,29 @@
 import { useEffect, useState } from 'react'
 
+import { Button, Heading, Screen } from '@/components'
+
+import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
 
+import { useIsMounted } from '@isikk/core/hooks'
 import { router } from 'expo-router'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
 
 export default function Home() {
+  const { t } = useTranslation()
   const [email, setEmail] = useState<string | undefined>()
+  const isMounted = useIsMounted()
 
-  // Every mutant on this guard (and the cleanup/deps around it) is equivalent, not uncovered:
-  // React 18+ silently drops a setState call after unmount instead of warning about it, so
-  // nothing here is observable from a test either way - see lib/useAuthenticated.ts, the same
-  // pattern, confirmed directly against this exact React/testing-library version.
-  // Stryker disable ConditionalExpression,BlockStatement,BooleanLiteral,ArrayDeclaration
+  // Equivalent mutant either way, both the guard and the deps array - see
+  // lib/useAuthenticated.ts's own copy of this same effect for why.
+  // Stryker disable ArrayDeclaration,ConditionalExpression
   useEffect(() => {
-    let cancelled = false
     getAuthApi()
       .session()
       .then(({ data }) => {
-        if (!cancelled) setEmail(data?.data.user.email)
+        if (isMounted()) setEmail(data?.data.user.email)
       })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-  // Stryker restore ConditionalExpression,BlockStatement,BooleanLiteral,ArrayDeclaration
+  }, [isMounted])
+  // Stryker restore ArrayDeclaration,ConditionalExpression
 
   async function logout() {
     await getAuthApi().logout()
@@ -32,22 +31,15 @@ export default function Home() {
   }
 
   return (
-    <View testID="home-container" style={styles.container}>
-      <Text testID="home-heading" accessibilityRole="header" style={styles.heading}>
-        You&apos;re logged in{email ? ` as ${email}` : ''}
-      </Text>
-      <Pressable testID="logout-button" onPress={logout} style={styles.button}>
-        <Text testID="logout-button-label" style={styles.buttonText}>
-          Log out
-        </Text>
-      </Pressable>
-    </View>
+    <Screen testID="home-container">
+      <Heading testID="home-heading">{email ? t('homeHeadingWithEmail', { email }) : t('homeHeading')}</Heading>
+      <Button
+        testID="profile-link"
+        labelTestID="profile-link-label"
+        onPress={() => router.push('/profile')}
+        label={t('homeProfileLink')}
+      />
+      <Button testID="logout-button" labelTestID="logout-button-label" onPress={logout} label={t('homeLogout')} />
+    </Screen>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 24, gap: 12 },
-  heading: { fontSize: 24, fontWeight: 'bold' },
-  button: { backgroundColor: 'black', borderRadius: 8, padding: 12, alignItems: 'center' },
-  buttonText: { color: 'white' },
-})

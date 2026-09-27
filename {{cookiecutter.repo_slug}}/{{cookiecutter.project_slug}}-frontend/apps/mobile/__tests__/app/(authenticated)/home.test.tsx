@@ -7,7 +7,10 @@ const mockLogout = jest.fn()
 jest.mock('@/lib/session', () => ({ getAuthApi: () => ({ session: () => mockSession(), logout: () => mockLogout() }) }))
 
 const mockReplace = jest.fn()
-jest.mock('expo-router', () => ({ router: { replace: (...args: unknown[]) => mockReplace(...args) } }))
+const mockPush = jest.fn()
+jest.mock('expo-router', () => ({
+  router: { replace: (...args: unknown[]) => mockReplace(...args), push: (...args: unknown[]) => mockPush(...args) },
+}))
 
 describe('Home', () => {
   beforeEach(() => jest.clearAllMocks())
@@ -78,5 +81,19 @@ describe('Home', () => {
     await fireEvent.press(screen.getByTestId('logout-button'))
     await waitFor(() => expect(mockLogout).toHaveBeenCalled())
     expect(mockReplace).toHaveBeenCalledWith('/login')
+  })
+
+  it('navigates to the profile screen', async () => {
+    mockSession.mockResolvedValue({ data: undefined })
+    await render(<Home />)
+    await fireEvent.press(screen.getByTestId('profile-link'))
+    expect(mockPush).toHaveBeenCalledWith('/profile')
+  })
+
+  it('shows the profile and logout button labels', async () => {
+    mockSession.mockResolvedValue({ data: undefined })
+    await render(<Home />)
+    expect(screen.getByTestId('profile-link-label').props.children).toBe('Profile')
+    expect(screen.getByTestId('logout-button-label').props.children).toBe('Log out')
   })
 })

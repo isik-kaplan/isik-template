@@ -12,11 +12,16 @@
   },
   "dependencies": {
     "@{{ cookiecutter.repo_slug }}/auth-api": "*",
+    "@isikk/core": "^{{ cookiecutter.isikk_core_version }}",
+    "@react-native-google-signin/google-signin": "^16.1.5",
     "expo": "~57.0.25",
+    "expo-apple-authentication": "~57.0.2",
     "expo-router": "~57.0.23",
     "expo-secure-store": "~57.0.4",
     "expo-status-bar": "~57.0.1",
+    "i18next": "^26.4.2",
     "react": "^19.2.3",
+    "react-i18next": "^17.0.15",
     "react-native": "0.86.3",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0"

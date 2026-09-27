@@ -1,0 +1,78 @@
+{
+  "emailPlaceholder": "Email",
+  "passwordPlaceholder": "Password",
+  "usernamePlaceholder": "Username",
+
+  "loginHeading": "Log in",
+  "loginSubmit": "Log in",
+  "loginSubmitting": "Logging in…",
+  "loginError": "Could not log in - check your email and password.",
+  "loginSignupLink": "Need an account? Sign up",
+  "loginForgotPasswordLink": "Forgot password?",
+
+  "signupHeading": "Sign up",
+  "signupSubmit": "Sign up",
+  "signupSubmitting": "Signing up…",
+  "signupError": "Could not sign up - check the fields above.",
+  "signupLoginLink": "Already have an account? Log in",
+
+  "forgotPasswordHeading": "Forgot password",
+  "forgotPasswordSubmit": "Send reset link",
+  "forgotPasswordSubmitting": "Sending…",
+  "forgotPasswordSentHeading": "Check your email",
+  "forgotPasswordSentMessage": "If an account exists for {{email}}, we've sent a link to reset the password.",
+  "backToLoginLink": "Back to log in",
+
+  "completeSignupHeading": "Finish setting up your account",
+  "completeSignupSubmit": "Finish signing up",
+  "completeSignupSubmitting": "Saving…",
+
+  "homeHeading": "You're logged in",
+  "homeHeadingWithEmail": "You're logged in as {{email}}",
+  "homeProfileLink": "Profile",
+  "homeLogout": "Log out",
+
+  "socialLoginGoogle": "Continue with Google",
+  "socialLoginApple": "Continue with Apple",
+  "socialLoginError": "Could not sign in - please try again.",
+
+  "profileMenuHeading": "Profile",
+  "profileDetailsLinkLabel": "Account details",
+  "profileEmailsLinkLabel": "Email addresses",
+  "profilePasswordLinkLabel": "Change password",
+  "profileConnectionsLinkLabel": "Connected accounts",
+  "profileSessionsLinkLabel": "Active sessions",
+
+  "profileDetailsHeading": "Account details",
+  "profileDetailsUsernameLabel": "Username",
+  "profileDetailsEmailLabel": "Email",
+
+  "profilePasswordHeading": "Change password",
+  "profilePasswordCurrentPlaceholder": "Current password",
+  "profilePasswordNewPlaceholder": "New password",
+  "profilePasswordError": "Could not change the password - check the fields above.",
+  "profilePasswordSuccess": "Password changed.",
+  "profilePasswordSubmit": "Save",
+  "profilePasswordSubmitting": "Saving…",
+
+  "profileEmailsHeading": "Email addresses",
+  "profileEmailsPrimarySuffix": " (primary)",
+  "profileEmailsUnverifiedSuffix": " (unverified)",
+  "profileEmailsMakePrimary": "Make primary",
+  "profileEmailsResend": "Resend",
+  "profileEmailsRemove": "Remove",
+  "profileEmailsAddPlaceholder": "Add an email",
+  "profileEmailsAddError": "Could not add that email.",
+  "profileEmailsAdd": "Add email",
+  "profileEmailsAdding": "Adding…",
+
+  "profileSessionsHeading": "Active sessions",
+  "profileSessionsThisDeviceSuffix": " (this device)",
+  "profileSessionsRevoke": "Revoke",
+  "profileSessionsRevoking": "Revoking…",
+  "profileSessionsRevokeOthers": "Log out other sessions",
+
+  "profileConnectionsHeading": "Connected accounts",
+  "profileConnectionsEmpty": "No connected accounts yet.",
+  "profileConnectionsDisconnect": "Disconnect"
+}

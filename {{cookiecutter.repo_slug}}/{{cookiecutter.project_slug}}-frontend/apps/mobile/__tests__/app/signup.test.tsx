@@ -35,6 +35,14 @@ describe('Signup', () => {
     expect(screen.getByTestId('password-input').props.value).toBe('')
   })
 
+  it('shows the heading and input placeholders', async () => {
+    await render(<Signup />)
+    expect(screen.getByTestId('signup-heading').props.children).toBe('Sign up')
+    expect(screen.getByTestId('username-input').props.placeholder).toBe('Username')
+    expect(screen.getByTestId('email-input').props.placeholder).toBe('Email')
+    expect(screen.getByTestId('password-input').props.placeholder).toBe('Password')
+  })
+
   it('shows the idle "Sign up" label before any submission', async () => {
     await render(<Signup />)
     expect(screen.getByTestId('signup-submit-label').props.children).toBe('Sign up')
@@ -152,5 +160,6 @@ describe('Signup', () => {
   it('links to the login screen', async () => {
     await render(<Signup />)
     expect(screen.getByTestId('login-link')).toBeTruthy()
+    expect(screen.getByText('Already have an account? Log in')).toBeTruthy()
   })
 })

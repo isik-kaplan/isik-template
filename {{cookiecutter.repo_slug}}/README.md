@@ -44,6 +44,15 @@ EXPO_PUBLIC_API_ORIGIN=http://api.{{ cookiecutter.domain }} EXPO_PUBLIC_AUTH_ORI
 The iOS Simulator shares this machine's own `/etc/hosts`, so the domain above works as-is. A
 physical device or the Android emulator doesn't - point at this machine's LAN IP instead (or
 `10.0.2.2` for the Android emulator specifically).
+{% if 'google' in cookiecutter.social_login_providers.split(',') or 'apple' in cookiecutter.social_login_providers.split(',') or cookiecutter.social_login_providers.strip() == 'all' %}
+Native Google/Apple sign-in (`apps/mobile/lib/nativeSignIn.ts`) needs a custom dev client, not
+Expo Go - `npx expo run:ios` / `npx expo run:android` (or an EAS development build) after adding
+your own real credentials: a Google OAuth iOS client ID (its reversed form as `iosUrlScheme` in
+`app.config.ts`'s `@react-native-google-signin/google-signin` plugin entry) and, for Apple, a
+provisioning profile with the Sign in with Apple capability enabled. Until those exist, the
+buttons render (when `social_login_providers` includes `google`/`apple`) but the native pickers
+will fail to open.
+{% endif %}
 {% endif %}
 ## Testing
 

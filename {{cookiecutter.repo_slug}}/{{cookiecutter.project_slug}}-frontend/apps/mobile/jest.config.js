@@ -6,7 +6,13 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
-  collectCoverageFrom: ['app/**/*.{ts,tsx}', 'lib/**/*.{ts,tsx}', '!**/__tests__/**'],
+  collectCoverageFrom: [
+    'app/**/*.{ts,tsx}',
+    'lib/**/*.{ts,tsx}',
+    'components/**/*.{ts,tsx}',
+    'theme/**/*.{ts,tsx}',
+    '!**/__tests__/**',
+  ],
   coverageThreshold: {
     global: { statements: 100, branches: 100, functions: 100, lines: 100 },
   },

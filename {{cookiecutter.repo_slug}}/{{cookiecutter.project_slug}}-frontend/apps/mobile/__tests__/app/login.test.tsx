@@ -33,6 +33,13 @@ describe('Login', () => {
     expect(screen.getByTestId('password-input').props.value).toBe('')
   })
 
+  it('shows the heading and input placeholders', async () => {
+    await render(<Login />)
+    expect(screen.getByTestId('login-heading').props.children).toBe('Log in')
+    expect(screen.getByTestId('email-input').props.placeholder).toBe('Email')
+    expect(screen.getByTestId('password-input').props.placeholder).toBe('Password')
+  })
+
   it('shows the idle "Log in" label before any submission', async () => {
     await render(<Login />)
     expect(screen.getByTestId('login-submit-label').props.children).toBe('Log in')
@@ -149,5 +156,12 @@ describe('Login', () => {
   it('links to the signup screen', async () => {
     await render(<Login />)
     expect(screen.getByTestId('signup-link')).toBeTruthy()
+    expect(screen.getByText('Need an account? Sign up')).toBeTruthy()
+  })
+
+  it('links to the forgot-password screen', async () => {
+    await render(<Login />)
+    expect(screen.getByTestId('forgot-password-link')).toBeTruthy()
+    expect(screen.getByText('Forgot password?')).toBeTruthy()
   })
 })

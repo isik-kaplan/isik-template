@@ -83,4 +83,85 @@ export class AppAuthApi {
     await this.setToken(null)
     return result
   }
+
+  async requestPasswordReset(email: string) {
+    return this.client.POST('/v0/app/v1/auth/password/request', { body: { email } })
+  }
+
+  async resetPassword(key: string, password: string) {
+    return this.client.POST('/v0/app/v1/auth/password/reset', { body: { key, password } })
+  }
+
+  async changePassword(data: { current_password?: string; new_password: string }) {
+    return this.client.POST('/v0/app/v1/account/password/change', { body: data })
+  }
+
+  async verifyEmail(key: string) {
+    return this.client.POST('/v0/app/v1/auth/email/verify', { body: { key } })
+  }
+
+  async emails() {
+    return this.client.GET('/v0/app/v1/account/email')
+  }
+
+  async addEmail(email: string) {
+    return this.client.POST('/v0/app/v1/account/email', { body: { email } })
+  }
+
+  async removeEmail(email: string) {
+    return this.client.DELETE('/v0/app/v1/account/email', { body: { email } })
+  }
+
+  async makeEmailPrimary(email: string) {
+    return this.client.PATCH('/v0/app/v1/account/email', { body: { email, primary: true } })
+  }
+
+  async resendEmailVerification(email: string) {
+    return this.client.PUT('/v0/app/v1/account/email', { body: { email } })
+  }
+
+  async providers() {
+    return this.client.GET('/v0/app/v1/account/providers')
+  }
+
+  async disconnectProvider(provider: string, account: string) {
+    return this.client.DELETE('/v0/app/v1/account/providers', { body: { provider, account } })
+  }
+
+  async sessions() {
+    return this.client.GET('/v0/app/v1/auth/sessions')
+  }
+
+  // Ending the current session logs this device out too, so the response can come back
+  // unauthenticated - callers should re-check rather than assume a session list.
+  async endSessions(sessions: number[]) {
+    return this.client.DELETE('/v0/app/v1/auth/sessions', { body: { sessions } })
+  }
+
+  // "Sign out everywhere else" is a filter over the list, not its own endpoint. Returns the list
+  // untouched when this is the only session: allauth's `sessions` field is required, so an empty
+  // array is a 400 rather than a no-op.
+  async endOtherSessions() {
+    const listed = await this.sessions()
+    const others = (listed.data?.data ?? []).filter((session) => !session.is_current)
+    if (others.length === 0) {
+      return listed
+    }
+    return this.endSessions(others.map((session) => session.id))
+  }
+
+  async pendingProviderSignup() {
+    return this.client.GET('/v0/app/v1/auth/provider/signup')
+  }
+
+  async completeProviderSignup(data: { username: string; email: string; password?: string }) {
+    return this.client.POST('/v0/app/v1/auth/provider/signup', { body: data })
+  }
+
+  // Native SDK sign-in (Sign in with Apple / Google's own on-device flow) hands back a provider
+  // ID token directly - no redirect, so nothing here needs a callback URL the way the browser's
+  // auth/provider/redirect does.
+  async loginWithProviderToken(provider: string, token: Record<string, unknown>) {
+    return this.client.POST('/v0/app/v1/auth/provider/token', { body: { provider, process: 'login', token } })
+  }
 }

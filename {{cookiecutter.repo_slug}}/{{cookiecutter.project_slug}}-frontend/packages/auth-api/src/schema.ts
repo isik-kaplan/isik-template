@@ -153,7 +153,7 @@ export interface paths {
     }
   }
   // The app client's own tree, same endpoints as their /v0/browser/v1 counterparts above (allauth
-  // mounts both from one implementation) - only the three AppAuthApi (src/app.ts) actually uses.
+  // mounts both from one implementation) - AppAuthApi (src/app.ts) uses all of these.
   '/v0/app/v1/auth/session': {
     get: { responses: { 200: { content: { 'application/json': AppSessionOk } }; 401: { content: { 'application/json': AppSessionErr } } } }
     delete: { responses: { 200: { content: { 'application/json': AppSessionOk } } } }
@@ -168,6 +168,103 @@ export interface paths {
     post: {
       requestBody: { content: { 'application/json': { username: string; email: string; password: string } } }
       responses: { 200: { content: { 'application/json': AppSessionOk } }; 401: { content: { 'application/json': AppSessionErr } } }
+    }
+  }
+  '/v0/app/v1/auth/password/request': {
+    post: { requestBody: { content: { 'application/json': { email: string } } }; responses: { 200: { content: { 'application/json': unknown } } } }
+  }
+  '/v0/app/v1/auth/password/reset': {
+    post: {
+      requestBody: { content: { 'application/json': { key: string; password: string } } }
+      responses: { 200: { content: { 'application/json': AppSessionOk } }; 401: { content: { 'application/json': AppSessionErr } } }
+    }
+  }
+  '/v0/app/v1/auth/email/verify': {
+    post: {
+      requestBody: { content: { 'application/json': { key: string } } }
+      responses: { 200: { content: { 'application/json': AppSessionOk } }; 401: { content: { 'application/json': AppSessionErr } } }
+    }
+  }
+  '/v0/app/v1/account/password/change': {
+    post: {
+      requestBody: { content: { 'application/json': { current_password?: string; new_password: string } } }
+      responses: { 200: { content: { 'application/json': unknown } } }
+    }
+  }
+  '/v0/app/v1/account/email': {
+    get: { responses: { 200: { content: { 'application/json': { data: EmailAddress[] } } } } }
+    post: {
+      requestBody: { content: { 'application/json': { email: string } } }
+      responses: {
+        200: { content: { 'application/json': { data: EmailAddress[] } } }
+        400: { content: { 'application/json': ValidationErr } }
+      }
+    }
+    put: { requestBody: { content: { 'application/json': { email: string } } }; responses: { 200: { content: { 'application/json': unknown } } } }
+    patch: {
+      requestBody: { content: { 'application/json': { email: string; primary: boolean } } }
+      responses: {
+        200: { content: { 'application/json': { data: EmailAddress[] } } }
+        400: { content: { 'application/json': ValidationErr } }
+      }
+    }
+    delete: {
+      requestBody: { content: { 'application/json': { email: string } } }
+      responses: {
+        200: { content: { 'application/json': { data: EmailAddress[] } } }
+        400: { content: { 'application/json': ValidationErr } }
+      }
+    }
+  }
+  '/v0/app/v1/account/providers': {
+    get: { responses: { 200: { content: { 'application/json': { data: ProviderAccount[] } } } } }
+    delete: {
+      requestBody: { content: { 'application/json': { provider: string; account: string } } }
+      responses: {
+        200: { content: { 'application/json': { data: ProviderAccount[] } } }
+        400: { content: { 'application/json': ValidationErr } }
+      }
+    }
+  }
+  '/v0/app/v1/auth/sessions': {
+    get: { responses: { 200: { content: { 'application/json': { status: number; data: Session[] } } } } }
+    delete: {
+      requestBody: { content: { 'application/json': { sessions: number[] } } }
+      responses: {
+        200: { content: { 'application/json': { status: number; data: Session[] } } }
+        401: { content: { 'application/json': AppSessionErr } }
+      }
+    }
+  }
+  '/v0/app/v1/auth/provider/signup': {
+    get: {
+      responses: {
+        200: { content: { 'application/json': { status: number; data: { user: User } } } }
+        409: { content: { 'application/json': unknown } }
+      }
+    }
+    post: {
+      requestBody: { content: { 'application/json': { username: string; email: string; password?: string } } }
+      responses: { 200: { content: { 'application/json': AppSessionOk } }; 401: { content: { 'application/json': AppSessionErr } } }
+    }
+  }
+  // Token-based social login (Sign in with Apple / Google's native sign-in) - the mobile
+  // counterpart to the browser's redirect-based auth/provider/redirect, which a native app has no
+  // use for (no address bar to redirect). Same AppSessionOk/Err shape as login/signup: a first-ever
+  // signup still lands in the same pending auth/provider/signup flow above, not automatically
+  // authenticated (SOCIALACCOUNT_AUTO_SIGNUP is off).
+  '/v0/app/v1/auth/provider/token': {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': { provider: string; process: 'login'; token: Record<string, unknown> }
+        }
+      }
+      responses: {
+        200: { content: { 'application/json': AppSessionOk } }
+        400: { content: { 'application/json': ValidationErr } }
+        401: { content: { 'application/json': AppSessionErr } }
+      }
     }
   }
 }

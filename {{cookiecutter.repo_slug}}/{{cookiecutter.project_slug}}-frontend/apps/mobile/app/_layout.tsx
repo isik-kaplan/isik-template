@@ -1,3 +1,8 @@
+// Side-effect only: runs i18next's init once for the real app entry point. Each screen also
+// imports useTranslation from here rather than from react-i18next directly, which triggers the
+// same init for a screen rendered on its own in a test - see that module's own comment.
+import '@/lib/i18n'
+
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 

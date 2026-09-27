@@ -27,10 +27,16 @@ one - `provider_id=url-or-path` pairs, comma-separated, e.g.
 `openid_connect=/icons/my-idp.svg` for a file dropped into `apps/web/public/`, or any full URL.
 
 `include_mobile` (default `n`) adds an Expo/React Native app (`apps/mobile`) alongside the web
-frontend - a minimal auth-only skeleton (login, signup, session check, logout) against the
-backend's existing `allauth.headless` app client (token-based, no cookies), not full parity with
-`apps/web`. Unlike everything else in this template, it's opt-in: most generated projects don't
-want a companion mobile app, unlike (say) Celery, which nearly all of them eventually do.
+frontend, against the backend's existing `allauth.headless` app client (token-based, no cookies) -
+login/signup/session/logout, password reset, a `profile/` section (account details, emails,
+password, connected accounts, active sessions), native Sign in with Google/Apple where
+`social_login_providers` configures them, and i18n infrastructure (English only for now, via
+i18next/react-i18next). The two screens web reaches only via an email link
+(`password-reset/[key]`, `verify-email/[key]`) are deliberately not mirrored here - allauth's
+`HEADLESS_FRONTEND_URLS` points every such link at the web app's fixed origin regardless of which
+client requested it, so a mobile version of those routes would never actually be opened. Unlike
+everything else in this template, `include_mobile` is opt-in: most generated projects don't want a
+companion mobile app, unlike (say) Celery, which nearly all of them eventually do.
 
 ## Developing this template
 
