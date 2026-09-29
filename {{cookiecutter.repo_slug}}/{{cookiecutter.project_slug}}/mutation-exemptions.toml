@@ -70,4 +70,3 @@ real Django shell - django.http.HttpResponse.headers is case-insensitive on both
 (setting via response.headers["content-language"] and reading back response.headers["Content-Language"]
 returns the same value) - so no test, however written, can observe a difference between these three
 spellings. test_the_response_carries_a_content_language_header covers the header's actual value."""
-
