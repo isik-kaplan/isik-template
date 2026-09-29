@@ -1,5 +1,5 @@
-import type { Language } from '@/i18n/config'
 import { i18next, useClientTranslation } from '@/i18n/client'
+import type { Language } from '@/i18n/config'
 import { LanguageProvider } from '@/lib/LanguageContext'
 
 import { render, screen, waitFor } from '@testing-library/react'
