@@ -67,6 +67,18 @@ def test_a_users_language_not_in_the_currently_configured_set_is_ignored(setting
     assert seen["language"] == "en"
 
 
+def test_the_request_itself_carries_the_resolved_language():
+    seen = {}
+
+    def get_response(request):
+        seen["request_language_code"] = request.LANGUAGE_CODE
+        return HttpResponse()
+
+    UserLanguageMiddleware(get_response=get_response)(_request(accept_language="tr", user=_User("")))
+
+    assert seen["request_language_code"] == "tr"
+
+
 def test_the_response_carries_a_content_language_header():
     middleware = UserLanguageMiddleware(get_response=lambda request: HttpResponse())
 

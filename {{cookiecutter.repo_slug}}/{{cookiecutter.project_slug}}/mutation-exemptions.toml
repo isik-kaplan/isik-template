@@ -61,3 +61,13 @@ so every call through it (ping.delay(), ping.apply_async(), ping() itself) reach
 level of indirection mutmut's call-attribution apparently doesn't see through, unlike a plain
 viewset method called directly off an instance. Revisit if a mutmut upgrade changes this, or if a
 task stops being dispatched through a bare Proxy."""
+
+["apps.common.middleware.language.xǁUserLanguageMiddlewareǁ__call__"]
+fingerprint = "6918a09dcbad"
+reason = """Genuinely equivalent, not uncovered: the two surviving mutants change the case of the
+"Content-Language" header name ("content-language", "CONTENT-LANGUAGE"). Confirmed by hand in a
+real Django shell - django.http.HttpResponse.headers is case-insensitive on both write and read
+(setting via response.headers["content-language"] and reading back response.headers["Content-Language"]
+returns the same value) - so no test, however written, can observe a difference between these three
+spellings. test_the_response_carries_a_content_language_header covers the header's actual value."""
+

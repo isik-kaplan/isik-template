@@ -23,11 +23,19 @@ function deviceLanguage(): Language {
   for (const locale of Localization.getLocales()) {
     if (locale.languageCode && isSupported(locale.languageCode)) return locale.languageCode
   }
+  // Stryker disable next-line StringLiteral: equivalent mutant, the same way and for the same
+  // reason as the fallbackLng comment below - i18next resolves an empty lng through fallbackLng
+  // regardless of what this placeholder actually is, landing on "en" either way.
   return 'en'
 }
 
 i18next.use(initReactI18next).init({
   lng: deviceLanguage(),
+  // Stryker disable next-line StringLiteral: equivalent mutant. deviceLanguage() only ever
+  // returns a language this app actually bundles resources for, so a missing *key* inside that
+  // bundle is the only thing fallbackLng could ever catch here - and every key that exists in
+  // "en" exists in every other bundle too (blank until translated, never absent - see
+  // hooks/post_gen_project.py), so that never happens either.
   fallbackLng: 'en',
   resources: { en: { translation: en } },
   interpolation: { escapeValue: false },
