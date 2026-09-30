@@ -19,6 +19,7 @@ from pathlib import Path
 import tomllib
 
 from scripts.mutation_fingerprint import mangled_function
+from scripts.mutmut_decorators import install as install_mutmut_decorators
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -48,6 +49,7 @@ def _in_tree():
     """
     from mutmut.__main__ import mutate_file_contents
 
+    install_mutmut_decorators()
     config = tomllib.loads((ROOT / PYPROJECT_NAME).read_text())["tool"]["mutmut"]
     do_not_mutate = config.get("do_not_mutate", [])
     only_mutate = config.get("only_mutate", [])
