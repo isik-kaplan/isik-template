@@ -37,6 +37,10 @@ describe('LanguageSwitcher', () => {
     const select = screen.getByRole('combobox', { name: 'Language' }) as HTMLSelectElement
     expect(select.value).toBe('en')
     expect(Array.from(select.options).map((option) => option.value)).toEqual(['en', 'tr'])
+    // Each option's own language names itself - "Türkçe", not "Turkish" (that would be English's
+    // name for it, what an empty display-locale falls back to).
+    expect(screen.getByRole('option', { name: 'Türkçe' })).toBeTruthy()
+    expect(screen.getByRole('option', { name: 'English' })).toBeTruthy()
   })
 
   it('saves the new preference and refreshes when a different language is picked', async () => {

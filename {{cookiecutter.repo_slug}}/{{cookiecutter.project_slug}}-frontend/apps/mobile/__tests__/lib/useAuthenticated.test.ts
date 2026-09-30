@@ -33,6 +33,15 @@ describe('useAuthenticated', () => {
     await waitFor(() => expect(result.current).toBe(false))
   })
 
+  it('resolves to false when the refusal itself carries no meta', async () => {
+    // Distinct from the "no meta at all" case above: error is present here, just without its own
+    // meta - dropping error?.meta's own "?." would reach for .is_authenticated on undefined instead
+    // of short-circuiting, throwing rather than falling back to false.
+    mockSession.mockResolvedValue({ error: {} })
+    const { result } = await renderHook(() => useAuthenticated())
+    await waitFor(() => expect(result.current).toBe(false))
+  })
+
   it("syncs i18n to the signed-in user's saved language", async () => {
     mockSession.mockResolvedValue({
       data: { meta: { is_authenticated: true }, data: { user: { id: '1', username: 'jane', language: 'en' } } },

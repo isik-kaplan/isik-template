@@ -24,6 +24,7 @@ describe('ProfileDetails', () => {
     })
     await render(<ProfileDetails />)
     await waitFor(() => expect(screen.getByTestId('profile-details-language').props.children).toBe('en'))
+    expect(screen.getByText('Language')).toBeTruthy()
   })
 
   it('shows the device-default placeholder when the user has no saved preference', async () => {

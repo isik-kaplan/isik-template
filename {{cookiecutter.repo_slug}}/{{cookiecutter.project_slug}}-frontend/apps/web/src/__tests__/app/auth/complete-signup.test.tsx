@@ -1,7 +1,7 @@
 import CompleteSignupPage from '@/app/auth/complete-signup/page'
 
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const pendingProviderSignup = vi.fn()
 const AuthApi = vi.hoisted(() => vi.fn())
@@ -28,6 +28,12 @@ vi.mock('next/navigation', () => ({
 }))
 
 describe('CompleteSignupPage', () => {
+  // Without this, a call recorded by an earlier test (getLanguage()'s own AuthApi construction,
+  // reached only on the non-redirect path) lingers in AuthApi's shared call history and can
+  // satisfy a later test's toHaveBeenCalledWith on its own, regardless of what this page's own
+  // constructor call actually passed.
+  beforeEach(() => AuthApi.mockClear())
+
   it('renders the form with the pending signup data when there is one', async () => {
     pendingProviderSignup.mockResolvedValue({
       data: { data: { user: { email: 'jane@example.test', username: 'jane' } } },
