@@ -31,9 +31,8 @@ import os
 import sys
 from pathlib import Path
 
-import tomllib
-
 import mutmut_decorators
+import tomllib
 
 
 ROOT = Path(__file__).resolve().parent.parent
