@@ -59,6 +59,18 @@ def test_a_user_can_set_their_own_language_preference(client):
 
 
 @pytest.mark.django_db
+def test_patching_me_with_an_unsupported_language_is_rejected(client):
+    user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
+    client.force_login(user)
+
+    response = client.patch("/v0/users/me/", {"language": "xx"}, content_type="application/json")
+
+    assert response.status_code == 400
+    user.refresh_from_db()
+    assert user.language == ""
+
+
+@pytest.mark.django_db
 def test_patching_me_cannot_change_username_or_email(client):
     user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
     client.force_login(user)

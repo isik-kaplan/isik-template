@@ -33,9 +33,14 @@ from pathlib import Path
 
 import tomllib
 
+import mutmut_decorators
+
 
 ROOT = Path(__file__).resolve().parent.parent
 TRAMPOLINE = "mutmut.mutation.trampoline"
+
+# Before anything below asks mutmut to generate a mutant, by any path - see mutmut_decorators.py.
+mutmut_decorators.install()
 
 
 def tree_problems(root=ROOT):
