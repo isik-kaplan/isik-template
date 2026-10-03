@@ -26,7 +26,8 @@ def test_a_signed_in_users_language_wins_over_the_browsers(settings):
     assert seen["language"] == "tr"
 
 
-def test_the_browsers_language_is_used_when_the_user_has_no_preference():
+def test_the_browsers_language_is_used_when_the_user_has_no_preference(settings):
+    settings.LANGUAGES = [("en", "English"), ("tr", "Turkish")]
     seen = {}
     middleware = UserLanguageMiddleware(get_response=_capture(seen))
 
@@ -35,7 +36,8 @@ def test_the_browsers_language_is_used_when_the_user_has_no_preference():
     assert seen["language"] == "tr"
 
 
-def test_anonymous_visitors_get_the_browsers_language_too():
+def test_anonymous_visitors_get_the_browsers_language_too(settings):
+    settings.LANGUAGES = [("en", "English"), ("tr", "Turkish")]
     seen = {}
     middleware = UserLanguageMiddleware(get_response=_capture(seen))
 
@@ -67,7 +69,8 @@ def test_a_users_language_not_in_the_currently_configured_set_is_ignored(setting
     assert seen["language"] == "en"
 
 
-def test_the_request_itself_carries_the_resolved_language():
+def test_the_request_itself_carries_the_resolved_language(settings):
+    settings.LANGUAGES = [("en", "English"), ("tr", "Turkish")]
     seen = {}
 
     def get_response(request):
@@ -79,7 +82,8 @@ def test_the_request_itself_carries_the_resolved_language():
     assert seen["request_language_code"] == "tr"
 
 
-def test_the_response_carries_a_content_language_header():
+def test_the_response_carries_a_content_language_header(settings):
+    settings.LANGUAGES = [("en", "English"), ("tr", "Turkish")]
     middleware = UserLanguageMiddleware(get_response=lambda request: HttpResponse())
 
     response = middleware(_request(accept_language="tr", user=_User("")))

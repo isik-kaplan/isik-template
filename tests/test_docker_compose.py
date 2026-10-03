@@ -5,7 +5,12 @@ import pytest
 from conftest import load_context
 
 
-pytestmark = pytest.mark.skipif(shutil.which("docker") is None, reason="docker not available")
+pytestmark = [
+    pytest.mark.skipif(shutil.which("docker") is None, reason="docker not available"),
+    # Only `docker compose config` here - no image is ever built, so there's nothing for a real
+    # install to do (see conftest.py's skip_lockfile_generation).
+    pytest.mark.usefixtures("skip_lockfile_generation"),
+]
 
 
 def test_docker_compose_config_validates(cookies):

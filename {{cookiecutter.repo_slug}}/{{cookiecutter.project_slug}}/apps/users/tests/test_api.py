@@ -46,7 +46,8 @@ def test_patching_me_requires_authentication(client):
 
 
 @pytest.mark.django_db
-def test_a_user_can_set_their_own_language_preference(client):
+def test_a_user_can_set_their_own_language_preference(client, settings):
+    settings.LANGUAGES = [("en", "English"), ("tr", "Turkish")]
     user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
     client.force_login(user)
 

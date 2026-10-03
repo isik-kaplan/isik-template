@@ -2,6 +2,7 @@
 """Post-generation setup."""
 
 import json
+import os
 import shutil
 import subprocess
 from datetime import datetime, timezone
@@ -196,6 +197,49 @@ def regenerate_mobile_i18n() -> None:
     (MOBILE_LIB / "i18n.ts").write_text(content)
 
 
+def generate_lock_files() -> list[str]:
+    """Resolves and writes `uv.lock`/`package-lock.json` for the real, rendered project - safe
+    only now, after cookiecutter has already resolved every placeholder, since a lock file's root
+    package entry is self-referential (name = the project's own slug) and one baked into the
+    template itself would mismatch every project generated under a different name (see both
+    Dockerfiles' own history). Once committed, `uv sync --frozen`/`npm ci` (both Dockerfiles,
+    every frontend CI job) stop re-resolving every dependency - runtime and dev tooling alike -
+    on every single build, so two builds of the same commit can no longer resolve differently.
+
+    Skipped under ISIK_TEMPLATE_SKIP_LOCKFILES - the template's own fast structural tests bake
+    a dozen throwaway projects purely to check file layout and never run a single install; paying
+    full dependency resolution twelve times over for that would be pure waste. tests/test_e2e.py
+    and the real bake-real-ci sandbox run never set that flag, so the actual --frozen/npm ci
+    Docker-build path this unlocks stays covered by a real install, not just a structural check.
+
+    Returns what it skipped, in prose, for main() to tell the person if either tool was missing -
+    not raised, since a missing uv/npm shouldn't fail generation outright, only this one step of
+    it that's trivial to redo by hand.
+    """
+    if os.environ.get("ISIK_TEMPLATE_SKIP_LOCKFILES"):
+        return []
+
+    warnings = []
+
+    if shutil.which("uv") is None:
+        warnings.append(
+            f"uv not found on PATH - run `uv lock` inside {PROJECT_SLUG}/ yourself, then commit "
+            "uv.lock before the backend Dockerfile's `uv sync --frozen` will work."
+        )
+    elif subprocess.run(["uv", "lock"], cwd=PROJECT_SLUG).returncode != 0:
+        warnings.append(f"`uv lock` failed - fix the issue above, then rerun it inside {PROJECT_SLUG}/.")
+
+    if shutil.which("npm") is None:
+        warnings.append(
+            f"npm not found on PATH - run `npm install` inside {PROJECT_SLUG}-frontend/ yourself, then "
+            "commit package-lock.json before `npm ci` will work."
+        )
+    elif subprocess.run(["npm", "install"], cwd=f"{PROJECT_SLUG}-frontend").returncode != 0:
+        warnings.append(f"`npm install` failed - fix the issue above, then rerun it inside {PROJECT_SLUG}-frontend/.")
+
+    return warnings
+
+
 def main() -> None:
     # .env.example already carries a real, working value for every field that has one (see its
     # own header comment) - domain, DB/broker names, and internal-only credentials are all
@@ -217,6 +261,8 @@ def main() -> None:
         if INCLUDE_MOBILE:
             regenerate_mobile_i18n()
 
+    lock_warnings = generate_lock_files()
+
     subprocess.run(["git", "init", "-q"], check=True)
 
     print(f"\n{PROJECT_NAME} scaffolded.")
@@ -237,6 +283,9 @@ def main() -> None:
             "(repeat per language) inside the container as the project's own code grows strings to "
             "translate, then fill in msgstr and run `python manage.py compilemessages`.\n"
         )
+
+    for warning in lock_warnings:
+        print(f"\n{warning}\n")
 
 
 if __name__ == "__main__":

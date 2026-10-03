@@ -4,6 +4,11 @@ import pytest
 from conftest import load_context
 
 
+# Every test here bakes purely to check file layout, never to install anything - see
+# conftest.py's skip_lockfile_generation.
+pytestmark = pytest.mark.usefixtures("skip_lockfile_generation")
+
+
 @pytest.mark.parametrize("context_name", ["default", "no-social-login"])
 def test_bake_succeeds(cookies, context_name):
     result = cookies.bake(extra_context=load_context(context_name))

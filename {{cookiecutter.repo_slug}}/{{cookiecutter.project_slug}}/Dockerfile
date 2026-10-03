@@ -16,12 +16,11 @@ WORKDIR /{{ cookiecutter.project_slug }}
 
 COPY . /{{ cookiecutter.project_slug }}/
 
-# Not --frozen and no uv.lock is committed: a lock file's root package entry is self-referential
-# (name = "<project_slug>"), so one baked into the template would mismatch every project generated
-# with a different name and --frozen would reject it. Each generated project resolves its own lock
-# on first build instead - commit the resulting uv.lock once it exists, then switch this to
-# --frozen if reproducible builds matter more than staying template-agnostic.
-RUN uv sync
+# uv.lock is generated (and committed) at bake time, not baked into the template itself - a lock
+# file's root package entry is self-referential (name = "<project_slug>"), so one shipped in the
+# template would mismatch every project generated under a different name. See
+# hooks/post_gen_project.py's generate_lock_files().
+RUN uv sync --frozen
 
 ENV PATH="/{{ cookiecutter.project_slug }}/.venv/bin:$PATH"
 

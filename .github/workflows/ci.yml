@@ -13,8 +13,14 @@ jobs:
       - uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
+      # test_lockfiles.py's own bake needs a real npm on PATH to resolve a real package-lock.json -
+      # every other test in this job never installs anything (see conftest.py's
+      # skip_lockfile_generation).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - run: uv sync
-      - run: uv run pytest tests/test_bake_structure.py tests/test_pre_gen_validate.py
+      - run: uv run pytest tests/test_bake_structure.py tests/test_pre_gen_validate.py tests/test_lockfiles.py
 
   pre-gen-validate-mutation:
     runs-on: ubuntu-latest

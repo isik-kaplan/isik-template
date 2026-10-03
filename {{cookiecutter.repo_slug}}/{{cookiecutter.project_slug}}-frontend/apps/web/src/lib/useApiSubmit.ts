@@ -28,7 +28,7 @@ export type ApiSubmitOptions<T extends ApiResult> = {
  * The tail every submit handler in this app had copied by hand: submitting flag, the call, and
  * putting the server's answer (or refusal) wherever the caller said it goes.
  *
- * Not `@isikk/core/hooks`' own `useApiSubmit` (0.8.0+): that one reads a refusal the way DRF
+ * Not `@isikk/core/hooks`' own `useAPISubmit` (0.8.0+): that one reads a refusal the way DRF
  * writes it (`@isikk/core/drf`) - every form here talks to allauth.headless instead, which has
  * its own distinct shape (`extractAuthErrors`/`toFormErrors` from `@{{ cookiecutter.repo_slug }}/auth-api`).
  * A generated project's own DRF-backed features (via `@{{ cookiecutter.repo_slug }}/api`) are what

@@ -3,15 +3,15 @@
 
 FROM node:{{ cookiecutter.node_version }}-alpine AS deps
 WORKDIR /repo
-COPY package.json ./
+COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/package.json
 COPY packages/api/package.json packages/api/package.json
 COPY packages/auth-api/package.json packages/auth-api/package.json
-# Not npm ci: that needs a committed package-lock.json, and one baked into the template would have
-# the same problem uv.lock did on the backend - workspace entries reference this project's own
-# package names (@<repo_slug>/api etc.), which differ for every other project generated from this
-# template. Commit a real package-lock.json once one exists, then switch this back.
-RUN npm install
+# package-lock.json is generated (and committed) at bake time, not baked into the template itself
+# - its workspace entries reference this project's own package names (@<repo_slug>/api etc.),
+# which differ for every other project generated from this template. See
+# hooks/post_gen_project.py's generate_lock_files().
+RUN npm ci
 
 FROM node:{{ cookiecutter.node_version }}-alpine AS builder
 WORKDIR /repo

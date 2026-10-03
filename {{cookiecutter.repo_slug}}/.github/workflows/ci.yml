@@ -20,7 +20,7 @@ jobs:
       # through their dist/, which is not tracked.
       - name: Install frontend dependencies
         working-directory: {{ cookiecutter.project_slug }}-frontend
-        run: npm install
+        run: npm ci
       - name: Build the API client packages
         working-directory: {{ cookiecutter.project_slug }}-frontend
         run: npm run build:packages
@@ -252,9 +252,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "{{ cookiecutter.node_version }}"
-      # No package-lock.json is committed (see apps/web/Dockerfile's comment) - npm ci needs one,
-      # so this uses install like every other build in the template.
-      - run: npm install
+      - run: npm ci
       - run: npm run build:packages
       - run: npm run lint
       - run: npm run build
@@ -270,7 +268,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "{{ cookiecutter.node_version }}"
-      - run: npm install
+      - run: npm ci
       - run: npm run build:packages
       # Its own job rather than a step in `frontend`: it reruns the whole suite once per mutant, so
       # it runs in minutes against the unit suite's seconds. Fails the build if the score drops
@@ -293,7 +291,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "{{ cookiecutter.node_version }}"
-      - run: npm install
+      - run: npm ci
       - run: npm run build:packages
       - name: Type-check and test
         working-directory: {{ cookiecutter.project_slug }}-frontend/apps/mobile
@@ -311,7 +309,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "{{ cookiecutter.node_version }}"
-      - run: npm install
+      - run: npm ci
       - run: npm run build:packages
       - name: Run mutation tests
         working-directory: {{ cookiecutter.project_slug }}-frontend/apps/mobile
