@@ -664,9 +664,7 @@
     {
       "mutator": "StringLiteral",
       "fingerprint": "60740868eecd",
-      "reason": [
-        "equivalent mutant, same reasoning as above."
-      ]
+      "reason": ["equivalent mutant, same reasoning as above."]
     }
   ],
   "src/components/base/button.tsx": [
@@ -709,51 +707,37 @@
     {
       "mutator": "StringLiteral",
       "fingerprint": "03941f63489e",
-      "reason": [
-        "equivalent mutant, same reasoning as above."
-      ]
+      "reason": ["equivalent mutant, same reasoning as above."]
     },
     {
       "mutator": "StringLiteral",
       "fingerprint": "7627bdb888e0",
-      "reason": [
-        "equivalent mutant, same reasoning as above."
-      ]
+      "reason": ["equivalent mutant, same reasoning as above."]
     },
     {
       "mutator": "StringLiteral",
       "fingerprint": "bca4b841885c",
-      "reason": [
-        "equivalent mutant, same reasoning as above."
-      ]
+      "reason": ["equivalent mutant, same reasoning as above."]
     },
     {
       "mutator": "StringLiteral",
       "fingerprint": "60740868eecd",
-      "reason": [
-        "equivalent mutant, same reasoning as above."
-      ]
+      "reason": ["equivalent mutant, same reasoning as above."]
     },
     {
       "mutator": "StringLiteral",
       "fingerprint": "03941f63489e",
-      "reason": [
-        "equivalent mutant, same reasoning as above."
-      ]
+      "reason": ["equivalent mutant, same reasoning as above."]
     },
     {
       "mutator": "StringLiteral",
       "fingerprint": "7627bdb888e0",
-      "reason": [
-        "equivalent mutant, same reasoning as above."
-      ]
+      "reason": ["equivalent mutant, same reasoning as above."]
     },
     {
       "mutator": "StringLiteral",
       "fingerprint": "bca4b841885c",
-      "reason": [
-        "equivalent mutant, same reasoning as above."
-      ]
+      "reason": ["equivalent mutant, same reasoning as above."]
     },
     {
       "mutator": "StringLiteral",
@@ -778,9 +762,7 @@
     {
       "mutator": "StringLiteral",
       "fingerprint": "7627bdb888e0",
-      "reason": [
-        "equivalent mutant, same reasoning as variant above."
-      ]
+      "reason": ["equivalent mutant, same reasoning as variant above."]
     }
   ],
   "src/components/base/popover.tsx": [
