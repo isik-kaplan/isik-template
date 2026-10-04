@@ -15,7 +15,10 @@
     "theme/**/*.tsx",
     "!**/__tests__/**"
   ],
-  "thresholds": { "high": 100, "low": 90, "break": 100 },
+  "reporters": ["progress", "clear-text", "html", "json"],
+  "thresholds": { "high": 100, "low": 90, "break": null },
+  "timeoutMS": 15000,
+  "timeoutFactor": 3,
   "htmlReporter": { "fileName": "reports/mutation/index.html" },
   "tempDirName": ".stryker-tmp",
   "cleanTempDir": true

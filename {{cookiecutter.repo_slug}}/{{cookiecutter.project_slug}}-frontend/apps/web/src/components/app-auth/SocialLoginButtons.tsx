@@ -14,9 +14,6 @@ export type SocialLoginButtonsProps = {
 }
 
 export function SocialLoginButtons({ action, callbackUrl }: SocialLoginButtonsProps) {
-  // Stryker disable next-line ArrayDeclaration,StringLiteral: equivalent mutant. Every t()
-  // call here names its full 'auth:key', so this array only matters for an unprefixed
-  // lookup - none of them are.
   const { t } = useClientTranslation(['auth'])
   if (SOCIAL_PROVIDERS.length === 0) return null
 

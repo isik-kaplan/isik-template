@@ -34,9 +34,6 @@ export type ConnectionsListProps = {
 }
 
 export function ConnectionsList({ initialProviders, connectAction, callbackUrl, connectError }: ConnectionsListProps) {
-  // Stryker disable next-line ArrayDeclaration,StringLiteral: equivalent mutant. Every t()
-  // call here names its full 'auth:key', so this array only matters for an unprefixed
-  // lookup - none of them are.
   const { t } = useClientTranslation(['auth'])
   const [connected, setConnected] = useState(initialProviders)
   // Captured once at mount, not read from the prop on every render - router.replace below causes
@@ -99,17 +96,7 @@ export function ConnectionsList({ initialProviders, connectAction, callbackUrl, 
               <div className="flex items-center gap-2">
                 <ProviderIcon providerId={provider.id} iconUrl={provider.icon} />
                 <span>{provider.name}</span>
-                <Badge
-                  variant={
-                    account
-                      ? // Stryker disable next-line StringLiteral: equivalent mutant. cva's own
-                        // defaultVariants fallback treats an empty-string variant the same as
-                        // unset, so "" renders identically to 'default' here (verified directly
-                        // against class-variance-authority).
-                        'default'
-                      : 'outline'
-                  }
-                >
+                <Badge variant={account ? 'default' : 'outline'}>
                   {account ? t('auth:profileConnectionsConnectedBadge') : t('auth:profileConnectionsNotConnectedBadge')}
                 </Badge>
               </div>

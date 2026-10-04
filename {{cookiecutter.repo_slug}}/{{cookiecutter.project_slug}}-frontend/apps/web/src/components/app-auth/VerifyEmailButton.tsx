@@ -12,9 +12,6 @@ import { authOrigin } from '@/lib/authOrigin'
 import { AuthApi, extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
 export function VerifyEmailButton({ verificationKey }: { verificationKey: string }) {
-  // Stryker disable next-line ArrayDeclaration,StringLiteral: equivalent mutant. Every t()
-  // call here names its full 'auth:key', so this array only matters for an unprefixed
-  // lookup - none of them are.
   const { t } = useClientTranslation(['auth'])
   const router = useRouter()
   const [error, setError] = useState(false)

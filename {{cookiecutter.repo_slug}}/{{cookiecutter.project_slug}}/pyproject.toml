@@ -72,10 +72,20 @@ omit = ["*/migrations/*", "*/wsgi.py", "*/asgi.py", "*/celery.py"]
 [tool.coverage.report]
 show_missing = true
 fail_under = 100
+# Never an inline `# pragma: no cover` in the source itself - every exclusion lives here, as an
+# exact-text pattern (so a reformat or edit of the line stops matching and the gate starts failing
+# again) with the reason next to it, the same discipline mutation-exemptions.toml applies to
+# mutants. Add a line here only when it is genuinely unreachable through the normal test suite,
+# never to silence a gap a real test could close instead.
 exclude_lines = [
-    "pragma: no cover",
     "raise NotImplementedError",
     "if TYPE_CHECKING:",
+    # Only false in the e2e environment (a separate docker-compose stack this suite's coverage
+    # run never touches) - see settings.py's own ACCOUNT_RATE_LIMITS comment just above this line.
+    "if not config\\.ACCOUNTS\\.RATE_LIMITS_ENABLED:",
+    # Only true when SENTRY__DSN is actually configured, which no test environment does -
+    # see settings.py's own comment just above this line.
+    "if config\\.SENTRY\\.DSN:",
 ]
 
 [tool.mutmut]

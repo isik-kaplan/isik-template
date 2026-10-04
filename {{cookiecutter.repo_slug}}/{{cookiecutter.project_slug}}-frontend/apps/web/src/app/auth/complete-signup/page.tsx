@@ -25,9 +25,6 @@ export default async function CompleteSignupPage() {
   // is nothing to finish here.
   const { data } = await authApi.pendingProviderSignup()
   if (!data) redirect('/auth/login')
-  // Stryker disable next-line ArrayDeclaration,StringLiteral: equivalent mutant. Every t()
-  // call here names its full 'auth:key', so this array only matters for an unprefixed
-  // lookup - none of them are.
   const { t } = await sUseTranslation(['auth'])
 
   return (

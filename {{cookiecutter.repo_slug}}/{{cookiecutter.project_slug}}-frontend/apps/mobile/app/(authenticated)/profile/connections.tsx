@@ -15,9 +15,6 @@ export default function ProfileConnections() {
   const [accounts, setAccounts] = useState<ProviderAccount[]>([])
   const isMounted = useIsMounted()
 
-  // Equivalent mutant either way, both the guard and the deps array - see
-  // lib/useAuthenticated.ts's own copy of this same effect for why.
-  // Stryker disable ArrayDeclaration,ConditionalExpression
   useEffect(() => {
     getAuthApi()
       .providers()
@@ -25,7 +22,6 @@ export default function ProfileConnections() {
         if (isMounted()) setAccounts(data?.data ?? [])
       })
   }, [isMounted])
-  // Stryker restore ArrayDeclaration,ConditionalExpression
 
   async function disconnect(providerId: string, uid: string) {
     const { data } = await getAuthApi().disconnectProvider(providerId, uid)

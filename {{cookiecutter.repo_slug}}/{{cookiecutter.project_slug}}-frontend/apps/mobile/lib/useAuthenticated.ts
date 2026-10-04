@@ -11,10 +11,6 @@ export function useAuthenticated(): boolean | null {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null)
   const isMounted = useIsMounted()
 
-  // isMounted is referentially stable (its own useCallback never changes it), so this effect's
-  // deps array is equivalent to [] either way - and see @isikk/core/hooks' own useIsMounted for
-  // why the guard below is equivalent too.
-  // Stryker disable ArrayDeclaration,ConditionalExpression
   useEffect(() => {
     getAuthApi()
       .session()
@@ -26,7 +22,6 @@ export function useAuthenticated(): boolean | null {
         if (data?.data?.user.language) setLanguage(data.data.user.language)
       })
   }, [isMounted])
-  // Stryker restore ArrayDeclaration,ConditionalExpression
 
   return authenticated
 }

@@ -23,6 +23,7 @@ dist/
 next-env.d.ts
 .stryker-tmp/
 reports/mutation/
+coverage/
 
 # Expo
 .expo/

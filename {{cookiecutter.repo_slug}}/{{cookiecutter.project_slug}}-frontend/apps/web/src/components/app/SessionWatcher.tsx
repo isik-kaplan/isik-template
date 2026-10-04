@@ -20,9 +20,6 @@ export function SessionWatcher() {
       onSessionCleared(() => {
         window.location.href = LOGIN_PATH
       }),
-    // Stryker disable next-line ArrayDeclaration: equivalent mutant. React compares deps by
-    // value (Object.is), so a fabricated string literal here is exactly as stable across
-    // renders as the empty array - this effect still runs (and re-runs) the same either way.
     []
   )
 

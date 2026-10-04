@@ -19,9 +19,6 @@ import { PasswordInput } from './PasswordInput'
 import { z } from 'zod'
 
 export function LoginForm({ redirectTo = '/' }: { redirectTo?: string }) {
-  // Stryker disable next-line ArrayDeclaration,StringLiteral: equivalent mutant. Every t()
-  // call here names its full 'auth:key', so this array only matters for an unprefixed
-  // lookup - none of them are.
   const { t } = useClientTranslation(['auth'])
   const router = useRouter()
   const schema = useMemo(
@@ -30,9 +27,6 @@ export function LoginForm({ redirectTo = '/' }: { redirectTo?: string }) {
         login: z.string().min(1, t('auth:validationLoginRequired')),
         password: z.string().min(1, t('auth:validationPasswordRequired')),
       }),
-    // Stryker disable next-line ArrayDeclaration: equivalent mutant. t's reference never
-    // changes across renders in this single-language app, so this memo never actually
-    // recomputes either way.
     [t]
   )
   const { formState, formErrors, handleFormStateEvent, isSubmitting, submit } = useValidatedFormState(schema, {

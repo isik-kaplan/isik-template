@@ -22,9 +22,6 @@ export default async function ProviderErrorPage({
   searchParams: Promise<{ error?: string; error_process?: string }>
 }) {
   const { error, error_process: errorProcess } = await searchParams
-  // Stryker disable next-line ArrayDeclaration,StringLiteral: equivalent mutant. Every t()
-  // call here names its full 'auth:key', so this array only matters for an unprefixed
-  // lookup - none of them are.
   const { t } = await sUseTranslation(['auth'])
   const { title, body } = getCopy(error, t)
   // error_process is only ever 'connect' here on the rare fallback where allauth lost track of

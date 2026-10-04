@@ -15,13 +15,8 @@ function PopoverTrigger({ ...props }: PopoverPrimitive.Trigger.Props) {
 
 function PopoverContent({
   className,
-  // Stryker disable next-line StringLiteral: equivalent mutant. Base UI's own Positioner falls
-  // back to 'center' for a falsy align value (verified directly: the resulting data-align
-  // attribute is unchanged either way) - same reasoning as tooltip.tsx's own align default.
   align = 'center',
   alignOffset = 0,
-  // Stryker disable next-line StringLiteral: equivalent mutant, same reasoning as align above -
-  // Base UI's Positioner falls back to 'bottom' for a falsy side value too.
   side = 'bottom',
   sideOffset = 4,
   ...props

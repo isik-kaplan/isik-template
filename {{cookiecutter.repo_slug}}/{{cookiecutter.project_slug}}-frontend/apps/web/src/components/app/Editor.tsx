@@ -23,10 +23,6 @@ export function Editor({
     extensions: [StarterKit, Mention],
     content,
     editable,
-    // Stryker disable next-line BooleanLiteral: equivalent mutant in this test suite - it exists
-    // to avoid an SSR hydration mismatch, and every render() here is client-only with nothing to
-    // hydrate against. Verified directly: flipping it produces no different DOM, and no
-    // console.error, in a real test run.
     immediatelyRender: false,
     onUpdate: ({ editor }) => onChange?.(editor.getHTML()),
     editorProps: {

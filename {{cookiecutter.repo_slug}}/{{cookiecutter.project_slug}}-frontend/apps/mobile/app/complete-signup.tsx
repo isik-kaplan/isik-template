@@ -18,19 +18,11 @@ import { Text } from 'react-native'
 export default function CompleteSignup() {
   const { t } = useTranslation()
   const [email, setEmail] = useState<string | undefined>()
-  // Equivalent mutant: the form (the only place this renders) doesn't show until email is also
-  // set, and both are always set together in the same effect below - so this initial value is
-  // never actually the one a test could observe rendered.
-  // Stryker disable next-line StringLiteral
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | undefined>()
   const [submitting, setSubmitting] = useState(false)
 
-  // Equivalent mutant: a fresh array literal with the same fixed content on every render compares
-  // equal element-wise (see @isikk/core/hooks' own useIsMounted for this reasoning), so this effect's
-  // deps array never actually causes an extra rerun either way.
-  // Stryker disable ArrayDeclaration
   useEffect(() => {
     getAuthApi()
       .pendingProviderSignup()
@@ -43,7 +35,6 @@ export default function CompleteSignup() {
         setUsername(data.data.user.username)
       })
   }, [])
-  // Stryker restore ArrayDeclaration
 
   // Takes email as a plain parameter rather than closing over the possibly-undefined state
   // directly, so the only caller (the button below, built after the render guard has already

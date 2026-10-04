@@ -18,14 +18,8 @@ import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
 import { z } from 'zod'
 
 export function ForgotPasswordForm() {
-  // Stryker disable next-line ArrayDeclaration,StringLiteral: equivalent mutant. Every t()
-  // call here names its full 'auth:key', so this array only matters for an unprefixed
-  // lookup - none of them are.
   const { t } = useClientTranslation(['auth'])
   const router = useRouter()
-  // Stryker disable next-line ArrayDeclaration: equivalent mutant. t's reference never
-  // changes across renders in this single-language app, so this memo never actually
-  // recomputes either way.
   const schema = useMemo(() => z.object({ email: z.email(t('auth:validationEmailInvalid')) }), [t])
   const { formState, formErrors, handleFormStateEvent, validate } = useValidatedFormState(schema, { email: '' })
 

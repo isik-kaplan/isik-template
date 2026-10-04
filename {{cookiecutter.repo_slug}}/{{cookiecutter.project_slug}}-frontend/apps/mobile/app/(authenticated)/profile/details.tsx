@@ -13,9 +13,6 @@ export default function ProfileDetails() {
   const [user, setUser] = useState<{ username: string; email: string; language?: string } | undefined>()
   const isMounted = useIsMounted()
 
-  // Equivalent mutant either way, both the guard and the deps array - see
-  // lib/useAuthenticated.ts's own copy of this same effect for why.
-  // Stryker disable ArrayDeclaration,ConditionalExpression
   useEffect(() => {
     getAuthApi()
       .session()
@@ -23,7 +20,6 @@ export default function ProfileDetails() {
         if (isMounted()) setUser(data?.data.user)
       })
   }, [isMounted])
-  // Stryker restore ArrayDeclaration,ConditionalExpression
 
   return (
     <Screen testID="profile-details">

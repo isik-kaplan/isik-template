@@ -24,13 +24,7 @@ export type EmailsListProps = {
 }
 
 export function EmailsList({ initialEmails }: EmailsListProps) {
-  // Stryker disable next-line ArrayDeclaration,StringLiteral: equivalent mutant. Every t()
-  // call here names its full 'auth:key', so this array only matters for an unprefixed
-  // lookup - none of them are.
   const { t } = useClientTranslation(['auth'])
-  // Stryker disable next-line ArrayDeclaration: equivalent mutant. t's reference never
-  // changes across renders in this single-language app, so this memo never actually
-  // recomputes either way.
   const addEmailSchema = useMemo(() => z.object({ email: z.email(t('auth:validationEmailInvalid')) }), [t])
   const [emails, setEmails] = useState(initialEmails)
   const { formState, handleFormStateEvent, formErrors, isSubmitting, submit, resetFormState } = useValidatedFormState(
@@ -67,17 +61,7 @@ export function EmailsList({ initialEmails }: EmailsListProps) {
               <div className="flex min-w-0 items-center gap-2">
                 <span className="truncate">{emailAddress.email}</span>
                 {emailAddress.primary && <Badge variant="secondary">{t('auth:profileEmailPrimaryBadge')}</Badge>}
-                <Badge
-                  variant={
-                    emailAddress.verified
-                      ? // Stryker disable next-line StringLiteral: equivalent mutant. cva's own
-                        // defaultVariants fallback treats an empty-string variant the same as
-                        // unset, so "" renders identically to 'default' here (verified directly
-                        // against class-variance-authority).
-                        'default'
-                      : 'outline'
-                  }
-                >
+                <Badge variant={emailAddress.verified ? 'default' : 'outline'}>
                   {emailAddress.verified ? t('auth:profileEmailVerifiedBadge') : t('auth:profileEmailUnverifiedBadge')}
                 </Badge>
               </div>
@@ -136,15 +120,7 @@ export function EmailsList({ initialEmails }: EmailsListProps) {
           placeholder={t('auth:emailLabel')}
           value={formState.email}
           onChange={handleFormStateEvent('email')}
-          errorText={
-            formErrors?.email?.join('\n') ??
-            // Stryker disable next-line OptionalChaining: equivalent mutant. This schema only
-            // recognizes 'email', so any server error not on that field lands in
-            // non_field_errors instead (see useValidatedFormState's acceptServerErrors) -
-            // whenever formErrors.email is missing, formErrors.non_field_errors is guaranteed
-            // present.
-            formErrors?.non_field_errors?.join('\n')
-          }
+          errorText={formErrors?.email?.join('\n') ?? formErrors?.non_field_errors?.join('\n')}
         />
         <Button type="submit" disabled={isSubmitting}>
           {t('auth:profileEmailAddAction')}

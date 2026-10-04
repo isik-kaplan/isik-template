@@ -9,9 +9,6 @@ import { useClientTranslation } from '@/i18n/client'
 import { useTheme } from 'next-themes'
 
 export function ThemeToggle() {
-  // Stryker disable next-line ArrayDeclaration,StringLiteral: equivalent mutant. Every t()
-  // call here names its full 'themeToggle:key', so this array only matters for an unprefixed
-  // lookup - none of them are.
   const { t } = useClientTranslation(['themeToggle'])
   const { resolvedTheme, setTheme } = useTheme()
 

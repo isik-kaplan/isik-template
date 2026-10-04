@@ -1,0 +1,25 @@
+{
+  "lib/i18n.ts": [
+    {
+      "kind": "branch",
+      "branchIndex": 0,
+      "fingerprint": "054e2df901af",
+      "reason": [
+        "Equivalent mutant's coverage twin: with only one supported language, isSupported(language) is only",
+        "ever true for \"en\", and i18next.language is always \"en\" too, so this condition is already always",
+        "false - the true side can't be exercised without a second supported language. Real once \"languages\"",
+        "names more than one; see i18n.ts's own ConditionalExpression entry in mutation-exemptions.json for",
+        "the same reasoning applied to mutation."
+      ]
+    },
+    {
+      "kind": "statement",
+      "fingerprint": "054e2df901af",
+      "reason": [
+        "Same reason as this line's branch entry above - the whole statement (void",
+        "i18next.changeLanguage(language)) is only reached once a second supported language lets the guard's",
+        "true branch run."
+      ]
+    }
+  ]
+}

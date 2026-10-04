@@ -40,9 +40,6 @@ const fetchSessionState = cache(async (): Promise<SessionState> => {
     }
     // "provider_signup" - a first-ever login via a social provider, with SOCIALACCOUNT_AUTO_SIGNUP
     // off, lands here rather than being signed in immediately.
-    // Stryker disable next-line OptionalChaining: equivalent mutants. Dropping any of these three
-    // "?." throws instead of short-circuiting to undefined when that link is missing - but the
-    // catch block below turns any thrown error into the exact same pendingProviderSignup: false.
     const pendingProviderSignup = error?.data?.flows?.some((flow) => flow.id === 'provider_signup') ?? false
     return { session: null, pendingProviderSignup, language: resolveLanguage(null, acceptLanguageHeader) }
   } catch (thrown) {

@@ -18,14 +18,8 @@ import { PasswordInput } from './PasswordInput'
 import { z } from 'zod'
 
 export function ResetPasswordForm({ resetKey }: { resetKey: string }) {
-  // Stryker disable next-line ArrayDeclaration,StringLiteral: equivalent mutant. Every t()
-  // call here names its full 'auth:key', so this array only matters for an unprefixed
-  // lookup - none of them are.
   const { t } = useClientTranslation(['auth'])
   const router = useRouter()
-  // Stryker disable next-line ArrayDeclaration: equivalent mutant. t's reference never
-  // changes across renders in this single-language app, so this memo never actually
-  // recomputes either way.
   const schema = useMemo(() => z.object({ password: z.string().min(8, t('auth:validationPasswordMinLength')) }), [t])
   const { formState, formErrors, handleFormStateEvent, isSubmitting, submit } = useValidatedFormState(schema, {
     password: '',
@@ -40,9 +34,6 @@ export function ResetPasswordForm({ resetKey }: { resetKey: string }) {
       // failure looks like here, not the response's HTTP status. ?.length, not just a truthiness
       // check - extractAuthErrors can return `[]` (present but empty), which is truthy in JS.
       isSuccess: ({ data, error }) => Boolean(data) || !extractAuthErrors(error)?.length,
-      // Stryker disable next-line StringLiteral: equivalent mutant, unreachable rather than
-      // untested - useApiSubmit only falls back to this string when toFormErrors(error) is
-      // undefined, which by isSuccess above already means this call counted as a success.
       failure: t('auth:resetPasswordError'),
       onSuccess: ({ response }) => router.push(response.status === 200 ? '/' : '/auth/login'),
     })

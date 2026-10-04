@@ -14,9 +14,6 @@ import { getRequestOrigin } from '@isikk/core/next/request'
 
 export default async function SignupPage() {
   await redirectIfAuthenticated()
-  // Stryker disable next-line ArrayDeclaration,StringLiteral: equivalent mutant. Every t()
-  // call here names its full 'auth:key', so this array only matters for an unprefixed
-  // lookup - none of them are.
   const { t } = await sUseTranslation(['auth'])
   const origin = getRequestOrigin(await headers(), { isLocalDevHost })
 

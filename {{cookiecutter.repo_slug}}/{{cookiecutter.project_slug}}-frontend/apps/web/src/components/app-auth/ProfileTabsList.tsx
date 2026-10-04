@@ -17,9 +17,6 @@ const TABS = [
 ] as const
 
 export function ProfileTabsList() {
-  // Stryker disable next-line ArrayDeclaration,StringLiteral: equivalent mutant. Every t()
-  // call here names its full 'auth:key', so this array only matters for an unprefixed
-  // lookup - none of them are.
   const { t } = useClientTranslation(['auth'])
   const pathname = usePathname()
   const router = useRouter()

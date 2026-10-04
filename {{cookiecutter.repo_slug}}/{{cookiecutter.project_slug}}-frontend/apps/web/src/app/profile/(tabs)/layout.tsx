@@ -21,9 +21,6 @@ export default async function ProfileTabsLayout({ children }: { children: React.
     return null
   }
   const { user } = session
-  // Stryker disable next-line ArrayDeclaration,StringLiteral: equivalent mutant. Every t()
-  // call here names its full 'auth:key', so this array only matters for an unprefixed
-  // lookup - none of them are.
   const { t } = await sUseTranslation(['auth'])
 
   return (

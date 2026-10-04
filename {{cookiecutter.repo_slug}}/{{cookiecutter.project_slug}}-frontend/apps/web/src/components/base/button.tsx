@@ -24,14 +24,8 @@ const buttonVariants = cva(
         'icon-sm': 'size-8',
       },
     },
-    // Stryker disable next-line ObjectLiteral,StringLiteral: equivalent mutant. Button's own
-    // `variant`/`size` parameter defaults below already guarantee valid keys reach
-    // buttonVariants() - this fallback exists for callers outside that guarantee (e.g. an
-    // `as any` cast) that this component's own tests can't produce.
     defaultVariants: {
-      // Stryker disable next-line StringLiteral: equivalent mutant, same reasoning as above.
       variant: 'default',
-      // Stryker disable next-line StringLiteral: equivalent mutant, same reasoning as above.
       size: 'default',
     },
   }
@@ -39,12 +33,7 @@ const buttonVariants = cva(
 
 function Button({
   className,
-  // Stryker disable next-line StringLiteral: equivalent mutant. cva's own defaultVariants
-  // fallback (above) treats a falsy variant the same as unset, so this produces the identical
-  // className either way (verified directly against class-variance-authority) - and unlike
-  // Badge, nothing here reflects the raw value onto a data-attribute to tell them apart.
   variant = 'default',
-  // Stryker disable next-line StringLiteral: equivalent mutant, same reasoning as variant above.
   size = 'default',
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {

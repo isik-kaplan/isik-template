@@ -20,7 +20,10 @@ export default defineConfig({
       all: true,
       include: ['src/**/*.ts', 'src/**/*.tsx'],
       exclude: ['src/**/*.d.ts', 'src/__tests__/**'],
-      thresholds: { 100: true },
+      // Enforced by packages/mutation-check/check-coverage.mjs instead of a threshold here - it
+      // reads this same coverage-final.json ('json' reporter, below) and allows only the gaps
+      // coverage-exemptions.json documents, rather than failing outright on any gap at all.
+      reporter: ['text', 'html', 'json'],
     },
   },
   resolve: {

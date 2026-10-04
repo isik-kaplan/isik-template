@@ -16,9 +16,6 @@ import { PasswordInput } from './PasswordInput'
 import { z } from 'zod'
 
 export function ChangePasswordForm() {
-  // Stryker disable next-line ArrayDeclaration,StringLiteral: equivalent mutant. Every t()
-  // call here names its full 'auth:key', so this array only matters for an unprefixed
-  // lookup - none of them are.
   const { t } = useClientTranslation(['auth'])
   // Keyed exactly like allauth's ChangePasswordInput ("current_password"/"new_password"), not
   // camelCase - toFormErrors groups server-side errors by that literal API param, and a form-only
@@ -30,9 +27,6 @@ export function ChangePasswordForm() {
         current_password: z.string().min(1, t('auth:validationPasswordRequired')),
         new_password: z.string().min(8, t('auth:validationPasswordMinLength')),
       }),
-    // Stryker disable next-line ArrayDeclaration: equivalent mutant. t's reference never
-    // changes across renders in this single-language app, so this memo never actually
-    // recomputes either way.
     [t]
   )
   const { formState, formErrors, handleFormStateEvent, setFormState, isSubmitting, submit } = useValidatedFormState(

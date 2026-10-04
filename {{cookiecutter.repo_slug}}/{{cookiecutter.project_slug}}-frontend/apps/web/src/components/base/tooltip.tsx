@@ -20,9 +20,6 @@ function TooltipContent({
   className,
   side = 'top',
   sideOffset = 4,
-  // Stryker disable next-line StringLiteral: equivalent mutant. Base UI's own Positioner falls
-  // back to 'center' for a falsy align value, so an empty string here renders identically to
-  // 'center' (verified directly: the resulting data-align attribute is unchanged either way).
   align = 'center',
   alignOffset = 0,
   children,

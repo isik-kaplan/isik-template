@@ -44,10 +44,6 @@ export function useValidatedFormState<S extends z.ZodObject>(schema: S, initialS
     const mine: FormErrors = {}
     const orphaned: string[] = []
     for (const [field, messages] of Object.entries(errors)) {
-      // Stryker disable next-line ConditionalExpression,StringLiteral: equivalent mutant. Losing
-      // the "field === 'non_field_errors'" half of this check just moves a non_field_errors entry
-      // into `orphaned` instead of `mine` directly - the recombination below puts its messages
-      // back under mine.non_field_errors either way, in the same order.
       if (field === 'non_field_errors' || known.includes(field)) mine[field] = messages
       else orphaned.push(...messages)
     }

@@ -21,9 +21,6 @@ export default function ProfileEmails() {
   const [submitting, setSubmitting] = useState(false)
   const isMounted = useIsMounted()
 
-  // Equivalent mutant either way, both the guard and the deps array - see
-  // lib/useAuthenticated.ts's own copy of this same effect for why.
-  // Stryker disable ArrayDeclaration,ConditionalExpression
   useEffect(() => {
     getAuthApi()
       .emails()
@@ -31,7 +28,6 @@ export default function ProfileEmails() {
         if (isMounted()) setEmails(data?.data ?? [])
       })
   }, [isMounted])
-  // Stryker restore ArrayDeclaration,ConditionalExpression
 
   async function addEmail() {
     setSubmitting(true)

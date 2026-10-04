@@ -12,9 +12,6 @@ import { useClientTranslation } from '@/i18n/client'
 import { cn } from '@/lib/utils'
 
 export function PasswordInput({ className, ...props }: React.ComponentProps<typeof Input>) {
-  // Stryker disable next-line ArrayDeclaration,StringLiteral: equivalent mutant. Every t()
-  // call here names its full 'auth:key', so this array only matters for an unprefixed
-  // lookup - none of them are.
   const { t } = useClientTranslation(['auth'])
   const [revealed, setRevealed] = useState(false)
 

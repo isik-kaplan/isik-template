@@ -16,9 +16,6 @@ async function initI18next(ns: Namespace[], language: Language) {
 // go through '@/i18n''s sUseTranslation(), which resolves the request's actual language (the
 // signed-in user's preference, or the browser's - see lib/resolveLanguage.ts) and passes it here;
 // this stays a plain, request-agnostic function so it's still trivial to unit-test directly.
-// Stryker disable next-line StringLiteral: equivalent mutant. getConfig()'s own fallbackLng is
-// always 'en' too, and i18next resolves a falsy lng through it regardless of this default's exact
-// value - confirmed directly (i18next.init({ lng: '', fallbackLng: 'en' }).language is "en").
 export async function useTranslation(ns: Namespace[], language: Language = 'en') {
   const i18nextInstance = await initI18next(ns, language)
   return {

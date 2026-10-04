@@ -271,8 +271,9 @@ jobs:
       - run: npm ci
       - run: npm run build:packages
       # Its own job rather than a step in `frontend`: it reruns the whole suite once per mutant, so
-      # it runs in minutes against the unit suite's seconds. Fails the build if the score drops
-      # below apps/web/stryker.config.json's `thresholds.break`.
+      # it runs in minutes against the unit suite's seconds. Stryker's own `thresholds.break` is
+      # null - packages/mutation-check/check-mutants.mjs is the real gate, failing on any survivor
+      # not named in mutation-exemptions.json with a reason.
       - name: Run mutation tests
         working-directory: {{ cookiecutter.project_slug }}-frontend/apps/web
         run: npm run test:mutation

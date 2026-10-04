@@ -9,6 +9,16 @@ from apps.users.api.serializers.user import UserSerializer
 from apps.users.models.user import User
 
 
+def _mark_partial(serializer):
+    """Split out of `me` so this one statement's mutants - and only this one's - can be exempted
+    in mutation-exemptions.toml; `me` itself stays held to the normal kill-everything bar.
+
+    Kept for correct PATCH semantics the day a required field is added, which is also the day
+    this stops being equivalent and the mutation-exemptions.toml entry should come back off.
+    """
+    serializer.partial = True
+
+
 class UserViewSet(HistoryMixin, BaseModelViewSet):
     model = User
     endpoint = "users"
@@ -24,14 +34,7 @@ class UserViewSet(HistoryMixin, BaseModelViewSet):
         # stay untouchable here too, via UserSerializer's own create_only_fields.
         if request.method == "PATCH":
             serializer = self.get_serializer(request.user, data=request.data)
-            # True is currently untestable, not just unproven: nothing in UserSerializer is required
-            # (id/created_at/updated_at are read-only, username/email are read-only on update via
-            # create_only_fields, first_name/last_name/language are all blank=True), and
-            # ModelSerializer.update() only ever sets fields actually present in the request body
-            # regardless of partial - confirmed by hand, an empty-body PATCH already returns 200.
-            # Kept for correct PATCH semantics the day a required field is added, which is also the
-            # day this stops being equivalent and the pragma below should come back off.
-            serializer.partial = True  # pragma: no mutate
+            _mark_partial(serializer)
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data)

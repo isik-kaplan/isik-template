@@ -1,0 +1,303 @@
+{
+  "app/(authenticated)/home.tsx": [
+    {
+      "mutator": "ConditionalExpression",
+      "fingerprint": "12621c2415f7",
+      "reason": [
+        "Equivalent mutant either way, both the guard and the deps array - see lib/useAuthenticated.ts's own",
+        "copy of this same effect for why."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "1cf406907db3",
+      "reason": [
+        "Equivalent mutant either way, both the guard and the deps array - see lib/useAuthenticated.ts's own",
+        "copy of this same effect for why."
+      ]
+    }
+  ],
+  "app/(authenticated)/profile/connections.tsx": [
+    {
+      "mutator": "ConditionalExpression",
+      "fingerprint": "3884f5a472ad",
+      "reason": [
+        "Equivalent mutant either way, both the guard and the deps array - see lib/useAuthenticated.ts's own",
+        "copy of this same effect for why."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "1cf406907db3",
+      "reason": [
+        "Equivalent mutant either way, both the guard and the deps array - see lib/useAuthenticated.ts's own",
+        "copy of this same effect for why."
+      ]
+    }
+  ],
+  "app/(authenticated)/profile/details.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "1cf406907db3",
+      "reason": [
+        "Equivalent mutant either way, both the guard and the deps array - see lib/useAuthenticated.ts's own",
+        "copy of this same effect for why."
+      ]
+    },
+    {
+      "mutator": "ConditionalExpression",
+      "fingerprint": "a111beb68b9a",
+      "reason": [
+        "Equivalent mutant either way, both the guard and the deps array - see lib/useAuthenticated.ts's own",
+        "copy of this same effect for why."
+      ]
+    }
+  ],
+  "app/(authenticated)/profile/emails.tsx": [
+    {
+      "mutator": "ConditionalExpression",
+      "fingerprint": "3a25840eb0b5",
+      "reason": [
+        "Equivalent mutant either way, both the guard and the deps array - see lib/useAuthenticated.ts's own",
+        "copy of this same effect for why."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "1cf406907db3",
+      "reason": [
+        "Equivalent mutant either way, both the guard and the deps array - see lib/useAuthenticated.ts's own",
+        "copy of this same effect for why."
+      ]
+    }
+  ],
+  "app/(authenticated)/profile/sessions.tsx": [
+    {
+      "mutator": "ConditionalExpression",
+      "fingerprint": "dbc3311bb9bc",
+      "reason": [
+        "Equivalent mutant either way, both the guard and the deps array - see lib/useAuthenticated.ts's own",
+        "copy of this same effect for why."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "1cf406907db3",
+      "reason": [
+        "Equivalent mutant either way, both the guard and the deps array - see lib/useAuthenticated.ts's own",
+        "copy of this same effect for why."
+      ]
+    }
+  ],
+  "app/complete-signup.tsx": [
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "4c208b158cb0",
+      "reason": [
+        "Equivalent mutant: the form (the only place this renders) doesn't show until email is also set, and",
+        "both are always set together in the same effect below - so this initial value is never actually the",
+        "one a test could observe rendered."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "fe46519c184b",
+      "reason": [
+        "Equivalent mutant: a fresh array literal with the same fixed content on every render compares equal",
+        "element-wise (see @isikk/core/hooks' own useIsMounted for this reasoning), so this effect's deps",
+        "array never actually causes an extra rerun either way."
+      ]
+    }
+  ],
+  "components/SocialLoginButtons.tsx": [
+    {
+      "mutator": "ConditionalExpression",
+      "fingerprint": "7f04d3acfe0f",
+      "reason": [
+        "Equivalent mutant: with both flags false, skipping this early return still renders an empty fragment",
+        "(both conditions below are false too) - indistinguishable from null in the tree either way, so no",
+        "assertion could tell the two apart."
+      ]
+    }
+  ],
+  "lib/i18n.ts": [
+    {
+      "mutator": "BlockStatement",
+      "fingerprint": "1cef7aa31b7f",
+      "reason": [
+        "equivalent mutant with only one supported language - both callers below (deviceLanguage's `if`,",
+        "setLanguage's `if`) are already equivalent-dead regardless of what this returns, so an empty body",
+        "changes nothing observable. Real once \"languages\" names more than one."
+      ]
+    },
+    {
+      "mutator": "BlockStatement",
+      "fingerprint": "6992a573bd90",
+      "reason": [
+        "equivalent mutant with only one supported language - both callers below (deviceLanguage's `if`,",
+        "setLanguage's `if`) are already equivalent-dead regardless of what this returns, so an empty body",
+        "changes nothing observable. Real once \"languages\" names more than one."
+      ]
+    },
+    {
+      "mutator": "BlockStatement",
+      "fingerprint": "8af4cf2fbe01",
+      "reason": [
+        "equivalent mutant with only one supported language - both callers below (deviceLanguage's `if`,",
+        "setLanguage's `if`) are already equivalent-dead regardless of what this returns, so an empty body",
+        "changes nothing observable. Real once \"languages\" names more than one."
+      ]
+    },
+    {
+      "mutator": "BlockStatement",
+      "fingerprint": "1cef7aa31b7f",
+      "reason": [
+        "equivalent mutant, same single-language reason as the comments inside this function - an empty body",
+        "returns undefined for `lng`, which i18next resolves through fallbackLng to the exact same \"en\"",
+        "regardless."
+      ]
+    },
+    {
+      "mutator": "BlockStatement",
+      "fingerprint": "8af4cf2fbe01",
+      "reason": [
+        "equivalent mutant, same single-language reason as the comments inside this function - an empty body",
+        "returns undefined for `lng`, which i18next resolves through fallbackLng to the exact same \"en\"",
+        "regardless."
+      ]
+    },
+    {
+      "mutator": "BlockStatement",
+      "fingerprint": "8af4cf2fbe01",
+      "reason": [
+        "equivalent mutant, same reason as the `if` just inside - an empty loop body still falls through to",
+        "the identical \"en\" fallback below."
+      ]
+    },
+    {
+      "mutator": "ConditionalExpression",
+      "fingerprint": "5116c64ab47b",
+      "reason": [
+        "equivalent mutant with only one supported language - isSupported() can only ever answer true for",
+        "\"en\", the same value the fallback below already returns, so forcing this branch to never run changes",
+        "nothing observable. Real once \"languages\" names more than one - see hooks/post_gen_project.py for",
+        "that version."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "b57faf005ce4",
+      "reason": [
+        "equivalent mutant, the same way and for the same reason as the fallbackLng comment below - i18next",
+        "resolves an empty lng through fallbackLng regardless of what this placeholder actually is, landing",
+        "on \"en\" either way."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "b5c23a94532c",
+      "reason": [
+        "equivalent mutant, the same way and for the same reason as the fallbackLng comment below - i18next",
+        "resolves an empty lng through fallbackLng regardless of what this placeholder actually is, landing",
+        "on \"en\" either way."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "b5c23a94532c",
+      "reason": [
+        "equivalent mutant. deviceLanguage() only ever returns a language this app actually bundles resources",
+        "for, so a missing *key* inside that bundle is the only thing fallbackLng could ever catch here - and",
+        "every key that exists in \"en\" exists in every other bundle too (blank until translated, never absent",
+        "- see hooks/post_gen_project.py), so that never happens either."
+      ]
+    },
+    {
+      "mutator": "BlockStatement",
+      "fingerprint": "abb75188bb36",
+      "reason": [
+        "equivalent mutant, same single-language reason as the `if` inside - its condition is already always",
+        "false, so an empty body changes nothing a caller could observe. Real once \"languages\" names more",
+        "than one."
+      ]
+    },
+    {
+      "mutator": "ConditionalExpression",
+      "fingerprint": "054e2df901af",
+      "reason": [
+        "equivalent mutant with only one supported language - isSupported(language) is only ever true for",
+        "\"en\", and i18next.language is always \"en\" too (nothing else to switch to), so the two halves can",
+        "never both be true at once - this condition is already always false, same as a literal `if (false)`.",
+        "Real once \"languages\" names more than one. istanbul ignore next -- same single-language reason: the",
+        "condition above can never be true, so this call can never execute, in this configuration. Real once",
+        "\"languages\" names more than one, where the \"switches to a different supported language\" test below",
+        "exercises it."
+      ]
+    }
+  ],
+  "lib/useAuthenticated.ts": [
+    {
+      "mutator": "ConditionalExpression",
+      "fingerprint": "bb64640fd47f",
+      "reason": [
+        "isMounted is referentially stable (its own useCallback never changes it), so this effect's deps",
+        "array is equivalent to [] either way - and see @isikk/core/hooks' own useIsMounted for why the guard",
+        "below is equivalent too."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "1cf406907db3",
+      "reason": [
+        "isMounted is referentially stable (its own useCallback never changes it), so this effect's deps",
+        "array is equivalent to [] either way - and see @isikk/core/hooks' own useIsMounted for why the guard",
+        "below is equivalent too."
+      ]
+    }
+  ],
+  "components/ListRow.tsx": [
+    {
+      "mutator": "BlockStatement",
+      "fingerprint": "ccb2cb5605f6",
+      "reason": [
+        "Genuinely a hang, not a slow test: this mutant replaces the component's whole body with {} (an",
+        "implicit `return undefined`). @testing-library/react-native's `render()` - awaited by every test",
+        "here - never settles when the root component itself renders nothing, confirmed by hand: raising",
+        "Stryker's own timeoutMS to 30000 (6x the default) made no difference, so jest's own per-test timeout",
+        "never gets a chance to fire either - this blocks synchronously, it doesn't just run long. The",
+        "component's real behavior (rendering its children inside the shared wrapper) is fully covered by",
+        "this same file's tests; only the mutated, empty-body version hangs."
+      ]
+    }
+  ],
+  "components/ErrorText.tsx": [
+    {
+      "mutator": "BlockStatement",
+      "fingerprint": "a9d8200f05c4",
+      "reason": [
+        "Genuinely a hang, not a slow test: this mutant replaces the component's whole body with {} (an",
+        "implicit `return undefined`). @testing-library/react-native's `render()` - awaited by every test",
+        "here - never settles when the root component itself renders nothing, confirmed by hand: raising",
+        "Stryker's own timeoutMS to 30000 (6x the default) made no difference, so jest's own per-test timeout",
+        "never gets a chance to fire either - this blocks synchronously, it doesn't just run long. The",
+        "component's real behavior (rendering its children inside the shared wrapper) is fully covered by",
+        "this same file's tests; only the mutated, empty-body version hangs."
+      ]
+    }
+  ],
+  "components/Screen.tsx": [
+    {
+      "mutator": "BlockStatement",
+      "fingerprint": "9fcc28f77185",
+      "reason": [
+        "Genuinely a hang, not a slow test: this mutant replaces the component's whole body with {} (an",
+        "implicit `return undefined`). @testing-library/react-native's `render()` - awaited by every test",
+        "here - never settles when the root component itself renders nothing, confirmed by hand: raising",
+        "Stryker's own timeoutMS to 30000 (6x the default) made no difference, so jest's own per-test timeout",
+        "never gets a chance to fire either - this blocks synchronously, it doesn't just run long. The",
+        "component's real behavior (rendering its children inside the shared wrapper) is fully covered by",
+        "this same file's tests; only the mutated, empty-body version hangs."
+      ]
+    }
+  ]
+}

@@ -182,7 +182,7 @@ ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_EMAIL_NOTIFICATIONS = True
 # Literal False, not an empty dict - allauth builds its defaults and then .update()s this over
 # them, so {} would disable nothing at all. Only False short-circuits the whole thing.
-if not config.ACCOUNTS.RATE_LIMITS_ENABLED:  # pragma: no cover - only false in the e2e environment
+if not config.ACCOUNTS.RATE_LIMITS_ENABLED:  # see pyproject.toml's coverage exclude_lines for why
     ACCOUNT_RATE_LIMITS = False
 
 # Costs a write per authenticated request and needs UserSessionsMiddleware. Off means last_seen_at
@@ -380,7 +380,7 @@ EMAIL_HOST_PASSWORD = config.EMAIL.SMTP.PASSWORD
 EMAIL_USE_TLS = config.EMAIL.SMTP.USE_TLS
 DEFAULT_FROM_EMAIL = config.EMAIL.DEFAULT_FROM
 
-if config.SENTRY.DSN:  # pragma: no cover - exercised only when SENTRY__DSN is actually configured
+if config.SENTRY.DSN:  # see pyproject.toml's coverage exclude_lines for why
     sentry_sdk.init(
         dsn=config.SENTRY.DSN,
         traces_sample_rate=float(config.SENTRY.TRACES_SAMPLE_RATE),

@@ -13,7 +13,8 @@ module.exports = {
     'theme/**/*.{ts,tsx}',
     '!**/__tests__/**',
   ],
-  coverageThreshold: {
-    global: { statements: 100, branches: 100, functions: 100, lines: 100 },
-  },
+  // Enforced by packages/mutation-check/check-coverage.mjs instead of a threshold here - it reads
+  // this same coverage-final.json ('json' reporter, below) and allows only the gaps
+  // coverage-exemptions.json documents, rather than failing outright on any gap at all.
+  coverageReporters: ['text', 'html', 'json'],
 }

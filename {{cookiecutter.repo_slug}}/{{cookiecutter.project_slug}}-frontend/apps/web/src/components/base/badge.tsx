@@ -16,12 +16,7 @@ const badgeVariants = cva(
         outline: 'border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground',
       },
     },
-    // Stryker disable next-line ObjectLiteral,StringLiteral: equivalent mutant. Badge's own
-    // `variant = 'default'` parameter default, and its type, already guarantee a valid key
-    // reaches badgeVariants() - this fallback exists for callers outside that guarantee (e.g.
-    // an `as any` cast) that this component's own tests can't produce.
     defaultVariants: {
-      // Stryker disable next-line StringLiteral: equivalent mutant, same reasoning as above.
       variant: 'default',
     },
   }

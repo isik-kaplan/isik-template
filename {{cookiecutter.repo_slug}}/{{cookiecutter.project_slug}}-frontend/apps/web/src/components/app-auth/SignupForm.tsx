@@ -19,9 +19,6 @@ import { PasswordInput } from './PasswordInput'
 import { z } from 'zod'
 
 export function SignupForm() {
-  // Stryker disable next-line ArrayDeclaration,StringLiteral: equivalent mutant. Every t()
-  // call here names its full 'auth:key', so this array only matters for an unprefixed
-  // lookup - none of them are.
   const { t } = useClientTranslation(['auth'])
   const router = useRouter()
   const schema = useMemo(
@@ -31,9 +28,6 @@ export function SignupForm() {
         email: z.email(t('auth:validationEmailInvalid')),
         password: z.string().min(8, t('auth:validationPasswordMinLength')),
       }),
-    // Stryker disable next-line ArrayDeclaration: equivalent mutant. t's reference never
-    // changes across renders in this single-language app, so this memo never actually
-    // recomputes either way.
     [t]
   )
   const { formState, formErrors, handleFormStateEvent, isSubmitting, submit } = useValidatedFormState(schema, {
@@ -52,9 +46,6 @@ export function SignupForm() {
       isSuccess: ({ data, error, response }) => {
         if (data) return true
         if (response.status !== 401) return false
-        // Stryker disable next-line OptionalChaining: equivalent mutant. `error` is only ever
-        // undefined when `data` is set instead (openapi-fetch's discriminated result), and the
-        // early return above already covers that case.
         const errorData = error?.data
         return Boolean(errorData?.flows?.some((flow) => flow.id === 'verify_email'))
       },

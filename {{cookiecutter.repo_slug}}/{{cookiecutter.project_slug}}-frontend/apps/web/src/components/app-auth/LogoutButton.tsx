@@ -15,9 +15,6 @@ import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
 export type LogoutButtonProps = Omit<React.ComponentProps<typeof Button>, 'onClick'>
 
 export function LogoutButton({ children, ...props }: LogoutButtonProps) {
-  // Stryker disable next-line ArrayDeclaration,StringLiteral: equivalent mutant. Every t()
-  // call here names its full 'auth:key', so this array only matters for an unprefixed
-  // lookup - none of them are.
   const { t } = useClientTranslation(['auth'])
   const router = useRouter()
 

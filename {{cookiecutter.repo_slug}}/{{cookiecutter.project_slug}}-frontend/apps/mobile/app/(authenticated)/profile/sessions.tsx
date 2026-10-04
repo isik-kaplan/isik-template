@@ -16,9 +16,6 @@ export default function ProfileSessions() {
   const [pending, setPending] = useState<number[] | null>(null)
   const isMounted = useIsMounted()
 
-  // Equivalent mutant either way, both the guard and the deps array - see
-  // lib/useAuthenticated.ts's own copy of this same effect for why.
-  // Stryker disable ArrayDeclaration,ConditionalExpression
   useEffect(() => {
     getAuthApi()
       .sessions()
@@ -26,7 +23,6 @@ export default function ProfileSessions() {
         if (isMounted()) setSessions(data?.data ?? [])
       })
   }, [isMounted])
-  // Stryker restore ArrayDeclaration,ConditionalExpression
 
   const others = sessions.filter((session) => !session.is_current)
 

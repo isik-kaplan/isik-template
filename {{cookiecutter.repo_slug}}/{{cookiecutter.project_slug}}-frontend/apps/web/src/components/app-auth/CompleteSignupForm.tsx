@@ -27,9 +27,6 @@ export type CompleteSignupFormProps = {
 }
 
 export function CompleteSignupForm({ email, suggestedUsername = '' }: CompleteSignupFormProps) {
-  // Stryker disable next-line ArrayDeclaration,StringLiteral: equivalent mutant. Every t()
-  // call here names its full 'auth:key', so this array only matters for an unprefixed
-  // lookup - none of them are.
   const { t } = useClientTranslation(['auth'])
   const router = useRouter()
   const schema = useMemo(
@@ -38,9 +35,6 @@ export function CompleteSignupForm({ email, suggestedUsername = '' }: CompleteSi
         username: z.string().min(1, t('auth:validationUsernameRequired')),
         password: z.string().min(8, t('auth:validationPasswordMinLength')),
       }),
-    // Stryker disable next-line ArrayDeclaration: equivalent mutant. t's reference never
-    // changes across renders in this single-language app, so this memo never actually
-    // recomputes either way.
     [t]
   )
   const { formState, formErrors, handleFormStateEvent, isSubmitting, submit } = useValidatedFormState(schema, {
@@ -56,9 +50,6 @@ export function CompleteSignupForm({ email, suggestedUsername = '' }: CompleteSi
       // Same 401-can-mean-success shape as every other auth endpoint here (see VerifyEmailButton) -
       // mandatory email verification means the account can be created without becoming logged in.
       isSuccess: ({ data, error }) => Boolean(data) || !extractAuthErrors(error)?.length,
-      // Stryker disable next-line StringLiteral: equivalent mutant, unreachable rather than
-      // untested - useApiSubmit only falls back to this string when toFormErrors(error) is
-      // undefined, which by isSuccess above already means this call counted as a success.
       failure: t('auth:completeSignupError'),
       onSuccess: ({ response }) => router.push(response.status === 200 ? '/' : '/auth/login'),
     })

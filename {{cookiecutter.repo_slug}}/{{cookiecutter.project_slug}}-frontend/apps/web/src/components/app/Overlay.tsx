@@ -39,9 +39,6 @@ const MOBILE_VISIBLE_CLASSES: Record<OverlayBreakpoint, string> = {
 
 type OverlayVariant = 'popover' | 'drawer'
 
-// Stryker disable next-line StringLiteral: equivalent mutant. This default is only read outside
-// an <Overlay>'s own Provider, which is a usage error - every consumer only branches on
-// `=== 'drawer'`, so any other string here is indistinguishable from the real default.
 const OverlayContext = createContext<OverlayVariant>('popover')
 
 type OverlayProps = {

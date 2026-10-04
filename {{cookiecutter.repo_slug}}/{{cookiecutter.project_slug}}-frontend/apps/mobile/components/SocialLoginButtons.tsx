@@ -52,10 +52,6 @@ export function SocialLoginButtons({
     }
   }
 
-  // Equivalent mutant: with both flags false, skipping this early return still renders an empty
-  // fragment (both conditions below are false too) - indistinguishable from null in the tree
-  // either way, so no assertion could tell the two apart.
-  // Stryker disable next-line ConditionalExpression
   if (!googleEnabled && !appleEnabled) return null
 
   return (

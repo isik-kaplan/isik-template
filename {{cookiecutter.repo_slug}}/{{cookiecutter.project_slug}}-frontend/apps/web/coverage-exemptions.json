@@ -1,0 +1,16 @@
+{
+  "src/lib/resolveLanguage.ts": [
+    {
+      "kind": "branch",
+      "branchIndex": 0,
+      "fingerprint": "23597c848013",
+      "reason": [
+        "Equivalent mutant's coverage twin: with only one configured language, isSupported(base) is only ever",
+        "true for \"en\", which is also the only value every fallback path below already returns - this",
+        "branch's true side can't be exercised without a second configured language. Real once \"languages\"",
+        "names more than one; see resolveLanguage.ts's own BlockStatement/ConditionalExpression entries in",
+        "mutation-exemptions.json for the same reasoning applied to mutation."
+      ]
+    }
+  ]
+}

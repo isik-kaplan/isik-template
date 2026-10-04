@@ -5,9 +5,6 @@ import { sUseTranslation } from '@/i18n'
 
 export default async function VerifyEmailPage({ params }: { params: Promise<{ key: string }> }) {
   const { key } = await params
-  // Stryker disable next-line ArrayDeclaration,StringLiteral: equivalent mutant. Every t()
-  // call here names its full 'auth:key', so this array only matters for an unprefixed
-  // lookup - none of them are.
   const { t } = await sUseTranslation(['auth'])
 
   return (

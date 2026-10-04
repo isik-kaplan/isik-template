@@ -7,8 +7,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "lint:types": "tsc --noEmit",
-    "test": "jest --coverage",
-    "test:mutation": "stryker run"
+    "test": "jest --coverage && node ../../packages/mutation-check/check-coverage.mjs .",
+    "test:mutation": "stryker run && node ../../packages/mutation-check/check-mutants.mjs ."
   },
   "dependencies": {
     "@{{ cookiecutter.repo_slug }}/auth-api": "*",
