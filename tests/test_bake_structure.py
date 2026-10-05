@@ -9,7 +9,7 @@ from conftest import load_context
 pytestmark = pytest.mark.usefixtures("skip_lockfile_generation")
 
 
-@pytest.mark.parametrize("context_name", ["default", "no-social-login"])
+@pytest.mark.parametrize("context_name", ["default", "no-social-login", "self-tls"])
 def test_bake_succeeds(cookies, context_name):
     result = cookies.bake(extra_context=load_context(context_name))
     assert result.exit_code == 0
@@ -38,8 +38,13 @@ def test_repo_slug_derived_from_project_name(cookies):
     assert result.project_path.name == "my-cool-app"
 
 
-def test_no_unrendered_jinja_in_output(cookies):
-    result = cookies.bake(extra_context=load_context("default"))
+@pytest.mark.parametrize("context_name", ["default", "self-tls"])
+def test_no_unrendered_jinja_in_output(cookies, context_name):
+    # "self-tls" exercises tls_termination's own self-termination branch (certbot/nginx :443
+    # blocks, entrypoint.sh's dummy-cert bootstrap) - every one of those lives inside a
+    # {% if cookiecutter.tls_termination == "self" %} block that "default" (tls_termination:
+    # "external") never renders at all.
+    result = cookies.bake(extra_context=load_context(context_name))
     assert result.exit_code == 0
 
     # Any source file wrapped in {% raw %} is expected to still contain literal "{{"/"{%" in its
@@ -139,3 +144,40 @@ def test_social_login_provider_icons_renders_into_socialProviders_ts(cookies):
     ).read_text()
     assert "icon: 'https://example.test/idp-icon.svg'" in social_providers_ts
     assert "{ id: 'google', name: 'Google', icon: '' }" in social_providers_ts
+
+
+def test_tls_termination_self_adds_certbot_and_443(cookies):
+    result = cookies.bake(extra_context=load_context("self-tls"))
+    assert result.exit_code == 0
+
+    server_dir = f"{result.context['project_slug']}-server"
+    compose = (result.project_path / "docker-compose.yml").read_text()
+    nginx_conf = (result.project_path / server_dir / "template.nginx.conf").read_text()
+    dockerfile = (result.project_path / server_dir / "Dockerfile").read_text()
+    env_example = (result.project_path / ".env.example").read_text()
+
+    assert "certbot:" in compose
+    assert '"443:443"' in compose
+    assert "letsencrypt:" in compose
+    assert "listen 443 ssl" in nginx_conf
+    assert "acme-challenge" in nginx_conf
+    assert "apk add --no-cache openssl" in dockerfile
+    assert f"{result.context['config_prefix']}__TLS__ACME_EMAIL" in env_example
+
+
+def test_tls_termination_external_has_no_certbot_or_443(cookies):
+    result = cookies.bake(extra_context=load_context("default"))
+    assert result.exit_code == 0
+
+    server_dir = f"{result.context['project_slug']}-server"
+    compose = (result.project_path / "docker-compose.yml").read_text()
+    nginx_conf = (result.project_path / server_dir / "template.nginx.conf").read_text()
+    dockerfile = (result.project_path / server_dir / "Dockerfile").read_text()
+    env_example = (result.project_path / ".env.example").read_text()
+
+    assert "certbot" not in compose
+    assert "443" not in compose
+    assert "listen 443" not in nginx_conf
+    assert "acme-challenge" not in nginx_conf
+    assert "openssl" not in dockerfile
+    assert "__TLS__ACME_EMAIL" not in env_example

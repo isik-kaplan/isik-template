@@ -1,0 +1,10 @@
+{
+  "project_name": "Self TLS Project",
+  "description": "Validates the certbot/nginx self-termination branch of tls_termination.",
+  "author_name": "Test Author",
+  "author_email": "test@example.test",
+  "domain": "selftls.test",
+  "tls_termination": "self",
+  "social_login_providers": "google",
+  "license": "MIT"
+}

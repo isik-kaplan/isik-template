@@ -145,13 +145,26 @@ services:
       context: ./{{ cookiecutter.project_slug }}-server
     image: {{ cookiecutter.repo_slug }}-server:latest
     env_file: .env
+{%- if cookiecutter.tls_termination == "self" %}
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - acme_webroot:/var/www/certbot
+{%- endif %}
     depends_on:
       backend:
         condition: service_healthy
       frontend:
         condition: service_healthy
     ports:
+{%- if cookiecutter.tls_termination == "self" %}
+      # Both on every interface, not 127.0.0.1 - nothing else sits in front of this container in
+      # self-termination mode, so the public internet has to reach both directly (80 for
+      # certbot's HTTP-01 challenge and the plain-http->https redirect, 443 for everything else).
+      - "80:80"
+      - "443:443"
+{%- else %}
       - "127.0.0.1:{{ '${' + cookiecutter.config_prefix + '__HTTP_PORT:-80}' }}:80"
+{%- endif %}
     networks:
       internal:
         # The frontend's own SSR fetches resolve these the same way a browser's requests do -
@@ -169,9 +182,39 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-
+{% if cookiecutter.tls_termination == "self" %}
+  # Only job: get the first real certificate and keep renewing it - nginx (server/entrypoint.sh)
+  # reloads periodically on its own to pick up whatever lands in the shared `letsencrypt` volume,
+  # so this never needs to reach into that container.
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - acme_webroot:/var/www/certbot
+    depends_on:
+      server:
+        condition: service_healthy
+    restart: unless-stopped
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - >-
+        trap exit TERM;
+        certbot certonly --webroot -w /var/www/certbot
+        -d {{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
+        -d api.{{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
+        -d admin.{{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
+        -d auth.{{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
+        --email {{ '${' + cookiecutter.config_prefix + '__TLS__ACME_EMAIL}' }}
+        --agree-tos --non-interactive --keep-until-expiring;
+        while true; do certbot renew; sleep 12h; done;
+{% endif %}
 volumes:
   postgres_data:
+{%- if cookiecutter.tls_termination == "self" %}
+  letsencrypt:
+  acme_webroot:
+{%- endif %}
 
 networks:
   internal:

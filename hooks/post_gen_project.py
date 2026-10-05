@@ -241,11 +241,6 @@ def generate_lock_files() -> list[str]:
 
 
 def main() -> None:
-    # .env.example already carries a real, working value for every field that has one (see its
-    # own header comment) - domain, DB/broker names, and internal-only credentials are all
-    # resolved via cookiecutter at generation time, so nothing here needs patching afterwards.
-    shutil.copy(".env.example", ".env")
-
     # A Jinja-conditional directory *name* (cookiecutter's usual trick for an optional app - and
     # what this started as) turned out not to work here: when the name renders empty, cookiecutter
     # resolves the target path to its own parent ("apps"), which already exists as a sibling
@@ -286,6 +281,12 @@ def main() -> None:
 
     for warning in lock_warnings:
         print(f"\n{warning}\n")
+
+    # Last step, deliberately - writes .env, prompting for a real deployment's secrets/config if
+    # this is a real terminal, or just copying .env.example's already-working dev values if not
+    # (a CI bake, or this script fed from a pipe - see its own isatty check). Everything above
+    # should already be on screen before scripts/setup.sh's own prompts show up.
+    subprocess.run(["bash", "scripts/setup.sh"], check=True)
 
 
 if __name__ == "__main__":

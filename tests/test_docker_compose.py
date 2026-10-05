@@ -13,8 +13,9 @@ pytestmark = [
 ]
 
 
-def test_docker_compose_config_validates(cookies):
-    result = cookies.bake(extra_context=load_context("default"))
+@pytest.mark.parametrize("context_name", ["default", "self-tls"])
+def test_docker_compose_config_validates(cookies, context_name):
+    result = cookies.bake(extra_context=load_context(context_name))
     assert result.exit_code == 0
 
     proc = subprocess.run(

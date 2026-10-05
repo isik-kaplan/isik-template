@@ -28,9 +28,45 @@ with no `build:` of their own, and starting them before that build finishes tagg
 race compose into trying to pull it instead of using what was just built.
 
 Brings up `database`, `broker`, `backend`, `worker`, `scheduler`, `frontend`, and `server` (nginx,
-the only service publishing a host port). Visit `http://{{ cookiecutter.domain }}`. `.env` was
-already created for you at generation time (from `.env.example`) - see that file's own header
-comment before changing anything in it.
+{%- if cookiecutter.tls_termination == "self" %}
+plus `certbot`; `server` is the only service publishing a host port, now on both `80` and `443`).
+Visit `https://{{ cookiecutter.domain }}` - see "TLS" below before the very first boot.
+{%- else %}
+the only service publishing a host port). Visit `http://{{ cookiecutter.domain }}`.
+{%- endif %}
+`.env` was already created for you at generation time by `scripts/setup.sh` (cookiecutter's own
+last step) - see `.env.example`'s own header comment before changing anything in it. Rerun
+`bash scripts/setup.sh` by hand later to redo that choice - e.g. to move this same checkout from
+local development to a real deployment, which generates strong secrets and prompts for real
+domain/SMTP/OAuth/Sentry config instead of leaving `.env.example`'s dev defaults in place.
+
+## TLS
+{% if cookiecutter.tls_termination == "self" %}
+This project terminates its own TLS: nginx serves `:443` off a certificate the `certbot` service
+(see `docker-compose.yml`) obtains and renews automatically via Let's Encrypt's HTTP-01 challenge,
+which only works once `{{ cookiecutter.domain }}`, `api.{{ cookiecutter.domain }}`,
+`admin.{{ cookiecutter.domain }}`, and `auth.{{ cookiecutter.domain }}` resolve, over real DNS, to
+this host's public IP. Point DNS there *before* the first `docker compose up -d` - nginx starts
+immediately either way (off a throwaway self-signed certificate, see
+`{{ cookiecutter.project_slug }}-server/entrypoint.sh`), but every client sees that placeholder
+cert, with a browser warning, until certbot's first real one lands. Running this locally instead
+(the `/etc/hosts` setup above) never satisfies that challenge - expect the self-signed cert there
+and either accept the browser warning or add it to your local store yourself, the same way
+`.env.example`'s dev defaults already assume plain HTTP for local work in the first place.
+
+A real deployment of this project must be reachable on both `80` and `443` directly - nothing else
+is meant to sit in front of it.
+{%- else %}
+This project serves plain HTTP (`:80`) only - it expects a TLS-terminating load balancer or
+reverse proxy in front of it in any real deployment (a platform's own (Fly.io/Render/Railway/an
+AWS ALB/Cloudflare), or your own nginx/Caddy on the same host), which forwards to this stack's
+`server` container and sets `X-Forwarded-Proto`/`X-Forwarded-Host` the way
+`{{ cookiecutter.project_slug }}-server/template.nginx.conf`'s own comments describe - get that
+wrong and `settings.py`'s `SECURE_PROXY_SSL_HEADER` trusts whatever the client sent instead,
+which lets anyone choose the scheme of an emailed password-reset link. Regenerate with
+`tls_termination: self` instead if you'd rather this project terminate its own TLS via certbot,
+with no separate proxy to run.
+{%- endif %}
 {% if cookiecutter.include_mobile %}
 The mobile app (`{{ cookiecutter.project_slug }}-frontend/apps/mobile`) isn't part of the compose
 stack - it talks to the same backend over plain HTTP, pointed at by two env vars Expo embeds at
