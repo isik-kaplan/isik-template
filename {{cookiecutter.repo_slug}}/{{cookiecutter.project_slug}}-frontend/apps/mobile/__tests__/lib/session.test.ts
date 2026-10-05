@@ -4,6 +4,8 @@ import { AppAuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
 import * as SecureStore from 'expo-secure-store'
 
+const mockPush = jest.fn()
+jest.mock('expo-router', () => ({ router: { push: (...args: unknown[]) => mockPush(...args) } }))
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(),
   setItemAsync: jest.fn(),
@@ -37,6 +39,21 @@ describe('session', () => {
     mockFetch({ status: 200, data: {}, meta: {} })
     await createAuthApi('http://auth.example.test').logout()
     expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('session_token')
+  })
+
+  it('sends the app to prove it is them when the backend asks for that, and passes the answer on', async () => {
+    global.fetch = jest.fn(
+      async () => new Response('{}', { status: 401, headers: { 'X-Reauthentication-Required': '1' } })
+    ) as unknown as typeof fetch
+    const { response } = await createAuthApi('http://auth.example.test').addEmail('second@example.test')
+    expect(mockPush).toHaveBeenCalledWith('/prove')
+    expect(response.status).toBe(401)
+  })
+
+  it('goes nowhere on an ordinary answer', async () => {
+    mockFetch({ status: 200, data: {}, meta: {} })
+    await createAuthApi('http://auth.example.test').session()
+    expect(mockPush).not.toHaveBeenCalled()
   })
 
   it('getAuthApi() returns the same real AppAuthApi instance on repeated calls', () => {

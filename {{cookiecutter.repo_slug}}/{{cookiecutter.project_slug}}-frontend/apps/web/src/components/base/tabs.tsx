@@ -15,12 +15,14 @@ function Tabs({ className, orientation = 'horizontal', ...props }: TabsPrimitive
   )
 }
 
+// Wraps onto another row rather than overflowing: a strip with more triggers than its width holds keeps
+// every one reachable, and each row's flex-1 triggers still divide it evenly.
 function TabsList({ className, ...props }: TabsPrimitive.List.Props) {
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
       className={cn(
-        'inline-flex w-fit items-center justify-center rounded-none bg-muted p-[3px] text-muted-foreground group-data-horizontal/tabs:h-9 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col',
+        'inline-flex w-fit max-w-full flex-wrap items-center justify-center rounded-none bg-muted p-[3px] text-muted-foreground group-data-horizontal/tabs:min-h-9 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col',
         className
       )}
       {...props}

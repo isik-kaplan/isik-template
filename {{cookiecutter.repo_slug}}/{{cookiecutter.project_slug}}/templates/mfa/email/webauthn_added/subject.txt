@@ -1,0 +1,3 @@
+{% raw -%}
+{% autoescape off %}{% blocktrans %}Passkey added{% endblocktrans %}{% endautoescape %}
+{%- endraw %}

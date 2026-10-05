@@ -7,21 +7,14 @@
 //
 // Catalog entries are keyed by (file, mutatorName, fingerprint), where fingerprint is a hash of the
 // exact source text the mutant's own location spans - not a line number, so a reformat or an edit
-// elsewhere in the file can't leave a stale entry silently covering the wrong code. An entry whose
-// fingerprint no longer matches anything simply stops applying - the mutant it used to excuse comes
-// back as unexplained, the same way it would if the entry were deleted outright.
-import { createHash } from 'node:crypto'
+// elsewhere in the file can't leave an entry silently covering the wrong code.
+//
+// Stryker never skips an exempt mutant here, so every run re-measures every exemption: an entry
+// that no surviving mutant matches any more (a test kills it now, or its code is gone) fails too,
+// rather than sitting in the catalog excusing nothing until it one day excuses something new.
+import { judgeMutants } from './judge-mutants.mjs'
 import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
-
-// Timeout counts as alive, same as mutmut's backend equivalent (survived/suspicious/timeout/
-// no_tests/segfault) - a mutant the suite never gave a real verdict on is a hole, not a pass.
-const ALIVE = new Set(['Survived', 'NoCoverage', 'Timeout'])
-
-function fingerprint(sourceLines, location) {
-  const snippet = sourceLines.slice(location.start.line - 1, location.end.line).join('\n')
-  return createHash('sha256').update(snippet).digest('hex').slice(0, 12)
-}
 
 function main() {
   const appRoot = path.resolve(process.argv[2] ?? '.')
@@ -36,46 +29,58 @@ function main() {
 
   const report = JSON.parse(readFileSync(reportPath, 'utf8'))
   const catalog = existsSync(catalogPath) ? JSON.parse(readFileSync(catalogPath, 'utf8')) : {}
+  const { total, alive, unexplained, stale, plural, orphaned } = judgeMutants(report, catalog, {
+    readLines: (file) => readFileSync(path.join(appRoot, file), 'utf8').split('\n'),
+    exists: (file) => existsSync(path.join(appRoot, file)),
+  })
 
-  let totalMutants = 0
-  let totalAlive = 0
-  const unexplained = []
-  const sourceCache = new Map()
-
-  for (const [file, data] of Object.entries(report.files)) {
-    const entries = catalog[file] ?? []
-    const absFile = path.join(appRoot, file)
-    for (const mutant of data.mutants) {
-      totalMutants++
-      if (!ALIVE.has(mutant.status)) continue
-      totalAlive++
-
-      if (!sourceCache.has(absFile)) {
-        sourceCache.set(absFile, readFileSync(absFile, 'utf8').split('\n'))
-      }
-      const fp = fingerprint(sourceCache.get(absFile), mutant.location)
-      const exempt = entries.some((entry) => entry.mutator === mutant.mutatorName && entry.fingerprint === fp)
-      if (!exempt) {
-        unexplained.push({ file, mutant, fp })
-      }
+  if (plural.length > 0) {
+    // Not a failure: a fingerprint spans whole lines, so one line holding two mutants of the same
+    // kind hands both to its entry. Printed so the reason can be checked against all of them.
+    console.log(
+      `${plural.length} exemption(s) match more mutants than they have entries - check each reason covers them all:\n`
+    )
+    for (const { file, entry, count } of plural) {
+      console.log(`  ${file}  ${entry.mutator}  (fingerprint ${entry.fingerprint})  ${count} mutants`)
     }
+    console.log()
   }
 
   if (unexplained.length > 0) {
     console.log(`${unexplained.length} mutant(s) survived with no exemption on record:\n`)
-    for (const { file, mutant, fp } of unexplained) {
+    for (const { file, mutant, fingerprint } of unexplained) {
       const { line, column } = mutant.location.start
-      console.log(`  ${file}:${line}:${column}  ${mutant.mutatorName}  (fingerprint ${fp})`)
+      console.log(`  ${file}:${line}:${column}  ${mutant.mutatorName}  (fingerprint ${fingerprint})`)
       console.log(`    status: ${mutant.status}, replacement: ${mutant.replacement}`)
     }
     console.log(
-      '\nEither add a test that kills it, or record it in mutation-exemptions.json with a reason for why no test can.'
+      '\nEither add a test that kills it, or record it in mutation-exemptions.json with a reason for why no test can.\n'
     )
+  }
+
+  if (stale.length > 0) {
+    console.log(`${stale.length} exemption(s) excuse no surviving mutant any more:\n`)
+    for (const { file, entry } of stale) {
+      console.log(`  ${file}  ${entry.mutator}  (fingerprint ${entry.fingerprint})`)
+    }
+    console.log(
+      '\nA test kills that mutant now, or the code it described has changed. Remove the entry from ' +
+        'mutation-exemptions.json.\n'
+    )
+  }
+
+  if (orphaned.length > 0) {
+    console.log(`mutation-exemptions.json names ${orphaned.length} file(s) that no longer exist:\n`)
+    for (const file of orphaned) console.log(`  ${file}`)
+    console.log('\nRemove their entries, or move them under the file the code now lives in.\n')
+  }
+
+  if (unexplained.length > 0 || stale.length > 0 || orphaned.length > 0) {
     process.exitCode = 1
     return
   }
 
-  console.log(`no unexplained survivors (${totalMutants} mutants total, ${totalAlive} alive and all exempt)`)
+  console.log(`no unexplained survivors or stale exemptions (${total} mutants total, ${alive} alive and all exempt)`)
 }
 
 main()

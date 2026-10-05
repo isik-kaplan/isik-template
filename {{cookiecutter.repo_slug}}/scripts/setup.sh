@@ -93,6 +93,8 @@ echo
 echo "Generating secrets..."
 set_var "${PREFIX}__DEBUG" "false"
 set_var "${PREFIX}__SECRET_KEY" "$(random_hex 32)"
+# A Fernet key is 32 random bytes in url-safe base64, which plain base64 becomes by swapping two characters.
+set_var "${PREFIX}__CREDENTIAL_KEY" "$(openssl rand -base64 32 | tr '+/' '-_')"
 set_var "${PREFIX}__DB__PASSWORD" "$(random_hex 24)"
 set_var "${PREFIX}__BROKER__PASSWORD" "$(random_hex 24)"
 
@@ -104,6 +106,17 @@ set_var "${PREFIX}__DOMAIN" "$domain"
 {% if cookiecutter.tls_termination == "self" %}
 acme_email="$(ask "Contact email for Let's Encrypt (expiry/revocation notices)" "{{ cookiecutter.author_email }}")"
 set_var "${PREFIX}__TLS__ACME_EMAIL" "$acme_email"
+{%- else %}
+echo
+echo "nginx serves plain HTTP here, behind the TLS-terminating load balancer you put in front of it."
+echo "Every proxy in that chain has to append to X-Forwarded-For, not replace it."
+front_proxies="$(ask "How many proxies sit in front of nginx" "1")"
+if ! [[ "$front_proxies" =~ ^[0-9]+$ ]]; then
+  echo "Expected a whole number, got '$front_proxies'." >&2
+  exit 1
+fi
+# nginx appends too, so it counts as one more.
+set_var "${PREFIX}__TRUSTED_PROXY_COUNT" "$((front_proxies + 1))"
 {% endif %}
 superuser_username="$(ask "Superuser username" "admin")"
 set_var "${PREFIX}__SETUP__SUPERUSER__USERNAME" "$superuser_username"
@@ -123,6 +136,20 @@ if [ -n "$smtp_host" ]; then
   set_var "${PREFIX}__EMAIL__DEFAULT_FROM" "$(ask "Default from address" "noreply@${domain}")"
 else
   echo "Skipped - fill in ${PREFIX}__EMAIL__SMTP__* in $ENV_FILE yourself before going live, or no email will send."
+fi
+
+echo
+echo "Object storage: the bundled LocalStack keeps nothing across a restart, so a real deployment"
+echo "needs a real S3-compatible bucket (AWS S3, Cloudflare R2, MinIO, ...)."
+storage_endpoint="$(ask "S3 endpoint URL (blank keeps the bundled LocalStack)" "")"
+if [ -n "$storage_endpoint" ]; then
+  set_var "${PREFIX}__STORAGE__ENDPOINT_URL" "$storage_endpoint"
+  set_var "${PREFIX}__STORAGE__BUCKET_NAME" "$(ask "Bucket name" "{{ cookiecutter.repo_slug }}")"
+  set_var "${PREFIX}__STORAGE__REGION_NAME" "$(ask "Region" "us-east-1")"
+  set_var "${PREFIX}__STORAGE__ACCESS_KEY_ID" "$(ask "Access key ID" "")"
+  set_var "${PREFIX}__STORAGE__SECRET_ACCESS_KEY" "$(ask_secret "Secret access key")"
+else
+  echo "Kept LocalStack - uploads will not survive a restart of the storage container."
 fi
 
 # Discovered from .env.example itself, not a fixed list - it already carries exactly the

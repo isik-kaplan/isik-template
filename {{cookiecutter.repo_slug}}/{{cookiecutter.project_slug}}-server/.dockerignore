@@ -1,0 +1,2 @@
+# Bind-mounted at runtime by docker-compose.dev-tls.yml - a local key must never be baked into the image.
+dev-tls

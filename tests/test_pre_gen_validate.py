@@ -168,8 +168,7 @@ def test_rejects_an_icon_entry_with_blank_url():
     with pytest.raises(AnswersInvalid) as excinfo:
         validate_provider_icons("google=", ["google"])
     assert str(excinfo.value) == (
-        "'social_login_provider_icons' entry 'google=' needs a provider id and a URL/path on both "
-        "sides of '='."
+        "'social_login_provider_icons' entry 'google=' needs a provider id and a URL/path on both sides of '='."
     )
 
 
@@ -243,7 +242,10 @@ def test_validate_answers_rejects_an_unknown_language_too():
 
 
 def test_validate_answers_accepts_the_default_english_only_languages():
-    validate_answers(**valid_answers())  # does not raise
+    # Left out rather than passed, so it is the parameter's own default being accepted.
+    answers = valid_answers()
+    del answers["languages"]
+    validate_answers(**answers)  # does not raise
 
 
 def test_parses_requested_languages_from_a_comma_separated_string():

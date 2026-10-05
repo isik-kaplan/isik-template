@@ -21,6 +21,15 @@ const TYPESCRIPT_RULES = {
   '@typescript-eslint/explicit-member-accessibility': 'off',
   '@typescript-eslint/no-var-requires': 'off',
   '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+  // The DOM declares these as globals, so a deleted local that is still referenced type-checks and
+  // passes a jsdom suite - then throws in a Server Component or React Native, where none exist.
+  'no-restricted-globals': [
+    'error',
+    ...['origin', 'name', 'status', 'length', 'closed', 'top', 'parent', 'self', 'event', 'history'].map((name) => ({
+      name,
+      message: `"${name}" is a DOM global here, not a variable you declared - bind it explicitly.`,
+    })),
+  ],
 }
 
 export default defineConfig([

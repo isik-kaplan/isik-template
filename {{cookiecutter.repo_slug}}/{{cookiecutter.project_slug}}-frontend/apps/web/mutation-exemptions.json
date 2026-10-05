@@ -89,6 +89,24 @@
       ]
     }
   ],
+  "src/app/auth/prove/page.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "8abfebfaf906",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "8abfebfaf906",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
   "src/app/auth/provider-error/page.tsx": [
     {
       "mutator": "ArrayDeclaration",
@@ -143,6 +161,24 @@
       ]
     }
   ],
+  "src/app/auth/two-factor/page.tsx": [
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "8abfebfaf906",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "8abfebfaf906",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
   "src/app/auth/verify-email/[key]/page.tsx": [
     {
       "mutator": "ArrayDeclaration",
@@ -162,6 +198,24 @@
     }
   ],
   "src/app/auth/verify-email-declined/page.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "8abfebfaf906",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "8abfebfaf906",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
+  "src/app/auth/verify-email-required/page.tsx": [
     {
       "mutator": "ArrayDeclaration",
       "fingerprint": "8abfebfaf906",
@@ -225,24 +279,42 @@
       ]
     }
   ],
-  "src/app/profile/(tabs)/details/page.tsx": [
+{%- if not cookiecutter.social_login_providers.strip() %}
+  "src/app/profile/(tabs)/connections/page.tsx": [
+    {
+      "mutator": "LogicalOperator",
+      "fingerprint": "867b981ecb4b",
+      "reason": [
+        "equivalent mutant, and only in a project with no social provider configured: ConnectionsList then",
+        "shows that nothing is configured and never reads the providers it was handed."
+      ]
+    },
     {
       "mutator": "ArrayDeclaration",
-      "fingerprint": "8abfebfaf906",
+      "fingerprint": "867b981ecb4b",
       "reason": [
-        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
-        "unprefixed lookup - none of them are."
+        "equivalent mutant, and only in a project with no social provider configured: ConnectionsList then",
+        "shows that nothing is configured and never reads the providers it was handed."
       ]
     },
     {
       "mutator": "StringLiteral",
-      "fingerprint": "8abfebfaf906",
+      "fingerprint": "b5adf6b115d0",
       "reason": [
-        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
-        "unprefixed lookup - none of them are."
+        "equivalent mutant, and only in a project with no social provider configured: ConnectionsList then",
+        "renders no connect button, so neither the form action nor the callback URL is ever read."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "7b79094fbe8c",
+      "reason": [
+        "equivalent mutant, and only in a project with no social provider configured: ConnectionsList then",
+        "renders no connect button, so neither the form action nor the callback URL is ever read."
       ]
     }
   ],
+{%- endif %}
   "src/app/profile/(tabs)/layout.tsx": [
     {
       "mutator": "ArrayDeclaration",
@@ -261,6 +333,200 @@
       ]
     }
   ],
+  "src/app/profile/(tabs)/two-factor/page.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "f2f14e8fc1eb",
+      "reason": [
+        "equivalent mutant. The fallback is only filtered by authenticator type, and a list holding a stray",
+        "string has no element of either type - the page renders exactly as it does for an empty list."
+      ]
+    }
+  ],
+  "src/components/app-auth/MfaChallengeForm.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "BlockStatement",
+      "fingerprint": "f7e63e882830",
+      "reason": [
+        "equivalent mutant. The catch hands back null for a dismissed prompt, and an empty block hands back",
+        "undefined - the caller only asks whether a credential came back, and both are falsy."
+      ]
+    }
+  ],
+  "src/components/app-auth/PasskeyList.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "BlockStatement",
+      "fingerprint": "4e08eb195659",
+      "reason": [
+        "equivalent mutant. The catch hands back null for a dismissed prompt, and an empty block hands back",
+        "undefined - the caller only asks whether a credential came back, and both are falsy."
+      ]
+    }
+  ],
+  "src/components/app-auth/ProveContent.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "30fe82ebf024",
+      "reason": [
+        "equivalent mutant. A flow naming no types falls back to a recovery code either way: the challenge form",
+        "only branches on 'totp', 'webauthn' and 'recovery_codes', and an invented type is none of them."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "ConditionalExpression",
+      "fingerprint": "1749fd54ffd2",
+      "reason": [
+        "equivalent mutant. Dropping the default's `return null` lets it fall off the end of the function, which",
+        "returns undefined - React renders that as nothing too, the same as null."
+      ]
+    }
+  ],
+  "src/components/app-auth/ProvePasswordForm.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "11f8260debb3",
+      "reason": [
+        "equivalent mutant. t's reference never changes across renders in this single-language app, so this",
+        "memo never actually recomputes either way."
+      ]
+    }
+  ],
+  "src/components/app-auth/ProveSetPasswordByEmail.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
+  "src/components/app-auth/RecoveryCodesReveal.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
+  "src/components/app-auth/RecoveryCodesSection.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
+  "src/components/app-auth/TotpSetup.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
   "src/components/app/Editor.tsx": [
     {
       "mutator": "BooleanLiteral",
@@ -272,6 +538,40 @@
       ]
     }
   ],
+  "src/components/app/EditMode.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "fe50cdbbb654",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'common:key', so this array only matters for",
+        "an unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "fe50cdbbb654",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'common:key', so this array only matters for",
+        "an unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "fe50cdbbb654",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'common:key', so this array only matters for",
+        "an unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "fe50cdbbb654",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'common:key', so this array only matters for",
+        "an unprefixed lookup - none of them are."
+      ]
+    }
+  ],
   "src/components/app/Overlay.tsx": [
     {
       "mutator": "StringLiteral",
@@ -280,6 +580,34 @@
         "equivalent mutant. This default is only read outside an <Overlay>'s own Provider, which is a usage",
         "error - every consumer only branches on `=== 'drawer'`, so any other string here is",
         "indistinguishable from the real default."
+      ]
+    }
+  ],
+  "src/components/app/Paginator.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "b62afb8aa32a",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'common:key', so this array only matters for",
+        "an unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "b62afb8aa32a",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'common:key', so this array only matters for",
+        "an unprefixed lookup - none of them are."
+      ]
+    }
+  ],
+  "src/components/app/RemoteCombobox.tsx": [
+    {
+      "mutator": "AssignmentOperator",
+      "fingerprint": "70c1bfe6c32b",
+      "reason": [
+        "equivalent mutant. Only equality against this counter is ever read, so which way it counts cannot be",
+        "observed."
       ]
     }
   ],
@@ -338,6 +666,24 @@
       ]
     }
   ],
+  "src/components/app-auth/AccountHistory.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "8abfebfaf906",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "8abfebfaf906",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
   "src/components/app-auth/CompleteSignupForm.tsx": [
     {
       "mutator": "ArrayDeclaration",
@@ -350,14 +696,6 @@
     {
       "mutator": "StringLiteral",
       "fingerprint": "56eb6d8002e5",
-      "reason": [
-        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
-        "unprefixed lookup - none of them are."
-      ]
-    },
-    {
-      "mutator": "ArrayDeclaration",
-      "fingerprint": "2b9f6a4a6bdb",
       "reason": [
         "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
         "unprefixed lookup - none of them are."
@@ -402,14 +740,6 @@
       "mutator": "ArrayDeclaration",
       "fingerprint": "837bc8450d40",
       "reason": [
-        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
-        "unprefixed lookup - none of them are."
-      ]
-    },
-    {
-      "mutator": "ArrayDeclaration",
-      "fingerprint": "837bc8450d40",
-      "reason": [
         "equivalent mutant. t's reference never changes across renders in this single-language app, so this",
         "memo never actually recomputes either way."
       ]
@@ -427,14 +757,6 @@
     {
       "mutator": "StringLiteral",
       "fingerprint": "56eb6d8002e5",
-      "reason": [
-        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
-        "unprefixed lookup - none of them are."
-      ]
-    },
-    {
-      "mutator": "ArrayDeclaration",
-      "fingerprint": "2b9f6a4a6bdb",
       "reason": [
         "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
         "unprefixed lookup - none of them are."
@@ -485,6 +807,66 @@
       ]
     }
   ],
+  "src/components/app-auth/ProfileDetails.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
+  "src/components/app-auth/ProfileNameForm.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "11c47177b97b",
+      "reason": [
+        "equivalent mutant. t's reference only changes with the language, which this form never sees change",
+        "while it is mounted, so this memo recomputes the same schema either way."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "6a0ad3abfd3c",
+      "reason": [
+        "equivalent mutant. updateMe never sends the idempotency key this generates, so what it returns is",
+        "never read - only that it does not reach for crypto.randomUUID, which a test pins."
+      ]
+    },
+    {
+      "mutator": "ArrowFunction",
+      "fingerprint": "6a0ad3abfd3c",
+      "reason": [
+        "equivalent mutant. updateMe never sends the idempotency key this generates, so what it returns is",
+        "never read - only that it does not reach for crypto.randomUUID, which a test pins."
+      ]
+    }
+  ],
   "src/components/app-auth/ProfileTabsList.tsx": [
     {
       "mutator": "ArrayDeclaration",
@@ -515,14 +897,6 @@
     {
       "mutator": "StringLiteral",
       "fingerprint": "56eb6d8002e5",
-      "reason": [
-        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
-        "unprefixed lookup - none of them are."
-      ]
-    },
-    {
-      "mutator": "ArrayDeclaration",
-      "fingerprint": "3775b7a6748e",
       "reason": [
         "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
         "unprefixed lookup - none of them are."
@@ -585,24 +959,8 @@
       "mutator": "ArrayDeclaration",
       "fingerprint": "2b9f6a4a6bdb",
       "reason": [
-        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
-        "unprefixed lookup - none of them are."
-      ]
-    },
-    {
-      "mutator": "ArrayDeclaration",
-      "fingerprint": "2b9f6a4a6bdb",
-      "reason": [
         "equivalent mutant. t's reference never changes across renders in this single-language app, so this",
         "memo never actually recomputes either way."
-      ]
-    },
-    {
-      "mutator": "OptionalChaining",
-      "fingerprint": "a39bb7786e9a",
-      "reason": [
-        "equivalent mutant. `error` is only ever undefined when `data` is set instead (openapi-fetch's",
-        "discriminated result), and the early return above already covers that case."
       ]
     }
   ],
@@ -660,23 +1018,9 @@
         "guarantee a valid key reaches badgeVariants() - this fallback exists for callers outside that",
         "guarantee (e.g. an `as any` cast) that this component's own tests can't produce."
       ]
-    },
-    {
-      "mutator": "StringLiteral",
-      "fingerprint": "60740868eecd",
-      "reason": ["equivalent mutant, same reasoning as above."]
     }
   ],
   "src/components/base/button.tsx": [
-    {
-      "mutator": "StringLiteral",
-      "fingerprint": "03941f63489e",
-      "reason": [
-        "equivalent mutant. Button's own `variant`/`size` parameter defaults below already guarantee valid",
-        "keys reach buttonVariants() - this fallback exists for callers outside that guarantee (e.g. an `as",
-        "any` cast) that this component's own tests can't produce."
-      ]
-    },
     {
       "mutator": "ObjectLiteral",
       "fingerprint": "187802c31f65",
@@ -707,41 +1051,6 @@
     {
       "mutator": "StringLiteral",
       "fingerprint": "03941f63489e",
-      "reason": ["equivalent mutant, same reasoning as above."]
-    },
-    {
-      "mutator": "StringLiteral",
-      "fingerprint": "7627bdb888e0",
-      "reason": ["equivalent mutant, same reasoning as above."]
-    },
-    {
-      "mutator": "StringLiteral",
-      "fingerprint": "bca4b841885c",
-      "reason": ["equivalent mutant, same reasoning as above."]
-    },
-    {
-      "mutator": "StringLiteral",
-      "fingerprint": "60740868eecd",
-      "reason": ["equivalent mutant, same reasoning as above."]
-    },
-    {
-      "mutator": "StringLiteral",
-      "fingerprint": "03941f63489e",
-      "reason": ["equivalent mutant, same reasoning as above."]
-    },
-    {
-      "mutator": "StringLiteral",
-      "fingerprint": "7627bdb888e0",
-      "reason": ["equivalent mutant, same reasoning as above."]
-    },
-    {
-      "mutator": "StringLiteral",
-      "fingerprint": "bca4b841885c",
-      "reason": ["equivalent mutant, same reasoning as above."]
-    },
-    {
-      "mutator": "StringLiteral",
-      "fingerprint": "03941f63489e",
       "reason": [
         "equivalent mutant. cva's own defaultVariants fallback (above) treats a falsy variant the same as",
         "unset, so this produces the identical className either way (verified directly against class-",
@@ -758,11 +1067,6 @@
         "variance-authority) - and unlike Badge, nothing here reflects the raw value onto a data-attribute to",
         "tell them apart."
       ]
-    },
-    {
-      "mutator": "StringLiteral",
-      "fingerprint": "7627bdb888e0",
-      "reason": ["equivalent mutant, same reasoning as variant above."]
     }
   ],
   "src/components/base/popover.tsx": [
@@ -779,17 +1083,34 @@
       "mutator": "StringLiteral",
       "fingerprint": "2ea11f925f53",
       "reason": [
-        "equivalent mutant. Base UI's own Positioner falls back to 'center' for a falsy align value (verified",
-        "directly: the resulting data-align attribute is unchanged either way) - same reasoning as",
-        "tooltip.tsx's own align default."
+        "equivalent mutant, same reasoning as align above - Base UI's Positioner falls back to 'bottom' for a",
+        "falsy side value too."
+      ]
+    }
+  ],
+  "src/components/base/segmented-code-input.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "efef0e31e7a1",
+      "reason": [
+        "equivalent mutant. Every slot is written by a ref callback during the first render, before anything",
+        "reads the array, so what it starts as never matters."
       ]
     },
     {
-      "mutator": "StringLiteral",
-      "fingerprint": "2ea11f925f53",
+      "mutator": "OptionalChaining",
+      "fingerprint": "aca0c087b0b8",
       "reason": [
-        "equivalent mutant, same reasoning as align above - Base UI's Positioner falls back to 'bottom' for a",
-        "falsy side value too."
+        "equivalent mutant. The index is clamped to boxes that are always mounted, so neither the optional",
+        "guard nor a wider upper bound is ever reached."
+      ]
+    },
+    {
+      "mutator": "ArithmeticOperator",
+      "fingerprint": "aca0c087b0b8",
+      "reason": [
+        "equivalent mutant. The index is clamped to boxes that are always mounted, so neither the optional",
+        "guard nor a wider upper bound is ever reached."
       ]
     }
   ],
@@ -837,6 +1158,58 @@
   ],
   "src/lib/resolveLanguage.ts": [
     {
+      "mutator": "StringLiteral",
+      "fingerprint": "fcef59eea6d1",
+      "reason": [
+        "equivalent mutant. The placeholder for a missing header only ever reaches the split below, and no",
+        "replacement for it names a supported language either, so it falls through to the same fallback."
+      ]
+    },
+    {
+      "mutator": "ConditionalExpression",
+      "fingerprint": "cde2ded1e550",
+      "reason": [
+        "equivalent mutant whenever no configured language is itself hyphenated (e.g. \"en\", \"tr\"):",
+        "tag.split('-')[0] equals tag when tag has no dash, so the base-subtag check below already returns",
+        "the identical value - this line only earns its keep once \"languages\" names a compound code too (e.g.",
+        "\"zh-hans\", \"pt-br\" - both real entries in hooks/_validate.py's own KNOWN_LANGUAGES), where an exact",
+        "\"zh-hans\" match must not fall through to base \"zh\" instead."
+      ]
+    }{% if cookiecutter.languages.split(',') | length == 1 %},
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "fcef59eea6d1",
+      "reason": [
+        "equivalent mutant with only one configured language - every possible value this can produce either",
+        "matches \"en\" or doesn't, and a non-match falls through to the exact same \"en\" this function would",
+        "return anyway, so case-folding, whitespace-trimming and the placeholder itself are all unobservable",
+        "here. Real once \"languages\" names more than one (a second language can genuinely fail to match a",
+        "header that differs only by case or stray whitespace)."
+      ]
+    },
+    {
+      "mutator": "MethodExpression",
+      "fingerprint": "fcef59eea6d1",
+      "reason": [
+        "equivalent mutant with only one configured language - every possible value this can produce either",
+        "matches \"en\" or doesn't, and a non-match falls through to the exact same \"en\" this function would",
+        "return anyway, so case-folding, whitespace-trimming and the placeholder itself are all unobservable",
+        "here. Real once \"languages\" names more than one (a second language can genuinely fail to match a",
+        "header that differs only by case or stray whitespace)."
+      ]
+    },
+    {
+      "mutator": "MethodExpression",
+      "fingerprint": "fcef59eea6d1",
+      "reason": [
+        "equivalent mutant with only one configured language - every possible value this can produce either",
+        "matches \"en\" or doesn't, and a non-match falls through to the exact same \"en\" this function would",
+        "return anyway, so case-folding, whitespace-trimming and the placeholder itself are all unobservable",
+        "here. Real once \"languages\" names more than one (a second language can genuinely fail to match a",
+        "header that differs only by case or stray whitespace)."
+      ]
+    },
+    {
       "mutator": "BlockStatement",
       "fingerprint": "9fd9307109c4",
       "reason": [
@@ -867,94 +1240,8 @@
       "mutator": "BlockStatement",
       "fingerprint": "550e847d0581",
       "reason": [
-        "equivalent mutant with only one configured language - isSupported(userLanguage) is only ever true",
-        "for \"en\", which is also the only value every fallback path below can ever return, so skipping this",
-        "branch changes nothing observable. Real once \"languages\" names more than one."
-      ]
-    },
-    {
-      "mutator": "StringLiteral",
-      "fingerprint": "fcef59eea6d1",
-      "reason": [
-        "equivalent mutant with only one configured language - every possible value this can produce either",
-        "matches \"en\" or doesn't, and a non-match falls through to the exact same \"en\" this function would",
-        "return anyway, so case-folding, whitespace-trimming and the placeholder itself are all unobservable",
-        "here. Real once \"languages\" names more than one (a second language can genuinely fail to match a",
-        "header that differs only by case or stray whitespace)."
-      ]
-    },
-    {
-      "mutator": "StringLiteral",
-      "fingerprint": "fcef59eea6d1",
-      "reason": [
-        "equivalent mutant with only one configured language - every possible value this can produce either",
-        "matches \"en\" or doesn't, and a non-match falls through to the exact same \"en\" this function would",
-        "return anyway, so case-folding, whitespace-trimming and the placeholder itself are all unobservable",
-        "here. Real once \"languages\" names more than one (a second language can genuinely fail to match a",
-        "header that differs only by case or stray whitespace)."
-      ]
-    },
-    {
-      "mutator": "MethodExpression",
-      "fingerprint": "fcef59eea6d1",
-      "reason": [
-        "equivalent mutant with only one configured language - every possible value this can produce either",
-        "matches \"en\" or doesn't, and a non-match falls through to the exact same \"en\" this function would",
-        "return anyway, so case-folding, whitespace-trimming and the placeholder itself are all unobservable",
-        "here. Real once \"languages\" names more than one (a second language can genuinely fail to match a",
-        "header that differs only by case or stray whitespace)."
-      ]
-    },
-    {
-      "mutator": "MethodExpression",
-      "fingerprint": "fcef59eea6d1",
-      "reason": [
-        "equivalent mutant with only one configured language - every possible value this can produce either",
-        "matches \"en\" or doesn't, and a non-match falls through to the exact same \"en\" this function would",
-        "return anyway, so case-folding, whitespace-trimming and the placeholder itself are all unobservable",
-        "here. Real once \"languages\" names more than one (a second language can genuinely fail to match a",
-        "header that differs only by case or stray whitespace)."
-      ]
-    },
-    {
-      "mutator": "StringLiteral",
-      "fingerprint": "b74efdd7098a",
-      "reason": [
-        "equivalent mutant with only one configured language - every possible value this can produce either",
-        "matches \"en\" or doesn't, and a non-match falls through to the exact same \"en\" this function would",
-        "return anyway, so case-folding, whitespace-trimming and the placeholder itself are all unobservable",
-        "here. Real once \"languages\" names more than one (a second language can genuinely fail to match a",
-        "header that differs only by case or stray whitespace)."
-      ]
-    },
-    {
-      "mutator": "BlockStatement",
-      "fingerprint": "550e847d0581",
-      "reason": [
         "equivalent mutant, same single-language reason as the two checks inside this loop - an empty body",
         "still falls through to the identical \"en\" fallback below."
-      ]
-    },
-    {
-      "mutator": "ConditionalExpression",
-      "fingerprint": "cde2ded1e550",
-      "reason": [
-        "equivalent mutant whenever no configured language is itself hyphenated (e.g. \"en\", \"tr\"):",
-        "tag.split('-')[0] equals tag when tag has no dash, so the base-subtag check below already returns",
-        "the identical value - this line only earns its keep once \"languages\" names a compound code too (e.g.",
-        "\"zh-hans\", \"pt-br\" - both real entries in hooks/_validate.py's own KNOWN_LANGUAGES), where an exact",
-        "\"zh-hans\" match must not fall through to base \"zh\" instead."
-      ]
-    },
-    {
-      "mutator": "ConditionalExpression",
-      "fingerprint": "23597c848013",
-      "reason": [
-        "equivalent mutant whenever no configured language is itself hyphenated (e.g. \"en\", \"tr\"):",
-        "tag.split('-')[0] equals tag when tag has no dash, so the base-subtag check below already returns",
-        "the identical value - this line only earns its keep once \"languages\" names a compound code too (e.g.",
-        "\"zh-hans\", \"pt-br\" - both real entries in hooks/_validate.py's own KNOWN_LANGUAGES), where an exact",
-        "\"zh-hans\" match must not fall through to base \"zh\" instead."
       ]
     },
     {
@@ -976,7 +1263,7 @@
         "top comment) - covered for real by \"matches a regional tag by its base subtag\" once \"languages\"",
         "names a second, real language."
       ]
-    }
+    }{% endif %}
   ],
   "src/lib/useValidatedFormState.ts": [
     {
@@ -1078,14 +1365,6 @@
       "mutator": "ArrayDeclaration",
       "fingerprint": "7f72df114cac",
       "reason": [
-        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
-        "unprefixed lookup - none of them are."
-      ]
-    },
-    {
-      "mutator": "ArrayDeclaration",
-      "fingerprint": "7f72df114cac",
-      "reason": [
         "equivalent mutant. t's reference never changes across renders in this single-language app, so this",
         "memo never actually recomputes either way."
       ]
@@ -1106,6 +1385,41 @@
         "equivalent mutant. This schema only recognizes 'email', so any server error not on that field lands",
         "in non_field_errors instead (see useValidatedFormState's acceptServerErrors) - whenever",
         "formErrors.email is missing, formErrors.non_field_errors is guaranteed present."
+      ]
+    }
+  ],
+  "src/lib/webauthn.ts": [
+    {
+      "mutator": "ArithmeticOperator",
+      "fingerprint": "1805b481368b",
+      "reason": [
+        "equivalent mutant. Restoring the padding is for decoders that insist on it; atob in every runtime this",
+        "app targets (and jsdom's) decodes an unpadded value to the same bytes, so a wrong pad length or none is",
+        "invisible."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "1805b481368b",
+      "reason": [
+        "equivalent mutant. Restoring the padding is for decoders that insist on it; atob in every runtime this",
+        "app targets (and jsdom's) decodes an unpadded value to the same bytes, so a wrong pad length or none is",
+        "invisible."
+      ]
+    },
+    {
+      "mutator": "Regex",
+      "fingerprint": "a098a36b6bbc",
+      "reason": [
+        "equivalent mutant. btoa only ever pads at the end, so dropping the end anchor matches the same characters."
+      ]
+    },
+    {
+      "mutator": "ArrowFunction",
+      "fingerprint": "e723bccaa4e3",
+      "reason": [
+        "equivalent mutant. Support never changes after load, so there is nothing to unsubscribe from - React",
+        "treats an undefined cleanup exactly like the empty one."
       ]
     }
   ]

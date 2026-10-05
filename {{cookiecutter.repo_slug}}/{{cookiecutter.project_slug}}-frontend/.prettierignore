@@ -2,6 +2,11 @@ node_modules
 .next
 dist
 coverage
+# What a local Stryker run leaves behind.
+reports
+.stryker-tmp
 package-lock.json
 apps/web/src/components/base
 packages/*/src/schema.ts
+# Written by next build/dev, and not this project's to format.
+apps/web/next-env.d.ts

@@ -5,7 +5,7 @@ import { Button, ErrorText, Heading, Screen, SocialLoginButtons, TextField } fro
 import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
 
-import { extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
+import { extractAuthErrors, hasPendingVerifyEmail, pendingMfaTypes } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
 import { Link, router } from 'expo-router'
 import { Text } from 'react-native'
@@ -24,6 +24,16 @@ export default function Login() {
       const { data, error: response } = await getAuthApi().login({ email, password })
       if (data?.meta.is_authenticated) {
         router.replace('/(authenticated)/home')
+        return
+      }
+      // The password was right; allauth refuses until the address is confirmed and mails a fresh link.
+      if (hasPendingVerifyEmail(response)) {
+        setError(t('loginVerifyEmailRequired'))
+        return
+      }
+      // The password was right; an account with a second factor still owes it.
+      if (pendingMfaTypes(response) !== null) {
+        router.push('/two-factor')
         return
       }
       const authErrors = extractAuthErrors(response)

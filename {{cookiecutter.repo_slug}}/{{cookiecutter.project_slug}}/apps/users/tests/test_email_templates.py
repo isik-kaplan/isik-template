@@ -20,6 +20,7 @@ FLOWS = [
     "email_confirmation",
     "email_deleted",
     "login_code",
+    "logins_closed",
     "password_changed",
     "password_reset_key",
     "password_reset_code",
@@ -34,6 +35,15 @@ FLOWS = [
 SOCIAL_FLOWS = [
     "account_connected",
     "account_disconnected",
+]
+
+# allauth.mfa sends these itself on every factor change, the same way SOCIAL_FLOWS are sent.
+MFA_FLOWS = [
+    "recovery_codes_generated",
+    "totp_activated",
+    "totp_deactivated",
+    "webauthn_added",
+    "webauthn_removed",
 ]
 
 # One dummy per placeholder any flow's message/subject templates reference - a superset, not
@@ -81,6 +91,21 @@ def test_every_ported_social_flow_renders(flow):
     html = mjml_template(f"socialaccount/email/{flow}/message.html", context, None)
     text = text_template(f"socialaccount/email/{flow}/message.txt", context, None)
     subject = text_template(f"socialaccount/email/{flow}/subject.txt", context, None).strip()
+
+    assert "<html" in html.lower() or "!doctype" in html.lower()
+    assert text.strip()
+    assert subject
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("flow", MFA_FLOWS)
+def test_every_mfa_flow_renders(flow):
+    user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
+    context = {**DUMMY_CONTEXT, "user": user}
+
+    html = mjml_template(f"mfa/email/{flow}/message.html", context, None)
+    text = text_template(f"mfa/email/{flow}/message.txt", context, None)
+    subject = text_template(f"mfa/email/{flow}/subject.txt", context, None).strip()
 
     assert "<html" in html.lower() or "!doctype" in html.lower()
     assert text.strip()

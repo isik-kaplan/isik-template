@@ -5,4 +5,8 @@
 from .celery import app as celery_app
 
 
-__all__ = ["celery_app"]
+# The one place the version is declared: pyproject.toml reads it from here through hatchling's
+# [tool.hatch.version], and every history event is stamped with it.
+__version__ = "0.1.0"
+
+__all__ = ["celery_app", "__version__"]

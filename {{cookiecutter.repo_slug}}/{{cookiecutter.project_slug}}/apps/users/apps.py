@@ -1,3 +1,5 @@
+from importlib import import_module
+
 from django.apps import AppConfig
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models.signals import post_migrate
@@ -21,3 +23,5 @@ class UsersConfig(AppConfig):
                 f"suppressing Django's default permissions. Check what django.contrib.auth's AuthConfig.ready() "
                 f"connects and update CREATE_PERMISSIONS_UID to match."
             )
+        # Its @receiver decorators connect on import, and nothing else imports it.
+        import_module("apps.users.receivers")

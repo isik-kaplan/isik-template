@@ -1,9 +1,13 @@
 import os
+import sys
 from pathlib import Path
 
 import sentry_sdk
 from django.conf.locale import LANG_INFO
 
+from apps.common.logging.scrub import scrub_event
+
+from . import __version__
 from .config import CONFIG as config  # Django thinks CONFIG is a setting if it is all caps  # NOQA
 
 
@@ -11,6 +15,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 DEBUG = config.DEBUG
 SECRET_KEY = config.SECRET_KEY
+# Its own key rather than SECRET_KEY, so rotating the signing key does not cost every stored secret.
+# Unset, an EncryptedField refuses to store one - see apps/common/fields/encrypted.py.
+CREDENTIAL_KEY = config.CREDENTIAL_KEY
 
 # "localhost" only covers the container-internal Docker healthcheck (curl http://localhost/health/)
 # - every real request arrives with one of the subdomains below, forwarded unmodified by nginx.
@@ -64,6 +71,7 @@ INSTALLED_APPS = [
     "pgtrigger",
     "pghistory",
     "isik.django.apps.common",
+    "isik.django.apps.idempotency.by_reference",
     "django_object_actions",
     "dalf",
     "django_filters",
@@ -74,9 +82,12 @@ INSTALLED_APPS = [
     "allauth.socialaccount",
     *[f"allauth.socialaccount.providers.{provider_id}" for provider_id in SOCIAL_LOGIN_PROVIDER_IDS],
     "allauth.usersessions",
+    "allauth.mfa",
     "allauth.headless",
     "django_celery_beat",
     "django_celery_results",
+    "apps.common.apps.CommonConfig",
+    "apps.idempotency.apps.IdempotencyConfig",
     "apps.core.apps.CoreConfig",
     "apps.users.apps.UsersConfig",
     "apps.admin.apps.AdminConfig",
@@ -105,12 +116,46 @@ MIDDLEWARE = [
     # After AuthenticationMiddleware/AccountMiddleware, whose request.user it reads - opens the
     # pghistory context every tracked write in this request stamps its actor from, and what a
     # Celery task dispatched from here reads via open_history_context() to carry that actor along.
-    "isik.django.apps.common.middleware.HistoryContextMiddleware",
+    "apps.common.middleware.history_context.HistoryContextMiddleware",
+    # Below the context it annotates its line with, so the actor is already on it.
+    "apps.common.middleware.request_log.RequestLogMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Last, mirroring HostsRequestMiddleware - django-hosts' own required pairing.
     "django_hosts.middleware.HostsResponseMiddleware",
 ]
+
+LOGGING = {
+    "version": 1,
+    # Nothing is silenced by existing: a library that took a logger before this ran still reaches
+    # the handler below, which is the whole reason for naming the noisy ones explicitly.
+    "disable_existing_loggers": False,
+    "formatters": {
+        "console": {"()": "apps.common.logging.formatters.ConsoleFormatter"},
+        "json": {"()": "apps.common.logging.formatters.JSONFormatter"},
+    },
+    "handlers": {
+        # stdout, because a container's log is its stdout - a file here would be a file nobody reads
+        # and a volume somebody has to remember.
+        "stdout": {"class": "logging.StreamHandler", "stream": sys.stdout, "formatter": config.LOGGING.FORMAT},
+    },
+    "root": {"handlers": ["stdout"], "level": "WARNING"},
+    "loggers": {
+        # Ours, at INFO: an event was declared because somebody wanted it written down.
+        "{{ cookiecutter.project_slug }}": {"level": "INFO"},
+        # Its own handler and no propagation, which is the whole of "cannot be turned down": an
+        # audit record does not pass through the logger above and is not quietened by lowering it.
+        "{{ cookiecutter.project_slug }}.audit": {"level": "INFO", "handlers": ["stdout"], "propagate": False},
+        # A refused Host or a suspicious operation is a real signal, and nothing else reports it.
+        "django.security": {"level": "INFO"},
+        # The request line carries the same failure with the actor on it. Left at ERROR rather than
+        # off, so a 500 raised outside that middleware still lands.
+        "django.request": {"level": "ERROR"},
+        # Every query, at DEBUG. Turning this up in production is a self-inflicted outage.
+        "django.db.backends": {"level": "WARNING"},
+        "celery": {"level": "WARNING"},
+    },
+}
 
 # django-hosts dispatches by Host header via ROOT_HOSTCONF/host_patterns (see hosts.py) - this is
 # only the fallback used where no per-request host resolution applies (shell, management commands).
@@ -150,6 +195,10 @@ DATABASES = {
         "PASSWORD": config.DB.PASSWORD,
         "HOST": config.DB.HOST,
         "PORT": config.DB.PORT,
+        # A view that dies partway leaves nothing behind, and idempotency claims need a transaction to
+        # commit inside. Opt a view out with apps.common.transactions.not_atomic(reason); anything that
+        # cannot roll back (mail, task dispatch) waits for transaction.on_commit instead.
+        "ATOMIC_REQUESTS": True,
     }
 }
 
@@ -164,16 +213,20 @@ AUTH_PASSWORD_VALIDATORS = [
 
 AUTH_USER_MODEL = "users.User"
 
+# The project's own subclasses of isik's and allauth's backends, so both answer to the login policy
+# (apps/users/login_policy.py) - a sign-in one refuses cannot get in through the other. Spelled by
+# defining module, not the package re-export: allauth records a social login under that path, and a
+# session whose path is not listed here is anonymous from its next request.
 AUTHENTICATION_BACKENDS = [
-    "isik.django.apps.common.backends.UsernameOREmailModelBackend",
-    "allauth.account.auth_backends.AuthenticationBackend",
+    "apps.users.backends.username_or_email.UsernameOREmailModelBackend",
+    "apps.users.backends.authentication.AuthenticationBackend",
 ]
 
 # allauth - headless API only, no server-rendered account pages.
 ACCOUNT_LOGIN_METHODS = {"username", "email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*"]
-ACCOUNT_ADAPTER = "apps.users.adapters.AccountAdapter"
-SOCIALACCOUNT_ADAPTER = "apps.users.adapters.SocialAccountAdapter"
+ACCOUNT_ADAPTER = "apps.users.adapters.account.AccountAdapter"
+SOCIALACCOUNT_ADAPTER = "apps.users.adapters.social_account.SocialAccountAdapter"
 # allauth's default (True) skips the signup form for a first social signup with a unique email,
 # committing a username taken verbatim from the provider. False routes every social signup through
 # the pending-signup flow, so the suggested username is always confirmable first.
@@ -185,9 +238,24 @@ ACCOUNT_EMAIL_NOTIFICATIONS = True
 if not config.ACCOUNTS.RATE_LIMITS_ENABLED:  # see pyproject.toml's coverage exclude_lines for why
     ACCOUNT_RATE_LIMITS = False
 
+# Without it allauth keys every rate limit on REMOTE_ADDR, which behind nginx is nginx itself - one
+# bucket for every visitor. Counted from the right, so a client-prepended X-Forwarded-For is skipped.
+ALLAUTH_TRUSTED_PROXY_COUNT = config.TRUSTED_PROXY_COUNT
+
 # Costs a write per authenticated request and needs UserSessionsMiddleware. Off means last_seen_at
 # never moves; listing and revoking work regardless.
 USERSESSIONS_TRACK_ACTIVITY = False
+
+# Opt-in per user: nobody is made to enroll, but anyone who has a factor is challenged for it.
+MFA_SUPPORTED_TYPES = ["totp", "recovery_codes", "webauthn"]
+MFA_ADAPTER = "apps.users.adapters.mfa.MFAAdapter"
+# Otherwise the authenticator app shows the Site row's name, "example.com" until someone renames it.
+MFA_TOTP_ISSUER = "{{ cookiecutter.project_name }}"
+# A passkey is a second factor here, never a replacement for the password. Leaving this on would
+# mount a passwordless login route nothing calls and advertise it in the headless config.
+MFA_PASSKEY_LOGIN_ENABLED = False
+# Shown once, at generation, so "write these down now" is true rather than advice.
+MFA_RECOVERY_CODES_SHOW_ONCE = True
 
 HEADLESS_ONLY = True
 HEADLESS_SERVE_SPECIFICATION = True
@@ -293,6 +361,19 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 # admin page without a collectstatic step first. This still gets whitenoise's gzip/brotli
 # compression, just not content-hashed cache-busting.
 STORAGES = {
+    # Uploads go to S3 - LocalStack locally (see docker-compose.yml's `storage`). Path-style
+    # addressing, because LocalStack serves buckets as paths rather than as subdomains.
+    "default": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": config.STORAGE.BUCKET_NAME,
+            "endpoint_url": config.STORAGE.ENDPOINT_URL,
+            "access_key": config.STORAGE.ACCESS_KEY_ID,
+            "secret_key": config.STORAGE.SECRET_ACCESS_KEY,
+            "region_name": config.STORAGE.REGION_NAME,
+            "addressing_style": "path",
+        },
+    },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
     },
@@ -303,25 +384,36 @@ X_FRAME_OPTIONS = "SAMEORIGIN"
 # nginx terminates every client connection and always sets this header, whether it speaks plain
 # HTTP or sits behind a TLS-terminating load balancer.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SESSION_SERIALIZER = "django_msgspec.sessions.JSONSerializer"
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 # Shared across api./admin./auth.<domain> so one session/CSRF cookie pair covers all three -
 # without this, each subdomain would need its own login.
 SESSION_COOKIE_DOMAIN = f".{config.DOMAIN}"
 CSRF_COOKIE_DOMAIN = f".{config.DOMAIN}"
-CSRF_TRUSTED_ORIGINS = [
-    f"{FRONTEND_SCHEME}://{config.DOMAIN}",
-    f"{FRONTEND_SCHEME}://api.{config.DOMAIN}",
-    f"{FRONTEND_SCHEME}://admin.{config.DOMAIN}",
-    f"{FRONTEND_SCHEME}://auth.{config.DOMAIN}",
-]
+
+
+def _origins(hosts: list[str], debug: bool) -> list[str]:
+    """Every scheme a browser may reach `hosts` on. Under DEBUG that is http and, once
+    scripts/dev-tls.sh has run (or in the e2e stack), https beside it; a real deployment is https only."""
+    schemes = ["http", "https"] if debug else ["https"]
+    return [f"{scheme}://{host}" for host in hosts for scheme in schemes]
+
+
+CSRF_TRUSTED_ORIGINS = _origins(
+    [config.DOMAIN, f"api.{config.DOMAIN}", f"admin.{config.DOMAIN}", f"auth.{config.DOMAIN}"], DEBUG
+)
 # The bare domain is where the frontend's own pages are served from, but its client-side JS calls
 # api./auth.<domain> directly (see apps/web/src/lib/authOrigin.ts) - a different origin from the
 # browser's point of view even though it's the same site for cookie purposes above. Without this,
 # the browser blocks those fetches before a response is ever read, regardless of what the response
 # actually contains.
-CORS_ALLOWED_ORIGINS = [FRONTEND_ORIGIN]
+CORS_ALLOWED_ORIGINS = _origins([config.DOMAIN], DEBUG)
 CORS_ALLOW_CREDENTIALS = True
+# A custom response header is invisible to cross-origin JS unless named here, and the frontend's
+# fetch wrapper (apiClients.ts) reads both: one sends somebody to prove it is them, the other to the
+# login page once their dead session's cookie was cleared.
+CORS_EXPOSE_HEADERS = ["X-Reauthentication-Required", "X-Session-Cleared"]
 
 REST_FRAMEWORK = {
     "PAGE_SIZE": 100,
@@ -347,14 +439,35 @@ REST_FRAMEWORK = {
         # maintain.
         "allauth.headless.contrib.rest_framework.authentication.XSessionTokenAuthentication",
     ],
-    "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
+    # Adds the refusal's code beside `detail` and logs every 403 - see apps/common/api/exception_handler.py.
+    "EXCEPTION_HANDLER": "apps.common.api.exception_handler.exception_handler",
+    "DEFAULT_RENDERER_CLASSES": ("apps.common.api.renderers.JSONRenderer",),
+    # DRF's own default list with only its JSON member replaced - JSON alone would answer 415 to multipart.
+    "DEFAULT_PARSER_CLASSES": (
+        "django_msgspec.rest_framework.JSONParser",
+        "rest_framework.parsers.FormParser",
+        "rest_framework.parsers.MultiPartParser",
+    ),
 }
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "{{ cookiecutter.project_name }} API",
     "DESCRIPTION": "{{ cookiecutter.description }}",
-    "VERSION": "0.1.0",
+    "VERSION": __version__,
     "COMPONENT_SPLIT_REQUEST": True,
+    "POSTPROCESSING_HOOKS": [
+        "drf_spectacular.hooks.postprocess_schema_enums",
+        # Every POST takes an Idempotency-Key, so the document says so once rather than per operation.
+        "apps.idempotency.schema.every_post_declares_the_key",
+    ],
+    # The schema endpoint documenting itself is noise to every client generated from it.
+    "SERVE_INCLUDE_SCHEMA": False,
+    # An enum component is a string union to whoever generates against it, so the suffix says
+    # nothing. Filled at startup by apps.common.enum_names.
+    "ENUM_SUFFIX": "",
+    "ENUM_NAME_OVERRIDES": {},
+    # Labels come from settings.LANGUAGES and friends, which differ per project; the values are the contract.
+    "ENUM_GENERATE_CHOICE_DESCRIPTION": False,
 }
 
 # RabbitMQ's default guest/guest user only accepts loopback connections, which worker/scheduler
@@ -385,4 +498,8 @@ if config.SENTRY.DSN:  # see pyproject.toml's coverage exclude_lines for why
         dsn=config.SENTRY.DSN,
         traces_sample_rate=float(config.SENTRY.TRACES_SAMPLE_RATE),
         debug=DEBUG,
+        # Named rather than left at the SDK's default: an exception report carries the request that
+        # caused it, and scrub_event narrows it by the same allowlist the request log uses.
+        send_default_pii=False,
+        before_send=scrub_event,
     )

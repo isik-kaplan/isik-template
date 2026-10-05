@@ -169,7 +169,6 @@ describe('ConnectionsList connect-flow errors', () => {
   it.each([
     ['cancelled', 'Connection canceled.'],
     ['connected_other', 'That account is already connected to a different user.'],
-    ['reauthentication_required', 'Log in again to connect a new account.'],
     ['permission_denied', 'Log in to connect an account.'],
     ['unknown', 'Could not connect that account. Try again.'],
   ])('shows an inline error for connectError=%s and clears it from the URL', (connectError, message) => {
@@ -184,6 +183,20 @@ describe('ConnectionsList connect-flow errors', () => {
 
     expect(screen.getByText(message)).toBeTruthy()
     expect(replace).toHaveBeenCalledWith('/profile/connections')
+  })
+
+  it('sends somebody the gate turned back off to prove it is them, and back here, with no dead-end message', () => {
+    render(
+      <ConnectionsList
+        initialProviders={[]}
+        connectAction="https://auth.example.test/v0/browser/v1/auth/provider/redirect"
+        callbackUrl="https://example.test/profile/connections"
+        connectError="reauthentication_required"
+      />
+    )
+
+    expect(replace).toHaveBeenCalledExactlyOnceWith('/auth/prove?next=%2Fprofile%2Fconnections')
+    expect(screen.queryByText(/./, { selector: 'p.text-destructive' })).toBeNull()
   })
 
   it('keeps showing the error message even after the URL is cleared', () => {

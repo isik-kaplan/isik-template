@@ -11,6 +11,7 @@ module.exports = {
     'lib/**/*.{ts,tsx}',
     'components/**/*.{ts,tsx}',
     'theme/**/*.{ts,tsx}',
+    '!**/*.d.ts',
     '!**/__tests__/**',
   ],
   // Enforced by packages/mutation-check/check-coverage.mjs instead of a threshold here - it reads

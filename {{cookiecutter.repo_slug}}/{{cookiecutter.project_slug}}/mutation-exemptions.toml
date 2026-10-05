@@ -1,25 +1,18 @@
-# Every mutant `mutmut run` reports as "survived" or "no tests" has to be either killed by a real
-# behavioral test, or explained here - never silently accepted. Keyed by function (not by mutant
-# number), so an entry covers every mutant of that function, including ones added later.
+# Whole functions mutmut's own tracing cannot attribute to any test, so every mutant of each comes
+# back "no tests" however well the suite covers it. Keyed by function, so an entry covers every mutant
+# of that function, including ones added later - which is exactly why nothing else belongs here.
 #
-# "survived" means a test exercises the mutated code but doesn't assert anything a real behavior
-# change to it would break - the fix is almost always a stronger assertion, not an entry here.
+# "no tests" is mutmut's trampoline reporting zero test attribution, which is not the same claim as
+# "no test calls it" - checked by hand each time before an entry is added, by breaking the function
+# and watching a named test fail.
 #
-# "no tests" is mutmut's own trampoline reporting zero test attribution for a function, which is
-# not the same claim as "no test calls it" - checked by hand each time before an entry is added.
+# A single mutant no test can kill (an equivalent mutant) belongs in mutation-equivalents.toml, keyed
+# by the mutation itself - scripts/confirm_survivors.py refuses a mutant name here.
 #
-# `fingerprint` is a hash of the function's AST as scripts/mutation_fingerprint.py last saw it. A
-# mutant's number is its position inside its own function, so editing the function moves every
-# number after the edit and an entry without this would keep excusing a mutation its reason no
-# longer describes. ast.dump() is not stable across Python versions (an f-string reparsed under a
-# different one hashes differently), so recompute inside the container CI runs, not the host:
-#   docker compose run --rm --no-deps backend python -c \
-#     "from scripts.mutation_fingerprint import fingerprint; print(fingerprint('<name>'))"
-#
-# scripts/check_mutants.py and scripts/confirm_survivors.py enforce this file in CI.
+# scripts/check_mutants.py and scripts/confirm_survivors.py enforce this file in CI, and every entry
+# is re-run on every push by the mutation job's re-check step.
 
 ["{{ cookiecutter.project_slug }}.settings.x__social_app_config"]
-fingerprint = "82c510c5b5de"
 reason = """Genuinely covered, not equivalent: apps' tests/test_settings.py calls this function
 directly and asserts on its return value for every branch (default provider, missing env vars,
 the openid_connect-only fields). Manually breaking the function (e.g. changing "key": "" to
@@ -33,23 +26,22 @@ the function again from a test does execute its trampoline, but the mutmut versi
 (3.7.x) still reports "no tests" for it - a tooling limitation with Django settings modules, not a
 real coverage gap. Revisit if a mutmut upgrade changes this."""
 
-["apps.users.adapters.xǁSocialAccountAdapterǁpopulate_user"]
-fingerprint = "3ea9d6ccd68a"
-reason = """Genuinely equivalent, not uncovered: the surviving mutant replaces the `request` argument
-to `super().populate_user(request, sociallogin, data)` with `None`. allauth's own
-DefaultSocialAccountAdapter.populate_user() never reads its request parameter at all (confirmed by
-reading its source directly) - it only touches `data` and `sociallogin.user` - so no test, however
-written, can observe a difference between passing the real request and passing None here. The
-method's own test (test_adapters.py) covers everything this override actually does (the
-created_at/updated_at backfill) by asserting on the real timezone.now() value."""
+["{{ cookiecutter.project_slug }}.settings.x__origins"]
+reason = """Genuinely covered, not equivalent: tests/test_settings.py calls this function directly for
+both branches (DEBUG answers http and https, a deployment https only) and checks CSRF_TRUSTED_ORIGINS
+and CORS_ALLOWED_ORIGINS against it. Manually breaking it (misspelling the "https" scheme, or answering
+None outside DEBUG) makes those tests fail, confirmed by hand.
+
+The same settings-module tooling limitation as x__social_app_config above: its only call sites run once
+during Django's settings import, and mutmut reports "no tests" for every mutant and phase two sees none
+of them killed, however directly a test calls it."""
 
 ["{{ cookiecutter.project_slug }}.celery_task.xǁOnCommitTaskǁapply_async"]
-fingerprint = "a833261df934"
 reason = """Genuinely covered, not equivalent. Manually breaking apply_async (dropping the
 transaction.on_commit wrapping; replacing the headers dict with just
 {history_context_header: self.history_cause()}, dropping the caller's own headers) makes
-test_project/tests/test_celery_task.py fail, confirmed by hand for both - the same file's other
-tests (dispatch waits for the transaction, a task nobody asked for is the system's, the worker
+{{ cookiecutter.project_slug }}/tests/test_celery_task.py fail, confirmed by hand for both - the same
+file's other tests (dispatch waits for the transaction, a task nobody asked for is the system's, the worker
 writes inside the cause it was given) exercise the rest of this method and OnCommitTask's inherited
 __call__.
 
@@ -62,21 +54,8 @@ level of indirection mutmut's call-attribution apparently doesn't see through, u
 viewset method called directly off an instance. Revisit if a mutmut upgrade changes this, or if a
 task stops being dispatched through a bare Proxy."""
 
-["apps.users.api.viewsets.user.x__mark_partial"]
-fingerprint = "0799fc788dd5"
-reason = """Genuinely equivalent, not uncovered: the surviving mutant flips `serializer.partial =
-True` to `False`. Nothing in UserSerializer is required (id/created_at/updated_at are read-only,
-username/email are read-only on update via create_only_fields, first_name/last_name/language are
-all blank=True), and ModelSerializer.update() only ever sets fields actually present in the
-request body regardless of `partial` - confirmed by hand, an empty-body PATCH already returns 200
-either way. Split into its own function so this is the only thing the exemption covers - `me`
-itself stays held to the normal kill-everything bar."""
-
-["apps.common.middleware.language.xǁUserLanguageMiddlewareǁ__call__"]
-fingerprint = "6918a09dcbad"
-reason = """Genuinely equivalent, not uncovered: the two surviving mutants change the case of the
-"Content-Language" header name ("content-language", "CONTENT-LANGUAGE"). Confirmed by hand in a
-real Django shell - django.http.HttpResponse.headers is case-insensitive on both write and read
-(setting via response.headers["content-language"] and reading back response.headers["Content-Language"]
-returns the same value) - so no test, however written, can observe a difference between these three
-spellings. test_the_response_carries_a_content_language_header covers the header's actual value."""
+["{{ cookiecutter.project_slug }}.celery_task.xǁOnCommitTaskǁworker_history_context"]
+reason = """Genuinely covered, not equivalent: the two mutants rename the "version" key ("XXversionXX",
+"VERSION"), and test_celery_task.py's test_the_worker_writes_inside_the_context_it_was_given asserts
+the whole context dict, so a renamed key fails it - confirmed by hand. mutmut reports "no tests" for
+the same reason as apply_async above: the worker half runs through ping's celery.local.Proxy."""

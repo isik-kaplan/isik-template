@@ -1,6 +1,6 @@
 [project]
 name = "{{ cookiecutter.project_slug }}"
-version = "0.1.0"
+dynamic = ["version"]
 description = "{{ cookiecutter.description }}"
 requires-python = ">={{ cookiecutter.python_version }}"
 dependencies = [
@@ -11,16 +11,23 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "drf-spectacular>=0.27.0",
     "django-hosts>=6.0",
-    "django-allauth>=65.0.0",
+    # "mfa" pulls in fido2 (passkeys) and qrcode, which allauth.mfa imports but does not require.
+    "django-allauth[mfa]>=65.18.0",
     # Not pulled in by django-allauth itself unless installed with its "socialaccount"/"headless"
     # extra - needed for the openid_connect provider's id_token verification specifically
     # (allauth.socialaccount.internal.jwtkit). Every other provider works without it.
     "pyjwt[crypto]>=2.13.0",
     "django-cors-headers>=4.4.0",
+    # DRF rendering/parsing and session serialization on msgspec's encoder - see apps/common/api/renderers.py.
+    "django-msgspec>=1.0.1",
+    # Fernet, for apps/common/fields/encrypted.py.
+    "cryptography>=49.0.0",
     "requests>=2.32.0",
     "celery>=5.5.0",
     "django-celery-beat>=2.9.0",
     "django-celery-results>=2.6.0",
+    "django-storages[s3]>=1.14.0",
+    "boto3>=1.35.0",
 ]
 
 [tool.uv]
@@ -43,23 +50,41 @@ dev-dependencies = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.version]
+path = "{{ cookiecutter.project_slug }}/__init__.py"
+
 [tool.ruff]
 line-length = 120
 fix = true
 extend-exclude = ["*/migrations/*"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B"]
+select = ["E", "F", "I", "UP", "B", "TID251"]
 fixable = ["ALL"]
 unfixable = []
 
+# A logger taken by hand writes outside the declared vocabulary in apps/common/logging/events.py.
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"logging.getLogger".msg = "Declare an event in apps/common/logging/events.py and write it with log() or audit()."
+
+[tool.ruff.lint.per-file-ignores]
+"apps/common/logging/emit.py" = ["TID251"]
+
 [tool.ruff.lint.isort]
 lines-after-imports = 2
-known-first-party = ["{{ cookiecutter.project_slug }}"]
+known-first-party = ["apps"]
+# The project package in a block of its own after `apps`, so the order does not depend on whether its
+# name sorts before or after "apps".
+section-order = ["future", "standard-library", "third-party", "first-party", "project", "local-folder"]
+
+[tool.ruff.lint.isort.sections]
+project = ["{{ cookiecutter.project_slug }}"]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "{{ cookiecutter.project_slug }}.settings"
 addopts = "-n auto --dist loadfile --cov --cov-report=term-missing --strict-markers"
+# pytest's own defaults plus `mutants`, the copy of the tree a mutation run leaves behind.
+norecursedirs = ["*.egg", ".*", "_darcs", "build", "CVS", "dist", "node_modules", "venv", "{arch}", "mutants"]
 
 [tool.coverage.run]
 source = ["apps", "{{ cookiecutter.project_slug }}"]
@@ -100,7 +125,18 @@ do_not_mutate = ["*/migrations/*", "*/tests/*", "*/conftest.py", "*/wsgi.py", "*
 # mutation, and without scripts/ pytest_add_cli_args' own -p plugin below fails to import inside
 # the tree every mutant actually runs in. Copied rather than mutated: do_not_mutate can only exempt
 # a source_paths file, and scripts/ isn't one - see scripts/mutation_test_order.py's own docstring.
-also_copy = ["conftest.py", "templates", "scripts"]
+# The registries are read by a test that runs inside the tree too, and re-copied every run rather
+# than copied once, so the tree never answers with a stale one. Without the compiled locale catalogs
+# the tree serves the default language whatever is active, so every mutant of anything translated
+# would be measured where translation never works - the mutation job compiles them first.
+also_copy = [
+    "conftest.py",
+    "templates",
+    "scripts",
+    "mutation-equivalents.toml",
+    "mutation-exemptions.toml",
+    "locale",
+]
 # --no-cov: the trampolines mutmut instruments add statements our 100% coverage gate can't account
 # for. -n 0: xdist workers would share one test database and race each other; mutmut's own
 # --max-children handles process isolation between mutants instead. -p scripts.mutation_test_order:

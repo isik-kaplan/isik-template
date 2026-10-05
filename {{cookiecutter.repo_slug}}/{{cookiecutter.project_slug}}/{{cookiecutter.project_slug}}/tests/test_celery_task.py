@@ -1,10 +1,14 @@
 import pytest
+from amqp.serialization import dumps
 from celery import Task
 from django.test import RequestFactory
 from isik.django.apps.common.middleware import HistoryContextMiddleware
 from pghistory.runtime import _tracker
 
+from apps.users.models.user import User
 from apps.users.tasks import ping
+
+from {{ cookiecutter.project_slug }} import __version__
 from {{ cookiecutter.project_slug }}.celery_task import OnCommitTask
 
 
@@ -85,6 +89,25 @@ def test_a_task_carries_whoever_asked_for_it(monkeypatch, django_capture_on_comm
 
 
 @pytest.mark.django_db
+def test_the_cause_survives_the_encoder_that_actually_carries_it(monkeypatch, django_capture_on_commit_callbacks):
+    """pghistory holds a UUID user pk as a `UUID`, which an AMQP header table refuses - only a real
+    user's pk and the broker's own encoder show it; a stand-in string never would."""
+    user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
+    sent = []
+    monkeypatch.setattr(Task, "apply_async", lambda self, *a, **kw: sent.append(kw))
+
+    def view():
+        with django_capture_on_commit_callbacks(execute=True):
+            ping.delay()
+
+    _while_serving(view, user=user.pk)
+
+    header = sent[0]["headers"][HEADER]
+    assert header["user"] == str(user.pk)
+    dumps("F", [header])
+
+
+@pytest.mark.django_db
 def test_a_task_nobody_asked_for_says_so_rather_than_naming_nobody(monkeypatch, django_capture_on_commit_callbacks):
     """A beat task has no request behind it. Marked as the system's, because an absent actor and a
     scheduled one would otherwise be the same empty value."""
@@ -113,7 +136,7 @@ def test_a_caller_naming_its_own_headers_keeps_them(monkeypatch, django_capture_
 def test_the_worker_writes_inside_the_context_it_was_given(monkeypatch):
     """The worker half: the cause off the message becomes the context every row it writes carries,
     with the task's own name added - a person's click and a worker acting on it are different
-    claims."""
+    claims - and the version of the worker, which is the build that wrote the rows."""
     seen = {}
     monkeypatch.setattr(Task, "__call__", lambda self, *a, **kw: seen.update(_tracker.value.metadata))
     ping.push_request(headers={HEADER: {"user": "user-1", "caused_by": "request"}})
@@ -123,7 +146,7 @@ def test_the_worker_writes_inside_the_context_it_was_given(monkeypatch):
     finally:
         ping.pop_request()
 
-    assert seen == {"user": "user-1", "caused_by": "request", "task": "ping"}
+    assert seen == {"user": "user-1", "caused_by": "request", "task": "ping", "version": __version__}
 
 
 def test_a_worker_given_no_cause_records_the_system(monkeypatch):

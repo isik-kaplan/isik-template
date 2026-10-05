@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { login, signUpAndVerify } from '../helpers'
+import { login, proveWithPassword, signUpAndVerify } from '../helpers'
 import { extractLinkFromEmail } from '../mailpit'
 
 test('adding, verifying, promoting, and removing a secondary email all work end to end', async ({ page }) => {
@@ -39,12 +39,21 @@ test('adding, verifying, promoting, and removing a secondary email all work end 
   // is a substring of "Unverified", so a loose match here could pass against either badge state.
   await expect(secondaryRow.getByText('Verified', { exact: true })).toBeVisible()
 
+  // Adding the address spent the proof the login left behind, so this act asks again - and comes back
+  // here to be done once it has the answer.
+  await secondaryRow.getByRole('button', { name: 'Email actions' }).click()
+  await page.getByText('Make primary').click()
+  await proveWithPassword(page, 'correct-horse-battery-staple')
+  await expect(page).toHaveURL('/profile/emails')
   await secondaryRow.getByRole('button', { name: 'Email actions' }).click()
   await page.getByText('Make primary').click()
   await expect(page.getByText('Email set as primary.')).toBeVisible()
   await expect(secondaryRow.getByText('Primary')).toBeVisible()
 
   const primaryRow = page.getByRole('listitem').filter({ hasText: primaryEmail })
+  await primaryRow.getByRole('button', { name: 'Email actions' }).click()
+  await page.getByText('Remove').click()
+  await proveWithPassword(page, 'correct-horse-battery-staple')
   await primaryRow.getByRole('button', { name: 'Email actions' }).click()
   await page.getByText('Remove').click()
   await expect(page.getByText('Email removed.')).toBeVisible()

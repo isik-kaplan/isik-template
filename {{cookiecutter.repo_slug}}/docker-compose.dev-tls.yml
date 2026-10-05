@@ -1,0 +1,16 @@
+# Local https for the dev stack, layered on docker-compose.yml only once scripts/dev-tls.sh has run (it
+# adds this file to COMPOSE_FILE in .env). An override rather than part of the base file, so a
+# deployment behind its own TLS proxy never has a :443 published that its proxy needs.
+services:
+  frontend:
+    volumes:
+      # The CA the local certificate is signed by, so SSR fetches to https://api./auth.<domain>
+      # verify. NODE_EXTRA_CA_CERTS points here from .env.
+      - ./{{ cookiecutter.project_slug }}-server/dev-tls:/etc/dev-tls:ro
+
+  server:
+    volumes:
+      # nginx includes *.conf from here inside both server blocks (template.nginx.conf), as e2e does.
+      - ./{{ cookiecutter.project_slug }}-server/dev-tls:/etc/nginx/extra-listen:ro
+    ports:
+      - "127.0.0.1:{{ '${' + cookiecutter.config_prefix + '__HTTPS_PORT:-443}' }}:443"

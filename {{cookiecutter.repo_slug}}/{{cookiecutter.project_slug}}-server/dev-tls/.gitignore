@@ -1,0 +1,3 @@
+# What scripts/dev-tls.sh writes: a local certificate, its key and an nginx snippet - never committed.
+*
+!.gitignore

@@ -1,4 +1,7 @@
-from {{ cookiecutter.project_slug }}.settings import _social_app_config
+from django.conf import settings
+
+from {{ cookiecutter.project_slug }}.config import CONFIG as config
+from {{ cookiecutter.project_slug }}.settings import _origins, _social_app_config
 
 
 PREFIX = "{{ cookiecutter.config_prefix }}__OAUTH"
@@ -43,3 +46,26 @@ def test_social_app_config_openid_connect_fields_are_absent_for_other_providers(
     assert "provider_id" not in _social_app_config("google")
     assert "name" not in _social_app_config("google")
     assert "settings" not in _social_app_config("google")
+
+
+def test_origins_under_debug_accept_both_schemes_so_local_https_works_beside_http():
+    assert _origins(["a.test", "api.a.test"], True) == [
+        "http://a.test",
+        "https://a.test",
+        "http://api.a.test",
+        "https://api.a.test",
+    ]
+
+
+def test_origins_outside_debug_are_https_only():
+    assert _origins(["a.test", "api.a.test"], False) == ["https://a.test", "https://api.a.test"]
+
+
+# config.DEBUG, not settings.DEBUG: pytest-django forces the latter off after these lists were built.
+def test_csrf_trusts_the_frontend_and_every_backend_subdomain():
+    hosts = [config.DOMAIN, f"api.{config.DOMAIN}", f"admin.{config.DOMAIN}", f"auth.{config.DOMAIN}"]
+    assert settings.CSRF_TRUSTED_ORIGINS == _origins(hosts, config.DEBUG)
+
+
+def test_cors_allows_only_the_frontend_origin():
+    assert settings.CORS_ALLOWED_ORIGINS == _origins([config.DOMAIN], config.DEBUG)

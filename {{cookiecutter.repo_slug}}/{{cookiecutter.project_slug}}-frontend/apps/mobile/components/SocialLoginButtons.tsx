@@ -3,7 +3,7 @@ import { type ProviderToken, signInWithApple, signInWithGoogle } from '@/lib/nat
 import { getAuthApi } from '@/lib/session'
 import { APPLE_SIGN_IN_ENABLED, GOOGLE_SIGN_IN_ENABLED } from '@/lib/socialProviders'
 
-import { extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
+import { extractAuthErrors, pendingMfaTypes } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
 import { Button } from './Button'
 import { router } from 'expo-router'
@@ -36,6 +36,10 @@ export function SocialLoginButtons({
       const { data, error } = await getAuthApi().loginWithProviderToken(result.provider, result.token)
       if (data?.meta.is_authenticated) {
         router.replace('/(authenticated)/home')
+        return
+      }
+      if (pendingMfaTypes(error) !== null) {
+        router.push('/two-factor')
         return
       }
       const authErrors = extractAuthErrors(error)

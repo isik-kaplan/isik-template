@@ -72,3 +72,27 @@ entries:
       is_active: true
       password: correct-horse-battery-staple
       type: internal
+
+  # profile/reauthentication-social.spec.ts's own: an account made through this IdP, proving it is
+  # them by signing in here again.
+  - model: authentik_core.user
+    identifiers:
+      username: oidc-e2e-user-3
+    attrs:
+      name: OIDC E2E User 3
+      email: oidc-e2e-user-3@example.com
+      is_active: true
+      password: correct-horse-battery-staple
+      type: internal
+
+  # auth/login-ladder.spec.ts's own: a social sign-in the login policy turns away, which must never
+  # create an account - so it gets an identity no other spec signs in with.
+  - model: authentik_core.user
+    identifiers:
+      username: oidc-e2e-user-4
+    attrs:
+      name: OIDC E2E User 4
+      email: oidc-e2e-user-4@example.com
+      is_active: true
+      password: correct-horse-battery-staple
+      type: internal

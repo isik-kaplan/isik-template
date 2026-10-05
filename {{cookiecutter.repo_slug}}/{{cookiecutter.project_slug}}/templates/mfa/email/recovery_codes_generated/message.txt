@@ -1,0 +1,7 @@
+{% raw -%}
+{% extends "account/email/base_notification/base_notification.txt" %}
+
+{% block notification_message %}
+    {% blocktrans %}A new set of recovery codes has been generated. Any previous codes no longer work.{% endblocktrans %}
+{% endblock notification_message %}
+{%- endraw %}

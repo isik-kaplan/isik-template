@@ -11,7 +11,8 @@ vi.mock('next/navigation', () => ({ redirect: vi.fn(), unstable_rethrow: vi.fn()
 vi.mock('@isikk/core/next/request', () => ({
   getRequestOrigin: (headers: Headers, options: unknown) => getRequestOriginMock(headers, options),
 }))
-vi.mock('@{{ cookiecutter.repo_slug }}/auth-api', () => ({
+vi.mock('@{{ cookiecutter.repo_slug }}/auth-api', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   AuthApi: vi.fn().mockImplementation(() => ({ session: sessionMock })),
 }))
 
@@ -36,6 +37,7 @@ describe('getSession', () => {
     expect(await getSessionState()).toEqual({
       session: { user: { id: '1', username: 'jane', email: 'j@test.test' } },
       pendingProviderSignup: false,
+      pendingMfaTypes: null,
       language: 'en',
     })
   })
@@ -99,42 +101,86 @@ describe('getSession', () => {
     })
     const { getSessionState } = await freshGetSession()
 
-    expect(await getSessionState()).toEqual({ session: null, pendingProviderSignup: true, language: 'en' })
+    expect(await getSessionState()).toEqual({
+      session: null,
+      pendingProviderSignup: true,
+      pendingMfaTypes: null,
+      language: 'en',
+    })
   })
 
   it('does not report a pending provider signup for an unrelated flow', async () => {
     sessionMock.mockResolvedValue({ error: { data: { flows: [{ id: 'something_else' }] } } })
     const { getSessionState } = await freshGetSession()
 
-    expect(await getSessionState()).toEqual({ session: null, pendingProviderSignup: false, language: 'en' })
+    expect(await getSessionState()).toEqual({
+      session: null,
+      pendingProviderSignup: false,
+      pendingMfaTypes: null,
+      language: 'en',
+    })
   })
 
   it('does not report a pending provider signup when there is no error at all', async () => {
     sessionMock.mockResolvedValue({ error: undefined })
     const { getSessionState } = await freshGetSession()
 
-    expect(await getSessionState()).toEqual({ session: null, pendingProviderSignup: false, language: 'en' })
+    expect(await getSessionState()).toEqual({
+      session: null,
+      pendingProviderSignup: false,
+      pendingMfaTypes: null,
+      language: 'en',
+    })
   })
 
   it('does not report a pending provider signup when the refusal has no data', async () => {
     sessionMock.mockResolvedValue({ error: {} })
     const { getSessionState } = await freshGetSession()
 
-    expect(await getSessionState()).toEqual({ session: null, pendingProviderSignup: false, language: 'en' })
+    expect(await getSessionState()).toEqual({
+      session: null,
+      pendingProviderSignup: false,
+      pendingMfaTypes: null,
+      language: 'en',
+    })
   })
 
   it('does not report a pending provider signup when the refusal has no flows', async () => {
     sessionMock.mockResolvedValue({ error: { data: {} } })
     const { getSessionState } = await freshGetSession()
 
-    expect(await getSessionState()).toEqual({ session: null, pendingProviderSignup: false, language: 'en' })
+    expect(await getSessionState()).toEqual({
+      session: null,
+      pendingProviderSignup: false,
+      pendingMfaTypes: null,
+      language: 'en',
+    })
+  })
+
+  it('reports the factors a login still owes when a second-factor challenge is pending', async () => {
+    sessionMock.mockResolvedValue({
+      error: { data: { flows: [{ id: 'mfa_authenticate', is_pending: true, types: ['totp', 'recovery_codes'] }] } },
+    })
+    const { getSessionState } = await freshGetSession()
+
+    expect(await getSessionState()).toEqual({
+      session: null,
+      pendingProviderSignup: false,
+      pendingMfaTypes: ['totp', 'recovery_codes'],
+      language: 'en',
+    })
   })
 
   it('treats an unreachable backend as logged out rather than failing the render', async () => {
     sessionMock.mockRejectedValue(new Error('network down'))
     const { getSessionState } = await freshGetSession()
 
-    expect(await getSessionState()).toEqual({ session: null, pendingProviderSignup: false, language: 'en' })
+    expect(await getSessionState()).toEqual({
+      session: null,
+      pendingProviderSignup: false,
+      pendingMfaTypes: null,
+      language: 'en',
+    })
     expect(unstable_rethrow).toHaveBeenCalled()
   })
 

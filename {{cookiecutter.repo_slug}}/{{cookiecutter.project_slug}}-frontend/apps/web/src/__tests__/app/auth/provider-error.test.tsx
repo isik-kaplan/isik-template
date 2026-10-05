@@ -22,6 +22,13 @@ describe('ProviderErrorPage', () => {
     expect(screen.getByText('You canceled before finishing. Nothing was changed.')).toBeTruthy()
   })
 
+  it('says signing in is restricted when the login policy turned a social sign-in away', async () => {
+    render(await ProviderErrorPage({ searchParams: Promise.resolve({ error: 'logins_closed' }) }))
+
+    expect(screen.getByText('Signing in is restricted')).toBeTruthy()
+    expect(screen.getByText('Signing in is limited to fewer people for the moment. Try again later.')).toBeTruthy()
+  })
+
   it('points back to connections when the error happened mid-connect', async () => {
     render(await ProviderErrorPage({ searchParams: Promise.resolve({ error_process: 'connect' }) }))
 

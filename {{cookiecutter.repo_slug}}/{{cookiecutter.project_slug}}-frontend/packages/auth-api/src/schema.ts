@@ -20,6 +20,8 @@ type User = {
   // Absent when unset (allauth's own DefaultHeadlessAdapter drops empty/None fields rather than
   // serving "" - see the backend's apps/users/headless.py), not just "" - browser fallback applies.
   language?: string
+  // allauth's own: false for an account made through a social provider, which never set one.
+  has_usable_password?: boolean
 }
 
 type Session = {
@@ -35,7 +37,8 @@ type Session = {
 type EmailAddress = { email: string; primary: boolean; verified: boolean }
 type ProviderAccount = { id: number; provider: { id: string; name: string }; uid: string; display: { name: string } }
 
-type Flow = { id: string; is_pending?: boolean; providers?: string[] }
+// `types` only on mfa_authenticate: the factors this user can answer the challenge with.
+type Flow = { id: string; is_pending?: boolean; providers?: string[]; types?: AuthenticatorType[] }
 type SessionData = { user: User; methods?: unknown[] }
 type SessionMeta = { is_authenticated: boolean }
 type SessionOk = { status: number; data: SessionData; meta: SessionMeta }
@@ -45,6 +48,28 @@ type SessionErr = { status: number; data?: { flows: Flow[] }; meta?: SessionMeta
 type AppSessionMeta = SessionMeta & { session_token?: string }
 type AppSessionOk = { status: number; data: SessionData; meta: AppSessionMeta }
 type AppSessionErr = { status: number; data?: { flows: Flow[] }; meta?: AppSessionMeta }
+type AuthenticatorType = 'totp' | 'recovery_codes' | 'webauthn'
+// One row of account/authenticators. id/name only on a passkey, the counts only on recovery codes.
+type Authenticator = {
+  type: AuthenticatorType
+  created_at: number
+  last_used_at: number | null
+  id?: number
+  name?: string
+  is_passwordless?: boolean
+  total_code_count?: number
+  unused_code_count?: number
+}
+// unused_codes only while they may still be shown - MFA_RECOVERY_CODES_SHOW_ONCE hides them after.
+type RecoveryCodes = Authenticator & { total_code_count: number; unused_code_count: number; unused_codes?: string[] }
+type ConfigOk = {
+  status: number
+  data: { mfa?: { supported_types: AuthenticatorType[]; passkey_login_enabled: boolean } }
+}
+// WebAuthn's own options, left opaque the way allauth's spec leaves them - lib/webauthn.ts converts.
+type WebAuthnOptions = { publicKey: Record<string, unknown> }
+// A 404 that still carries what is needed to enroll: allauth answers "no TOTP yet" with a fresh secret.
+type TOTPNotFound = { status: number; meta: { secret: string; totp_url: string } }
 // allauth headless's flat validation-error shape ({errors: [{code, param, message}]}) - distinct
 // from SessionErr, which is the 401 "pending flow" shape these 400s never take.
 type ValidationErr = { status: number; errors: { code: string; param?: string; message: string }[] }
@@ -64,6 +89,15 @@ export interface paths {
     post: {
       requestBody: { content: { 'application/json': { username: string; email: string; password: string } } }
       responses: { 200: { content: { 'application/json': SessionOk } }; 401: { content: { 'application/json': SessionErr } } }
+    }
+  }
+  '/v0/browser/v1/auth/reauthenticate': {
+    post: {
+      requestBody: { content: { 'application/json': { password: string } } }
+      responses: {
+        200: { content: { 'application/json': SessionOk } }
+        400: { content: { 'application/json': ValidationErr } }
+      }
     }
   }
   '/v0/browser/v1/auth/password/request': {
@@ -155,6 +189,132 @@ export interface paths {
       responses: { 200: { content: { 'application/json': SessionOk } }; 401: { content: { 'application/json': SessionErr } } }
     }
   }
+  '/v0/browser/v1/config': {
+    get: { responses: { 200: { content: { 'application/json': ConfigOk } } } }
+  }
+  // Every write below needs a recent login: past ACCOUNT_REAUTHENTICATION_TIMEOUT allauth answers 401
+  // with a pending reauthenticate flow instead.
+  '/v0/browser/v1/account/authenticators': {
+    get: { responses: { 200: { content: { 'application/json': { status: number; data: Authenticator[] } } } } }
+  }
+  '/v0/browser/v1/account/authenticators/totp': {
+    get: {
+      responses: {
+        200: { content: { 'application/json': { status: number; data: Authenticator } } }
+        404: { content: { 'application/json': TOTPNotFound } }
+        // Enrolling is refused until the account's email is verified.
+        409: { content: { 'application/json': ValidationErr } }
+      }
+    }
+    post: {
+      requestBody: { content: { 'application/json': { code: string } } }
+      responses: {
+        200: { content: { 'application/json': { status: number; data: Authenticator } } }
+        400: { content: { 'application/json': ValidationErr } }
+        401: { content: { 'application/json': SessionErr } }
+      }
+    }
+    delete: {
+      responses: {
+        200: { content: { 'application/json': { status: number } } }
+        401: { content: { 'application/json': SessionErr } }
+      }
+    }
+  }
+  '/v0/browser/v1/account/authenticators/recovery-codes': {
+    get: {
+      responses: {
+        200: { content: { 'application/json': { status: number; data: RecoveryCodes } } }
+        404: { content: { 'application/json': { status: number } } }
+      }
+    }
+    post: {
+      responses: {
+        200: { content: { 'application/json': { status: number; data: RecoveryCodes } } }
+        400: { content: { 'application/json': ValidationErr } }
+        401: { content: { 'application/json': SessionErr } }
+      }
+    }
+  }
+  '/v0/browser/v1/account/authenticators/webauthn': {
+    get: {
+      responses: {
+        200: { content: { 'application/json': { status: number; data: { creation_options: WebAuthnOptions } } } }
+        401: { content: { 'application/json': SessionErr } }
+        409: { content: { 'application/json': ValidationErr } }
+      }
+    }
+    post: {
+      requestBody: { content: { 'application/json': { name?: string; credential: Record<string, unknown> } } }
+      responses: {
+        200: {
+          content: {
+            'application/json': { status: number; data: Authenticator; meta: { recovery_codes_generated: boolean } }
+          }
+        }
+        400: { content: { 'application/json': ValidationErr } }
+        401: { content: { 'application/json': SessionErr } }
+      }
+    }
+    delete: {
+      requestBody: { content: { 'application/json': { authenticators: number[] } } }
+      responses: {
+        200: { content: { 'application/json': { status: number } } }
+        400: { content: { 'application/json': ValidationErr } }
+        401: { content: { 'application/json': SessionErr } }
+      }
+    }
+  }
+  // The second step of a login whose password was right: the pending mfa_authenticate flow.
+  '/v0/browser/v1/auth/2fa/authenticate': {
+    post: {
+      requestBody: { content: { 'application/json': { code: string } } }
+      responses: {
+        200: { content: { 'application/json': SessionOk } }
+        400: { content: { 'application/json': ValidationErr } }
+        401: { content: { 'application/json': SessionErr } }
+      }
+    }
+  }
+  '/v0/browser/v1/auth/webauthn/authenticate': {
+    get: {
+      responses: {
+        200: { content: { 'application/json': { status: number; data: { request_options: WebAuthnOptions } } } }
+      }
+    }
+    post: {
+      requestBody: { content: { 'application/json': { credential: Record<string, unknown> } } }
+      responses: {
+        200: { content: { 'application/json': SessionOk } }
+        400: { content: { 'application/json': ValidationErr } }
+        401: { content: { 'application/json': SessionErr } }
+      }
+    }
+  }
+  // Proving it is you again with a second factor rather than the password: the mfa_reauthenticate flow.
+  '/v0/browser/v1/auth/2fa/reauthenticate': {
+    post: {
+      requestBody: { content: { 'application/json': { code: string } } }
+      responses: {
+        200: { content: { 'application/json': SessionOk } }
+        400: { content: { 'application/json': ValidationErr } }
+      }
+    }
+  }
+  '/v0/browser/v1/auth/webauthn/reauthenticate': {
+    get: {
+      responses: {
+        200: { content: { 'application/json': { status: number; data: { request_options: WebAuthnOptions } } } }
+      }
+    }
+    post: {
+      requestBody: { content: { 'application/json': { credential: Record<string, unknown> } } }
+      responses: {
+        200: { content: { 'application/json': SessionOk } }
+        400: { content: { 'application/json': ValidationErr } }
+      }
+    }
+  }
   // The app client's own tree, same endpoints as their /v0/browser/v1 counterparts above (allauth
   // mounts both from one implementation) - AppAuthApi (src/app.ts) uses all of these.
   '/v0/app/v1/auth/session': {
@@ -171,6 +331,25 @@ export interface paths {
     post: {
       requestBody: { content: { 'application/json': { username: string; email: string; password: string } } }
       responses: { 200: { content: { 'application/json': AppSessionOk } }; 401: { content: { 'application/json': AppSessionErr } } }
+    }
+  }
+  '/v0/app/v1/auth/2fa/authenticate': {
+    post: {
+      requestBody: { content: { 'application/json': { code: string } } }
+      responses: {
+        200: { content: { 'application/json': AppSessionOk } }
+        400: { content: { 'application/json': ValidationErr } }
+        401: { content: { 'application/json': AppSessionErr } }
+      }
+    }
+  }
+  '/v0/app/v1/auth/reauthenticate': {
+    post: {
+      requestBody: { content: { 'application/json': { password: string } } }
+      responses: {
+        200: { content: { 'application/json': AppSessionOk } }
+        400: { content: { 'application/json': ValidationErr } }
+      }
     }
   }
   '/v0/app/v1/auth/password/request': {

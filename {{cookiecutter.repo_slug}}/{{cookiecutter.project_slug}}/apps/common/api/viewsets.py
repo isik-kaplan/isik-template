@@ -1,8 +1,9 @@
 from django.conf import settings
+from isik.django.apps.idempotency.drf import IdempotencyMixin
 from isik.django.drf.viewsets import BaseModelViewSet as _BaseModelViewSet
 
 
-class BaseModelViewSet(_BaseModelViewSet):
+class BaseModelViewSet(IdempotencyMixin, _BaseModelViewSet):
     # Exempts this abstract class from the required-attributes check and forks a private
     # model->viewset registry, so subclasses register under this project's own base instead of
     # isik's shared default registry.

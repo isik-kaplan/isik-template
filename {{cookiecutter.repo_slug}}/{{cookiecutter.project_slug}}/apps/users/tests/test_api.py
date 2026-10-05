@@ -1,5 +1,7 @@
 import pytest
 from django.conf import settings
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 
 from apps.users.models.user import User
 
@@ -37,6 +39,20 @@ def test_me_returns_the_logged_in_user(client):
     response = client.get("/v0/users/me/")
     assert response.status_code == 200
     assert response.json()["username"] == "alice"
+
+
+@pytest.mark.django_db
+def test_reading_me_writes_nothing(client):
+    """A read routed down the write path still answers 200 with the same body, so only the absence
+    of the write tells the two apart."""
+    user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
+    client.force_login(user)
+
+    with CaptureQueriesContext(connection) as queries:
+        response = client.get("/v0/users/me/", {"language": "tr"})
+
+    assert response.status_code == 200
+    assert not [query for query in queries if query["sql"].lstrip().upper().startswith("UPDATE")]
 
 
 @pytest.mark.django_db
@@ -91,8 +107,10 @@ def test_patching_me_cannot_change_username_or_email(client):
 @pytest.mark.django_db
 def test_a_users_history_records_its_creation(client):
     user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
+    client.force_login(user)
 
-    response = client.get(f"/v0/users/{user.id}/history/")
+    # Signing in stamps last_login, so the creation is the oldest event rather than the only one.
+    response = client.get(f"/v0/users/{user.id}/history/?action=insert")
 
     assert response.status_code == 200
     (event,) = response.json()["results"]
@@ -107,26 +125,63 @@ def test_a_password_change_is_recorded_but_never_served(client):
     user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
     user.set_password("a-new-password")
     user.save()
+    client.force_login(user)
 
     response = client.get(f"/v0/users/{user.id}/history/")
-    update = response.json()["results"][0]
+    # The sign-in that reads it is an update too (last_login), so the password's is the one before.
+    update = next(event for event in response.json()["results"] if "password" in event["changes"])
     assert "password" not in update
     assert update["changes"]["password"] == [None, None]
 
 
 @pytest.mark.django_db
-def test_the_cross_user_history_requires_a_superuser(client):
+@pytest.mark.parametrize("path", ["/v0/users/{id}/history/", "/v0/users/history/"])
+def test_nobody_signed_out_reads_any_history(client, path):
     user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
-    client.force_login(user)
 
-    response = client.get("/v0/users/history/")
+    response = client.get(path.format(id=user.id))
 
     assert response.status_code == 403
 
 
 @pytest.mark.django_db
-def test_a_superuser_can_read_the_cross_user_history(client):
-    superuser = User.objects.create_superuser(username="root", email="root@example.test", password="x")
+def test_somebody_elses_history_is_refused(client):
+    alice = User.objects.create_user(username="alice", email="alice@example.test", password="x")
+    mallory = User.objects.create_user(username="mallory", email="mallory@example.test", password="x")
+    client.force_login(mallory)
+
+    response = client.get(f"/v0/users/{alice.id}/history/")
+
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_staff_read_anybodys_history(client):
+    alice = User.objects.create_user(username="alice", email="alice@example.test", password="x")
+    staff = User.objects.create_user(username="staff", email="staff@example.test", password="x", is_staff=True)
+    client.force_login(staff)
+
+    response = client.get(f"/v0/users/{alice.id}/history/")
+
+    assert response.status_code == 200
+    assert [event["username"] for event in response.json()["results"]] == ["alice"]
+
+
+@pytest.mark.django_db
+def test_the_cross_user_history_shows_somebody_signed_in_only_their_own(client):
+    alice = User.objects.create_user(username="alice", email="alice@example.test", password="x")
+    User.objects.create_user(username="mallory", email="mallory@example.test", password="x")
+    client.force_login(alice)
+
+    response = client.get("/v0/users/history/")
+
+    assert response.status_code == 200
+    assert {event["id"] for event in response.json()["results"]} == {str(alice.id)}
+
+
+@pytest.mark.django_db
+def test_staff_read_the_cross_user_history(client):
+    superuser = User.objects.create_user(username="root", email="root@example.test", password="x", is_staff=True)
     User.objects.create_user(username="alice", email="alice@example.test", password="x")
     client.force_login(superuser)
 

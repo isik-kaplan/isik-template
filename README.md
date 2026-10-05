@@ -11,8 +11,15 @@ all wired together in Docker Compose with a Playwright e2e suite (mailpit, plus 
 Authentik instance for social login) covering the full auth surface end to end.
 
 `User` is tracked with `@track_events()`, exposed at `/v0/users/{id}/history/` and
-`/v0/users/history/` (password changes recorded, never served) and named by whoever caused
-them - a request's session, or, via `HistoryContextTask`, a Celery task the request dispatched.
+`/v0/users/history/` to the account's owner and to staff only (password changes recorded, never
+served) and named by whoever caused them - a request's session, or, via `HistoryContextTask`, a Celery
+task the request dispatched.
+
+Two-factor authentication is opt-in per user via `allauth.mfa`: an authenticator app (TOTP),
+recovery codes, and passkeys - a passkey is a second factor only, never a password replacement
+(`MFA_PASSKEY_LOGIN_ENABLED = False`). Anyone with a factor is challenged for it after their
+password or social login; the profile's 2FA tab enrolls and removes factors. The e2e stack serves a
+self-signed https listener beside plain http, since WebAuthn exists only in a secure context.
 
 Every string is authored in English and everything (backend error/admin copy, web, mobile) is
 translatable via `LANGUAGES`/`LocaleMiddleware`-equivalent wiring and i18next; the active language
@@ -44,7 +51,8 @@ one - `provider_id=url-or-path` pairs, comma-separated, e.g.
 
 `include_mobile` (default `n`) adds an Expo/React Native app (`apps/mobile`) alongside the web
 frontend, against the backend's existing `allauth.headless` app client (token-based, no cookies) -
-login/signup/session/logout, password reset, a `profile/` section (account details, emails,
+login/signup/session/logout (including the second-factor step for an account with TOTP or recovery
+codes), password reset, a `profile/` section (account details, emails,
 password, connected accounts, active sessions), native Sign in with Google/Apple where
 `social_login_providers` configures them, and i18next/react-i18next wired to the device's own
 locale (falling back to English), same `languages` list as the backend and web. The two screens
@@ -86,10 +94,17 @@ deliberately blocked from triggering workflow runs it pushes itself), so it isn'
 `hooks/_validate.py` (the bake-time validation `pre_gen_project.py` calls) has its own mutmut run
 too, checked in `pre-gen-validate-mutation`, so both this repo's own tooling and the generated
 project it produces carry the same 100%-mutation-clean bar - see `mutation-exemptions.toml` at the
-root for this repo's own exemptions and the generated project's own copy for its.
+root for this repo's own exemptions, and the generated project's `mutation-equivalents.toml`/
+`mutation-exemptions.toml` for its. Run it locally with `uv run python scripts/mutmut_run.py run`
+rather than bare `mutmut run`: the wrapper names each mutant after the mutation it makes, which is
+what the exemption keys are.
 
-Generated projects get their own `.github/workflows/ci.yml` covering the same tiers, plus
-`frontend-mutation` (Stryker, `break: 100`).
+Generated projects get their own `.github/workflows/ci.yml` covering the same tiers. Its
+`frontend-mutation` runs Stryker once per shard of `apps/web/scripts/mutation-shards.mjs` (a matrix read
+from that file, with an incremental cache per shard, inside the same `tester` image as `frontend`), and
+`mobile-mutation` runs it over the mobile app. Stryker's own `break` is off in both: the gate is
+`packages/mutation-check/check-mutants.mjs`, which fails on any surviving mutant not named in that app's
+`mutation-exemptions.json`, and on any entry no surviving mutant matches.
 
 ## What's not implemented
 

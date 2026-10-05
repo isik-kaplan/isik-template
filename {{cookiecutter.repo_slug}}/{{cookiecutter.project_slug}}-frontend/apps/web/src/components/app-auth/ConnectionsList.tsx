@@ -8,14 +8,19 @@ import { Badge } from '@/components/base/badge'
 import { Button } from '@/components/base/button'
 
 import { useClientTranslation } from '@/i18n/client'
+import { createAuthApi } from '@/lib/apiClients'
 import { authOrigin } from '@/lib/authOrigin'
+import { provePath } from '@/lib/reauthentication'
 import { SOCIAL_PROVIDERS } from '@/lib/socialProviders'
 
-import { AuthApi, extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api'
+import { extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
 import { AutoFormButton } from './AutoFormButton'
 import { ProviderIcon } from './ProviderIcon'
 import { toast } from 'sonner'
+
+// allauth's own code for a connect the backend's re-authentication gate turned back.
+const REAUTHENTICATION_REQUIRED_ERROR = 'reauthentication_required'
 
 type ProviderAccount = { id: number; provider: { id: string; name: string }; uid: string; display: { name: string } }
 
@@ -44,7 +49,10 @@ export function ConnectionsList({ initialProviders, connectAction, callbackUrl, 
   const pathname = usePathname()
 
   useEffect(() => {
-    if (connectError) router.replace(pathname)
+    if (!connectError) return
+    // The backend refused to connect until this person proves it is them - not a dead end: off to
+    // prove it, and back here to connect again.
+    router.replace(connectError === REAUTHENTICATION_REQUIRED_ERROR ? provePath(pathname) : pathname)
   }, [connectError, pathname, router])
 
   // allauth's own codes for a failed connect attempt (do_connect, socialaccount/internal/flows/
@@ -52,13 +60,12 @@ export function ConnectionsList({ initialProviders, connectAction, callbackUrl, 
   function getErrorMessage() {
     switch (connectErrorShown) {
       case undefined:
+      case REAUTHENTICATION_REQUIRED_ERROR:
         return null
       case 'cancelled':
         return t('auth:profileConnectionsCancelled')
       case 'connected_other':
         return t('auth:profileConnectionsConnectedOther')
-      case 'reauthentication_required':
-        return t('auth:profileConnectionsReauthRequired')
       case 'permission_denied':
         return t('auth:profileConnectionsPermissionDenied')
       default:
@@ -68,7 +75,7 @@ export function ConnectionsList({ initialProviders, connectAction, callbackUrl, 
   const errorMessage = getErrorMessage()
 
   async function handleDisconnect(providerId: string, account: string) {
-    const { data, error } = await new AuthApi(authOrigin()).disconnectProvider(providerId, account)
+    const { data, error } = await createAuthApi(authOrigin()).disconnectProvider(providerId, account)
 
     if (data) {
       setConnected(data.data as ProviderAccount[])
@@ -94,7 +101,7 @@ export function ConnectionsList({ initialProviders, connectAction, callbackUrl, 
           return (
             <li key={provider.id} className="flex items-center justify-between gap-2 py-3 first:pt-0 last:pb-0">
               <div className="flex items-center gap-2">
-                <ProviderIcon providerId={provider.id} iconUrl={provider.icon} />
+                <ProviderIcon providerId={provider.id} name={provider.name} iconUrl={provider.icon} />
                 <span>{provider.name}</span>
                 <Badge variant={account ? 'default' : 'outline'}>
                   {account ? t('auth:profileConnectionsConnectedBadge') : t('auth:profileConnectionsNotConnectedBadge')}

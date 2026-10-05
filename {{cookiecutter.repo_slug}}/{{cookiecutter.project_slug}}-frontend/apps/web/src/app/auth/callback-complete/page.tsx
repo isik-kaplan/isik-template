@@ -19,9 +19,11 @@ export default async function CallbackCompletePage({
   }>
 }) {
   const params = await searchParams
-  const { session, pendingProviderSignup } = await getSessionState()
+  const { session, pendingProviderSignup, pendingMfaTypes } = await getSessionState()
   if (pendingProviderSignup) redirect('/auth/complete-signup')
   if (session) redirect(getSafeRedirect(params.next))
+  // The provider vouched for the first factor; an account with a second one still owes it.
+  if (pendingMfaTypes) redirect(`/auth/two-factor?next=${encodeURIComponent(getSafeRedirect(params.next))}`)
   // A real failure (e.g. the provider declined, or - see the blueprint's own comment on this
   // exact failure mode - the provider sent back no usable identity data) carries an `error` param
   // here rather than throwing - allauth always redirects back to this page's own URL regardless

@@ -1,10 +1,13 @@
-# Every mutant `mutmut run` reports as "survived" or "no tests" has to be either killed by a real
-# behavioral test, or explained here - never silently accepted. Keyed by function (not by mutant
-# number), so an entry covers every mutant of that function, including ones added later.
+# Every mutant `mutmut run` leaves alive - survived, no tests, timeout, anything but killed - has to
+# be either killed by a real behavioral test, or explained here - never silently accepted. Keyed by
+# mutant, and a mutant is named after the mutation itself (scripts/mutation_naming.py), so an entry
+# excuses exactly the change its reason describes: another mutant of the same function needs its own,
+# and an entry whose mutation is edited away goes stale and fails the build.
 #
-# scripts/check_mutants.py enforces this file against `mutmut results` in CI.
+# scripts/check_mutants.py enforces this file against `mutmut results` in CI. Run mutmut through
+# scripts/mutmut_run.py, or the names it generates are positional and match nothing here.
 
-["hooks._validate.x_validate_answers"]
+["hooks._validate.x_validate_answers__mutmut__1ef13a86c553"]
 reason = """Equivalent, verified by hand: this mutant drops `domain=domain` from the
 validate_required_fields(...) call inside validate_answers, so a blank/whitespace-only domain no
 longer fails there. It still fails one line later regardless - validate_domain(domain) is always

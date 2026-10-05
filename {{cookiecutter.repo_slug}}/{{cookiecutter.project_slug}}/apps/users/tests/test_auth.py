@@ -1,6 +1,9 @@
+import uuid
+
 import pytest
 from django.conf import settings
 
+from apps.users.headless import EXAMPLE_USER_ID
 from apps.users.models.user import User
 
 
@@ -79,3 +82,24 @@ def test_the_session_omits_language_when_the_user_has_no_preference(client):
     # Matches how allauth's own DefaultHeadlessAdapter drops every other empty/None field
     # (email, username, ...) from this same payload rather than serving it as "".
     assert "language" not in response.json()["data"]["user"]
+
+
+@pytest.mark.django_db
+def test_the_served_specification_is_the_same_document_every_time(client):
+    host = f"auth.{settings.PARENT_HOST}"
+
+    first = client.get("/v0/openapi.json", HTTP_HOST=host)
+    second = client.get("/v0/openapi.json", HTTP_HOST=host)
+
+    assert first.status_code == 200
+    assert first.content == second.content
+
+
+@pytest.mark.django_db
+def test_the_specification_still_describes_the_user_id_it_really_issues(client):
+    """Pinned, but not to a lie: the id stays a string shaped like the uuid7s User.id holds."""
+    response = client.get("/v0/openapi.json", HTTP_HOST=f"auth.{settings.PARENT_HOST}")
+
+    identifier = response.json()["components"]["schemas"]["User"]["properties"]["id"]
+    assert (identifier["type"], identifier["example"]) == ("string", EXAMPLE_USER_ID)
+    assert uuid.UUID(identifier["example"]).version == 7

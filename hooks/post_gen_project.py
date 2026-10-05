@@ -5,7 +5,7 @@ import json
 import os
 import shutil
 import subprocess
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 
@@ -13,6 +13,7 @@ PROJECT_NAME = "{{ cookiecutter.project_name }}"
 PROJECT_SLUG = "{{ cookiecutter.project_slug }}"
 DOMAIN = "{{ cookiecutter.domain }}"
 INCLUDE_MOBILE = {{ cookiecutter.include_mobile }}
+TLS_TERMINATION = "{{ cookiecutter.tls_termination }}"
 AUTHOR_NAME = "{{ cookiecutter.author_name }}"
 AUTHOR_EMAIL = "{{ cookiecutter.author_email }}"
 # "en" first, always - see hooks/_validate.py's own validate_requested_languages().
@@ -35,7 +36,7 @@ GENERATED_FILE_NOTICE = (
 
 
 def _po_header(language: str) -> str:
-    year = datetime.now(tz=timezone.utc).year
+    year = datetime.now(tz=UTC).year
     return f"""# {PROJECT_NAME} translations.
 # Copyright (C) {year} {AUTHOR_NAME}
 # {AUTHOR_NAME} <{AUTHOR_EMAIL}>, {year}.
@@ -117,7 +118,7 @@ def regenerate_web_i18n_config(web_namespaces: list[str]) -> None:
     content = (
         "\n".join(import_lines)
         + "\n"
-        + "import type { InitOptions } from 'i18next'\n\n"
+        + "import type { InitOptions, TFunction } from 'i18next'\n\n"
         + GENERATED_FILE_NOTICE
         + _const_array("languages", LANGUAGES)
         + "\n"
@@ -125,7 +126,7 @@ def regenerate_web_i18n_config(web_namespaces: list[str]) -> None:
         + "\n\n"
         + "export type Language = (typeof languages)[number]\n"
         + "export type Namespace = (typeof namespaces)[number]\n\n"
-        + "const resources = {\n"
+        + "export const resources = {\n"
         + "\n".join(resource_blocks)
         + "\n} as const\n\n"
         + "export function getConfig(ns?: Namespace[], lng: Language = 'en'): InitOptions {\n"
@@ -137,7 +138,9 @@ def regenerate_web_i18n_config(web_namespaces: list[str]) -> None:
         + "    // i18next escapes interpolated values by default, which React then renders literally.\n"
         + "    interpolation: { escapeValue: false },\n"
         + "  }\n"
-        + "}\n"
+        + "}\n\n"
+        + "// What a function handed `t` should take - see i18next.d.ts for what makes its keys checked.\n"
+        + "export type Translate = TFunction<Namespace[]>\n"
     )
     (WEB_SRC / "i18n" / "config.ts").write_text(content)
 
@@ -145,7 +148,10 @@ def regenerate_web_i18n_config(web_namespaces: list[str]) -> None:
 def regenerate_mobile_i18n() -> None:
     """Rewrites lib/i18n.ts to register every requested language and pick the initial one from
     the device's own locale (see expo-localization) rather than always defaulting to English."""
-    import_lines = [f"import {_identifier('translation', language)} from './locales/{language}.json'" for language in sorted(LANGUAGES)]
+    import_lines = [
+        f"import {_identifier('translation', language)} from './locales/{language}.json'"
+        for language in sorted(LANGUAGES)
+    ]
     resources_entries = "\n".join(
         f"    {language}: {OPEN_BRACE} translation: {_identifier('translation', language)} {CLOSE_BRACE},"
         for language in LANGUAGES
@@ -170,18 +176,10 @@ def regenerate_mobile_i18n() -> None:
         + "  for (const locale of Localization.getLocales()) {\n"
         + "    if (locale.languageCode && isSupported(locale.languageCode)) return locale.languageCode\n"
         + "  }\n"
-        + "  // Stryker disable next-line StringLiteral: equivalent mutant, the same way and for the\n"
-        + "  // same reason as the fallbackLng comment below - i18next resolves an empty lng through\n"
-        + "  // fallbackLng regardless of what this placeholder actually is, landing on \"en\" either way.\n"
         + "  return 'en'\n"
         + "}\n\n"
         + "i18next.use(initReactI18next).init({\n"
         + "  lng: deviceLanguage(),\n"
-        + "  // Stryker disable next-line StringLiteral: equivalent mutant. deviceLanguage() only ever\n"
-        + "  // returns a language this app actually bundles resources for, so a missing *key* inside\n"
-        + "  // that bundle is the only thing fallbackLng could ever catch here - and every key that\n"
-        + "  // exists in \"en\" exists in every other bundle too (blank until translated, never absent\n"
-        + "  // - see hooks/post_gen_project.py), so that never happens either.\n"
         + "  fallbackLng: 'en',\n"
         + "  resources: {\n"
         + resources_entries
@@ -249,6 +247,10 @@ def main() -> None:
     # works.
     if not INCLUDE_MOBILE:
         shutil.rmtree(f"{PROJECT_SLUG}-frontend/apps/mobile")
+    # Same trick for local https: self mode already serves :443 off its own certificate.
+    if TLS_TERMINATION == "self":
+        shutil.rmtree(f"{PROJECT_SLUG}-server/dev-tls")
+        os.remove("docker-compose.dev-tls.yml")
 
     translation_files, web_namespaces = scaffold_translation_files()
     if EXTRA_LANGUAGES:

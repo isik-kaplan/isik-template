@@ -31,6 +31,7 @@ import os
 import sys
 from pathlib import Path
 
+import mutation_naming
 import mutmut_decorators
 import tomllib
 
@@ -38,8 +39,11 @@ import tomllib
 ROOT = Path(__file__).resolve().parent.parent
 TRAMPOLINE = "mutmut.mutation.trampoline"
 
-# Before anything below asks mutmut to generate a mutant, by any path - see mutmut_decorators.py.
+# Before anything below asks mutmut to generate a mutant, by any path - `mutmut run` builds the tree
+# itself when there is none. Both, because the queue generates its names the same way and a name the
+# tree does not hold is a mutant mutmut reports "not checked" forever.
 mutmut_decorators.install()
+mutation_naming.apply()
 
 
 def tree_problems(root=ROOT):

@@ -21,7 +21,7 @@ describe('ProfileTabsList', () => {
   it('renders every tab, labelled', () => {
     render(<ProfileTabsList />)
 
-    for (const label of ['Details', 'Password', 'Emails', 'Links', 'Sessions']) {
+    for (const label of ['Details', 'Password', 'Emails', 'Links', 'Sessions', '2FA']) {
       expect(screen.getByRole('tab', { name: label })).toBeTruthy()
     }
   })
@@ -71,5 +71,15 @@ describe('ProfileTabsList', () => {
     await user.click(screen.getByRole('tab', { name: 'Sessions' }))
 
     expect(push).toHaveBeenCalledWith('/profile/details/nested')
+  })
+
+  it('selects and reaches the two-factor tab by its own segment', async () => {
+    pathname = '/profile/two-factor'
+    const user = userEvent.setup()
+    render(<ProfileTabsList />)
+
+    expect(screen.getByRole('tab', { name: '2FA' }).getAttribute('aria-selected')).toBe('true')
+    await user.click(screen.getByRole('tab', { name: 'Details' }))
+    expect(push).toHaveBeenCalledWith('/profile/details')
   })
 })

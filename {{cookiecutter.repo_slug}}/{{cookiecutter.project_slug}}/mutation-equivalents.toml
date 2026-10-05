@@ -1,0 +1,57 @@
+# Single mutants no test can kill, because the system behaves identically with them. Each is skipped
+# by phase one and subtracted from the survivor list in phase two.
+#
+# The bar is behavior. A test that asserts what a call returned, what it wrote or what a user sees
+# kills a mutant; asserting the arguments a mock received does not, and neither does reading a
+# spelling back out of a header. An escape hatch from a policy, so it is guarded like one:
+#
+#   * every entry needs a `reason` long enough to be one, or scripts/confirm_survivors.py rejects the
+#     file.
+#   * an entry whose mutant is now killed fails the build - an unnecessary exemption is how a list
+#     like this becomes a way of ignoring the policy. `python -m scripts.toolbox.check_exemption_keys`
+#     (run by CI) finds one whose mutant no longer exists at all.
+#   * an entry may name a test with `verified_by`, and then that test re-checks it instead of the
+#     re-run. Only for a reason that rests on a library's behavior rather than this codebase's own -
+#     a case-insensitive header, an argument a library method never reads - and the test must make
+#     the real call the reason is about, not a stand-in that looks similar. The re-run it replaces can
+#     only ever observe "nothing killed it"; the test asserts the reason itself, on every push.
+#     apps/common/tests/test_mutation_registries.py refuses one that names a test nobody defines.
+#
+# A name is the mutation, hashed (scripts/mutation_naming.py), so an entry follows its mutant through
+# any edit that leaves the mutation in place and stops resolving the moment one does not. Read the
+# names and diffs off `python -m scripts.toolbox.triage <report> --diffs`.
+#
+# Quote the name: TOML reads a bare `[a.b.c]` as nested tables, so an unquoted entry matches nothing.
+#
+# A function mutmut's tracing cannot attribute to any test at all belongs in mutation-exemptions.toml
+# instead, which is keyed by function.
+
+["apps.users.adapters.social_account.xǁSocialAccountAdapterǁpopulate_user__mutmut__7b105d92b12d"]
+reason = """Passes None instead of the request to super().populate_user(request, sociallogin, data).
+allauth's DefaultSocialAccountAdapter.populate_user() never reads its request parameter - it only
+touches `data` and `sociallogin.user` - so no test can observe which one was passed."""
+verified_by = "apps/common/tests/test_library_assumptions.py::test_populate_user_never_reads_the_request"
+
+["apps.users.api.viewsets.user.x__mark_partial__mutmut__1a1b3d6410e6"]
+reason = """Flips `serializer.partial = True` to False. Nothing in UserSerializer is required
+(id/created_at/updated_at are read-only, username/email are read-only on update via
+create_only_fields, first_name/last_name/language are all blank=True), and ModelSerializer.update()
+only sets fields present in the request body regardless of `partial` - an empty-body PATCH returns 200
+either way. Stops being equivalent the day a required field is added."""
+
+["apps.users.api.viewsets.user.x__mark_partial__mutmut__de2cdac5f87a"]
+reason = """Sets `serializer.partial = None` instead of True. DRF only ever reads `partial` for its
+truth value, so None behaves as False - and False is equivalent here for the reason the entry above
+gives: nothing in UserSerializer is required, so partial validation and full validation agree."""
+
+["apps.common.middleware.language.xǁUserLanguageMiddlewareǁ__call____mutmut__ddadfc18aac5"]
+reason = """Spells the header "content-language" instead of "Content-Language". Django's
+HttpResponse.headers is case-insensitive on write and on read, so every spelling sets the same header
+and no test can observe which one was written."""
+verified_by = "apps/common/tests/test_library_assumptions.py::test_a_response_header_is_case_insensitive"
+
+["apps.common.middleware.language.xǁUserLanguageMiddlewareǁ__call____mutmut__2d568dee1fcb"]
+reason = """Spells the header "CONTENT-LANGUAGE" instead of "Content-Language". Django's
+HttpResponse.headers is case-insensitive on write and on read, so every spelling sets the same header
+and no test can observe which one was written."""
+verified_by = "apps/common/tests/test_library_assumptions.py::test_a_response_header_is_case_insensitive"

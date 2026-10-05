@@ -14,6 +14,7 @@ __pycache__/
 .coverage
 staticfiles/
 mutants/
+template.dump
 
 # Node / Next.js
 node_modules/

@@ -165,17 +165,12 @@ def cost_of(stats_path, names):
     return priced
 
 
-def exempt(path, names):
-    """Which of `names` belongs to a function `mutation-exemptions.toml` records as unkillable.
-
-    The file is keyed by function, covering every mutant of it, so a mutant name is never a key in
-    it directly - only matched against one after its own mutant number is stripped.
-    """
-    path = Path(path)
-    if not path.exists():
-        return set()
-    functions = set(tomllib.loads(path.read_text()))
-    return {name for name in names if (name.rpartition("__mutmut_")[0] or name) in functions}
+def exempt(equivalents, exemptions, names):
+    """Which of `names` a registry records as unkillable: by mutant in `mutation-equivalents.toml`,
+    by function in `mutation-exemptions.toml`."""
+    single = set(tomllib.loads(Path(equivalents).read_text())) if Path(equivalents).exists() else set()
+    whole = set(tomllib.loads(Path(exemptions).read_text())) if Path(exemptions).exists() else set()
+    return {name for name in names if name in single or (name.rpartition("__mutmut_")[0] or name) in whole}
 
 
 def read(path):
@@ -231,9 +226,14 @@ def main(argv=None):
         "--queue", help="the queue that report must cover, so a mutant it never ran cannot pass as absent"
     )
     parser.add_argument(
+        "--equivalents",
+        default=str(ROOT / "mutation-equivalents.toml"),
+        help="single mutants phase two skips, which are absent from its report by design",
+    )
+    parser.add_argument(
         "--exemptions",
         default=str(ROOT / "mutation-exemptions.toml"),
-        help="the mutants phase two skips, which are absent from its report by design",
+        help="whole functions phase two skips, for the same reason",
     )
     options = parser.parse_args(argv)
 
@@ -296,7 +296,7 @@ def main(argv=None):
             if line.strip()
         }
         # An exempt mutant is absent for the one reason that is not a hole; confirm_survivors guards the rest.
-        missing = sorted(queued - set(verdicts) - exempt(options.exemptions, queued))
+        missing = sorted(queued - set(verdicts) - exempt(options.equivalents, options.exemptions, queued))
         if missing:
             print(f"\n{len(missing):,} of {len(queued):,} queued mutant(s) have no verdict at all:")
             for name in missing[:20]:
@@ -320,7 +320,7 @@ def main(argv=None):
         if billed:
             print(f"\n  these survivors are what the run spent {billed / 60:.0f} traced minutes on")
         print(
-            "\nEither add a test that kills it, or record it in mutation-exemptions.toml with a reason"
+            "\nEither add a test that kills it, or record it in mutation-equivalents.toml with a reason"
             " for why no test can."
         )
         return 1

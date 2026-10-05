@@ -1,5 +1,8 @@
 import { LoginForm } from '@/components/app-auth/LoginForm'
 
+import { VERIFY_EMAIL_REQUIRED_PATH } from '@/lib/sessionChannel'
+
+import { expectUniqueAccessibleNames } from '@isikk/core/testing'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -145,6 +148,52 @@ describe('LoginForm', () => {
     expect(refresh).toHaveBeenCalled()
   })
 
+  it('names every control uniquely', () => {
+    render(<LoginForm />)
+
+    expectUniqueAccessibleNames()
+  })
+
+  it('sends a right password for an unconfirmed address to the confirm-first page, not an error', async () => {
+    globalThis.fetch = vi.fn(async () =>
+      jsonResponse(401, {
+        status: 401,
+        data: { flows: [{ id: 'login' }, { id: 'verify_email', is_pending: true }] },
+        meta: { is_authenticated: false },
+      })
+    )
+    const user = userEvent.setup()
+    render(<LoginForm redirectTo="/dashboard" />)
+
+    await user.type(screen.getByLabelText('Username or email'), 'jane')
+    await user.type(screen.getByLabelText('Password'), 'secret123')
+    await user.click(screen.getByRole('button', { name: 'Log in' }))
+
+    expect(push).toHaveBeenCalledWith(VERIFY_EMAIL_REQUIRED_PATH)
+    expect(push).toHaveBeenCalledTimes(1)
+    expect(refresh).not.toHaveBeenCalled()
+    expect(screen.queryByText('Could not log you in.')).toBeNull()
+  })
+
+  it('still reports a 401 with no pending verify_email flow as a failure', async () => {
+    globalThis.fetch = vi.fn(async () =>
+      jsonResponse(401, {
+        status: 401,
+        data: { flows: [{ id: 'verify_email', is_pending: false }] },
+        meta: { is_authenticated: false },
+      })
+    )
+    const user = userEvent.setup()
+    render(<LoginForm />)
+
+    await user.type(screen.getByLabelText('Username or email'), 'jane')
+    await user.type(screen.getByLabelText('Password'), 'secret123')
+    await user.click(screen.getByRole('button', { name: 'Log in' }))
+
+    expect(await screen.findByText('Could not log you in.')).toBeTruthy()
+    expect(push).not.toHaveBeenCalled()
+  })
+
   it('falls back to a generic error message when the response has no errors array', async () => {
     globalThis.fetch = vi.fn(async () => jsonResponse(400, { status: 400 }))
     const user = userEvent.setup()
@@ -155,5 +204,26 @@ describe('LoginForm', () => {
     await user.click(screen.getByRole('button', { name: 'Log in' }))
 
     expect(await screen.findByText('Could not log you in.')).toBeTruthy()
+  })
+
+  it('sends a right password with a factor still owed on to the two-factor step, keeping "next"', async () => {
+    globalThis.fetch = vi.fn(async () =>
+      jsonResponse(401, {
+        status: 401,
+        data: { flows: [{ id: 'mfa_authenticate', is_pending: true, types: ['totp'] }] },
+        meta: { is_authenticated: false },
+      })
+    )
+    const user = userEvent.setup()
+    render(<LoginForm redirectTo="/a b" />)
+
+    await user.type(screen.getByLabelText('Username or email'), 'jane')
+    await user.type(screen.getByLabelText('Password'), 'secret123')
+    await user.click(screen.getByRole('button', { name: 'Log in' }))
+
+    expect(push).toHaveBeenCalledWith('/auth/two-factor?next=%2Fa%20b')
+    expect(push).toHaveBeenCalledTimes(1)
+    expect(refresh).not.toHaveBeenCalled()
+    expect(screen.queryByText('Could not log you in.')).toBeNull()
   })
 })

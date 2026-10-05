@@ -49,3 +49,11 @@ def test_returns_the_response_super_produced():
 
     mocked_super.assert_called_once_with(request, response, "arg", kwarg="value")
     assert result is response
+
+
+def test_the_header_is_one_a_cross_origin_frontend_can_read():
+    """The frontend calls the API from another origin, where an unexposed header reads as absent."""
+    response = _finalize(401, is_authenticated=False)
+
+    (header, _value), _kwargs = response.__setitem__.call_args
+    assert header in settings.CORS_EXPOSE_HEADERS

@@ -1,10 +1,19 @@
+import logging
 import os
+import uuid
 from pathlib import Path
 
 import pytest
 from django.conf import settings as django_settings
 from django.core.cache import cache
-from django.db import connections
+from django.db import connections, transaction
+from django.test import Client
+from isik.django.apps.idempotency.drf import IdempotencyMixin
+
+from apps.common.logging.emit import AUDIT_LOGGER, LOGGER
+from apps.common.logging.events import PAYLOAD
+
+from {{ cookiecutter.project_slug }}.config import CONFIG as config
 
 
 @pytest.fixture(autouse=True)
@@ -14,6 +23,98 @@ def _clear_cache():
     real: enough requests to a rate-limited view earlier in the same process silently starves a
     later test's own request of the same kind, however unrelated the two tests look."""
     cache.clear()
+
+
+@pytest.fixture(autouse=True)
+def _commit_callbacks_run_where_a_request_would_commit(request, monkeypatch):
+    """`on_commit` runs immediately, because pytest-django's transaction never commits.
+
+    Mail and task dispatch defer to commit, so without this a test asserting either sees nothing - not
+    because the code is wrong but because the test rolls back. A test that asks for
+    `django_capture_on_commit_callbacks` is asking about the deferral itself, so it keeps the real one,
+    and so does a `transaction=True` test, whose transactions really commit.
+    """
+    marker = request.node.get_closest_marker("django_db")
+    deferral_is_the_subject = "django_capture_on_commit_callbacks" in request.fixturenames
+    if marker is None or deferral_is_the_subject or marker.kwargs.get("transaction"):
+        yield
+        return
+    monkeypatch.setattr(transaction, "on_commit", lambda callback, using=None, robust=False: callback())
+    yield
+
+
+@pytest.fixture(autouse=True)
+def _every_post_carries_an_idempotency_key(monkeypatch):
+    """A real caller always sends one - the clients mint it per attempt - so a suite whose every POST
+    arrives without one is testing a caller that does not exist. A fresh key per call, so each is its
+    own first attempt; a test about the header passes its own, or sends through `generic` to omit it.
+    """
+    posting = Client.post
+
+    def post(self, path, *args, headers=None, **kwargs):
+        headers = {IdempotencyMixin.idempotency_header: str(uuid.uuid4()), **(headers or {})}
+        return posting(self, path, *args, headers=headers, **kwargs)
+
+    monkeypatch.setattr(Client, "post", post)
+
+
+class _Collected(logging.Handler):
+    def __init__(self):
+        super().__init__()
+        self.lines = []
+
+    def emit(self, record):
+        self.lines.append(getattr(record, PAYLOAD))
+
+
+def _collected_from(logger):
+    handler = _Collected()
+    logger.addHandler(handler)
+    try:
+        yield handler.lines
+    finally:
+        logger.removeHandler(handler)
+
+
+@pytest.fixture
+def logged():
+    """Every event `log()` wrote during the test, as the dict it carried - so a log call is asserted
+    like any other return value rather than left as a line nothing checks."""
+    yield from _collected_from(LOGGER)
+
+
+@pytest.fixture
+def audited():
+    """The same for `audit()`, whose logger does not propagate and so never reaches `logged`."""
+    yield from _collected_from(AUDIT_LOGGER)
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _a_storage_bucket_of_its_own():
+    """Django hands each worker a `test_` copy of the database, but object storage would otherwise
+    be the bucket the dev stack serves - and an object a test writes outlives the row rolled back
+    beside it. Named per worker and per mutation run, the same way the test database is.
+
+    `override_settings` resets the storage registry and `default_storage`, but every `FileField`
+    with a callable storage called it once at import and kept the instance, so those are rebuilt.
+    """
+    from django.apps import apps as django_apps
+    from django.db import models
+    from django.test import override_settings
+
+    from apps.common.storage import ensure_bucket
+
+    suffix = (os.environ.get("MUTMUT_DB_SUFFIX"), os.environ.get("PYTEST_XDIST_WORKER"))
+    bucket = "-".join(filter(None, (config.STORAGE.BUCKET_NAME, "test", *suffix)))
+    default = {**django_settings.STORAGES["default"]}
+    default["OPTIONS"] = {**default["OPTIONS"], "bucket_name": bucket}
+    with override_settings(STORAGES={**django_settings.STORAGES, "default": default}):
+        for model in django_apps.get_models():
+            for field in model._meta.get_fields():
+                if isinstance(field, models.FileField) and hasattr(field, "_storage_callable"):
+                    field.storage = field._storage_callable()
+        ensure_bucket()
+        yield
 
 
 # Captured before any session can rewrite it: pytest-django replaces the live database name with the
@@ -29,8 +130,49 @@ if not hasattr(django_settings, "_ORIGINAL_DATABASE_NAMES"):
 _DATABASE_NAMES = django_settings._ORIGINAL_DATABASE_NAMES
 
 
+def _refuse_a_drifted_template(template):
+    """Refuse a template built before a migration that exists now.
+
+    Every session copies this database instead of migrating one, so a template a migration has passed
+    runs the whole suite against a schema nobody wrote - and the suite passes, because the tests that
+    would notice are the ones that cannot run. Counting rows against files is coarse, and that is the
+    point: it is a check nobody has to remember to run.
+    """
+    import psycopg
+    from django.db.migrations.loader import MigrationLoader
+
+    # Django's own resolution rather than a count of files: the template carries every installed app's
+    # migrations, and the apps this project wrote are a fraction of them.
+    on_disk = set(MigrationLoader(None, ignore_no_migrations=True).disk_migrations)
+    database = django_settings.DATABASES["default"]
+    arguments = {
+        "host": database["HOST"],
+        "port": database["PORT"] or 5432,
+        "user": database["USER"],
+        "password": database["PASSWORD"],
+        "dbname": template,
+        "autocommit": True,
+    }
+    try:
+        with psycopg.connect(**arguments) as connection:
+            applied = set(connection.execute("SELECT app, name FROM django_migrations").fetchall())
+    except psycopg.Error as error:
+        raise pytest.UsageError(
+            f"MUTMUT_DB_TEMPLATE names {template!r}, which cannot be read ({error}). Build it with "
+            "`python scripts/mutation_template.py build`, or unset the variable to migrate instead."
+        ) from error
+    missing = sorted(f"{app}.{name}" for app, name in on_disk - applied)
+    if missing:
+        raise pytest.UsageError(
+            f"the template {template!r} was built before {', '.join(missing[:3])}"
+            f"{'' if len(missing) <= 3 else f' and {len(missing) - 3} more'}, so every session would "
+            "copy a schema that is not the one the migrations build. Rebuild it with "
+            "`python scripts/mutation_template.py build`."
+        )
+
+
 def pytest_configure(config):
-    """A mutation run may only reuse a database it cloned itself.
+    """A run may only reuse a database it cloned itself.
 
     `--reuse-db` is how a templated mutation run stops pytest-django rebuilding what it already
     cloned. The same flag without a template means every mutant in the run shares one database, and
@@ -41,7 +183,13 @@ def pytest_configure(config):
     wanted a database, and a suite that errors is exactly what a mutation run counts as a kill - the
     misconfiguration would score as a clean sweep instead of stopping the run.
     """
-    if os.environ.get("MUTMUT_DB_TEMPLATE"):
+    template = os.environ.get("MUTMUT_DB_TEMPLATE")
+    if template:
+        # Only for an ordinary run (a template, no mutation suffix): a mutation run opens thousands of
+        # sessions, each would pay for this, and `mutation_template.py check` already answered it once
+        # for that whole run. Only the xdist controller asks, not every worker.
+        if not os.environ.get("MUTMUT_DB_SUFFIX") and not os.environ.get("PYTEST_XDIST_WORKER"):
+            _refuse_a_drifted_template(template)
         # Set here rather than passed as `--reuse-db`: mutmut takes pytest arguments from
         # pyproject.toml only, where the flag would also reach an ordinary run and mean the unsafe
         # thing there.
@@ -61,7 +209,7 @@ def pytest_configure(config):
 
 @pytest.fixture(scope="session")
 def django_db_modify_db_settings(django_db_modify_db_settings_xdist_suffix):
-    """A test database of its own for a mutation run, named by `MUTMUT_DB_SUFFIX`.
+    """A test database of its own for a run that asks for one, named by `MUTMUT_DB_SUFFIX`.
 
     mutmut runs one child process at a time (`--max-children 1`), but this still has to be safe if
     that ever changes: two children sharing one process-derived name would build and drop the same
@@ -72,12 +220,15 @@ def django_db_modify_db_settings(django_db_modify_db_settings_xdist_suffix):
     any child forks.
     """
     suffix = os.environ.get("MUTMUT_DB_SUFFIX")
-    if not suffix:
-        return
-    # Composed with the xdist worker rather than replacing it, so a mutation run that ever adds
-    # xdist back does not hand every worker the same database.
-    worker = os.environ.get("PYTEST_XDIST_WORKER")
     template = os.environ.get("MUTMUT_DB_TEMPLATE")
+    # A template with no suffix is an ordinary `pytest -n auto` run asking to copy a database rather
+    # than migrate one - the same trade for the same reason, since every xdist worker migrates its own
+    # otherwise.
+    if not suffix and not template:
+        return
+    # Composed with the xdist worker rather than replacing it: an ordinary run is under xdist, and a
+    # name that dropped the worker id would hand every worker the same database.
+    worker = os.environ.get("PYTEST_XDIST_WORKER")
     for alias, name in _DATABASE_NAMES.items():
         test_name = "_".join(part for part in (f"test_{name}", suffix, worker) if part)
         django_settings.DATABASES[alias].setdefault("TEST", {})["NAME"] = test_name

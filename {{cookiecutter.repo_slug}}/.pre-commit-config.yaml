@@ -17,8 +17,8 @@ repos:
         args: [--fix]
       - id: ruff-format
 
-  # Both go through a script rather than an inline entry: one needs to pick between `exec` and
-  # `run` depending on whether the stack is up, the other has to change directory first. Neither
+  # The scripts rather than inline entries: migration-check and openapi-check pick between `exec`
+  # and `run` depending on whether the stack is up, lint-frontend has to change directory first. None
   # takes paths, so `files` only decides whether they run at all.
   - repo: local
     hooks:
@@ -26,6 +26,23 @@ repos:
         name: migration-check
         entry: scripts/pre-commit/migration_check.sh
         language: script
+        pass_filenames: false
+        files: ^{{ cookiecutter.project_slug }}/.*\.py$
+
+      # Needs the backend image for the documents and the frontend's node_modules for the client.
+      - id: openapi-check
+        name: openapi-check
+        entry: scripts/pre-commit/openapi_check.sh
+        language: script
+        pass_filenames: false
+        files: ^{{ cookiecutter.project_slug }}(/.*\.py|-frontend/packages/(api|auth-api)/.*)$
+
+      # Standard library only, so it runs straight off the checkout - no container, and no reason to
+      # skip it in the fast CI job.
+      - id: layout-check
+        name: layout-check
+        entry: python {{ cookiecutter.project_slug }}/scripts/layout_check.py
+        language: python
         pass_filenames: false
         files: ^{{ cookiecutter.project_slug }}/.*\.py$
 

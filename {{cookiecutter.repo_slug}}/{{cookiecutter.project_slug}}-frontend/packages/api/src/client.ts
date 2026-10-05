@@ -1,5 +1,6 @@
 import { createOpenApiClient } from './httpClient'
 import type { paths } from './schema'
+import type { ApiQuery } from './typeHelpers'
 import Cookies from 'js-cookie'
 
 export type ApiOptions = {
@@ -45,11 +46,20 @@ export class Api {
     return this.client.GET('/v0/users/me/')
   }
 
-  async updateMe(data: paths['/v0/users/me/']['patch']['requestBody']['content']['application/json']) {
+  // NonNullable: a PATCH body is optional in the generated document, so the request body type is too.
+  async updateMe(data: NonNullable<paths['/v0/users/me/']['patch']['requestBody']>['content']['application/json']) {
     return this.client.PATCH('/v0/users/me/', { body: data })
+  }
+
+  async reauthenticationFlows() {
+    return this.client.GET('/v0/users/me/reauthentication/')
   }
 
   async users(params?: { page?: number; page_size?: number }) {
     return this.client.GET('/v0/users/', { params: { query: params } })
+  }
+
+  async userHistory(id: string, query?: ApiQuery<'/v0/users/{id}/history/'>) {
+    return this.client.GET('/v0/users/{id}/history/', { params: { path: { id }, query } })
   }
 }

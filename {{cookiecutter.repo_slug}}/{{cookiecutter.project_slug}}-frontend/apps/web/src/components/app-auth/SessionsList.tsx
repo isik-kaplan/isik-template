@@ -8,10 +8,11 @@ import { Badge } from '@/components/base/badge'
 import { Button } from '@/components/base/button'
 
 import { useClientTranslation } from '@/i18n/client'
+import { createAuthApi } from '@/lib/apiClients'
 import { authOrigin } from '@/lib/authOrigin'
 import { formatUserAgent } from '@/lib/formatUserAgent'
 
-import { AuthApi, extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api'
+import { extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
 import { toDate } from '@isikk/core'
 import { toast } from 'sonner'
@@ -37,7 +38,7 @@ export function SessionsList({ initialSessions }: SessionsListProps) {
 
   async function revoke(ids: number[], successMessage: string) {
     setPending(ids)
-    const { data, error } = await new AuthApi(authOrigin()).endSessions(ids)
+    const { data, error } = await createAuthApi(authOrigin()).endSessions(ids)
     setPending(null)
 
     if (data) {

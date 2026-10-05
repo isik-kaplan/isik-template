@@ -13,6 +13,17 @@ COPY packages/auth-api/package.json packages/auth-api/package.json
 # hooks/post_gen_project.py's generate_lock_files().
 RUN npm ci
 
+# Where the suites run, here and in CI, so neither depends on the node a laptop or runner happens to
+# have. From `deps`, not `builder`: vitest transforms the sources itself and never reads `.next`. A
+# leaf - `runner` copies from `builder` - so nothing here can reach the image that ships.
+FROM deps AS tester
+WORKDIR /repo
+COPY . .
+RUN npm run build:packages
+# The workspaces `deps` installed: apps/mobile, when there is one, has a toolchain of its own.
+CMD ["npm", "run", "test", "--workspace=web", \
+     "--workspace=@{{ cookiecutter.repo_slug }}/api", "--workspace=@{{ cookiecutter.repo_slug }}/auth-api"]
+
 FROM node:{{ cookiecutter.node_version }}-alpine AS builder
 WORKDIR /repo
 COPY --from=deps /repo/node_modules ./node_modules

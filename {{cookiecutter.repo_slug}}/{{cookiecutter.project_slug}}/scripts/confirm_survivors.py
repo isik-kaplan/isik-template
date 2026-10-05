@@ -5,12 +5,14 @@ and wrong in exactly one direction: tracing can miss a test that would have kill
 cannot invent one that kills a mutant the suite would have let live. So a kill in phase one is final,
 and everything tracing gets wrong arrives here.
 
-Three kinds of mutant land in this queue, and only the first is what the name suggests:
+Four kinds of mutant land in this queue, and only the first is what the name suggests:
 
   * survived - tracing found no test that objected, which may or may not be true of the whole suite.
   * timeout  - shot for running past its wall limit, which under concurrent runs says more about the
                load than about the mutant.
   * not checked - never ran at all.
+  * no tests - tracing associated no test with it, so mutmut skipped it. Unsettled rather than clean:
+               a mutant nothing ran is a mutant nothing killed, and the whole suite may well kill it.
 
 Each is re-run in its own process with the whole suite behind it. `-x` means a mutant that does die
 stops at the first test to object, so only genuine survivors pay for a full pass. A separate process
@@ -40,13 +42,12 @@ from threading import Lock
 
 import tomllib
 
-from scripts.mutation_fingerprint import drifted, mangled_function
+from scripts.mutation_queue import EQUIVALENTS, EXEMPTIONS, function_of
 
 
 ROOT = Path(__file__).resolve().parent.parent
 MUTANTS = ROOT / "mutants"
 REPORT = MUTANTS / "mutmut-confirmed.json"
-EXEMPTIONS = ROOT / "mutation-exemptions.toml"
 # Long enough that "equivalent" or "n/a" cannot pass for an explanation.
 SHORTEST_USEFUL_REASON = 40
 
@@ -62,37 +63,60 @@ WALL_LIMIT = int(os.environ.get("MUTMUT_WALL_LIMIT", "900"))
 RUN = f"{os.getpid() % 1000:03d}"
 
 
-def load_exemptions():
-    """Mutants no test can kill because the mutated code behaves identically, or a mutmut tooling gap.
+def _load(path):
+    """A registry's entries, each guarded the same way.
 
     An escape hatch from a policy, so it is guarded like one: an entry without a real explanation is
     rejected here rather than quietly shrinking the survivor list.
     """
-    if not EXEMPTIONS.exists():
+    if not path.exists():
         return {}
-    entries = tomllib.loads(EXEMPTIONS.read_text())
+    entries = tomllib.loads(path.read_text())
     for name, entry in entries.items():
         # A bare `[a.b.c]` header is a nested table in TOML, not a key called "a.b.c", so a mutant's
         # dotted name has to be quoted - unquoted it matches nothing and reads as having no reason.
         if not isinstance(entry, dict) or any(isinstance(value, dict) for value in entry.values()):
             raise SystemExit(
-                f"{EXEMPTIONS.name}: [{name}] is a nested table, so the mutant name was not quoted. "
+                f"{path.name}: [{name}] is a nested table, so the mutant name was not quoted. "
                 'Write ["<the whole dotted name>"] instead - TOML reads the dots as table nesting.'
             )
         reason = entry.get("reason", "").strip()
         if len(reason) < SHORTEST_USEFUL_REASON:
-            raise SystemExit(f"{EXEMPTIONS.name}: {name} needs a reason, and {reason!r} is not one")
-    # A mutant's number is its position inside its own function, so editing that function hands the
-    # name to a different mutation and leaves the reason describing one nobody exempted.
-    moved = drifted(entries, ROOT)
-    if moved:
-        raise SystemExit(
-            f"{EXEMPTIONS.name}: {len(moved)} entr{'y' if len(moved) == 1 else 'ies'} written against a"
-            " version of the function that has since changed, so the number now names a different"
-            " mutation. Re-read each one, confirm the reason still describes it, then record the new"
-            " fingerprint:\n"
-            + "\n".join(f"  {name}  {recorded or 'none'} -> {current}" for name, recorded, current in moved)
-        )
+            raise SystemExit(f"{path.name}: {name} needs a reason, and {reason!r} is not one")
+    return entries
+
+
+def load_equivalents():
+    """Single mutants no test can kill, because the mutated code behaves identically."""
+    entries = _load(EQUIVALENTS)
+    for name, entry in entries.items():
+        # A positional name is the one thing this file exists not to hold: the number moves with any
+        # edit above it in the function, and the entry starts excusing a mutation nobody read.
+        if not re.search(r"__mutmut__[0-9a-f]{12}(_[0-9]+)?$", name):
+            raise SystemExit(
+                f"{EQUIVALENTS.name}: {name} is not named by its mutation - generate the name with "
+                "scripts/mutation_naming.py applied (see the file's header)."
+            )
+        # Shape only. That the test exists is asserted by the suite, the only thing that can answer
+        # it - an entry naming a test nobody collects is an exemption re-checked by nothing at all.
+        verified_by = entry.get("verified_by")
+        if verified_by is not None and (not isinstance(verified_by, str) or "::" not in verified_by):
+            raise SystemExit(
+                f"{EQUIVALENTS.name}: {name} has verified_by {verified_by!r}, which is not a test's "
+                "node id - write `<path>::<test name>`."
+            )
+    return entries
+
+
+def load_exemptions():
+    """Whole functions mutmut's tracing cannot attribute to a test, covering every mutant of each."""
+    entries = _load(EXEMPTIONS)
+    for name in entries:
+        if "__mutmut_" in name:
+            raise SystemExit(
+                f"{EXEMPTIONS.name}: {name} names one mutant, and this file is keyed by function. A "
+                f"single mutant no test can kill belongs in {EQUIVALENTS.name}."
+            )
     return entries
 
 
@@ -204,31 +228,32 @@ def main(argv):
             "fails the suite for reasons that have nothing to do with the mutant. Use --jobs instead."
         )
 
-    exemptions = load_exemptions()
+    equivalents, exemptions = load_equivalents(), load_exemptions()
+
+    def registered(name):
+        return name in equivalents or function_of(name) in exemptions
+
     unsettled = []
     for line in Path(arguments.queue).read_text().splitlines():
         name = line.rpartition(": ")[0].strip() or line.strip()
         if name:
             unsettled.append(name)
 
-    # An exemption this tree holds but did not queue is a hole nobody chose. Judged against the tree,
-    # since the file covers a codebase the queue is only a slice of. Expanded from function names to
-    # mutant names first: the file is keyed by function, and a mutant's own name never appears in it.
+    # A registered mutant this tree holds but did not queue is a hole nobody chose. Judged against the
+    # tree, since the registries cover a codebase the queue is only a slice of.
     in_tree = mutants_in_tree()
-    exempt_mutants = {name for name in in_tree if mangled_function(name) in exemptions}
-    stale = sorted(exempt_mutants - set(unsettled))
+    stale = sorted({name for name in in_tree if registered(name)} - set(unsettled))
     if stale:
         raise SystemExit(
-            f"{EXEMPTIONS.name} exempts mutant(s) this tree holds but its queue does not: "
-            + ", ".join(stale)
-            + " - each was killed or no longer exists, so the exemption is obsolete. Remove it."
+            f"{EQUIVALENTS.name}/{EXEMPTIONS.name} register mutant(s) this tree holds but its queue does "
+            "not: " + ", ".join(stale) + " - each was killed, so its entry is obsolete. Remove it."
         )
-    queue = [name for name in unsettled if mangled_function(name) not in exemptions]
+    queue = [name for name in unsettled if not registered(name)]
 
     # Only a kill and a survival are terminal: an interrupted run writes `error` for everything it held.
     settled = json.loads(REPORT.read_text()) if REPORT.exists() else {}
     # The gate reads the report, so a verdict cached before its mutant was exempted would keep failing.
-    settled = {name: result for name, result in settled.items() if mangled_function(name) not in exemptions}
+    settled = {name: result for name, result in settled.items() if not registered(name)}
     decided = {name for name, result in settled.items() if result.get("verdict") in ("killed", "survived")}
     todo = [name for name in queue if name not in decided]
     print(f"{len(queue)} queued, {len(decided)} already settled, {len(todo)} to run", flush=True)

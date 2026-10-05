@@ -1,5 +1,7 @@
-import { LOGIN_PATH, broadcastSessionCleared, onSessionCleared } from '@/lib/sessionChannel'
+import { LOGIN_PATH, VERIFY_EMAIL_REQUIRED_PATH, broadcastSessionCleared, onSessionCleared } from '@/lib/sessionChannel'
 
+import { existsSync } from 'node:fs'
+import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const CHANNEL_NAME = '{{ cookiecutter.project_slug }}-session'
@@ -20,6 +22,11 @@ describe('sessionChannel', () => {
 
   it('exports the login path every consumer redirects to', () => {
     expect(LOGIN_PATH).toBe('/auth/login')
+  })
+
+  it('exports the confirm-first path LoginForm sends an unconfirmed address to, naming a real page', () => {
+    expect(VERIFY_EMAIL_REQUIRED_PATH).toBe('/auth/verify-email-required')
+    expect(existsSync(path.join(__dirname, '../../app', VERIFY_EMAIL_REQUIRED_PATH, 'page.tsx'))).toBe(true)
   })
 
   it('reaches a listener in another tab', async () => {

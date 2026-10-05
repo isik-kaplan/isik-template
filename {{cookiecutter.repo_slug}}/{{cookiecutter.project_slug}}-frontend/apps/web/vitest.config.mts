@@ -8,6 +8,9 @@ export default defineConfig({
     environment: 'jsdom',
     globals: false,
     setupFiles: ['./vitest.setup.ts'],
+    // fast-check's test.prop renders a whole sample of cases in one test, not one render, so the
+    // 5s default leaves no headroom on a loaded runner.
+    testTimeout: 15_000,
     // Otherwise @isikk/core is externalized and its own "next/server" import is resolved by
     // Node directly - bypassing vi.mock() entirely, which only intercepts Vite-transformed
     // imports. public.test.ts mocks next/server because next's package.json has no "exports"

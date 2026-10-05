@@ -30,4 +30,14 @@ describe('Api', () => {
       expect(headers.get('Cookie')).toBe(`csrftoken=${token}`)
     }
   )
+
+  it("asks for one user's history through the path and passes its query through", async () => {
+    const baseFetch = vi.fn<typeof fetch>(async () => new Response('{}', { status: 200 }))
+    const api = new Api('https://api.example.test', { baseFetch })
+    await api.userHistory('user-1', { action: 'update', page: 2 })
+    const [request] = baseFetch.mock.calls[0]
+    expect(String(request instanceof Request ? request.url : request)).toBe(
+      'https://api.example.test/v0/users/user-1/history/?action=update&page=2'
+    )
+  })
 })

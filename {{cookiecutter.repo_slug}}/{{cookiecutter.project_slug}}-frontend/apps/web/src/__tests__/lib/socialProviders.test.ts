@@ -24,10 +24,14 @@ import { describe, expect, it } from 'vitest'
 // independent expected value, not a tautology against the module under test.
 describe('SOCIAL_PROVIDERS', () => {
   it('lists exactly the providers this project was generated with', () => {
+{%- if entries %}
     expect(SOCIAL_PROVIDERS).toEqual([
 {%- for entry in entries %}
 {{ entry }}
 {%- endfor %}
     ])
+{%- else %}
+    expect(SOCIAL_PROVIDERS).toEqual([])
+{%- endif %}
   })
 })

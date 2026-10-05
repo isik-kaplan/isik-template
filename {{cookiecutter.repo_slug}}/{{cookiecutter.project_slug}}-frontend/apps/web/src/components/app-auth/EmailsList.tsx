@@ -10,12 +10,11 @@ import { Button } from '@/components/base/button'
 import { Input } from '@/components/base/input'
 
 import { useClientTranslation } from '@/i18n/client'
+import { createAuthApi } from '@/lib/apiClients'
 import { authOrigin } from '@/lib/authOrigin'
 import type { EmailAddress } from '@/lib/useEmailRowActions'
 import { useEmailRowActions } from '@/lib/useEmailRowActions'
 import { useValidatedFormState } from '@/lib/useValidatedFormState'
-
-import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
 import { z } from 'zod'
 
@@ -36,7 +35,7 @@ export function EmailsList({ initialEmails }: EmailsListProps) {
   async function handleAddEmail(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    await submit(() => new AuthApi(authOrigin()).addEmail(formState.email), {
+    await submit(() => createAuthApi(authOrigin()).addEmail(formState.email), {
       success: t('auth:profileEmailAdded'),
       failure: t('auth:profileEmailAddError'),
       // data is defined here: onSuccess only runs once the default isSuccess (Boolean(data)) held.

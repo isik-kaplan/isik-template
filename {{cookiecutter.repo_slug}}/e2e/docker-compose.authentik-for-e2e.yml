@@ -16,7 +16,7 @@ services:
       # static IP until that service claims it, so an unclaimed range would get handed out from
       # under it.
       internal:
-        ipv4_address: 172.30.0.20
+        ipv4_address: ${E2E_SUBNET_PREFIX:-172.30.0}.20
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "authentik"]
       interval: 5s
@@ -27,7 +27,7 @@ services:
     image: redis:7-alpine
     networks:
       internal:
-        ipv4_address: 172.30.0.21
+        ipv4_address: ${E2E_SUBNET_PREFIX:-172.30.0}.21
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -54,12 +54,15 @@ services:
       - ./e2e/authentik-blueprints:/blueprints/custom:ro
     networks:
       internal:
-        ipv4_address: 172.30.0.22
+        ipv4_address: ${E2E_SUBNET_PREFIX:-172.30.0}.22
     depends_on:
       authentik-postgres:
         condition: service_healthy
       authentik-redis:
         condition: service_healthy
+      # The worker applies the blueprint the healthcheck below waits on.
+      authentik-worker:
+        condition: service_started
     healthcheck:
       # Neither curl nor wget - this image is multi-arch, and its amd64 build (what every hosted CI
       # runner is) carries neither, confirmed directly with `docker run --platform linux/amd64
@@ -67,14 +70,17 @@ services:
       # have curl, which is exactly why this passed locally through every earlier version of this
       # check - the command itself only ever worked on the architecture nobody's CI runs on. What
       # every build of the image does carry is its own bundled Python, so this uses that instead of
-      # depending on either external binary at all.
+      # depending on either external binary at all. The test client's own discovery document rather than
+      # liveness: the blueprint that creates it is applied after the server is up, and the first spec
+      # to use it would otherwise race that.
       test:
-        [
-          "CMD",
-          "/ak-root/.venv/bin/python3",
-          "-c",
-          "import urllib.request; urllib.request.urlopen('http://localhost:9000/-/health/live/', timeout=3)",
-        ]
+        - CMD
+        - /ak-root/.venv/bin/python3
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://localhost:9000/application/o/e2e-oidc-test/.well-known/openid-configuration',
+          timeout=3)
       interval: 10s
       timeout: 5s
       retries: 60
@@ -87,7 +93,7 @@ services:
       - ./e2e/authentik-blueprints:/blueprints/custom:ro
     networks:
       internal:
-        ipv4_address: 172.30.0.23
+        ipv4_address: ${E2E_SUBNET_PREFIX:-172.30.0}.23
     depends_on:
       authentik-postgres:
         condition: service_healthy

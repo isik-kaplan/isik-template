@@ -6,7 +6,7 @@ vi.mock('next/server', () => ({ connection: vi.fn() }))
 
 describe('CONFIG (public)', () => {
   it('reads DOMAIN from its own env var', async () => {
-    vi.stubEnv('TEST_PROJECT__DOMAIN', 'example.test')
+    vi.stubEnv('{{ cookiecutter.config_prefix }}__DOMAIN', 'example.test')
     vi.resetModules()
 
     const { CONFIG, PublicConfigScript } = await import('@/config/public')

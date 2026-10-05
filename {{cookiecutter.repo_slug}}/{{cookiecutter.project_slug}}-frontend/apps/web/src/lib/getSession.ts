@@ -5,7 +5,7 @@ import { cache } from 'react'
 
 import type { Language } from '@/i18n/config'
 
-import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
+import { AuthApi, pendingMfaTypes } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
 import type { Session } from './SessionContext'
 import { isLocalDevHost } from './isLocalDevHost'
@@ -15,6 +15,8 @@ import { getRequestOrigin } from '@isikk/core/next/request'
 type SessionState = {
   session: Session
   pendingProviderSignup: boolean
+  // Non-null while a login still owes its second factor: the factors it can be answered with.
+  pendingMfaTypes: string[] | null
   language: Language
 }
 
@@ -35,18 +37,29 @@ const fetchSessionState = cache(async (): Promise<SessionState> => {
       return {
         session: { user: data.data.user },
         pendingProviderSignup: false,
+        pendingMfaTypes: null,
         language: resolveLanguage(data.data.user.language, acceptLanguageHeader),
       }
     }
     // "provider_signup" - a first-ever login via a social provider, with SOCIALACCOUNT_AUTO_SIGNUP
     // off, lands here rather than being signed in immediately.
     const pendingProviderSignup = error?.data?.flows?.some((flow) => flow.id === 'provider_signup') ?? false
-    return { session: null, pendingProviderSignup, language: resolveLanguage(null, acceptLanguageHeader) }
+    return {
+      session: null,
+      pendingProviderSignup,
+      pendingMfaTypes: pendingMfaTypes(error),
+      language: resolveLanguage(null, acceptLanguageHeader),
+    }
   } catch (thrown) {
     unstable_rethrow(thrown)
     // An unreachable backend is not "not logged in", but this runs in the root layout, so
     // failing the render would take down every page.
-    return { session: null, pendingProviderSignup: false, language: resolveLanguage(null, acceptLanguageHeader) }
+    return {
+      session: null,
+      pendingProviderSignup: false,
+      pendingMfaTypes: null,
+      language: resolveLanguage(null, acceptLanguageHeader),
+    }
   }
 })
 

@@ -1,0 +1,7 @@
+{% raw -%}
+{% extends "account/email/base_notification/base_notification.html" %}
+
+{% block notification_message %}
+    <mj-text>{% blocktrans %}Two-factor authentication using an authenticator app has been disabled for your account.{% endblocktrans %}</mj-text>
+{% endblock notification_message %}
+{%- endraw %}

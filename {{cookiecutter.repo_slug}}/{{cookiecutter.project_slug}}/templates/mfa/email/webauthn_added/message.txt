@@ -1,0 +1,7 @@
+{% raw -%}
+{% extends "account/email/base_notification/base_notification.txt" %}
+
+{% block notification_message %}
+    {% blocktrans %}A passkey has been added to your account as a second factor.{% endblocktrans %}
+{% endblock notification_message %}
+{%- endraw %}

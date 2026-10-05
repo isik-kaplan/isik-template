@@ -1,3 +1,4 @@
+import { echoKeys as t } from '@/__tests__/support/translate'
 import { useEmailRowActions } from '@/lib/useEmailRowActions'
 
 import { act, renderHook } from '@testing-library/react'
@@ -5,8 +6,6 @@ import { toast } from 'sonner'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
-
-const t = (key: string) => key
 
 function jsonResponse(status: number, body: unknown) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })

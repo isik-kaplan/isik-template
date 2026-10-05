@@ -120,16 +120,8 @@
       ]
     }
   ],
+{%- if cookiecutter.languages.split(',') | length == 1 %}
   "lib/i18n.ts": [
-    {
-      "mutator": "BlockStatement",
-      "fingerprint": "1cef7aa31b7f",
-      "reason": [
-        "equivalent mutant with only one supported language - both callers below (deviceLanguage's `if`,",
-        "setLanguage's `if`) are already equivalent-dead regardless of what this returns, so an empty body",
-        "changes nothing observable. Real once \"languages\" names more than one."
-      ]
-    },
     {
       "mutator": "BlockStatement",
       "fingerprint": "6992a573bd90",
@@ -141,25 +133,7 @@
     },
     {
       "mutator": "BlockStatement",
-      "fingerprint": "8af4cf2fbe01",
-      "reason": [
-        "equivalent mutant with only one supported language - both callers below (deviceLanguage's `if`,",
-        "setLanguage's `if`) are already equivalent-dead regardless of what this returns, so an empty body",
-        "changes nothing observable. Real once \"languages\" names more than one."
-      ]
-    },
-    {
-      "mutator": "BlockStatement",
       "fingerprint": "1cef7aa31b7f",
-      "reason": [
-        "equivalent mutant, same single-language reason as the comments inside this function - an empty body",
-        "returns undefined for `lng`, which i18next resolves through fallbackLng to the exact same \"en\"",
-        "regardless."
-      ]
-    },
-    {
-      "mutator": "BlockStatement",
-      "fingerprint": "8af4cf2fbe01",
       "reason": [
         "equivalent mutant, same single-language reason as the comments inside this function - an empty body",
         "returns undefined for `lng`, which i18next resolves through fallbackLng to the exact same \"en\"",
@@ -187,15 +161,6 @@
     {
       "mutator": "StringLiteral",
       "fingerprint": "b57faf005ce4",
-      "reason": [
-        "equivalent mutant, the same way and for the same reason as the fallbackLng comment below - i18next",
-        "resolves an empty lng through fallbackLng regardless of what this placeholder actually is, landing",
-        "on \"en\" either way."
-      ]
-    },
-    {
-      "mutator": "StringLiteral",
-      "fingerprint": "b5c23a94532c",
       "reason": [
         "equivalent mutant, the same way and for the same reason as the fallbackLng comment below - i18next",
         "resolves an empty lng through fallbackLng regardless of what this placeholder actually is, landing",
@@ -235,6 +200,29 @@
       ]
     }
   ],
+{%- else %}
+  "lib/i18n.ts": [
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "b57faf005ce4",
+      "reason": [
+        "equivalent mutant, the same way and for the same reason as the fallbackLng entry below - i18next",
+        "resolves an unknown lng through fallbackLng regardless of what this placeholder actually is, landing",
+        "on \"en\" either way."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "b5c23a94532c",
+      "reason": [
+        "equivalent mutant. deviceLanguage() only ever returns a language this app actually bundles resources",
+        "for, so a missing *key* inside that bundle is the only thing fallbackLng could ever catch here - and",
+        "every key that exists in \"en\" exists in every other bundle too (blank until translated, never absent",
+        "- see hooks/post_gen_project.py), so that never happens either."
+      ]
+    }
+  ],
+{%- endif %}
   "lib/useAuthenticated.ts": [
     {
       "mutator": "ConditionalExpression",
@@ -252,21 +240,6 @@
         "isMounted is referentially stable (its own useCallback never changes it), so this effect's deps",
         "array is equivalent to [] either way - and see @isikk/core/hooks' own useIsMounted for why the guard",
         "below is equivalent too."
-      ]
-    }
-  ],
-  "components/ListRow.tsx": [
-    {
-      "mutator": "BlockStatement",
-      "fingerprint": "ccb2cb5605f6",
-      "reason": [
-        "Genuinely a hang, not a slow test: this mutant replaces the component's whole body with {} (an",
-        "implicit `return undefined`). @testing-library/react-native's `render()` - awaited by every test",
-        "here - never settles when the root component itself renders nothing, confirmed by hand: raising",
-        "Stryker's own timeoutMS to 30000 (6x the default) made no difference, so jest's own per-test timeout",
-        "never gets a chance to fire either - this blocks synchronously, it doesn't just run long. The",
-        "component's real behavior (rendering its children inside the shared wrapper) is fully covered by",
-        "this same file's tests; only the mutated, empty-body version hangs."
       ]
     }
   ],
@@ -297,6 +270,26 @@
         "never gets a chance to fire either - this blocks synchronously, it doesn't just run long. The",
         "component's real behavior (rendering its children inside the shared wrapper) is fully covered by",
         "this same file's tests; only the mutated, empty-body version hangs."
+      ]
+    }
+  ],
+  "app/(authenticated)/prove.tsx": [
+    {
+      "mutator": "ConditionalExpression",
+      "fingerprint": "cd435c241ba0",
+      "reason": [
+        "isMounted is referentially stable (its own useCallback never changes it), so this effect's deps",
+        "array is equivalent to [] either way - and see @isikk/core/hooks' own useIsMounted for why the guard",
+        "below is equivalent too."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "1cf406907db3",
+      "reason": [
+        "isMounted is referentially stable (its own useCallback never changes it), so this effect's deps",
+        "array is equivalent to [] either way - and see @isikk/core/hooks' own useIsMounted for why the guard",
+        "below is equivalent too."
       ]
     }
   ]

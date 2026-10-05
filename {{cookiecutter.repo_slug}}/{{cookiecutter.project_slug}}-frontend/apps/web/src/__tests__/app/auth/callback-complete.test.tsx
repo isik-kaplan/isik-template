@@ -83,4 +83,20 @@ describe('CallbackCompletePage', () => {
 
     expect(to).toBe('/auth/provider-error?error=cancelled&error_process=connect')
   })
+
+  it('sends a provider login that still owes a second factor to the two-factor step', async () => {
+    getSessionState.mockResolvedValue({ session: null, pendingProviderSignup: false, pendingMfaTypes: ['totp'] })
+
+    const to = await redirectedTo(CallbackCompletePage({ searchParams: searchParams({ next: '/a b' }) }))
+
+    expect(to).toBe('/auth/two-factor?next=%2Fa%20b')
+  })
+
+  it('keeps an unsafe "next" out of the two-factor redirect', async () => {
+    getSessionState.mockResolvedValue({ session: null, pendingProviderSignup: false, pendingMfaTypes: [] })
+
+    const to = await redirectedTo(CallbackCompletePage({ searchParams: searchParams({ next: '//evil.test' }) }))
+
+    expect(to).toBe('/auth/two-factor?next=%2F')
+  })
 })

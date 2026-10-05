@@ -1,5 +1,7 @@
-export { AuthApi, PROVIDER_REDIRECT_PATH, SESSION_PATH } from './client'
+export { AuthApi, PROVIDER_REAUTHENTICATE_PATH, PROVIDER_REDIRECT_PATH, SESSION_PATH } from './client'
 export type { AuthApiOptions } from './client'
 export type { paths } from './schema'
 export { extractAuthErrors, toFormErrors } from './errors'
+export { needsReauthentication, pendingMfaTypes } from './flows'
 export type { AllauthError, AllauthErrorResponse, FormErrors } from './errors'
+export { hasPendingVerifyEmail } from './flows'

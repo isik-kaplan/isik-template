@@ -13,7 +13,7 @@ import { useClientTranslation } from '@/i18n/client'
 import { authOrigin } from '@/lib/authOrigin'
 import { useValidatedFormState } from '@/lib/useValidatedFormState'
 
-import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
+import { AuthApi, hasPendingVerifyEmail } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
 import { PasswordInput } from './PasswordInput'
 import { z } from 'zod'
@@ -43,12 +43,8 @@ export function SignupForm() {
     await submit(() => authApi.signup(formState), {
       // Mandatory email verification: a successful signup is still a 401, with a pending
       // verify_email flow, not a 2xx - it means "go check your inbox", not "you're in".
-      isSuccess: ({ data, error, response }) => {
-        if (data) return true
-        if (response.status !== 401) return false
-        const errorData = error?.data
-        return Boolean(errorData?.flows?.some((flow) => flow.id === 'verify_email'))
-      },
+      isSuccess: ({ data, error, response }) =>
+        Boolean(data) || (response.status === 401 && hasPendingVerifyEmail(error)),
       failure: t('auth:signupError'),
       onSuccess: () => router.push('/auth/signup-email-sent'),
     })

@@ -11,9 +11,10 @@ import { Label } from '@/components/base/label'
 
 import { useClientTranslation } from '@/i18n/client'
 import { authOrigin } from '@/lib/authOrigin'
+import { VERIFY_EMAIL_REQUIRED_PATH } from '@/lib/sessionChannel'
 import { useValidatedFormState } from '@/lib/useValidatedFormState'
 
-import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
+import { AuthApi, hasPendingVerifyEmail, pendingMfaTypes } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
 import { PasswordInput } from './PasswordInput'
 import { z } from 'zod'
@@ -46,10 +47,20 @@ export function LoginForm({ redirectTo = '/' }: { redirectTo?: string }) {
           password: formState.password,
         }),
       {
-        // A 409 means the visitor was already logged in - also a success, not a refusal.
-        isSuccess: ({ data, response }) => Boolean(data) || response.status === 409,
+        // None of these is a wrong password: a 409 means the visitor was already logged in, a pending
+        // verify_email flow means the address is still unconfirmed, and a pending second factor is owed.
+        isSuccess: ({ data, error, response }) =>
+          Boolean(data) || response.status === 409 || hasPendingVerifyEmail(error) || pendingMfaTypes(error) !== null,
         failure: t('auth:loginError'),
-        onSuccess: () => {
+        onSuccess: ({ error }) => {
+          if (hasPendingVerifyEmail(error)) {
+            router.push(VERIFY_EMAIL_REQUIRED_PATH)
+            return
+          }
+          if (pendingMfaTypes(error) !== null) {
+            router.push(`/auth/two-factor?next=${encodeURIComponent(redirectTo)}`)
+            return
+          }
           router.push(redirectTo)
           router.refresh()
         },

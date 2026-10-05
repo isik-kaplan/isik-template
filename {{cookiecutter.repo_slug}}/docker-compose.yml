@@ -2,7 +2,7 @@ services:
   database:
     build:
       context: ./database
-    image: {{ cookiecutter.repo_slug }}-database:latest
+    image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-database:latest
     env_file: .env
     environment:
       POSTGRES_DB: {{ '${' + cookiecutter.config_prefix + '__DB__NAME}' }}
@@ -22,7 +22,7 @@ services:
   broker:
     build:
       context: ./broker
-    image: {{ cookiecutter.repo_slug }}-broker:latest
+    image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-broker:latest
     env_file: .env
     environment:
       RABBITMQ_DEFAULT_USER: {{ '${' + cookiecutter.config_prefix + '__BROKER__USER}' }}
@@ -36,11 +36,35 @@ services:
       timeout: 10s
       retries: 10
 
+  # S3-compatible object storage for local dev and demos. Pinned to the last release that starts
+  # without a LocalStack account and auth token - every release from 2026.03.0 on requires one.
+  # No docker.sock and no Lambda port range: only S3 runs. Community edition keeps nothing across a
+  # restart, so `setup` recreates the bucket on every backend boot.
+  storage:
+    image: localstack/localstack:4.14.0
+    environment:
+      SERVICES: s3
+    networks:
+      - internal
+      # Only so the port below can be published at all - Docker publishes nothing for a container
+      # whose every network is `internal`.
+      - external
+    ports:
+      # Loopback only, for poking at it by hand (`aws --endpoint-url=http://localhost:4566 s3 ls`);
+      # the backend reaches it as storage:4566.
+      - "127.0.0.1:{{ '${' + cookiecutter.config_prefix + '__STORAGE__PORT:-4566}' }}:4566"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   backend:
     build:
       context: ./{{ cookiecutter.project_slug }}
       dockerfile: Dockerfile
-    image: {{ cookiecutter.repo_slug }}-backend:latest
+    image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-backend:latest
     env_file: .env
     volumes:
       - ./{{ cookiecutter.project_slug }}:/{{ cookiecutter.project_slug }}
@@ -59,6 +83,9 @@ services:
         condition: service_healthy
       broker:
         condition: service_healthy
+      # A real dependency, not a nice-to-have: an upload is a synchronous call from the request.
+      storage:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health/"]
@@ -67,7 +94,7 @@ services:
       retries: 10
 
   worker:
-    image: {{ cookiecutter.repo_slug }}-backend:latest
+    image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-backend:latest
     command: celery -A {{ cookiecutter.project_slug }} worker
     env_file: .env
     volumes:
@@ -86,7 +113,7 @@ services:
     restart: unless-stopped
 
   scheduler:
-    image: {{ cookiecutter.repo_slug }}-backend:latest
+    image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-backend:latest
     command: celery -A {{ cookiecutter.project_slug }} beat --scheduler django_celery_beat.schedulers:DatabaseScheduler
     env_file: .env
     volumes:
@@ -104,6 +131,25 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # The frontend suites in the image the app is built in, the same way CI runs them. Profiled, so
+  # `docker compose up` never starts it: `docker compose run --rm frontend-test`.
+  frontend-test:
+    build:
+      context: ./{{ cookiecutter.project_slug }}-frontend
+      dockerfile: apps/web/Dockerfile
+      target: tester
+    image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-frontend-test:latest
+    profiles: ["test"]
+    working_dir: /repo
+    volumes:
+      # Sources live, so a run needs no rebuild - but never the installed trees, which belong to the
+      # image and are resolved for its platform.
+      - ./{{ cookiecutter.project_slug }}-frontend:/repo
+      - /repo/node_modules
+      - /repo/apps/web/node_modules
+      - /repo/packages/api/node_modules
+      - /repo/packages/auth-api/node_modules
+
   frontend:
     build:
       context: ./{{ cookiecutter.project_slug }}-frontend
@@ -112,7 +158,7 @@ services:
         # Build-time by necessity - next build inlines it into the client bundle. Every other
         # frontend value is read at runtime from env_file below.
         NEXT_PUBLIC_SENTRY_DSN: {{ '${NEXT_PUBLIC_SENTRY_DSN:-}' }}
-    image: {{ cookiecutter.repo_slug }}-frontend:latest
+    image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-frontend:latest
     env_file: .env
     environment:
       # Node's http.Server default (5000ms) is shorter than nginx's upstream keepalive_timeout
@@ -143,7 +189,7 @@ services:
   server:
     build:
       context: ./{{ cookiecutter.project_slug }}-server
-    image: {{ cookiecutter.repo_slug }}-server:latest
+    image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-server:latest
     env_file: .env
 {%- if cookiecutter.tls_termination == "self" %}
     volumes:

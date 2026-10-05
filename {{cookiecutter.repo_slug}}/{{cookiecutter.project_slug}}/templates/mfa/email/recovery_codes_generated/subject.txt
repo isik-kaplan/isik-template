@@ -1,0 +1,3 @@
+{% raw -%}
+{% autoescape off %}{% blocktrans %}New recovery codes generated{% endblocktrans %}{% endautoescape %}
+{%- endraw %}

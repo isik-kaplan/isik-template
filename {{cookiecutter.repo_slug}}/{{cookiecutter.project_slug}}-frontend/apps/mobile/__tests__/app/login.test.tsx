@@ -6,10 +6,11 @@ const mockLogin = jest.fn()
 jest.mock('@/lib/session', () => ({ getAuthApi: () => ({ login: (...args: unknown[]) => mockLogin(...args) }) }))
 
 const mockReplace = jest.fn()
+const mockPush = jest.fn()
 jest.mock('expo-router', () => {
   const { Text } = jest.requireActual('react-native')
   return {
-    router: { replace: (...args: unknown[]) => mockReplace(...args) },
+    router: { replace: (...args: unknown[]) => mockReplace(...args), push: (...args: unknown[]) => mockPush(...args) },
     Link: ({ children, testID }: { children: unknown; testID?: string }) => <Text testID={testID}>{children}</Text>,
   }
 })
@@ -43,6 +44,18 @@ describe('Login', () => {
   it('shows the idle "Log in" label before any submission', async () => {
     await render(<Login />)
     expect(screen.getByTestId('login-submit-label').props.children).toBe('Log in')
+  })
+
+  it('tells an unconfirmed address apart from a wrong password', async () => {
+    mockLogin.mockResolvedValue({
+      data: undefined,
+      error: { status: 401, data: { flows: [{ id: 'verify_email', is_pending: true }] }, meta: {} },
+    })
+    await render(<Login />)
+    await fireEvent.press(screen.getByTestId('login-submit'))
+    await waitFor(() => expect(screen.getByTestId('login-error')).toBeTruthy())
+    expect(screen.getByTestId('login-error').props.children).toContain('Confirm your email address first')
+    expect(mockReplace).not.toHaveBeenCalled()
   })
 
   it('falls back to a generic error message when errors is an empty array', async () => {
@@ -163,5 +176,17 @@ describe('Login', () => {
     await render(<Login />)
     expect(screen.getByTestId('forgot-password-link')).toBeTruthy()
     expect(screen.getByText('Forgot password?')).toBeTruthy()
+  })
+
+  it('sends a right password with a second factor still owed on to the two-factor screen', async () => {
+    mockLogin.mockResolvedValue({
+      data: undefined,
+      error: { status: 401, data: { flows: [{ id: 'mfa_authenticate', is_pending: true, types: ['totp'] }] } },
+    })
+    await render(<Login />)
+    await fireEvent.press(screen.getByTestId('login-submit'))
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/two-factor'))
+    expect(screen.queryByTestId('login-error')).toBeNull()
+    expect(mockReplace).not.toHaveBeenCalled()
   })
 })

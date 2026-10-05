@@ -8,6 +8,7 @@ what goes in is deliberate:
   * the dependencies and the lockfile, which mutmut's git-based change detection is blind to
   * `confirm_survivors.py` and `conftest.py`, which decide and record verdicts without being source
     files mutmut watches - a bug fixed in either otherwise leaves its false kills cached and terminal
+  * `mutation_naming.py`, which names every mutant a verdict is stored under
 
     python scripts/mutation_cache_key.py
 """
@@ -25,7 +26,12 @@ PYPROJECT = ROOT / "pyproject.toml"
 LOCKFILE = ROOT / "uv.lock"
 
 # What a stored verdict means, rather than what was mutated.
-VERDICT_TOOLING = [ROOT / "scripts" / "confirm_survivors.py", ROOT / "conftest.py"]
+VERDICT_TOOLING = [
+    ROOT / "scripts" / "confirm_survivors.py",
+    ROOT / "conftest.py",
+    # Every verdict is stored under a mutant's name, and this is what decides the names.
+    ROOT / "scripts" / "mutation_naming.py",
+]
 
 
 def fingerprint():

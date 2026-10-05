@@ -1,0 +1,7 @@
+# Installed and built inside the image, for its own platform - a laptop's copies would overwrite them.
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/reports
+**/.stryker-tmp

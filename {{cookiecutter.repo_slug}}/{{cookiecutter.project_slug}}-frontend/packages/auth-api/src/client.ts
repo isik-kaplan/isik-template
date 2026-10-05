@@ -13,6 +13,9 @@ export const SESSION_PATH = '/v0/browser/v1/auth/session'
 // submission (see components/app-auth/AutoFormButton.tsx) so the browser follows the 302 to the
 // provider natively. A fetch()-based POST would just receive the redirect response as inert JSON.
 export const PROVIDER_REDIRECT_PATH = '/v0/browser/v1/auth/provider/redirect'
+// The same kind of form submission, to the backend's own endpoint that sends a signed-in person back
+// to their provider to prove it is them (apps/users/reauthentication/views/prove_with_provider.py).
+export const PROVIDER_REAUTHENTICATE_PATH = '/v0/browser/v1/auth/provider/reauthenticate'
 
 function readCookie(cookieHeader: string, name: string): string | undefined {
   const match = cookieHeader.match(new RegExp(`(?:^|; )${name}=([^;]*)`))
@@ -75,6 +78,10 @@ export class AuthApi {
 
   async logout() {
     return this.client.DELETE('/v0/browser/v1/auth/session')
+  }
+
+  async reauthenticate(password: string) {
+    return this.client.POST('/v0/browser/v1/auth/reauthenticate', { body: { password } })
   }
 
   async requestPasswordReset(email: string) {
@@ -141,6 +148,71 @@ export class AuthApi {
       return listed
     }
     return this.endSessions(others.map((session) => session.id))
+  }
+
+  async config() {
+    return this.client.GET('/v0/browser/v1/config')
+  }
+
+  async completeMfaChallenge(code: string) {
+    return this.client.POST('/v0/browser/v1/auth/2fa/authenticate', { body: { code } })
+  }
+
+  async webauthnChallengeOptions() {
+    return this.client.GET('/v0/browser/v1/auth/webauthn/authenticate')
+  }
+
+  async completeWebauthnChallenge(credential: Record<string, unknown>) {
+    return this.client.POST('/v0/browser/v1/auth/webauthn/authenticate', { body: { credential } })
+  }
+
+  async reauthenticateWithCode(code: string) {
+    return this.client.POST('/v0/browser/v1/auth/2fa/reauthenticate', { body: { code } })
+  }
+
+  async webauthnReauthenticationOptions() {
+    return this.client.GET('/v0/browser/v1/auth/webauthn/reauthenticate')
+  }
+
+  async reauthenticateWithWebauthn(credential: Record<string, unknown>) {
+    return this.client.POST('/v0/browser/v1/auth/webauthn/reauthenticate', { body: { credential } })
+  }
+
+  async authenticators() {
+    return this.client.GET('/v0/browser/v1/account/authenticators')
+  }
+
+  // A 404 here is not a failure: it means no TOTP yet, and carries a freshly rotated secret to enroll.
+  async totpStatus() {
+    return this.client.GET('/v0/browser/v1/account/authenticators/totp')
+  }
+
+  async activateTotp(code: string) {
+    return this.client.POST('/v0/browser/v1/account/authenticators/totp', { body: { code } })
+  }
+
+  async deactivateTotp() {
+    return this.client.DELETE('/v0/browser/v1/account/authenticators/totp')
+  }
+
+  async recoveryCodes() {
+    return this.client.GET('/v0/browser/v1/account/authenticators/recovery-codes')
+  }
+
+  async regenerateRecoveryCodes() {
+    return this.client.POST('/v0/browser/v1/account/authenticators/recovery-codes')
+  }
+
+  async webauthnCreationOptions() {
+    return this.client.GET('/v0/browser/v1/account/authenticators/webauthn')
+  }
+
+  async addWebauthn(credential: Record<string, unknown>, name?: string) {
+    return this.client.POST('/v0/browser/v1/account/authenticators/webauthn', { body: { credential, name } })
+  }
+
+  async removeWebauthn(authenticators: number[]) {
+    return this.client.DELETE('/v0/browser/v1/account/authenticators/webauthn', { body: { authenticators } })
   }
 
   async pendingProviderSignup() {

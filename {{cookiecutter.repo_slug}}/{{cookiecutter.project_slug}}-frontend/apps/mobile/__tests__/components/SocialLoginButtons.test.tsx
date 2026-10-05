@@ -124,4 +124,18 @@ describe('SocialLoginButtons', () => {
     expect(mockLoginWithProviderToken).toHaveBeenCalledWith('apple', { id_token: 'a' })
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/(authenticated)/home'))
   })
+
+  it('sends a provider login that still owes a second factor to the two-factor screen', async () => {
+    mockSignInWithGoogle.mockResolvedValue({ provider: 'google', token: { id_token: 't' } })
+    mockLoginWithProviderToken.mockResolvedValue({
+      data: undefined,
+      error: { status: 401, data: { flows: [{ id: 'mfa_authenticate', is_pending: true, types: ['totp'] }] } },
+    })
+    const onError = jest.fn()
+    await render(<SocialLoginButtons onError={onError} googleEnabled appleEnabled={false} />)
+    await fireEvent.press(screen.getByTestId('google-signin'))
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/two-factor'))
+    expect(mockPush).toHaveBeenCalledTimes(1)
+    expect(onError).not.toHaveBeenCalled()
+  })
 })

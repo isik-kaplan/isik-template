@@ -8,8 +8,16 @@
   "loginSubmit": "Log in",
   "loginSubmitting": "Logging in…",
   "loginError": "Could not log in - check your email and password.",
+  "loginVerifyEmailRequired": "Confirm your email address first - we've sent you a fresh link. Open it, then log in again.",
   "loginSignupLink": "Need an account? Sign up",
   "loginForgotPasswordLink": "Forgot password?",
+
+  "twoFactorHeading": "Two-factor authentication",
+  "twoFactorHint": "Enter the 6-digit code from your authenticator app, or one of your recovery codes.",
+  "twoFactorCodePlaceholder": "Code",
+  "twoFactorSubmit": "Verify",
+  "twoFactorSubmitting": "Verifying…",
+  "twoFactorError": "That code didn't work. Try again.",
 
   "signupHeading": "Sign up",
   "signupSubmit": "Sign up",
@@ -77,6 +85,14 @@
 
   "profileConnectionsHeading": "Connected accounts",
   "profileConnectionsEmpty": "No connected accounts yet.",
-  "profileConnectionsDisconnect": "Disconnect"
+  "profileConnectionsDisconnect": "Disconnect",
+  "proveHeading": "Confirm it's you",
+  "provePasswordPlaceholder": "Password",
+  "proveSubmit": "Confirm",
+  "proveSubmitting": "Confirming…",
+  "proveError": "That password is not right.",
+  "proveSetPasswordHint": "Your account has no password yet. We can email you a link to set one, and you can confirm with it afterwards.",
+  "proveSetPasswordAction": "Email me a link to set a password",
+  "proveSetPasswordSent": "We sent a link to {{email}}. Set a password there, then come back to confirm with it."
 }
 {%- endraw %}

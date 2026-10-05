@@ -1,0 +1,3 @@
+{% raw -%}
+{% autoescape off %}{% blocktrans %}Two-factor authentication enabled{% endblocktrans %}{% endautoescape %}
+{%- endraw %}

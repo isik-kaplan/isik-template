@@ -26,11 +26,19 @@ line-length = 120
 fix = true
 # The generated-project directory is a Jinja template, not valid Python - unrendered
 # `{{ cookiecutter.x }}` expressions in its .py files would otherwise fail to parse.
-extend-exclude = ["{{cookiecutter.repo_slug}}"]
+extend-exclude = ["[{][{]cookiecutter.repo_slug[}][}]"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 fixable = ["ALL"]
+
+[tool.ruff.lint.per-file-ignores]
+# Rendered by cookiecutter before they run: an unquoted `{{ cookiecutter.x }}` reads to Python as a name.
+"hooks/*_gen_project.py" = ["F821"]
+
+[tool.ruff.format]
+# Same files: the formatter would respace `{{ cookiecutter.x }}` into `{{cookiecutter.x}}`.
+exclude = ["hooks/*_gen_project.py"]
 
 [tool.ruff.lint.isort]
 lines-after-imports = 2

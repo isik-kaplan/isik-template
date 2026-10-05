@@ -1,6 +1,11 @@
 import dataclasses
+from types import MappingProxyType
 
 from allauth.headless.adapter import DefaultHeadlessAdapter
+
+
+# Any fixed value would do; this one is shaped like the uuid7s User.id really holds.
+EXAMPLE_USER_ID = "01920000-0000-7000-8000-000000000000"
 
 
 class HeadlessAdapter(DefaultHeadlessAdapter):
@@ -14,6 +19,10 @@ class HeadlessAdapter(DefaultHeadlessAdapter):
 
     def get_user_dataclass(self):
         base = super().get_user_dataclass()
+        # Upstream draws the id example from uuid4() on every call for a UUID-keyed user, so the
+        # served OpenAPI document - and every client generated from it - differed from itself.
+        identifier = base.__dataclass_fields__["id"]
+        identifier.metadata = MappingProxyType({**identifier.metadata, "example": EXAMPLE_USER_ID})
         # base.__name__, not a fresh "User" literal - it already is "User" (allauth's own
         # get_user_dataclass() names it that), so this never needs its own copy to drift from it.
         # default_factory=str, not default="" - the base class's own user_as_dataclass() also calls

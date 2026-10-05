@@ -120,4 +120,14 @@ describe('AppAuthApi', () => {
     const api = new AppAuthApi('https://api.example.test', { getToken: () => null, setToken: vi.fn(), baseFetch })
     expect(await api.isAuthenticated()).toBe(false)
   })
+
+  it('answers the pending second-factor challenge on the app tree', async () => {
+    const baseFetch = vi.fn<typeof fetch>(async () => jsonResponse({ status: 200, data: {}, meta: {} }))
+    const api = new AppAuthApi('https://auth.example.test', { getToken: () => 't', setToken: vi.fn(), baseFetch })
+    await api.completeMfaChallenge('123456')
+    const [request] = baseFetch.mock.calls[0] as unknown as [Request]
+    expect(request.method).toBe('POST')
+    expect(request.url).toBe('https://auth.example.test/v0/app/v1/auth/2fa/authenticate')
+    expect(await request.json()).toEqual({ code: '123456' })
+  })
 })

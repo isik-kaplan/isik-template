@@ -5,7 +5,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const pendingProviderSignup = vi.fn()
 const AuthApi = vi.hoisted(() => vi.fn())
-vi.mock('@{{ cookiecutter.repo_slug }}/auth-api', () => ({ AuthApi }))
+vi.mock('@{{ cookiecutter.repo_slug }}/auth-api', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  AuthApi,
+}))
 // session(), not just pendingProviderSignup: getLanguage() (called by this page's own
 // sUseTranslation, via '@/lib/getSession', not mocked here) constructs its own AuthApi too.
 AuthApi.mockImplementation(() => ({ pendingProviderSignup, session: vi.fn().mockResolvedValue({}) }))

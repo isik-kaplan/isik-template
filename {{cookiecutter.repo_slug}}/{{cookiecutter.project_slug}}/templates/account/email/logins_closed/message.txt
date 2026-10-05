@@ -1,0 +1,11 @@
+{% raw -%}
+{% extends "account/email/base/base.txt" %}
+
+{% block content %}
+    {% autoescape off %}
+        {% blocktrans %}Signing in to {{ site_name }} is restricted for the moment, so you have been signed out.{% endblocktrans %}
+
+        {% blocktrans %}Nothing is wrong with your account. You will be able to sign in again once signing in reopens.{% endblocktrans %}
+    {% endautoescape %}
+{% endblock content %}
+{%- endraw %}

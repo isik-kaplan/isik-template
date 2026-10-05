@@ -25,7 +25,7 @@ describe('RootLayout', () => {
   })
 
   it('sets the page title and description from this project', () => {
-    expect(metadata.title).toBe('Test Project')
+    expect(metadata.title).toBe('{{ cookiecutter.project_name }}')
     expect(metadata.description).toBeTruthy()
   })
 })

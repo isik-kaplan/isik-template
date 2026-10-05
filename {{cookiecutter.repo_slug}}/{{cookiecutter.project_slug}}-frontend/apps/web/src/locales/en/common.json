@@ -1,0 +1,12 @@
+{% raw -%}
+{
+  "editAction": "Edit",
+  "saveAction": "Save",
+  "savingAction": "Saving…",
+  "cancelAction": "Cancel",
+
+  "previousPage": "Previous page",
+  "nextPage": "Next page",
+  "pageOfTotal": "Page {{page}} of {{total}}"
+}
+{%- endraw %}

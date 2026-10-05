@@ -54,6 +54,26 @@ describe('createApi auto-logout wrapping', () => {
     expect(redirect).toHaveBeenCalledWith('/auth/login')
     expect(broadcastSessionCleared).not.toHaveBeenCalled()
   })
+
+  it('names a network failure by the call that failed', async () => {
+    const baseFetch = vi.fn(async () => Promise.reject(new TypeError('fetch failed')))
+    const api = createApi('http://api.test', { baseFetch })
+
+    await expect(api.me()).rejects.toThrow(/^fetch failed: GET http:\/\/api\.test\/v0\/users\/me\/$/)
+  })
+
+  it("leaves Next's redirect throw alone rather than renaming it a fetch failure", async () => {
+    vi.stubGlobal('window', undefined)
+    const thrown = new Error('NEXT_REDIRECT')
+    vi.mocked(redirect).mockImplementationOnce(() => {
+      throw thrown
+    })
+    const api = createApi('http://api.test', {
+      baseFetch: vi.fn(async () => responseWith({ 'X-Session-Cleared': '1' })),
+    })
+
+    await expect(api.me()).rejects.toBe(thrown)
+  })
 })
 
 describe('createAuthApi auto-logout wrapping', () => {
@@ -83,3 +103,49 @@ describe('createAuthApi auto-logout wrapping', () => {
     Object.defineProperty(window, 'location', { value: originalLocation, writable: true })
   })
 })
+
+describe('the re-authentication gate', () => {
+  const originalLocation = window.location
+
+  afterEach(() => {
+    vi.clearAllMocks()
+    vi.unstubAllGlobals()
+    Object.defineProperty(window, 'location', { value: originalLocation, writable: true })
+  })
+
+  it.each([
+    ['createApi', () => createApi('http://api.test', { baseFetch: refusedFetch() }).me()],
+    [
+      'createAuthApi',
+      () => createAuthApi('http://auth.test', { baseFetch: refusedFetch(), cookieHeader: 'a=b' }).emails(),
+    ],
+  ])('%s sends the browser to prove it is them and back to this page, and never settles', async (_, call) => {
+    Object.defineProperty(window, 'location', {
+      value: { href: '', pathname: '/profile/emails', search: '?tab=1' },
+      writable: true,
+    })
+
+    const settled = await Promise.race([
+      call().then(() => true),
+      new Promise((resolve) => setTimeout(resolve, 20, false)),
+    ])
+
+    expect(settled).toBe(false)
+    expect(window.location.href).toBe('/auth/prove?next=%2Fprofile%2Femails%3Ftab%3D1')
+    expect(broadcastSessionCleared).not.toHaveBeenCalled()
+  })
+
+  it('passes the refusal through untouched where there is no browser to send anywhere', async () => {
+    vi.stubGlobal('window', undefined)
+    const api = createApi('http://api.test', { baseFetch: refusedFetch() })
+
+    const { response } = await api.me()
+
+    expect(response.headers.get('X-Reauthentication-Required')).toBe('1')
+    expect(redirect).not.toHaveBeenCalled()
+  })
+})
+
+function refusedFetch() {
+  return vi.fn(async () => responseWith({ 'X-Reauthentication-Required': '1' }))
+}

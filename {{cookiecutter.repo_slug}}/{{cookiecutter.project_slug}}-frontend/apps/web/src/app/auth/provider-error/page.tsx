@@ -1,17 +1,20 @@
 import { AuthCard, AuthCardFooterLink } from '@/components/app-auth/AuthCard'
 
 import { sUseTranslation } from '@/i18n'
-
-import type { TFunction } from 'i18next'
+import type { Translate } from '@/i18n/config'
 
 // Only two of allauth's error codes ever land here: `cancelled` (user declined provider consent)
-// and everything else, folded into the pre-existing generic copy - the connect-flow-only codes
+// and everything else, folded into the pre-existing generic copy - plus the backend's own
+// `logins_closed`, a social sign-in the login policy turned away. The connect-flow-only codes
 // (connected_other, reauthentication_required, permission_denied) can't reach this page, since
 // ConnectionsList points its own callback_url straight back at /profile/connections instead (see
 // its own comment) and surfaces those as a toast there.
-function getCopy(error: string | undefined, t: TFunction) {
+function getCopy(error: string | undefined, t: Translate) {
   if (error === 'cancelled') {
     return { title: t('auth:providerErrorCancelledTitle'), body: t('auth:providerErrorCancelledBody') }
+  }
+  if (error === 'logins_closed') {
+    return { title: t('auth:providerErrorLoginsClosedTitle'), body: t('auth:providerErrorLoginsClosedBody') }
   }
   return { title: t('auth:providerErrorTitle'), body: t('auth:providerErrorBody') }
 }

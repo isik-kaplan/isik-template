@@ -1,9 +1,9 @@
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from isik.django.apps.common.db import track_events
 
 from apps.common.models.base import BaseModel
+from apps.common.tracking import track_events
 
 
 def language_choices():
@@ -21,7 +21,14 @@ class User(AbstractUser, BaseModel):
     # project happened to be generated with - a callable keeps choices re-read from settings live,
     # so it can never drift from what's actually configured (and the migration stays generic
     # enough to check into the template unmodified, regardless of a project's own answer).
-    language = models.CharField(max_length=15, choices=language_choices, blank=True, default="")
+    language = models.CharField(
+        max_length=15,
+        choices=language_choices,
+        blank=True,
+        default="",
+        help_text="The language this user chose for the interface, or blank to follow their browser's.",
+        db_comment="A code from settings.LANGUAGES, or empty for no preference: Accept-Language decides then.",
+    )
 
     class Meta(AbstractUser.Meta):
         swappable = "AUTH_USER_MODEL"

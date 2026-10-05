@@ -99,3 +99,38 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+@layer base {
+  /* What an image that will not load shows instead of the browser's broken glyph. An <img> whose
+     source fails stops being a replaced element, the one moment it renders its own pseudo-elements,
+     so this costs nothing while the image is fine and needs no error handler anywhere. Chromium
+     draws its own placeholder when `alt` is empty, so an image worth a fallback needs a real alt. */
+  img {
+    position: relative;
+  }
+  img::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--muted);
+    border: 1px dashed var(--border);
+    border-radius: inherit;
+  }
+  img::after {
+    content: attr(alt);
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 0.25rem;
+    overflow: hidden;
+    color: var(--muted-foreground);
+    font-size: 0.625rem;
+    line-height: 1.2;
+    text-align: center;
+  }
+  /* A box too small to caption: the text would spill out, and the tile alone reads as missing. */
+  img[data-fallback="tile"]::after {
+    content: "";
+  }
+}

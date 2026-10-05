@@ -1,0 +1,3 @@
+{% raw -%}
+{% autoescape off %}{% blocktrans %}You have been signed out{% endblocktrans %}{% endautoescape %}
+{%- endraw %}

@@ -1,0 +1,7 @@
+{% raw -%}
+{% extends "account/email/base_notification/base_notification.txt" %}
+
+{% block notification_message %}
+    {% blocktrans %}Two-factor authentication using an authenticator app has been disabled for your account.{% endblocktrans %}
+{% endblock notification_message %}
+{%- endraw %}

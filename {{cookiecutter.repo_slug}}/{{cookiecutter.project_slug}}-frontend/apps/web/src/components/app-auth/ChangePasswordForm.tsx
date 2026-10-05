@@ -7,10 +7,9 @@ import { Button } from '@/components/base/button'
 import { Label } from '@/components/base/label'
 
 import { useClientTranslation } from '@/i18n/client'
+import { createAuthApi } from '@/lib/apiClients'
 import { authOrigin } from '@/lib/authOrigin'
 import { useValidatedFormState } from '@/lib/useValidatedFormState'
-
-import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
 import { PasswordInput } from './PasswordInput'
 import { z } from 'zod'
@@ -37,7 +36,7 @@ export function ChangePasswordForm() {
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
 
-    await submit(() => new AuthApi(authOrigin()).changePassword(formState), {
+    await submit(() => createAuthApi(authOrigin()).changePassword(formState), {
       success: t('auth:changePasswordSuccess'),
       failure: t('auth:changePasswordError'),
       onSuccess: () => setFormState({ current_password: '', new_password: '' }),

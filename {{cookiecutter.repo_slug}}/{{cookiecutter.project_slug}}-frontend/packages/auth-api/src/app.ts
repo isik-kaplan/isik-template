@@ -5,7 +5,9 @@ import type { paths } from './schema'
 // index.ts also re-exports client.ts (js-cookie), and this subpath exists specifically so a
 // React Native bundle never has to pull that in.
 export { extractAuthErrors, toFormErrors } from './errors'
+export { needsReauthentication, pendingMfaTypes } from './flows'
 export type { AllauthError, AllauthErrorResponse, FormErrors } from './errors'
+export { hasPendingVerifyEmail } from './flows'
 
 export type AppAuthApiOptions = {
   // Caller-supplied rather than a fixed storage choice, so this package stays testable without a
@@ -82,6 +84,15 @@ export class AppAuthApi {
     // session_token at all, which would otherwise leave the just-invalidated one in storage.
     await this.setToken(null)
     return result
+  }
+
+  // The second step of a login whose password was right, answered with a TOTP or recovery code.
+  async completeMfaChallenge(code: string) {
+    return this.client.POST('/v0/app/v1/auth/2fa/authenticate', { body: { code } })
+  }
+
+  async reauthenticate(password: string) {
+    return this.client.POST('/v0/app/v1/auth/reauthenticate', { body: { password } })
   }
 
   async requestPasswordReset(email: string) {

@@ -7,9 +7,16 @@ services:
       # Relative to the project directory (repo root), not this file's own directory - same
       # resolution rule as env_file above.
       context: ./e2e/dnsmasq
+    # The answers live here rather than in dnsmasq.conf so they follow E2E_SUBNET_PREFIX (see e2e/.env).
+    command:
+      - dnsmasq
+      - -k
+      - --log-facility=-
+      - --address=/{{ cookiecutter.domain }}/${E2E_SUBNET_PREFIX:-172.30.0}.10
+      - --address=/authentik.{{ cookiecutter.domain }}/${E2E_SUBNET_PREFIX:-172.30.0}.22
     networks:
       internal:
-        ipv4_address: 172.30.0.11
+        ipv4_address: ${E2E_SUBNET_PREFIX:-172.30.0}.11
     restart: unless-stopped
 
   server:
@@ -17,11 +24,36 @@ services:
       internal:
         # Fixed, not an alias: dnsmasq's address=/.../<ip> directive needs a literal IP to answer
         # with, not a name it would have to resolve itself.
-        ipv4_address: 172.30.0.10
+        ipv4_address: ${E2E_SUBNET_PREFIX:-172.30.0}.10
+    # https beside http, so the passkey specs' pages are secure contexts - see nginx.tls.conf.
+    volumes:
+      - ./e2e/nginx.tls.conf:/etc/nginx/extra-listen/tls.conf:ro
+      - certs:/certs:ro
+    depends_on:
+      e2e-certs:
+        condition: service_completed_successfully
+
+  # One self-signed certificate for every name the stack serves. The backend image, rather than one
+  # more to pull: it already carries openssl.
+  e2e-certs:
+    image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-backend:latest
+    volumes:
+      - certs:/certs
+    networks:
+      - internal
+    command:
+      - sh
+      - -c
+      - >-
+        openssl x509 -checkend 86400 -noout -in /certs/cert.pem 2>/dev/null
+        || openssl req -x509 -newkey rsa:2048 -nodes -days 30
+        -keyout /certs/key.pem -out /certs/cert.pem -subj "/CN={{ cookiecutter.domain }}"
+        -addext "subjectAltName=DNS:{{ cookiecutter.domain }},DNS:*.{{ cookiecutter.domain }}"
+        && chmod 644 /certs/key.pem /certs/cert.pem
 
   backend:
     dns:
-      - 172.30.0.11
+      - ${E2E_SUBNET_PREFIX:-172.30.0}.11
     # A second env_file, not a replacement - concatenated with the base compose's env_file: .env,
     # so both apply (later entries win on key conflicts). Written "e2e/.env", not ".env": relative
     # env_file paths resolve against the *project directory* (the first file listed in
@@ -37,15 +69,31 @@ services:
 
   frontend:
     dns:
-      - 172.30.0.11
+      - ${E2E_SUBNET_PREFIX:-172.30.0}.11
+    # Its server-side fetches follow the page's own scheme, so on an https page they meet the
+    # self-signed certificate too.
+    environment:
+      NODE_EXTRA_CA_CERTS: /certs/cert.pem
+    volumes:
+      - certs:/certs:ro
+    depends_on:
+      e2e-certs:
+        condition: service_completed_successfully
 
   playwright:
+    # Behind a profile so `up` never starts it: its image runs the whole suite on start, and a second
+    # copy racing the one `run` starts shares the stack - one spec raising the login ladder while the
+    # other signs in. `run playwright` still works, named services ignore profiles.
+    profiles: [suite]
     build:
       context: ./e2e/playwright
     networks:
       - internal
     dns:
-      - 172.30.0.11
+      - ${E2E_SUBNET_PREFIX:-172.30.0}.11
+    # The seeded superuser's credentials (SETUP__SUPERUSER__*), read from the same file the backend
+    # seeds it from - auth/login-ladder.spec.ts signs in to the admin with them.
+    env_file: [.env]
     depends_on:
       server:
         condition: service_healthy
@@ -53,8 +101,11 @@ services:
       - ./e2e/playwright/playwright-report:/e2e/playwright-report
       - ./e2e/playwright/test-results:/e2e/test-results
 
+volumes:
+  certs:
+
 networks:
   internal:
     ipam:
       config:
-        - subnet: 172.30.0.0/24
+        - subnet: ${E2E_SUBNET_PREFIX:-172.30.0}.0/24

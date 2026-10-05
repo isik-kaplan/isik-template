@@ -23,7 +23,7 @@ export function SocialLoginButtons({ action, callbackUrl }: SocialLoginButtonsPr
         const payload = { provider: provider.id, callback_url: callbackUrl, process: 'login' }
         return (
           <AutoFormButton key={provider.id} variant="outline" action={action} payload={payload}>
-            <ProviderIcon providerId={provider.id} iconUrl={provider.icon} />
+            <ProviderIcon providerId={provider.id} name={provider.name} iconUrl={provider.icon} />
             {t('auth:continueWith', { provider: provider.name })}
           </AutoFormButton>
         )

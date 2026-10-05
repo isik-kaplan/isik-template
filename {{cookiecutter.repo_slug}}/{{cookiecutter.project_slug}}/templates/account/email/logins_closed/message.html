@@ -1,0 +1,10 @@
+{% raw -%}
+{% extends "account/email/base/base.html" %}
+
+{% block content %}
+    {% autoescape off %}
+        <mj-text>{% blocktrans %}Signing in to {{ site_name }} is restricted for the moment, so you have been signed out.{% endblocktrans %}</mj-text>
+        <mj-text>{% blocktrans %}Nothing is wrong with your account. You will be able to sign in again once signing in reopens.{% endblocktrans %}</mj-text>
+    {% endautoescape %}
+{% endblock content %}
+{%- endraw %}

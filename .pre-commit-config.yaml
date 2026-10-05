@@ -5,14 +5,18 @@ repos:
       - id: end-of-file-fixer
       - id: trailing-whitespace
       - id: check-json
-        # cookiecutter.json's values are Jinja expressions, not the JSON they'll eventually
-        # render to - a stock JSON validator has no trouble with that (they're still valid JSON
-        # strings), so no exclude is needed here, unlike the generated project's own check-yaml.
+        # cookiecutter.json's values are Jinja expressions inside valid JSON strings, so it passes as
+        # is. The generated project's own JSON files are templates too, and some are only JSON once
+        # rendered (a `{% if %}` between entries), so they are left to the baked project's checks.
+        exclude: ^\{\{cookiecutter\.repo_slug\}\}/
       - id: check-added-large-files
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.9.0
     hooks:
+      # The generated project is Jinja, and ruff would read its templated pyproject.toml as config.
       - id: ruff
         args: [--fix]
+        exclude: ^\{\{cookiecutter\.repo_slug\}\}/
       - id: ruff-format
+        exclude: ^\{\{cookiecutter\.repo_slug\}\}/

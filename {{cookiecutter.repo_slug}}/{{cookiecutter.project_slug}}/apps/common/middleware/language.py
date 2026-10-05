@@ -26,6 +26,6 @@ class UserLanguageMiddleware:
         finally:
             translation.deactivate()
         # This header's own name-casing has no test that could ever observe it - Django's response
-        # headers are case-insensitive on both read and write - see mutation-exemptions.toml.
+        # headers are case-insensitive on both read and write - see mutation-equivalents.toml.
         response.headers["Content-Language"] = language
         return response

@@ -1,4 +1,5 @@
 export const LOGIN_PATH = '/auth/login'
+export const VERIFY_EMAIL_REQUIRED_PATH = '/auth/verify-email-required'
 
 const CHANNEL_NAME = '{{ cookiecutter.project_slug }}-session'
 const SESSION_CLEARED = 'session-cleared'

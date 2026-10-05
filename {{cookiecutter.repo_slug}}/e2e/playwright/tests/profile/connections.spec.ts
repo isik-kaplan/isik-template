@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { login, signUpAndVerify } from '../helpers'
+import { login, proveWithPassword, signUpAndVerify } from '../helpers'
 
 {%- set providers = cookiecutter.social_login_providers.strip() %}
 {#- Same guard as auth/social-login.spec.ts: "all" renders no provider buttons at all
@@ -61,6 +61,9 @@ test('connecting the OIDC test IdP either links it and can be undone, or is sile
     return
   }
 
+  // Connecting spent the proof the login left behind, so disconnecting asks again.
+  await oidcRow.getByRole('button', { name: 'Disconnect' }).click()
+  await proveWithPassword(page, 'correct-horse-battery-staple')
   await oidcRow.getByRole('button', { name: 'Disconnect' }).click()
   await expect(page.getByText('Account disconnected.')).toBeVisible()
   await expect(oidcRow.getByText('Not connected')).toBeVisible()
