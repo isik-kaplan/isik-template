@@ -15,7 +15,7 @@
   "python_version": "3.14",
   "node_version": "22",
   "include_mobile": false,
-  "isik_version": "0.16.0",
+  "isik_version": "0.17.0",
   "isikk_core_version": "0.13.0",
   "_copy_without_render": [
     "*/e2e/authentik-blueprints/*"

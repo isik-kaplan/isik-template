@@ -75,6 +75,15 @@ def _is_binding(decorator):
     return isinstance(decorator, cst.Name) and decorator.value in BINDING_DECORATORS
 
 
+def carried_by_copies(decorators):
+    """The decorators a mutant copy keeps: a lone staticmethod/classmethod, which mutmut binds the copy
+    with, and any that only marks it. isik's own patch keeps the same ones."""
+    binding = len(decorators) == 1 and _is_binding(decorators[0].decorator)
+    return [
+        d for d in decorators if (binding and _is_binding(d.decorator)) or _name_of(d.decorator) in MARKING_DECORATORS
+    ]
+
+
 def _mutable_despite_its_decorators(node):
     if not node.decorators:
         return False
@@ -127,11 +136,8 @@ def install():
         empty, methods, assignments, names = arrange_original(function, mutants, class_name)
         if not function.decorators:
             return empty, methods, assignments, names
-        # The first is the trampoline and keeps every decorator; everything after it is a copy and
-        # keeps only whichever of them binds its call (staticmethod/classmethod) or merely marks it.
-        carried = [
-            d for d in function.decorators if _is_binding(d.decorator) or _name_of(d.decorator) in MARKING_DECORATORS
-        ]
+        # The first is the trampoline and keeps every decorator; everything after it is a copy.
+        carried = carried_by_copies(function.decorators)
         kept = [methods[0], *(node.with_changes(decorators=carried) for node in methods[1:])]
         return empty, kept, assignments, names
 
