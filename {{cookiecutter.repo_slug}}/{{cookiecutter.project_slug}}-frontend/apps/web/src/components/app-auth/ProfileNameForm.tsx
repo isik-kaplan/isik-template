@@ -20,8 +20,6 @@ import { z } from 'zod'
 // Django's own max_length on both name columns.
 const NAME_MAX_LENGTH = 150
 
-const unusedKey = () => ''
-
 export type ProfileUser = Pick<ApiType<'User'>, 'username' | 'email' | 'first_name' | 'last_name'>
 
 export function ProfileNameForm({ user, onSaved }: { user: ProfileUser; onSaved: (user: ProfileUser) => void }) {
@@ -36,16 +34,15 @@ export function ProfileNameForm({ user, onSaved }: { user: ProfileUser; onSaved:
     schema,
     // Optional in the document because a write may leave them out; a read always carries both.
     { first_name: user.first_name ?? '', last_name: user.last_name ?? '' },
-    toast,
-    // This write sends no idempotency key, and the default generator, crypto.randomUUID, does not exist
-    // outside a secure context - plain-http local dev would throw before the request left.
-    { generateKey: unusedKey }
+    toast
   )
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     await submit((names) => createApi(apiOrigin()).updateMe(names), {
       failure: t('auth:profileDetailsSaveError'),
+      // A PATCH, which sends no idempotency key.
+      idempotencyKey: false,
       // data is defined here: onSuccess only runs once the default success check held.
       onSuccess: ({ data }) => {
         onSaved(data!)

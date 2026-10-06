@@ -1,10 +1,14 @@
+import inspect
+from pathlib import Path
+
 import pytest
 from django.conf import settings
 from django.db import connection, transaction
 from django.urls import get_resolver
+from isik.common.utils.exemptions import declared_exemptions
 
 from apps.common.checks import atomicity as checks
-from apps.common.transactions import not_atomic
+from apps.common.transactions import NotAtomicReason, not_atomic
 from apps.common.urls import _callbacks, routed_callbacks
 
 
@@ -33,6 +37,15 @@ def test_the_reason_is_kept_on_the_view_for_the_check_to_read():
     assert view.not_atomic_reason == REAL_REASON
     assert view._non_atomic_requests == {"default"}
     assert view("passed through") == "passed through"
+
+
+def test_each_use_is_listed_where_it_was_written():
+    """`manage.py exemptions` points at the view that opted out, not at this helper."""
+    line = inspect.currentframe().f_lineno + 1
+    view = not_atomic(REAL_REASON)(_stand_in())
+
+    (made,) = [each for each in declared_exemptions(NotAtomicReason.rule) if each is view.not_atomic_reason]
+    assert (made.file, made.line) == (str(Path(__file__).resolve()), line)
 
 
 @pytest.mark.parametrize("reason", ["", "n/a", "TODO", "not needed", "because"])
@@ -88,6 +101,17 @@ def test_the_check_passes_a_view_that_said_why(monkeypatch):
     monkeypatch.setattr(checks, "routed_callbacks", lambda: [not_atomic(REAL_REASON)(_stand_in())])
 
     assert checks.views_that_opt_out_of_atomicity_say_why(None) == []
+
+
+def test_the_check_names_a_view_whose_reason_was_written_by_hand(monkeypatch):
+    """Set beside Django's own decorator, a reason skips the floor `not_atomic` holds it to."""
+    bare = transaction.non_atomic_requests(_stand_in())
+    bare.not_atomic_reason = REAL_REASON
+    monkeypatch.setattr(checks, "routed_callbacks", lambda: [bare])
+
+    (error,) = checks.views_that_opt_out_of_atomicity_say_why(None)
+
+    assert error.msg == f"Views opt out of ATOMIC_REQUESTS without a reason: {__name__}.view"
 
 
 def test_the_check_passes_an_ordinary_view(monkeypatch):

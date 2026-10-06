@@ -1,9 +1,9 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from isik.django.apps.common.db import track_events
 
 from apps.common.models.base import BaseModel
 from apps.common.schema_docs import NoHelpText
-from apps.common.tracking import track_events
 
 
 @track_events()
@@ -43,7 +43,9 @@ class SiteSettings(BaseModel):
         default=True,
         editable=False,
         unique=True,
-        help_text=NoHelpText("Never editable and never serialized: an internal guard, not a value anybody reads."),
+        help_text=NoHelpText(
+            reason="Never editable and never serialized: an internal guard, not a value anybody reads."
+        ),
         db_comment="Always true and unique, so the table can hold at most one row.",
     )
 

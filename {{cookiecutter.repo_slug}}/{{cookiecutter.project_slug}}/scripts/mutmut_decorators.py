@@ -48,20 +48,27 @@ DESCRIPTOR_ATTRIBUTES = frozenset({"setter", "getter", "deleter"})
 # which only works while the copy the trampoline dispatches to is still a classmethod itself.
 BINDING_DECORATORS = frozenset({"staticmethod", "classmethod"})
 
+# Ones that only mark the function they are given and hand it back, so every copy wears them too:
+# `@makes_exemption` records an exemption where the marked function was called, and the copy the
+# trampoline dispatches to is what actually runs.
+MARKING_DECORATORS = frozenset({"makes_exemption"})
+
+
+def _name_of(decorator):
+    """The decorator's last name, so `@functools.cache` reads the same as `@cache`, and `@thing.setter`
+    is caught by the descriptor protocol's own spelling. None for anything else."""
+    while isinstance(decorator, cst.Call):
+        decorator = decorator.func
+    if isinstance(decorator, cst.Attribute):
+        return decorator.attr.value
+    if isinstance(decorator, cst.Name):
+        return decorator.value
+    return None
+
 
 def defeats_a_trampoline(decorator):
     """Whether a trampoline cannot be put under this decorator."""
-    while isinstance(decorator, cst.Call):
-        decorator = decorator.func
-    # The last name either way, so `@functools.cache` reads the same as `@cache`, and `@thing.setter`
-    # is caught by the descriptor protocol's own spelling.
-    if isinstance(decorator, cst.Attribute):
-        name = decorator.attr.value
-    elif isinstance(decorator, cst.Name):
-        name = decorator.value
-    else:
-        return False
-    return name in DESCRIPTOR_ATTRIBUTES | DESCRIPTOR_DECORATORS | MEMOISING_DECORATORS
+    return _name_of(decorator) in DESCRIPTOR_ATTRIBUTES | DESCRIPTOR_DECORATORS | MEMOISING_DECORATORS
 
 
 def _is_binding(decorator):
@@ -121,9 +128,11 @@ def install():
         if not function.decorators:
             return empty, methods, assignments, names
         # The first is the trampoline and keeps every decorator; everything after it is a copy and
-        # keeps only whichever of them actually binds its call (staticmethod/classmethod).
-        binding = [d for d in function.decorators if _is_binding(d.decorator)]
-        kept = [methods[0], *(node.with_changes(decorators=binding) for node in methods[1:])]
+        # keeps only whichever of them binds its call (staticmethod/classmethod) or merely marks it.
+        carried = [
+            d for d in function.decorators if _is_binding(d.decorator) or _name_of(d.decorator) in MARKING_DECORATORS
+        ]
+        kept = [methods[0], *(node.with_changes(decorators=carried) for node in methods[1:])]
         return empty, kept, assignments, names
 
     file_mutation.MutationVisitor._skip_node_and_children = _skip_node_and_children

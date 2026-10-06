@@ -89,7 +89,7 @@ class Migration(migrations.Migration):
         ),
         pgtrigger.migrations.AddTrigger(
             model_name='user',
-            trigger=pgtrigger.compiler.Trigger(name='stamp_updated_at', sql=pgtrigger.compiler.UpsertTriggerSql(func='NEW.updated_at = NOW(); RETURN NEW;', hash='49a93081a233e7174f90734a5cbaae0e4d5b5fa3', operation='UPDATE', pgid='pgtrigger_stamp_updated_at_4c63c', table='users_user', when='BEFORE')),
+            trigger=pgtrigger.compiler.Trigger(name='stamp_updated_at', sql=pgtrigger.compiler.UpsertTriggerSql(func='NEW."updated_at" = NOW(); RETURN NEW;', hash='772925d019b1e0aedd0c67b2f9b10317bf1cdb55', operation='UPDATE', pgid='pgtrigger_stamp_updated_at_4c63c', table='users_user', when='BEFORE')),
         ),
         pgtrigger.migrations.AddTrigger(
             model_name='user',

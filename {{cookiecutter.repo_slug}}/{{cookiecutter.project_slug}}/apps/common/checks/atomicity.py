@@ -1,5 +1,6 @@
 from django.core.checks import Error, register
 
+from apps.common.transactions import NotAtomicReason
 from apps.common.urls import routed_callbacks
 
 
@@ -13,7 +14,8 @@ def views_that_opt_out_of_atomicity_say_why(app_configs, **kwargs):
     unexplained = sorted(
         f"{view.__module__}.{view.__qualname__}"
         for view in routed_callbacks()
-        if getattr(view, "_non_atomic_requests", None) and not getattr(view, "not_atomic_reason", None)
+        if getattr(view, "_non_atomic_requests", None)
+        and not isinstance(getattr(view, "not_atomic_reason", None), NotAtomicReason)
     )
     if not unexplained:
         return []

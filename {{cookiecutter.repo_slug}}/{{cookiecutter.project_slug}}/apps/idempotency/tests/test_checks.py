@@ -5,15 +5,19 @@ asserts, and a check that could only be exercised by breaking the app is one nob
 """
 
 import pytest
+from isik.django.apps.idempotency import coverage
+from isik.django.apps.idempotency.coverage import idempotency_coverage
 from isik.django.apps.idempotency.drf import IdempotencyMixin
-from rest_framework import viewsets
+from isik.django.drf.coverage import RoutedAction
+from rest_framework import views, viewsets
 
-from apps.common.exemptions import Exemption
 from apps.idempotency import checks, schema
+from apps.idempotency.exemptions import NoIdempotencyKey, NoReplay
 from apps.users.api.viewsets.user import UserViewSet
 
 
-REASON = Exemption("Answers out of the index and writes nothing, so a retry costs a query.")
+KEYLESS = NoIdempotencyKey(reason="Answers out of the index and writes nothing, so a retry costs a query.")
+UNREPLAYABLE = NoReplay(reason="Hands out a one-time secret, which a replay would hand to whoever asked again.")
 PREFIX = "{{ cookiecutter.project_slug }}_idempotency"
 
 
@@ -25,12 +29,14 @@ class Unguarded(viewsets.ViewSet):
     pass
 
 
-def _routed(*pairs):
-    return lambda: list(pairs)
+def _routed(monkeypatch, *pairs):
+    """isik's walk answering with these POSTs alone, so its own verdict on each is what the check reads."""
+    routed = [RoutedAction(f"{view.__name__}/", view, "POST", action) for view, action in pairs]
+    monkeypatch.setattr(coverage, "routed_actions", lambda urlconf=None: routed)
 
 
 def test_a_post_that_honours_no_key_is_named(monkeypatch):
-    monkeypatch.setattr(checks, "_routed_posts", _routed((Unguarded, "create")))
+    _routed(monkeypatch, (Unguarded, "create"))
 
     (error,) = checks.guarded_handlers_honour_a_key_or_say_why_not(None)
 
@@ -38,12 +44,12 @@ def test_a_post_that_honours_no_key_is_named(monkeypatch):
     assert error.msg == "POST handlers neither honour an idempotency key nor say why not: Unguarded.create"
     assert error.hint == (
         "Add isik.django.apps.idempotency.drf.IdempotencyMixin, or name the action in "
-        "idempotency_exempt_actions with an Exemption(reason) saying it changes nothing."
+        "idempotency_exempt_actions with a NoIdempotencyKey(reason=...) saying it changes nothing."
     )
 
 
 def test_every_unguarded_handler_is_named_rather_than_the_first(monkeypatch):
-    monkeypatch.setattr(checks, "_routed_posts", _routed((Unguarded, "second"), (Unguarded, "first")))
+    _routed(monkeypatch, (Unguarded, "second"), (Unguarded, "first"))
 
     (error,) = checks.guarded_handlers_honour_a_key_or_say_why_not(None)
 
@@ -51,27 +57,38 @@ def test_every_unguarded_handler_is_named_rather_than_the_first(monkeypatch):
 
 
 def test_a_post_on_a_guarded_viewset_passes(monkeypatch):
-    monkeypatch.setattr(checks, "_routed_posts", _routed((Guarded, "create")))
+    _routed(monkeypatch, (Guarded, "create"))
 
     assert checks.guarded_handlers_honour_a_key_or_say_why_not(None) == []
 
 
 def test_an_exemption_with_a_reason_passes(monkeypatch):
     class Exempt(Guarded):
-        idempotency_exempt_actions = {"search": REASON}
+        idempotency_exempt_actions = {"search": KEYLESS}
 
-    monkeypatch.setattr(checks, "_routed_posts", _routed((Exempt, "search")))
+    _routed(monkeypatch, (Exempt, "search"))
 
     assert checks.guarded_handlers_honour_a_key_or_say_why_not(None) == []
 
 
+def test_an_exemption_from_another_rule_does_not_excuse_a_post(monkeypatch):
+    class Misfiled(Guarded):
+        idempotency_exempt_actions = {"search": UNREPLAYABLE}
+
+    _routed(monkeypatch, (Misfiled, "search"))
+
+    (error,) = checks.guarded_handlers_honour_a_key_or_say_why_not(None)
+
+    assert error.msg.endswith("Misfiled.search")
+
+
 def test_a_reason_too_short_to_be_one_is_not_one(monkeypatch):
-    """isik asks only for a non-empty string; this project holds every escape hatch to an Exemption."""
+    """isik asks only for a reason that is not blank or a placeholder; this project holds the escape hatch to a type."""
 
     class Bare(Guarded):
         idempotency_exempt_actions = {"search": "because"}
 
-    monkeypatch.setattr(checks, "_routed_posts", _routed((Bare, "search")))
+    _routed(monkeypatch, (Bare, "search"))
 
     (error,) = checks.guarded_handlers_honour_a_key_or_say_why_not(None)
 
@@ -82,7 +99,7 @@ def test_an_exemption_for_another_action_does_not_cover_this_one(monkeypatch):
     class Elsewhere(Guarded):
         idempotency_exempt_actions = {"search": "because"}
 
-    monkeypatch.setattr(checks, "_routed_posts", _routed((Elsewhere, "create")))
+    _routed(monkeypatch, (Elsewhere, "create"))
 
     assert checks.guarded_handlers_honour_a_key_or_say_why_not(None) == []
 
@@ -91,20 +108,20 @@ def test_a_refused_replay_needs_a_reason_too(monkeypatch):
     class Bare(Guarded):
         idempotency_no_replay_actions = {"create": "because"}
 
-    monkeypatch.setattr(checks, "_routed_posts", _routed((Bare, "create")))
+    _routed(monkeypatch, (Bare, "create"))
 
     (error,) = checks.an_unreplayable_handler_says_what_it_hands_out(None)
 
     assert error.id == f"{PREFIX}.E002"
     assert error.msg == "Actions refuse a replay without saying why: Bare.create"
-    assert error.hint == "Give each one an Exemption(reason) from apps.common.exemptions."
+    assert error.hint == "Give each one a NoReplay(reason=...) from apps.idempotency.exemptions."
 
 
 def test_every_refused_replay_is_named_rather_than_the_first(monkeypatch):
     class Bare(Guarded):
         idempotency_no_replay_actions = {"second": "because", "first": "because"}
 
-    monkeypatch.setattr(checks, "_routed_posts", _routed((Bare, "second")))
+    _routed(monkeypatch, (Bare, "second"))
 
     (error,) = checks.an_unreplayable_handler_says_what_it_hands_out(None)
 
@@ -113,28 +130,48 @@ def test_every_refused_replay_is_named_rather_than_the_first(monkeypatch):
 
 def test_a_refused_replay_with_a_reason_passes(monkeypatch):
     class Declared(Guarded):
-        idempotency_no_replay_actions = {"create": REASON}
+        idempotency_no_replay_actions = {"create": UNREPLAYABLE}
 
-    monkeypatch.setattr(checks, "_routed_posts", _routed((Declared, "create")))
+    _routed(monkeypatch, (Declared, "create"))
 
     assert checks.an_unreplayable_handler_says_what_it_hands_out(None) == []
+
+
+def test_an_exemption_from_another_rule_does_not_excuse_a_refused_replay(monkeypatch):
+    class Misfiled(Guarded):
+        idempotency_no_replay_actions = {"create": KEYLESS}
+
+    _routed(monkeypatch, (Misfiled, "create"))
+
+    (error,) = checks.an_unreplayable_handler_says_what_it_hands_out(None)
+
+    assert error.msg.endswith("Misfiled.create")
 
 
 def test_an_unguarded_viewset_is_not_asked_for_replay_reasons(monkeypatch):
     """It has no `idempotency_no_replay_actions` to read - E001 is what names it."""
-    monkeypatch.setattr(checks, "_routed_posts", _routed((Unguarded, "create")))
+    _routed(monkeypatch, (Unguarded, "create"))
 
     assert checks.an_unreplayable_handler_says_what_it_hands_out(None) == []
 
 
-def test_the_walk_finds_the_routed_posts_and_only_those():
-    """`create` is the users endpoint's one POST; its GET-only actions and allauth's plain views
-    (no `actions` map) are not this check's to guard."""
-    routed = set(checks._routed_posts())
+def test_a_plain_api_view_is_named_by_the_method_it_answers(monkeypatch):
+    class Endpoint(views.APIView):
+        pass
+
+    _routed(monkeypatch, (Endpoint, None))
+
+    (error,) = checks.guarded_handlers_honour_a_key_or_say_why_not(None)
+
+    assert error.msg.endswith("Endpoint.POST")
+
+
+def test_the_walk_reaches_the_users_post_on_its_own_host():
+    """isik walks every urlconf django-hosts serves; the users endpoint lives on the api host."""
+    routed = {(entry.routed.view, entry.routed.action) for entry in idempotency_coverage()}
 
     assert (UserViewSet, "create") in routed
     assert (UserViewSet, "list") not in routed
-    assert all(view is not None for view, _ in routed)
 
 
 @pytest.mark.parametrize(

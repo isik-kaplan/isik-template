@@ -9,18 +9,13 @@ import { Button } from '@/components/base/button'
 import { useClientTranslation } from '@/i18n/client'
 import { authOrigin } from '@/lib/authOrigin'
 import { useFactorSubmit } from '@/lib/useFactorSubmit'
-import {
-  type CreationOptionsJSON,
-  fromCredential,
-  inASecureContext,
-  toCreationOptions,
-  useBrowserSupportsPasskeys,
-} from '@/lib/webauthn'
 
 import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
 import { RecoveryCodesReveal } from './RecoveryCodesReveal'
 import { toDate } from '@isikk/core'
+import { useBrowserSupportsPasskeys } from '@isikk/core/hooks'
+import { createCredential, inASecureContext } from '@isikk/core/webauthn'
 
 export type Passkey = {
   id: number
@@ -33,10 +28,9 @@ export type PasskeyListProps = {
   passkeys: Passkey[]
 }
 
-async function createCredential(options: Record<string, unknown>): Promise<PublicKeyCredential | null> {
+async function register(options: PublicKeyCredentialCreationOptionsJSON) {
   try {
-    const publicKey = toCreationOptions(options as CreationOptionsJSON)
-    return (await navigator.credentials.create({ publicKey })) as PublicKeyCredential | null
+    return await createCredential(options)
   } catch {
     // Cancelling the browser's own prompt is the ordinary way out of this flow, not a failure.
     return null
@@ -57,10 +51,10 @@ export function PasskeyList({ passkeys }: PasskeyListProps) {
     const authApi = new AuthApi(authOrigin())
     // Fetched at the moment of enrollment: the options carry a one-shot challenge.
     const options = await submit(() => authApi.webauthnCreationOptions(), { failure: t('auth:passkeyEnrollError') })
-    const credential = options && (await createCredential(options.data.creation_options.publicKey))
+    const credential = options && (await register(options.data.creation_options.publicKey))
     const added =
       credential &&
-      (await submit(() => authApi.addWebauthn(fromCredential(credential)), {
+      (await submit(() => authApi.addWebauthn(credential), {
         success: t('auth:passkeyEnrolled'),
         failure: t('auth:passkeyEnrollError'),
       }))

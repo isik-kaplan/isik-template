@@ -849,22 +849,6 @@
         "equivalent mutant. t's reference only changes with the language, which this form never sees change",
         "while it is mounted, so this memo recomputes the same schema either way."
       ]
-    },
-    {
-      "mutator": "StringLiteral",
-      "fingerprint": "6a0ad3abfd3c",
-      "reason": [
-        "equivalent mutant. updateMe never sends the idempotency key this generates, so what it returns is",
-        "never read - only that it does not reach for crypto.randomUUID, which a test pins."
-      ]
-    },
-    {
-      "mutator": "ArrowFunction",
-      "fingerprint": "6a0ad3abfd3c",
-      "reason": [
-        "equivalent mutant. updateMe never sends the idempotency key this generates, so what it returns is",
-        "never read - only that it does not reach for crypto.randomUUID, which a test pins."
-      ]
     }
   ],
   "src/components/app-auth/ProfileTabsList.tsx": [
@@ -1385,41 +1369,6 @@
         "equivalent mutant. This schema only recognizes 'email', so any server error not on that field lands",
         "in non_field_errors instead (see useValidatedFormState's acceptServerErrors) - whenever",
         "formErrors.email is missing, formErrors.non_field_errors is guaranteed present."
-      ]
-    }
-  ],
-  "src/lib/webauthn.ts": [
-    {
-      "mutator": "ArithmeticOperator",
-      "fingerprint": "1805b481368b",
-      "reason": [
-        "equivalent mutant. Restoring the padding is for decoders that insist on it; atob in every runtime this",
-        "app targets (and jsdom's) decodes an unpadded value to the same bytes, so a wrong pad length or none is",
-        "invisible."
-      ]
-    },
-    {
-      "mutator": "StringLiteral",
-      "fingerprint": "1805b481368b",
-      "reason": [
-        "equivalent mutant. Restoring the padding is for decoders that insist on it; atob in every runtime this",
-        "app targets (and jsdom's) decodes an unpadded value to the same bytes, so a wrong pad length or none is",
-        "invisible."
-      ]
-    },
-    {
-      "mutator": "Regex",
-      "fingerprint": "a098a36b6bbc",
-      "reason": [
-        "equivalent mutant. btoa only ever pads at the end, so dropping the end anchor matches the same characters."
-      ]
-    },
-    {
-      "mutator": "ArrowFunction",
-      "fingerprint": "e723bccaa4e3",
-      "reason": [
-        "equivalent mutant. Support never changes after load, so there is nothing to unsubscribe from - React",
-        "treats an undefined cleanup exactly like the empty one."
       ]
     }
   ]

@@ -13,9 +13,11 @@ import { SegmentedCodeInput } from '@/components/base/segmented-code-input'
 import { useClientTranslation } from '@/i18n/client'
 import { authOrigin } from '@/lib/authOrigin'
 import { useApiSubmit } from '@/lib/useApiSubmit'
-import { type RequestOptionsJSON, fromAssertion, toRequestOptions, useBrowserSupportsPasskeys } from '@/lib/webauthn'
 
 import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
+
+import { useBrowserSupportsPasskeys } from '@isikk/core/hooks'
+import { getCredential } from '@isikk/core/webauthn'
 
 // The same factors answer two questions: the second step of a login, and proving it is you again
 // before an act (the mfa_reauthenticate flow the prove page offers). Only the endpoints differ.
@@ -39,10 +41,9 @@ export type MfaChallengeFormProps = {
   purpose?: keyof typeof CALLS
 }
 
-async function getAssertion(options: Record<string, unknown>): Promise<PublicKeyCredential | null> {
+async function askForAssertion(options: PublicKeyCredentialRequestOptionsJSON) {
   try {
-    const publicKey = toRequestOptions(options as RequestOptionsJSON)
-    return (await navigator.credentials.get({ publicKey })) as PublicKeyCredential | null
+    return await getCredential(options)
   } catch {
     // Dismissing the browser's prompt is a way back to the other factors, not a failed attempt.
     return null
@@ -85,9 +86,9 @@ export function MfaChallengeForm({ types, redirectTo, purpose = 'login' }: MfaCh
     setError(null)
     const authApi = new AuthApi(authOrigin())
     const { data } = await calls.passkeyOptions(authApi)
-    const credential = data && (await getAssertion(data.data.request_options.publicKey))
+    const credential = data && (await askForAssertion(data.data.request_options.publicKey))
     if (!credential) return
-    await submit(() => calls.passkey(authApi, fromAssertion(credential)), {
+    await submit(() => calls.passkey(authApi, credential), {
       failure: t('auth:twoFactorPasskeyError'),
       setFormErrors: (errors) => setError(Object.values(errors)[0][0]),
       onSuccess: finish,

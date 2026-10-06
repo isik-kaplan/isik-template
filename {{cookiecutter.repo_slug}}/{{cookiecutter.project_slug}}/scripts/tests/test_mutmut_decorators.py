@@ -194,6 +194,29 @@ def test_a_classmethod_copy_keeps_the_decorator_that_binds_it(patched):
     assert all("@classmethod" in decorated[name] for name in copies)
 
 
+def test_every_copy_keeps_a_decorator_that_only_marks_it(patched):
+    """`@makes_exemption` records an exemption where the marked function was called; a copy without it
+    would record each one inside itself, since the copy is what the trampoline runs."""
+    source = """
+@makes_exemption(Reason)
+@shared_task
+def work(left, right):
+    return left + right
+"""
+    module = cst.parse_module(mutate_file_contents("probe.py", source).code)
+    decorated = {}
+
+    class Collect(cst.CSTVisitor):
+        def visit_FunctionDef(self, node):
+            decorated[node.name.value] = [module.code_for_node(d).strip() for d in node.decorators]
+
+    module.visit(Collect())
+    copies = [name for name in decorated if name != "work"]
+
+    assert copies, "nothing was copied, so this proves nothing"
+    assert all(decorated[name] == ["@makes_exemption(Reason)"] for name in copies)
+
+
 def test_the_mutants_of_a_classmethod_can_actually_be_called(patched):
     """The failure this exists to stop is a TypeError at import, so the generated module is run."""
     namespace = {}

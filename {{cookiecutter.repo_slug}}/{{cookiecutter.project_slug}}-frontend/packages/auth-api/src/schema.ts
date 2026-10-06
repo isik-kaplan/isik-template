@@ -66,8 +66,9 @@ type ConfigOk = {
   status: number
   data: { mfa?: { supported_types: AuthenticatorType[]; passkey_login_enabled: boolean } }
 }
-// WebAuthn's own options, left opaque the way allauth's spec leaves them - lib/webauthn.ts converts.
-type WebAuthnOptions = { publicKey: Record<string, unknown> }
+// WebAuthn's own options as JSON, which @isikk/core/webauthn turns into what the browser takes.
+type WebAuthnCreationOptions = { publicKey: PublicKeyCredentialCreationOptionsJSON }
+type WebAuthnRequestOptions = { publicKey: PublicKeyCredentialRequestOptionsJSON }
 // A 404 that still carries what is needed to enroll: allauth answers "no TOTP yet" with a fresh secret.
 type TOTPNotFound = { status: number; meta: { secret: string; totp_url: string } }
 // allauth headless's flat validation-error shape ({errors: [{code, param, message}]}) - distinct
@@ -239,7 +240,7 @@ export interface paths {
   '/v0/browser/v1/account/authenticators/webauthn': {
     get: {
       responses: {
-        200: { content: { 'application/json': { status: number; data: { creation_options: WebAuthnOptions } } } }
+        200: { content: { 'application/json': { status: number; data: { creation_options: WebAuthnCreationOptions } } } }
         401: { content: { 'application/json': SessionErr } }
         409: { content: { 'application/json': ValidationErr } }
       }
@@ -279,7 +280,7 @@ export interface paths {
   '/v0/browser/v1/auth/webauthn/authenticate': {
     get: {
       responses: {
-        200: { content: { 'application/json': { status: number; data: { request_options: WebAuthnOptions } } } }
+        200: { content: { 'application/json': { status: number; data: { request_options: WebAuthnRequestOptions } } } }
       }
     }
     post: {
@@ -304,7 +305,7 @@ export interface paths {
   '/v0/browser/v1/auth/webauthn/reauthenticate': {
     get: {
       responses: {
-        200: { content: { 'application/json': { status: number; data: { request_options: WebAuthnOptions } } } }
+        200: { content: { 'application/json': { status: number; data: { request_options: WebAuthnRequestOptions } } } }
       }
     }
     post: {

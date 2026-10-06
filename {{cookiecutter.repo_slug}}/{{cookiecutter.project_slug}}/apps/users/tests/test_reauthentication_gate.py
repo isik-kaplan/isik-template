@@ -5,22 +5,21 @@ gated fails here, and a write route nobody has classified - a new viewset, an al
 an endpoint, allauth.mfa being installed - fails until somebody decides whether it is an act.
 """
 
-from django.urls import URLResolver, get_resolver
+from types import ModuleType
+
+from django.urls import path
+from isik.django.drf.coverage import CoverageStatus, ViewKind, request_policy_coverage
+from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.routers import SimpleRouter
 
 from apps.common.api.reauthentication import ProvesWhoTheyAre as ViewSetProvesWhoTheyAre
 from apps.common.api.request_policies import RecentlyProvedWhoTheyAre
 from apps.users.reauthentication.gate import ProvesWhoTheyAre as HeadlessProvesWhoTheyAre
 
 
+# The two hosts a signed-in person acts through. The admin is staff's own surface, behind its own login.
 URLCONFS = ("{{ cookiecutter.project_slug }}.urls.api", "{{ cookiecutter.project_slug }}.urls.auth")
-
-# Included urlconfs left out of the write surface, and why.
-NOT_WALKED = {
-    # allauth's classic provider endpoints: under HEADLESS_ONLY a provider's login view answers 404,
-    # its callback only finishes a flow a headless redirect started (gated where that is a connect),
-    # and a token login is a login. Which of them exist depends on the providers a project enables.
-    "allauth.urls",
-}
 
 # view -> the methods (allauth's views) or actions (DRF viewsets) on it that ask for a proof.
 GATED = {
@@ -73,52 +72,46 @@ NOT_AN_ACT = {
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
 
-def _walk(patterns, prefix=""):
-    for pattern in patterns:
-        route = prefix + str(pattern.pattern)
-        if isinstance(pattern, URLResolver):
-            # include() of a dotted path keeps the imported module; one of a plain list keeps the list.
-            if getattr(pattern.urlconf_name, "__name__", None) not in NOT_WALKED:
-                yield from _walk(pattern.url_patterns, route)
-        else:
-            yield route, pattern.callback
+def _classic_allauth(view):
+    """allauth's classic provider endpoints, left out of the write surface: under HEADLESS_ONLY a
+    provider's login view answers 404, its callback only finishes a flow a headless redirect started
+    (gated where that is a connect), and a token login is a login. Which of them exist depends on the
+    providers a project enables."""
+    module = view.__module__
+    return module.startswith("allauth.") and not module.startswith("allauth.headless.")
 
 
-def _writes_of(callback):
-    """(view, method or action, gated) for each write `callback` answers."""
-    viewset = getattr(callback, "cls", None)
-    actions = getattr(callback, "actions", None)
-    if actions is not None:
-        exempt = getattr(viewset, "reauthentication_exempt_actions", {})
-        for method, action in actions.items():
-            # A router registers every method on every viewset, and Django answers 405 to the ones the
-            # viewset refuses before anything runs - those are not acts anybody can perform.
-            if method.upper() not in SAFE_METHODS and method in viewset.http_method_names:
-                gated = issubclass(viewset, ViewSetProvesWhoTheyAre) and action not in exempt
-                yield viewset.__name__, action, gated
-        return
-    view = getattr(callback, "view_class", None) or viewset
-    for method in view.http_method_names:
-        if method.upper() not in SAFE_METHODS and hasattr(view, method):
-            gated = issubclass(view, HeadlessProvesWhoTheyAre) and method.upper() in view.reauthentication_methods
-            yield view.__name__, method.upper(), gated
+def _gated_plain_view(routed):
+    """What isik cannot read off a view that is not DRF's: allauth's views carry the gate as a mixin."""
+    return (
+        routed.kind is ViewKind.CLASS
+        and issubclass(routed.view, HeadlessProvesWhoTheyAre)
+        and routed.method in routed.view.reauthentication_methods
+    )
 
 
-def _routed():
+def _is_write(routed):
+    # Which methods a function answers cannot be read off it, so one is left for somebody to classify.
+    if routed.kind is ViewKind.FUNCTION:
+        return True
+    # A router registers every method on every viewset, and Django answers 405 to the ones the viewset
+    # refuses before anything runs - those are not acts anybody can perform.
+    return routed.method not in SAFE_METHODS and routed.method.lower() in routed.view.http_method_names
+
+
+def _routed(urlconfs=URLCONFS):
     """{(view, method or action): gated} for every write a caller can reach, across both hosts.
 
     A route seen twice resolves to the first pattern only, which is how the gated allauth views stand
     in for allauth's own - the shadowed one is never served, so it is not part of the surface.
     """
-    found = {}
-    for urlconf in URLCONFS:
-        seen = set()
-        for route, callback in _walk(get_resolver(urlconf).url_patterns):
-            if route in seen:
-                continue
-            seen.add(route)
-            for view, method, gated in _writes_of(callback):
-                found[(view, method)] = gated
+    found, served = {}, {}
+    for entry in request_policy_coverage(RecentlyProvedWhoTheyAre, list(urlconfs), plain_views=_gated_plain_view):
+        routed = entry.routed
+        if served.setdefault((routed.urlconf, routed.route), routed.view) is not routed.view:
+            continue
+        if not _classic_allauth(routed.view) and _is_write(routed):
+            found[(routed.view.__name__, routed.action or routed.method)] = entry.status is CoverageStatus.COVERED
     return found
 
 
@@ -154,25 +147,59 @@ def test_every_reason_is_a_sentence():
         assert len(reason.split()) >= 4, reason
 
 
+def _urlconf(patterns):
+    urlconf = ModuleType("urlconf")
+    urlconf.urlpatterns = patterns
+    return urlconf
+
+
+def _routed_alone(viewset):
+    router = SimpleRouter()
+    router.register("settings", viewset, basename="settings")
+    return _routed([_urlconf(router.urls)])
+
+
+class _Settings(ViewSetProvesWhoTheyAre, viewsets.ViewSet):
+    def retrieve(self, request, pk=None):
+        raise NotImplementedError
+
+    def partial_update(self, request, pk=None):
+        raise NotImplementedError
+
+    def destroy(self, request, pk=None):
+        raise NotImplementedError
+
+    @action(detail=False, methods=["post"])
+    def ping(self, request):
+        raise NotImplementedError
+
+
 def test_a_viewset_gated_through_the_policy_is_counted_as_gated():
     """The DRF half of the walk, which the generated project has no act for yet - so a viewset that
-    opts in is not silently counted as ungated the day one is added."""
+    opts in is not silently counted as ungated the day one is added. DELETE is refused by
+    `http_method_names` before anything runs, so it is no act."""
 
-    class Callback:
-        cls = type("SettingsViewSet", (ViewSetProvesWhoTheyAre,), {"http_method_names": ["get", "patch"]})
-        actions = {"get": "retrieve", "patch": "partial_update", "delete": "destroy"}
+    class SettingsViewSet(_Settings):
+        http_method_names = ["get", "patch", "post"]
 
-    assert list(_writes_of(Callback)) == [("SettingsViewSet", "partial_update", True)]
-    assert RecentlyProvedWhoTheyAre in Callback.cls.request_policies
+    assert _routed_alone(SettingsViewSet) == {
+        ("SettingsViewSet", "partial_update"): True,
+        ("SettingsViewSet", "ping"): True,
+    }
 
 
 def test_an_exempt_action_on_a_gated_viewset_is_not_counted_as_gated():
-    class Callback:
-        cls = type(
-            "SettingsViewSet",
-            (ViewSetProvesWhoTheyAre,),
-            {"http_method_names": ["post"], "reauthentication_exempt_actions": {"ping": "says nothing about anybody"}},
-        )
-        actions = {"post": "ping"}
+    class SettingsViewSet(_Settings):
+        http_method_names = ["get", "post"]
+        reauthentication_exempt_actions = {"ping": "says nothing about anybody"}
 
-    assert list(_writes_of(Callback)) == [("SettingsViewSet", "ping", False)]
+    assert _routed_alone(SettingsViewSet) == {("SettingsViewSet", "ping"): False}
+
+
+def test_a_function_view_is_left_for_somebody_to_classify():
+    """isik cannot tell which methods a function answers, so it lands outside both GATED and NOT_AN_ACT."""
+
+    def ping(request):
+        raise NotImplementedError
+
+    assert _routed([_urlconf([path("ping/", ping)])]) == {("ping", None): False}

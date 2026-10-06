@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
                 ('updated_at', models.DateTimeField(db_comment="When the row last changed, by the database's clock. Stamped by a trigger on every update.", db_default=django.db.models.functions.datetime.Now(), editable=False, help_text="When the row last changed, by the database's clock.", verbose_name='Updated At')),
                 ('id', models.UUIDField(db_comment='Primary key: a UUIDv7 the application generates, so ids sort roughly by creation time.', default=uuid.uuid7, editable=False, help_text='Identifies this record. A UUIDv7, so ids sort roughly by when they were created.', serialize=False, verbose_name='ID')),
                 ('login_policy', models.CharField(choices=[('everyone', 'Everyone'), ('staff', 'Staff and superusers'), ('superusers', 'Superusers only')], db_comment='Who may still sign in: everyone, staff (and superusers) or superusers only.', default='everyone', help_text='Raising it signs out everybody it no longer admits, straight away.', max_length=16, verbose_name='who may sign in')),
-                ('singleton', models.BooleanField(db_comment='Always true and unique, so the table can hold at most one row.', default=True, editable=False, help_text=apps.common.schema_docs.NoHelpText('Never editable and never serialized: an internal guard, not a value anybody reads.'))),
+                ('singleton', models.BooleanField(db_comment='Always true and unique, so the table can hold at most one row.', default=True, editable=False, help_text=apps.common.schema_docs.NoHelpText(reason='Never editable and never serialized: an internal guard, not a value anybody reads.'))),
             ],
             options={
                 'abstract': False,
@@ -42,7 +42,7 @@ class Migration(migrations.Migration):
                 ('updated_at', models.DateTimeField(db_comment="When the row last changed, by the database's clock. Stamped by a trigger on every update.", db_default=django.db.models.functions.datetime.Now(), db_index=True, editable=False, help_text="When the row last changed, by the database's clock.", verbose_name='Updated At')),
                 ('id', models.UUIDField(db_comment='Primary key: a UUIDv7 the application generates, so ids sort roughly by creation time.', db_index=True, default=uuid.uuid7, editable=False, help_text='Identifies this record. A UUIDv7, so ids sort roughly by when they were created.', primary_key=True, serialize=False, verbose_name='ID')),
                 ('login_policy', models.CharField(choices=[('everyone', 'Everyone'), ('staff', 'Staff and superusers'), ('superusers', 'Superusers only')], db_comment='Who may still sign in: everyone, staff (and superusers) or superusers only.', default='everyone', help_text='Raising it signs out everybody it no longer admits, straight away.', max_length=16, verbose_name='who may sign in')),
-                ('singleton', models.BooleanField(db_comment='Always true and unique, so the table can hold at most one row.', default=True, editable=False, help_text=apps.common.schema_docs.NoHelpText('Never editable and never serialized: an internal guard, not a value anybody reads.'), unique=True)),
+                ('singleton', models.BooleanField(db_comment='Always true and unique, so the table can hold at most one row.', default=True, editable=False, help_text=apps.common.schema_docs.NoHelpText(reason='Never editable and never serialized: an internal guard, not a value anybody reads.'), unique=True)),
             ],
             options={
                 'verbose_name': 'site settings',
@@ -57,7 +57,7 @@ class Migration(migrations.Migration):
         ),
         pgtrigger.migrations.AddTrigger(
             model_name='sitesettings',
-            trigger=pgtrigger.compiler.Trigger(name='stamp_updated_at', sql=pgtrigger.compiler.UpsertTriggerSql(func='NEW.updated_at = NOW(); RETURN NEW;', hash='d4a229e95f0e23f1acfeeab040c4b4bce0b2a6ab', operation='UPDATE', pgid='pgtrigger_stamp_updated_at_e11c1', table='users_sitesettings', when='BEFORE')),
+            trigger=pgtrigger.compiler.Trigger(name='stamp_updated_at', sql=pgtrigger.compiler.UpsertTriggerSql(func='NEW."updated_at" = NOW(); RETURN NEW;', hash='c6fb0cf6a5303514f2daf14bd6f985514b2af0c0', operation='UPDATE', pgid='pgtrigger_stamp_updated_at_e11c1', table='users_sitesettings', when='BEFORE')),
         ),
         pgtrigger.migrations.AddTrigger(
             model_name='sitesettings',

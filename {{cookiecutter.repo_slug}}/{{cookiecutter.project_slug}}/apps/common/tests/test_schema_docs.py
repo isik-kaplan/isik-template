@@ -17,28 +17,28 @@ REASON = "Named for what it points at, and the caller just read the row it names
 def test_it_is_empty_to_everything_that_reads_it(sentinel):
     """Django writes it to the column and drf-spectacular publishes it, so a sentinel that rendered
     would leak into both."""
-    assert sentinel(REASON) == ""
+    assert sentinel(reason=REASON) == ""
 
 
 @pytest.mark.parametrize("sentinel", [NoHelpText, NoComment])
 def test_the_reason_is_kept_where_the_check_looks(sentinel):
-    assert sentinel(REASON).reason == REASON
+    assert sentinel(reason=REASON).reason == REASON
 
 
 @pytest.mark.parametrize("sentinel", [NoHelpText, NoComment])
 def test_a_placeholder_is_not_a_reason(sentinel):
     with pytest.raises(ValueError, match="at least 40 characters"):
-        sentinel("n/a")
+        sentinel(reason="n/a")
 
 
 @pytest.mark.parametrize("sentinel", [NoHelpText, NoComment])
 def test_it_deconstructs_as_itself(sentinel):
     """Written out as the empty string it equals, the migration state rebuilds `help_text`'s own
     default and `makemigrations` asks for the same change forever."""
-    path, args, kwargs = sentinel(REASON).deconstruct()
+    path, args, kwargs = sentinel(reason=REASON).deconstruct()
 
     assert path == f"apps.common.schema_docs.{sentinel.__name__}"
-    assert (args, kwargs) == ((REASON,), {})
+    assert (args, kwargs) == ((), {"reason": REASON})
 
 
 def _column(name, **kwargs):
@@ -72,7 +72,7 @@ def test_the_check_names_a_field_that_says_neither(monkeypatch):
     assert error.msg == (
         "Fields say nothing and do not say why: somewhere.Model.bare (db_comment), somewhere.Model.bare (help_text)"
     )
-    assert error.hint == "Give it one, or NoHelpText(reason) / NoComment(reason) from apps.common.schema_docs."
+    assert error.hint == "Give it one, or NoHelpText(reason=...) / NoComment(reason=...) from apps.common.schema_docs."
 
 
 def test_the_check_names_the_half_that_is_missing(monkeypatch):
@@ -92,9 +92,21 @@ def test_the_check_lists_every_field_rather_than_stopping_at_the_first(monkeypat
 
 
 def test_the_check_passes_a_field_that_said_why_it_says_nothing(monkeypatch):
-    said = _column("quiet", help_text=NoHelpText(REASON), db_comment=NoComment(REASON))
+    said = _column("quiet", help_text=NoHelpText(reason=REASON), db_comment=NoComment(reason=REASON))
 
     assert _errors_for(monkeypatch, said) == []
+
+
+def test_each_half_takes_only_its_own_sentinel(monkeypatch):
+    """Why a column needs no comment says nothing about why the API needs no description."""
+    swapped = _column("swapped", help_text=NoComment(reason=REASON), db_comment=NoHelpText(reason=REASON))
+
+    (error,) = _errors_for(monkeypatch, swapped)
+
+    assert error.msg == (
+        "Fields say nothing and do not say why: "
+        "somewhere.Model.swapped (db_comment), somewhere.Model.swapped (help_text)"
+    )
 
 
 def test_the_check_passes_a_field_that_says_what_it_is(monkeypatch):

@@ -114,9 +114,9 @@ describe('ProfileNameForm', () => {
     expect(onSaved).toHaveBeenCalled()
   })
 
-  it('still saves outside a secure context, where crypto.randomUUID does not exist', async () => {
+  it('mints no idempotency key, so it saves even where none could be made', async () => {
     globalThis.fetch = vi.fn(async () => jsonResponse(200, USER)) as unknown as typeof fetch
-    vi.stubGlobal('crypto', { ...globalThis.crypto, randomUUID: undefined })
+    vi.stubGlobal('crypto', {})
     const onSaved = renderForm()
 
     await save()

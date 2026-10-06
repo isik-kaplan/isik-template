@@ -1,9 +1,9 @@
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from isik.django.apps.common.db import track_events
 
 from apps.common.models.base import BaseModel
-from apps.common.tracking import track_events
 
 
 def language_choices():

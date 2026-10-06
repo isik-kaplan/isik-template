@@ -156,8 +156,8 @@ ends up configured with; a visitor with no preference gets their browser's own l
   `transaction.on_commit` - `OnCommitTask` and `AccountAdapter.send_mail` already do.
 - **Every POST takes an `Idempotency-Key` header** (a UUID per attempt, not per call). `BaseModelViewSet`
   carries isik's `IdempotencyMixin`, so a retried request replays the first answer rather than doing the
-  work twice; a system check refuses a routed POST that neither honours a key nor names an
-  `Exemption(reason)`. Clients mint the key with `@isikk/core`'s `useIdempotencyKey()` (or
+  work twice; a system check refuses a routed POST that neither honours a key nor names a
+  `NoIdempotencyKey(reason=...)` from `apps/idempotency/exemptions.py`. Clients mint the key with `@isikk/core`'s `useIdempotencyKey()` (or
   `useValidatedFormState`, which passes one to its `submit` call).
 - **Raw SQL never spells a table or column name.** Resolve them with `apps.common.db.model_db_name` /
   `model_db_column`, building trigger bodies in a `BuiltTrigger(build=...)`; `test_raw_sql_names.py`
@@ -289,8 +289,11 @@ Each of these fails a commit (pre-commit) and CI rather than relying on review:
   `EXCEPTIONS` with the reason.
 - **Every field says what it is.** Each model field this project declares carries a `help_text` (the
   published API description) and a `db_comment` (what someone in psql sees), or
-  `NoHelpText(reason)` / `NoComment(reason)` from `apps/common/schema_docs.py` saying why it needs none.
+  `NoHelpText(reason=...)` / `NoComment(reason=...)` from `apps/common/schema_docs.py` saying why it needs none.
   A Django system check (`schema_docs.E001`) refuses to start otherwise.
+- **Every opt-out names the rule it skips.** The sentinels above, `NotAtomicReason`, `NoIdempotencyKey`,
+  `NoReplay` and isik's own registry opt-outs are isik `Exemption` types that refuse a reason too short
+  to be one; `python manage.py exemptions` lists them by rule.
 - **Serializers over a `BaseModel` list `created_at` and `updated_at`.** By hand - a sweep test in
   `apps/common/tests/test_serializer_conventions.py` checks every `apps/*/api/serializers/` module.
 - **The API documents are clean and the clients match them.** `openapi-check` fails on any

@@ -121,9 +121,7 @@ export const SHARDS = {
     'src/components/app-auth/RecoveryCodesReveal.tsx',
     'src/components/app-auth/RecoveryCodesSection.tsx',
     'src/components/app-auth/TotpSetup.tsx',
-    'src/lib/isSecureContext.ts',
     'src/lib/useFactorSubmit.ts',
-    'src/lib/webauthn.ts',
   ],
   // The app shell and the components every screen is built from.
   ui: [

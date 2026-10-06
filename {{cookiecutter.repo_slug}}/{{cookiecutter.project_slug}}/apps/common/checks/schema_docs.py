@@ -1,7 +1,7 @@
 from django.apps import apps
 from django.core.checks import Error, register
 
-from apps.common.schema_docs import _Unsaid
+from apps.common.schema_docs import NoComment, NoHelpText
 
 
 UNSAID_FIELDS = "schema_docs.E001"
@@ -15,8 +15,11 @@ def every_field_says_what_it_is_or_why_it_does_not(app_configs, **kwargs):
         {
             f"{where}.{field.name} ({kind})"
             for where, field in _fields_we_write()
-            for kind, said in (("help_text", field.help_text), ("db_comment", field.db_comment))
-            if not said and not isinstance(said, _Unsaid)
+            for kind, said, sentinel in (
+                ("help_text", field.help_text, NoHelpText),
+                ("db_comment", field.db_comment, NoComment),
+            )
+            if not said and not isinstance(said, sentinel)
         }
     )
     if not unsaid:
@@ -25,7 +28,7 @@ def every_field_says_what_it_is_or_why_it_does_not(app_configs, **kwargs):
     return [
         Error(
             "Fields say nothing and do not say why: " + ", ".join(unsaid),
-            hint="Give it one, or NoHelpText(reason) / NoComment(reason) from apps.common.schema_docs.",
+            hint="Give it one, or NoHelpText(reason=...) / NoComment(reason=...) from apps.common.schema_docs.",
             id=UNSAID_FIELDS,
         )
     ]

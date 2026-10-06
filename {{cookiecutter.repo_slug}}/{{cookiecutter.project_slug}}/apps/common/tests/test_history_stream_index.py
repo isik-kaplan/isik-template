@@ -4,22 +4,20 @@ pghistory's aggregate finds each row's predecessor with `pgh_obj_id = X AND pgh_
 of the object's stream before the page's `LIMIT` applies. On its own single-column `pgh_obj_id` index
 each lookup reads and sorts the whole stream, so a page costs the square of the history.
 
-Asserted over every event table rather than over the decorator, because `pghistory.track()` can be
-called directly and a table declared that way would lose the index with nothing said.
+isik's `track_events()` declares the index. Asserted over every event table rather than over the
+decorator, because `pghistory.track()` can be called directly and a table declared that way would
+lose the index with nothing said.
 """
-
-from types import SimpleNamespace
 
 import pytest
 from django.apps import apps
 from django.db import connection
+from isik.django.apps.common.db import object_stream_index
 
-from apps.common import tracking
 from apps.common.db import model_db_name
-from apps.common.tracking import object_stream_index, track_events
 
 
-STREAM = ["pgh_obj", "-pgh_id"]
+STREAM = object_stream_index().fields
 
 
 def streamed_event_models():
@@ -66,51 +64,3 @@ def test_every_event_table_has_it_in_the_database():
     )
 
     assert unindexed == []
-
-
-def test_the_index_names_the_columns_the_lookup_reads():
-    """Either column alone leaves the predecessor lookup sorting a stream it could have walked."""
-    assert object_stream_index().fields == STREAM
-
-
-def _a_stub(monkeypatch):
-    """Enough of a model for the decorator, kept out of the app registry."""
-    passed_on = []
-
-    def record(**kwargs):
-        passed_on.append(kwargs)
-        return lambda cls: cls
-
-    monkeypatch.setattr(tracking, "_track_events", record)
-    return SimpleNamespace(), passed_on
-
-
-def test_a_table_with_no_stream_is_not_asked_to_index_one(monkeypatch):
-    """`obj_field=None` means no `pgh_obj` column, so an index naming it would refuse the model."""
-    tracked, passed_on = _a_stub(monkeypatch)
-
-    track_events(obj_field=None)(tracked)
-
-    assert passed_on == [{"obj_field": None}]
-
-
-def test_indexes_the_caller_asked_for_are_kept(monkeypatch):
-    """The decorator adds to `meta`, and a merge that replaced it would silently drop a declaration the
-    tracked model made for itself."""
-    tracked, passed_on = _a_stub(monkeypatch)
-    theirs = object_stream_index()
-
-    assert track_events(meta={"indexes": [theirs], "triggers": ["theirs"]})(tracked) is tracked
-
-    assert passed_on[0]["meta"]["triggers"] == ["theirs"]
-    assert [index.fields for index in passed_on[0]["meta"]["indexes"]] == [STREAM, STREAM]
-    assert passed_on[0]["meta"]["indexes"][0] is theirs
-
-
-def test_the_other_options_reach_isik_unchanged(monkeypatch):
-    tracked, passed_on = _a_stub(monkeypatch)
-
-    track_events(model_name="Probe")(tracked)
-
-    assert passed_on[0]["model_name"] == "Probe"
-    assert [index.fields for index in passed_on[0]["meta"]["indexes"]] == [STREAM]
