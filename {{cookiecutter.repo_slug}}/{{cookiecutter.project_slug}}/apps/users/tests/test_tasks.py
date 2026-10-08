@@ -16,8 +16,7 @@ def test_ping_task_returns_pong():
 
 
 @pytest.mark.django_db
-def test_the_people_a_rung_shuts_out_are_mailed_in_their_own_language(settings):
-    settings.LANGUAGES = [("en", "English"), ("tr", "Turkish")]
+def test_the_people_a_rung_shuts_out_are_mailed_in_their_own_language(a_second_language):
     SiteSettings.objects.create(login_policy=SiteSettings.LoginPolicy.STAFF)
     # The ones it skips first, so skipping one is not taken for being done.
     User.objects.create_user(username="gone", email="gone@example.test", is_active=False)

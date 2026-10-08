@@ -1,4 +1,5 @@
 import json
+from unittest.mock import ANY
 
 import pytest
 from allauth.account.models import EmailAddress
@@ -7,6 +8,7 @@ from allauth.socialaccount.providers.github.provider import GitHubProvider
 from allauth.socialaccount.providers.openid_connect.provider import OpenIDConnectProvider
 from allauth.socialaccount.providers.openid_connect.views import OpenIDConnectOAuth2Adapter
 from django.conf import settings
+from django.db import connection
 from django.urls import reverse
 
 from apps.users.models.user import User
@@ -47,6 +49,18 @@ class Headless:
         response = self.call("POST", "account:reauthenticate", {"password": password})
         assert response.status_code == 200
         return response
+
+
+@pytest.fixture
+def a_second_language(settings, db, monkeypatch):
+    """The project as if it also shipped Turkish, whatever it was generated with. LANGUAGES says so,
+    and the CHECK built from the languages it does ship is lifted: from the model, which `full_clean()`
+    validates against, and from the column inside the test's own transaction, which puts it back."""
+    settings.LANGUAGES = [("en", "English"), ("tr", "Turkish")]
+    (check,) = [each for each in User._meta.constraints if ("language__in", ANY) in each.condition.children]
+    monkeypatch.setattr(User._meta, "constraints", [each for each in User._meta.constraints if each is not check])
+    with connection.schema_editor() as editor:
+        editor.remove_constraint(User, check)
 
 
 @pytest.fixture

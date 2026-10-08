@@ -16,11 +16,9 @@ class User(AbstractUser, BaseModel):
     # UserLanguageMiddleware). Django's own blank-skips-choice-validation means "" stays valid even
     # though it's not itself one of the choices.
     #
-    # choices=language_choices, not choices=settings.LANGUAGES directly: a plain list gets frozen
-    # into the migration that adds this field, which would commit to whatever "languages" this
-    # project happened to be generated with - a callable keeps choices re-read from settings live,
-    # so it can never drift from what's actually configured (and the migration stays generic
-    # enough to check into the template unmodified, regardless of a project's own answer).
+    # choices=language_choices, not choices=settings.LANGUAGES directly: a callable keeps the field
+    # re-reading what is configured. The CHECK isik derives from the choices is a list in the
+    # migration all the same, so changing LANGUAGES means a migration that rewrites that constraint.
     language = models.CharField(
         max_length=15,
         choices=language_choices,

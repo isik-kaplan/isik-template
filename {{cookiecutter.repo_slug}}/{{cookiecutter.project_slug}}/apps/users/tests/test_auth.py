@@ -60,8 +60,7 @@ def test_a_password_change_names_the_session_that_made_it(client):
 
 
 @pytest.mark.django_db
-def test_the_session_carries_the_users_saved_language(client, settings):
-    settings.LANGUAGES = [("en", "English"), ("tr", "Turkish")]
+def test_the_session_carries_the_users_saved_language(client, settings, a_second_language):
     # apps/users/headless.py's own reason for existing: the frontend resolves its language from
     # this same session payload it already fetches, with no extra request.
     user = User.objects.create_user(username="alice", email="alice@example.test", password="x", language="tr")

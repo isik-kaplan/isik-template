@@ -50,6 +50,7 @@ class Migration(migrations.Migration):
                 'verbose_name_plural': 'users',
                 'abstract': False,
                 'swappable': 'AUTH_USER_MODEL',
+                'constraints': [models.CheckConstraint(condition=models.Q(('language__in', [{% for code in cookiecutter.languages.split(',') %}'{{ code.strip() }}'{{ ', ' if not loop.last }}{% endfor %}]), ('language', ''), _connector='OR'), name='users_user_language_choices')],
             },
             bases=(isik.django.apps.common.skippable_validators.mixin.SkippableValidatorsMixin, django_lifecycle.mixins.LifecycleModelMixin, models.Model),
             managers=[

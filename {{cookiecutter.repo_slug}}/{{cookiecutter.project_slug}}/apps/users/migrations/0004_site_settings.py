@@ -47,7 +47,7 @@ class Migration(migrations.Migration):
             options={
                 'verbose_name': 'site settings',
                 'verbose_name_plural': 'site settings',
-                'constraints': [models.CheckConstraint(condition=models.Q(('singleton', True)), name='site_settings_singleton')],
+                'constraints': [models.CheckConstraint(condition=models.Q(('singleton', True)), name='site_settings_singleton'), models.CheckConstraint(condition=models.Q(('login_policy__in', ['everyone', 'staff', 'superusers'])), name='users_sitesettings_login_policy_choices')],
             },
             bases=(isik.django.apps.common.skippable_validators.mixin.SkippableValidatorsMixin, django_lifecycle.mixins.LifecycleModelMixin, models.Model),
         ),
