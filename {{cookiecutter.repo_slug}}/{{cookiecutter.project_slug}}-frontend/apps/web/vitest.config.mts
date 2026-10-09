@@ -1,6 +1,19 @@
 import react from '@vitejs/plugin-react'
+import { statSync } from 'fs'
 import path from 'path'
 import { defineConfig } from 'vitest/config'
+import { BaseSequencer, type TestSpecification } from 'vitest/node'
+
+// The narrowest test files first, by size and then by path, whatever the last run's cache says. A
+// mutant usually dies to the small unit test of the file it is in, and Stryker stops at the first
+// failure - left to run last, that test only kills it after the whole suite, which can outlast
+// Stryker's timeout and be counted alive.
+class NarrowestFirst extends BaseSequencer {
+  async sort(files: TestSpecification[]) {
+    const size = (file: TestSpecification) => statSync(file.moduleId).size
+    return [...files].sort((a, b) => size(a) - size(b) || a.moduleId.localeCompare(b.moduleId))
+  }
+}
 
 export default defineConfig({
   plugins: [react()],
@@ -11,6 +24,7 @@ export default defineConfig({
     // fast-check's test.prop renders a whole sample of cases in one test, not one render, so the
     // 5s default leaves no headroom on a loaded runner.
     testTimeout: 15_000,
+    sequence: { sequencer: NarrowestFirst },
     // Otherwise @isikk/core is externalized and its own "next/server" import is resolved by
     // Node directly - bypassing vi.mock() entirely, which only intercepts Vite-transformed
     // imports. public.test.ts mocks next/server because next's package.json has no "exports"
