@@ -20,7 +20,11 @@ def _finalize(status_code, is_authenticated):
 def test_clears_the_session_cookie_for_an_unauthenticated_401_or_403(status_code):
     response = _finalize(status_code, is_authenticated=False)
 
-    response.delete_cookie.assert_called_once_with(settings.SESSION_COOKIE_NAME)
+    response.delete_cookie.assert_called_once_with(
+        settings.SESSION_COOKIE_NAME,
+        domain=settings.SESSION_COOKIE_DOMAIN,
+        samesite=settings.SESSION_COOKIE_SAMESITE,
+    )
     response.__setitem__.assert_called_once_with("X-Session-Cleared", "1")
 
 
@@ -57,3 +61,16 @@ def test_the_header_is_one_a_cross_origin_frontend_can_read():
 
     (header, _value), _kwargs = response.__setitem__.call_args
     assert header in settings.CORS_EXPOSE_HEADERS
+
+
+@pytest.mark.django_db
+def test_the_cleared_cookie_names_the_domain_the_session_was_set_on(client):
+    """A deletion without the session cookie's domain is a different cookie, and the real one stays."""
+    client.cookies[settings.SESSION_COOKIE_NAME] = "a-dead-session"
+
+    response = client.get("/v0/users/me/")
+
+    cookie = response.cookies[settings.SESSION_COOKIE_NAME]
+    assert cookie.value == ""
+    assert cookie["max-age"] == 0
+    assert cookie["domain"] == settings.SESSION_COOKIE_DOMAIN

@@ -3,7 +3,7 @@ services:
     build:
       context: ./database
     image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-database:latest
-    env_file: .env
+    # Only its own credentials, never all of .env: each service holds just the secrets it needs.
     environment:
       POSTGRES_DB: {{ '${' + cookiecutter.config_prefix + '__DB__NAME}' }}
       POSTGRES_USER: {{ '${' + cookiecutter.config_prefix + '__DB__USER}' }}
@@ -23,7 +23,6 @@ services:
     build:
       context: ./broker
     image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-broker:latest
-    env_file: .env
     environment:
       RABBITMQ_DEFAULT_USER: {{ '${' + cookiecutter.config_prefix + '__BROKER__USER}' }}
       RABBITMQ_DEFAULT_PASS: {{ '${' + cookiecutter.config_prefix + '__BROKER__PASSWORD}' }}
@@ -156,11 +155,19 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         # Build-time by necessity - next build inlines it into the client bundle. Every other
-        # frontend value is read at runtime from env_file below.
+        # frontend value is read at runtime from the environment below.
         NEXT_PUBLIC_SENTRY_DSN: {{ '${NEXT_PUBLIC_SENTRY_DSN:-}' }}
     image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-frontend:latest
-    env_file: .env
+    # Named one by one rather than all of .env: this is the public-facing process, and none of the
+    # backend's secrets belong in it.
     environment:
+{%- set server_sentry_dsn = cookiecutter.config_prefix + '_SERVER__SENTRY__DSN' %}
+      {{ cookiecutter.config_prefix }}__DOMAIN: {{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
+      {{ server_sentry_dsn }}: {{ '${' + server_sentry_dsn + ':-}' }}
+{%- if cookiecutter.tls_termination == "external" %}
+      # Set in .env by scripts/dev-tls.sh, local dev only.
+      NODE_EXTRA_CA_CERTS: {{ '${NODE_EXTRA_CA_CERTS:-}' }}
+{%- endif %}
       # Node's http.Server default (5000ms) is shorter than nginx's upstream keepalive_timeout
       # to this container (server/template.nginx.conf) - nginx would keep reusing a connection
       # this server had already dropped, reproducing the exact uwsgi keep-alive bug one hop over.
@@ -190,7 +197,10 @@ services:
     build:
       context: ./{{ cookiecutter.project_slug }}-server
     image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-server:latest
-    env_file: .env
+    # The one value the nginx template is rendered with (entrypoint.sh substitutes every variable it
+    # holds), and no secret.
+    environment:
+      {{ cookiecutter.config_prefix }}__DOMAIN: {{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
 {%- if cookiecutter.tls_termination == "self" %}
     volumes:
       - letsencrypt:/etc/letsencrypt

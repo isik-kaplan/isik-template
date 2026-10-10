@@ -1,3 +1,8 @@
+import os
+import subprocess
+import sys
+
+import pytest
 from django.conf import settings
 
 from {{ cookiecutter.project_slug }}.config import CONFIG as config
@@ -69,3 +74,22 @@ def test_csrf_trusts_the_frontend_and_every_backend_subdomain():
 
 def test_cors_allows_only_the_frontend_origin():
     assert settings.CORS_ALLOWED_ORIGINS == _origins([config.DOMAIN], config.DEBUG)
+
+
+@pytest.mark.parametrize(
+    ("debug", "expected"),
+    [("false", ["31536000", "True", "False"]), ("true", ["0", "False", "False"])],
+)
+def test_outside_debug_browsers_stay_on_https_for_a_year_across_subdomains(debug, expected):
+    """Settings are built once, at import, from the environment - so each DEBUG is read in an
+    interpreter of its own. Preload stays off either way: it is the owner's one-way decision."""
+    script = (
+        "from {{ cookiecutter.project_slug }} import settings; "
+        "print(settings.SECURE_HSTS_SECONDS, settings.SECURE_HSTS_INCLUDE_SUBDOMAINS, "
+        "getattr(settings, 'SECURE_HSTS_PRELOAD', False))"
+    )
+    env = {**os.environ, "{{ cookiecutter.config_prefix }}__DEBUG": debug}
+
+    result = subprocess.run([sys.executable, "-c", script], env=env, capture_output=True, text=True, check=True)
+
+    assert result.stdout.splitlines()[-1].split() == expected

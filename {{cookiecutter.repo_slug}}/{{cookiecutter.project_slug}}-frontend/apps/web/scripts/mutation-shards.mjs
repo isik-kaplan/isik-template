@@ -46,6 +46,7 @@ export const SHARDS = {
     'src/lib/isLocalDevHost.ts',
     'src/lib/nameFetchFailures.ts',
     'src/lib/reauthentication.ts',
+    'src/lib/requestOrigin.ts',
     'src/lib/monkeypatches.ts',
     'src/lib/resolveLanguage.ts',
     'src/lib/serverApi.ts',

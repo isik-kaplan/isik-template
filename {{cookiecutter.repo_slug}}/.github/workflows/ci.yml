@@ -75,6 +75,12 @@ jobs:
         run: docker compose run --rm --no-deps backend python manage.py migrate
       - name: Check for missing migrations
         run: scripts/pre-commit/migration_check.sh
+      # With DEBUG off, as in production, so a new deployment warning fails the build rather than
+      # waiting to be noticed. The ones the project accepts are silenced, with reasons, in settings.py.
+      - name: Check the production settings
+        run: >-
+          docker compose run --rm --no-deps -e {{ cookiecutter.config_prefix }}__DEBUG=false backend
+          python manage.py check --deploy --fail-level WARNING
 
       # Every xdist worker migrates its own test database otherwise, which is most of what a run
       # costs. Keyed on what the schema is built from; a key that missed something is refused by the

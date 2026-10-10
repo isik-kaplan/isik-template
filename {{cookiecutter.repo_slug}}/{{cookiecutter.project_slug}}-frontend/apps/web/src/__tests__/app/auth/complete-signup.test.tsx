@@ -13,6 +13,9 @@ vi.mock('@{{ cookiecutter.repo_slug }}/auth-api', async (importOriginal) => ({
 // sUseTranslation, via '@/lib/getSession', not mocked here) constructs its own AuthApi too.
 AuthApi.mockImplementation(() => ({ pendingProviderSignup, session: vi.fn().mockResolvedValue({}) }))
 
+// The request's host below is only taken as this deployment's origin when it is the configured domain.
+vi.mock('@/config/public', () => ({ CONFIG: { DOMAIN: 'test-project.test' } }))
+
 let cookieHeader: string | undefined = 'sessionid=abc123'
 vi.mock('next/headers', () => ({
   headers: async () => {

@@ -13,11 +13,60 @@ from apps.users.models.user import User
 
 
 @pytest.mark.django_db
-def test_list_users_is_readable_anonymously(client):
-    User.objects.create_user(username="alice", email="alice@example.test", password="x")
+@pytest.mark.parametrize("path", ["/v0/users/", "/v0/users/{id}/"])
+def test_nobody_signed_out_reads_any_account(client, path):
+    user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
+
+    response = client.get(path.format(id=user.id))
+
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_the_list_shows_somebody_signed_in_only_themselves(client):
+    alice = User.objects.create_user(username="alice", email="alice@example.test", password="x")
+    User.objects.create_user(username="mallory", email="mallory@example.test", password="x")
+    client.force_login(alice)
+
     response = client.get("/v0/users/")
+
     assert response.status_code == 200
-    assert response.json()["count"] == 1
+    assert [account["id"] for account in response.json()["results"]] == [str(alice.id)]
+
+
+@pytest.mark.django_db
+def test_somebody_signed_in_reads_their_own_account(client):
+    alice = User.objects.create_user(username="alice", email="alice@example.test", password="x")
+    client.force_login(alice)
+
+    response = client.get(f"/v0/users/{alice.id}/")
+
+    assert response.status_code == 200
+    assert response.json()["email"] == "alice@example.test"
+
+
+@pytest.mark.django_db
+def test_somebody_elses_account_is_not_found(client):
+    alice = User.objects.create_user(username="alice", email="alice@example.test", password="x")
+    mallory = User.objects.create_user(username="mallory", email="mallory@example.test", password="x")
+    client.force_login(mallory)
+
+    response = client.get(f"/v0/users/{alice.id}/")
+
+    assert response.status_code == 404
+
+
+@pytest.mark.django_db
+def test_staff_list_and_read_every_account(client):
+    alice = User.objects.create_user(username="alice", email="alice@example.test", password="x")
+    staff = User.objects.create_user(username="staff", email="staff@example.test", password="x", is_staff=True)
+    client.force_login(staff)
+
+    listed = client.get("/v0/users/")
+    read = client.get(f"/v0/users/{alice.id}/")
+
+    assert {account["id"] for account in listed.json()["results"]} == {str(alice.id), str(staff.id)}
+    assert read.status_code == 200
 
 
 @pytest.mark.django_db

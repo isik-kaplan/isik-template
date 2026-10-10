@@ -5,6 +5,8 @@ import { describe, expect, it, vi } from 'vitest'
 const createApi = vi.fn((origin: string, options: object) => ({ origin, options }))
 vi.mock('@/lib/apiClients', () => ({ createApi: (origin: string, options: object) => createApi(origin, options) }))
 
+vi.mock('@/config/public', () => ({ CONFIG: { DOMAIN: 'test.test' } }))
+
 let cookie: string | undefined = 'sessionid=abc'
 vi.mock('next/headers', () => ({
   headers: async () => new Headers(cookie === undefined ? { host: 'test.test' } : { host: 'test.test', cookie }),

@@ -8,9 +8,8 @@ import type { Language } from '@/i18n/config'
 import { AuthApi, pendingMfaTypes } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
 import type { Session } from './SessionContext'
-import { isLocalDevHost } from './isLocalDevHost'
+import { requestOrigin } from './requestOrigin'
 import { resolveLanguage } from './resolveLanguage'
-import { getRequestOrigin } from '@isikk/core/next/request'
 
 type SessionState = {
   session: Session
@@ -28,7 +27,7 @@ type SessionState = {
 // session.
 const fetchSessionState = cache(async (): Promise<SessionState> => {
   const requestHeaders = await headers()
-  const authOrigin = getRequestOrigin(requestHeaders, { isLocalDevHost }).replace('://', '://auth.')
+  const authOrigin = requestOrigin(requestHeaders).replace('://', '://auth.')
   const authApi = new AuthApi(authOrigin, { cookieHeader: requestHeaders.get('cookie') ?? undefined })
   const acceptLanguageHeader = requestHeaders.get('accept-language')
   try {

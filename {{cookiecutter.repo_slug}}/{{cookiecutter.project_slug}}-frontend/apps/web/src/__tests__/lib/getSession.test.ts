@@ -4,13 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const headersMock = vi.fn()
 const sessionMock = vi.fn()
-const getRequestOriginMock = vi.fn((_headers: Headers, _options: unknown) => 'http://api.example.test')
+const requestOriginMock = vi.fn((_headers: Headers) => 'http://api.example.test')
 
 vi.mock('next/headers', () => ({ headers: () => headersMock() }))
 vi.mock('next/navigation', () => ({ redirect: vi.fn(), unstable_rethrow: vi.fn() }))
-vi.mock('@isikk/core/next/request', () => ({
-  getRequestOrigin: (headers: Headers, options: unknown) => getRequestOriginMock(headers, options),
-}))
+vi.mock('@/lib/requestOrigin', () => ({ requestOrigin: (headers: Headers) => requestOriginMock(headers) }))
 vi.mock('@{{ cookiecutter.repo_slug }}/auth-api', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   AuthApi: vi.fn().mockImplementation(() => ({ session: sessionMock })),
@@ -57,13 +55,15 @@ describe('getSession', () => {
     expect(await getLanguage()).toBe('en')
   })
 
-  it('resolves the auth origin with the local-dev-host detector', async () => {
+  it("resolves the auth origin from the request's own headers", async () => {
+    const requestHeaders = new Headers({ cookie: 'sessionid=abc' })
+    headersMock.mockReturnValue(requestHeaders)
     sessionMock.mockResolvedValue({ error: { data: {} } })
     const { getSession } = await freshGetSession()
 
     await getSession()
 
-    expect(getRequestOriginMock).toHaveBeenCalledWith(expect.anything(), { isLocalDevHost: expect.any(Function) })
+    expect(requestOriginMock).toHaveBeenCalledWith(requestHeaders)
   })
 
   it('forwards no cookie header when the incoming request has none', async () => {

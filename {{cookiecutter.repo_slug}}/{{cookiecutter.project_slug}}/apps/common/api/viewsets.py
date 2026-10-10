@@ -15,7 +15,13 @@ class BaseModelViewSet(IdempotencyMixin, _BaseModelViewSet):
         # WWW-Authenticate challenge), so a dead session looks identical to a real user lacking
         # permission - request.user.is_authenticated is what tells them apart.
         if response.status_code in (401, 403) and not request.user.is_authenticated:
-            response.delete_cookie(settings.SESSION_COOKIE_NAME)
+            # Browsers key a cookie by name, domain and path: deleting without the domain it was set on
+            # leaves the real one in place.
+            response.delete_cookie(
+                settings.SESSION_COOKIE_NAME,
+                domain=settings.SESSION_COOKIE_DOMAIN,
+                samesite=settings.SESSION_COOKIE_SAMESITE,
+            )
             # Set-Cookie is not readable from JS, and the status alone cannot tell "your session
             # is dead" apart from "logged in, just not allowed here" - both are 403.
             response["X-Session-Cleared"] = "1"

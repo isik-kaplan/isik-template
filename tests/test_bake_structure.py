@@ -238,6 +238,52 @@ def test_tls_termination_external_has_no_certbot_or_443(cookies):
     assert "__TLS__ACME_EMAIL" not in env_example
 
 
+@pytest.mark.parametrize("context_name", ["default", "self-tls"])
+def test_nginx_drops_unknown_hosts_and_sets_the_forwarded_host_itself(cookies, context_name):
+    """The frontend builds its server-side fetch URLs from the forwarded host, so no client may choose it."""
+    result = cookies.bake(extra_context=load_context(context_name))
+    assert result.exit_code == 0
+
+    nginx_conf = (result.project_path / f"{result.context['project_slug']}-server" / "template.nginx.conf").read_text()
+
+    default_server = nginx_conf.split("listen 80 default_server;")[1].split("server {")[0]
+    assert "return 444;" in default_server
+    assert 'return 200 "ok";' in default_server
+    assert nginx_conf.count("proxy_set_header X-Forwarded-Host $host;") == nginx_conf.count("http://frontend_app;")
+
+
+def test_self_tls_refuses_unknown_names_and_sends_hsts(cookies):
+    result = cookies.bake(extra_context=load_context("self-tls"))
+    assert result.exit_code == 0
+
+    nginx_conf = (result.project_path / f"{result.context['project_slug']}-server" / "template.nginx.conf").read_text()
+
+    assert "listen 443 ssl default_server;\n        ssl_reject_handshake on;" in nginx_conf
+    assert 'add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;' in nginx_conf
+
+
+def test_external_tls_sends_no_hsts_from_nginx(cookies):
+    """Behind the load balancer nginx speaks plain http, where the header means nothing; Django sends it."""
+    result = cookies.bake(extra_context=load_context("default"))
+    assert result.exit_code == 0
+
+    nginx_conf = (result.project_path / f"{result.context['project_slug']}-server" / "template.nginx.conf").read_text()
+
+    assert "Strict-Transport-Security" not in nginx_conf
+    assert "ssl_reject_handshake" not in nginx_conf
+
+
+def test_ci_checks_the_production_settings(cookies):
+    result = cookies.bake(extra_context=load_context("default"))
+    assert result.exit_code == 0
+
+    ci = yaml.safe_load((result.project_path / ".github" / "workflows" / "ci.yml").read_text())
+    runs = [step.get("run", "") for step in ci["jobs"]["backend"]["steps"]]
+    (deploy_check,) = [run for run in runs if "check --deploy" in run]
+    assert f"-e {result.context['config_prefix']}__DEBUG=false" in deploy_check
+    assert "--fail-level WARNING" in deploy_check
+
+
 @pytest.mark.parametrize(
     ("context_name", "default_count", "env_example_line", "setup_writes_count"),
     [

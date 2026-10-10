@@ -122,3 +122,28 @@ def test_e2e_stack_adds_a_self_signed_https_listener_for_passkeys(cookies):
     assert services["frontend"]["environment"]["NODE_EXTRA_CA_CERTS"] == "/certs/cert.pem"
     nginx = (result.project_path / f"{result.context['project_slug']}-server" / "template.nginx.conf").read_text()
     assert nginx.count("include /etc/nginx/extra-listen/*.conf;") == 2
+
+
+@pytest.mark.parametrize("context_name", ["default", "self-tls"])
+def test_only_the_backend_services_receive_the_backends_secrets(cookies, context_name):
+    """The public Node process, nginx, Postgres and RabbitMQ get what they read, never the whole .env."""
+    result = cookies.bake(extra_context=load_context(context_name))
+    assert result.exit_code == 0
+
+    proc = subprocess.run(
+        ["docker", "compose", "config", "--format", "json"],
+        cwd=result.project_path,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    services = json.loads(proc.stdout)["services"]
+    prefix = result.context["config_prefix"]
+    secrets = {f"{prefix}__SECRET_KEY", f"{prefix}__CREDENTIAL_KEY", f"{prefix}__SETUP__SUPERUSER__PASSWORD"}
+    for name in ("frontend", "server", "database", "broker"):
+        assert "env_file" not in services[name], name
+        assert not secrets & set(services[name].get("environment", {})), name
+    assert services["frontend"]["environment"][f"{prefix}__DOMAIN"] == result.context["domain"]
+    assert services["server"]["environment"] == {f"{prefix}__DOMAIN": result.context["domain"]}
+    for name in ("backend", "worker", "scheduler"):
+        assert f"{prefix}__SECRET_KEY" in services[name]["environment"], name

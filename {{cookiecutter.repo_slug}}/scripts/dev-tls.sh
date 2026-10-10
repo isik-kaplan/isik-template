@@ -87,8 +87,8 @@ CONF
 
 # The frontend fetches this deployment's own API server-side, so over https it is a Node client
 # verifying this certificate - and it rejects one nothing told it about, which surfaces as a 500 on
-# every page rather than as a certificate error. Written into .env rather than set in compose's
-# `environment`, which would override whatever env_file says.
+# every page rather than as a certificate error. Written into .env, which the frontend's `environment`
+# in docker-compose.yml passes on.
 CA_LINE="NODE_EXTRA_CA_CERTS=/etc/dev-tls/ca.pem"
 if ! grep -q "^NODE_EXTRA_CA_CERTS=" "$ENV_FILE"; then
   printf '\n# Written by scripts/dev-tls.sh - the CA the frontend trusts for this stack'"'"'s local https.\n%s\n' \

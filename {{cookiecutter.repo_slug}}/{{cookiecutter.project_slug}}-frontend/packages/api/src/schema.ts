@@ -12,14 +12,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description The project's accounts: anyone may list and read them, and a signed-in user reads and edits
-         *     their own through `me`.
+         * @description The project's accounts: staff list and read all of them, anybody else signed in only their own,
+         *     and a signed-in user edits their own through `me`.
          */
         get: operations["users_list"];
         put?: never;
         /**
-         * @description The project's accounts: anyone may list and read them, and a signed-in user reads and edits
-         *     their own through `me`.
+         * @description The project's accounts: staff list and read all of them, anybody else signed in only their own,
+         *     and a signed-in user edits their own through `me`.
          */
         post: operations["users_create"];
         delete?: never;
@@ -36,26 +36,26 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description The project's accounts: anyone may list and read them, and a signed-in user reads and edits
-         *     their own through `me`.
+         * @description The project's accounts: staff list and read all of them, anybody else signed in only their own,
+         *     and a signed-in user edits their own through `me`.
          */
         get: operations["users_retrieve"];
         /**
-         * @description The project's accounts: anyone may list and read them, and a signed-in user reads and edits
-         *     their own through `me`.
+         * @description The project's accounts: staff list and read all of them, anybody else signed in only their own,
+         *     and a signed-in user edits their own through `me`.
          */
         put: operations["users_update"];
         post?: never;
         /**
-         * @description The project's accounts: anyone may list and read them, and a signed-in user reads and edits
-         *     their own through `me`.
+         * @description The project's accounts: staff list and read all of them, anybody else signed in only their own,
+         *     and a signed-in user edits their own through `me`.
          */
         delete: operations["users_destroy"];
         options?: never;
         head?: never;
         /**
-         * @description The project's accounts: anyone may list and read them, and a signed-in user reads and edits
-         *     their own through `me`.
+         * @description The project's accounts: staff list and read all of them, anybody else signed in only their own,
+         *     and a signed-in user edits their own through `me`.
          */
         patch: operations["users_partial_update"];
         trace?: never;
@@ -106,8 +106,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description The project's accounts: anyone may list and read them, and a signed-in user reads and edits
-         *     their own through `me`.
+         * @description The project's accounts: staff list and read all of them, anybody else signed in only their own,
+         *     and a signed-in user edits their own through `me`.
          */
         get: operations["users_me_retrieve"];
         put?: never;

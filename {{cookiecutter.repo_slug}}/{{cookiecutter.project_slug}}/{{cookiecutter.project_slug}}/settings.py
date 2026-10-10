@@ -386,6 +386,14 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_SERIALIZER = "django_msgspec.sessions.JSONSerializer"
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
+# A year, so a visitor's browser never starts over plain http where it can be downgraded. Preload stays
+# off: getting off the browsers' list again takes months, so it is the owner's call to make.
+SECURE_HSTS_SECONDS = 0 if DEBUG else 31_536_000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+# What `check --deploy` (run in CI) is told to accept. W008: nginx or the load balancer in front of it
+# redirects http to https, before Django sees the request. W019: SAMEORIGIN above still refuses every
+# other site a frame, which is the clickjacking case. W021: preload, as above.
+SILENCED_SYSTEM_CHECKS = ["security.W008", "security.W019", "security.W021"]
 # Shared across api./admin./auth.<domain> so one session/CSRF cookie pair covers all three -
 # without this, each subdomain would need its own login.
 SESSION_COOKIE_DOMAIN = f".{config.DOMAIN}"

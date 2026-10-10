@@ -24,8 +24,8 @@ def _mark_partial(serializer):
 
 
 class UserViewSet(HistoryMixin, BaseModelViewSet):
-    """The project's accounts: anyone may list and read them, and a signed-in user reads and edits
-    their own through `me`."""
+    """The project's accounts: staff list and read all of them, anybody else signed in only their own,
+    and a signed-in user edits their own through `me`."""
 
     model = User
     endpoint = "users"
@@ -35,13 +35,13 @@ class UserViewSet(HistoryMixin, BaseModelViewSet):
     history_shows_change_of = ["password", "last_login", "is_active", "is_staff", "is_superuser"]
     # HistoryMixin's own default assumes an integer actor pk - User.id is a uuid7.
     extra_history_filters = {"actor": context_filter("user", filter_cls=CharFilter)}
-    # An account's history is its owner's and staff's to read, nobody else's. ReadOnly is the project
-    # default, restated because this list replaces it.
+    # An account and its history are its owner's and staff's to read, nobody else's. ReadOnly is the
+    # project default, restated because this list replaces it.
     permission_classes = [
         ReadOnly,
         guarding(
             IsAuthenticated & (user_property(User.is_staff) | is_owner(lambda user: user, name="IsThatUser")),
-            actions=["history"],
+            actions=["list", "retrieve", "history"],
         ),
     ]
     # The cross-user list is everybody's for staff, and only their own for anybody else signed in.
@@ -50,7 +50,8 @@ class UserViewSet(HistoryMixin, BaseModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        if self.action == "history_list" and not self.request.user.is_staff:
+        # Narrowed rather than guarded on retrieve too, so somebody else's id is a 404, not a hint it exists.
+        if self.action in ("list", "retrieve", "history_list") and not self.request.user.is_staff:
             return queryset.filter(pk=self.request.user.pk)
         return queryset
 
