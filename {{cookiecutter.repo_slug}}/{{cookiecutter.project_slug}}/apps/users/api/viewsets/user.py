@@ -30,8 +30,9 @@ class UserViewSet(HistoryMixin, BaseModelViewSet):
     model = User
     endpoint = "users"
     serializer_class = UserSerializer
-    # Worth knowing the password changed, never worth serving what it changed to or from.
-    history_withhold = ("password",)
+    # The history shows only UserSerializer's fields. These hidden ones still list their changes, as
+    # [None, None]: a password change or a sign-in is worth seeing, never the hash or the values.
+    history_shows_change_of = ["password", "last_login", "is_active", "is_staff", "is_superuser"]
     # HistoryMixin's own default assumes an integer actor pk - User.id is a uuid7.
     extra_history_filters = {"actor": context_filter("user", filter_cls=CharFilter)}
     # An account's history is its owner's and staff's to read, nobody else's. ReadOnly is the project

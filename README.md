@@ -11,9 +11,9 @@ all wired together in Docker Compose with a Playwright e2e suite (mailpit, plus 
 Authentik instance for social login) covering the full auth surface end to end.
 
 `User` is tracked with `@track_events()`, exposed at `/v0/users/{id}/history/` and
-`/v0/users/history/` to the account's owner and to staff only (password changes recorded, never
-served) and named by whoever caused them - a request's session, or, via `HistoryContextTask`, a Celery
-task the request dispatched.
+`/v0/users/history/` to the account's owner and to staff only (showing what `UserSerializer` shows;
+a password change, sign-in or permission change is listed, never its values) and named by whoever
+caused them - a request's session, or, via `HistoryContextTask`, a Celery task the request dispatched.
 
 Two-factor authentication is opt-in per user via `allauth.mfa`: an authenticator app (TOTP),
 recovery codes, and passkeys - a passkey is a second factor only, never a password replacement

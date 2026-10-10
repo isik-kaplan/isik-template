@@ -12,7 +12,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from apps.users import login_policy
-from apps.users.backends import AuthenticationBackend, UsernameOREmailModelBackend
+from apps.users.backends import AuthenticationBackend
 from apps.users.models.site_settings import SiteSettings
 from apps.users.models.user import User
 from apps.users.tests.conftest import PASSWORD
@@ -128,13 +128,12 @@ def test_the_sweep_signs_out_everybody_the_rung_excludes_and_nobody_else(alice, 
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("backend", [UsernameOREmailModelBackend, AuthenticationBackend])
-def test_both_password_backends_refuse_whoever_the_ladder_shuts_out(alice, backend):
+def test_the_password_backend_refuses_whoever_the_ladder_shuts_out(alice):
     staff = User.objects.create_user(username="staff", email="staff@example.test", password=PASSWORD, is_staff=True)
     SiteSettings.objects.create(login_policy=LoginPolicy.STAFF)
 
-    assert backend().authenticate(None, username="alice", password=PASSWORD) is None
-    assert backend().authenticate(None, username="staff", password=PASSWORD) == staff
+    assert AuthenticationBackend().authenticate(None, username="alice", password=PASSWORD) is None
+    assert AuthenticationBackend().authenticate(None, username="staff", password=PASSWORD) == staff
 
 
 @pytest.mark.django_db
@@ -155,10 +154,10 @@ def test_a_session_the_sweep_missed_stops_working_on_its_next_request(client, si
     assert client.get("/v0/users/me/").status_code == 403
 
 
-@pytest.mark.parametrize("backend", [UsernameOREmailModelBackend, AuthenticationBackend])
-def test_each_backend_is_listed_under_the_path_a_login_records(backend):
+def test_the_backend_is_listed_under_the_path_a_login_records():
     """allauth stores a social login's backend as module + class name; listed any other way, the
     session it opens is anonymous on the very next request."""
+    backend = AuthenticationBackend
     assert f"{backend.__module__}.{backend.__name__}" in settings.AUTHENTICATION_BACKENDS
 
 
@@ -178,9 +177,8 @@ def test_a_password_sign_in_the_ladder_admits_goes_through(headless, alice):
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("backend", [UsernameOREmailModelBackend, AuthenticationBackend])
-def test_an_inactive_account_is_refused_whatever_the_ladder_says(alice, backend):
+def test_an_inactive_account_is_refused_whatever_the_ladder_says(alice):
     alice.is_active = False
     alice.save()
 
-    assert backend().user_can_authenticate(alice) is False
+    assert AuthenticationBackend().user_can_authenticate(alice) is False

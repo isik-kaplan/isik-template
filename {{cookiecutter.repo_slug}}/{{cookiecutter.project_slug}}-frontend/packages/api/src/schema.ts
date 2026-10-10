@@ -247,30 +247,34 @@ export interface components {
             readonly updated_at: string;
         };
         UserHistory: {
-            /** Format: date-time */
-            readonly last_login: string | null;
-            readonly is_superuser: boolean;
-            readonly username: string;
-            readonly first_name: string;
-            readonly last_name: string;
-            /** Format: email */
-            readonly email: string;
-            readonly is_staff: boolean;
-            readonly is_active: boolean;
-            /** Format: date-time */
-            readonly date_joined: string;
-            /** Format: date-time */
-            readonly created_at: string;
-            /** Format: date-time */
-            readonly updated_at: string;
-            /** Format: uuid */
-            readonly id: string;
-            readonly language: string;
             readonly event_id: number;
             /** Format: date-time */
             readonly event_created_at: string;
             readonly action: string;
             readonly changes: unknown;
+            /**
+             * Format: uuid
+             * @description Identifies this record. A UUIDv7, so ids sort roughly by when they were created.
+             */
+            readonly id: string;
+            /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
+            username: string;
+            /** Email address */
+            email?: string;
+            first_name?: string;
+            last_name?: string;
+            /** @description The language this user chose for the interface, or blank to follow their browser's. */
+            language?: components["schemas"]["UserLanguage"] | components["schemas"]["Blank"];
+            /**
+             * Format: date-time
+             * @description When the row was created, by the database's clock. Never changes.
+             */
+            readonly created_at: string;
+            /**
+             * Format: date-time
+             * @description When the row last changed, by the database's clock.
+             */
+            readonly updated_at: string;
             readonly actor_id: string | null;
         };
         /** @enum {string} */

@@ -213,12 +213,11 @@ AUTH_PASSWORD_VALIDATORS = [
 
 AUTH_USER_MODEL = "users.User"
 
-# The project's own subclasses of isik's and allauth's backends, so both answer to the login policy
-# (apps/users/login_policy.py) - a sign-in one refuses cannot get in through the other. Spelled by
+# allauth's backend, subclassed so it answers to the login policy (apps/users/login_policy.py). It
+# signs in by username or email per ACCOUNT_LOGIN_METHODS, the admin's form included. Spelled by
 # defining module, not the package re-export: allauth records a social login under that path, and a
 # session whose path is not listed here is anonymous from its next request.
 AUTHENTICATION_BACKENDS = [
-    "apps.users.backends.username_or_email.UsernameOREmailModelBackend",
     "apps.users.backends.authentication.AuthenticationBackend",
 ]
 

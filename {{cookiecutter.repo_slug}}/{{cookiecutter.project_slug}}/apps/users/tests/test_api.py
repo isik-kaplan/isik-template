@@ -118,6 +118,34 @@ def test_a_users_history_records_its_creation(client):
 
 
 @pytest.mark.django_db
+def test_a_users_history_lists_a_hidden_change_without_its_values(client):
+    user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
+    user.first_name = "Alice"
+    user.is_staff = True
+    user.save()
+    client.force_login(user)
+
+    response = client.get(f"/v0/users/{user.id}/history/?action=update")
+
+    (_sign_in, event) = response.json()["results"]  # newest first
+    assert event["changes"]["first_name"] == ["", "Alice"]
+    assert event["changes"]["is_staff"] == [None, None]
+    assert "is_staff" not in event
+    assert "last_login" not in event
+
+
+@pytest.mark.django_db
+def test_a_sign_in_is_listed_as_a_last_login_change(client):
+    user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
+    client.force_login(user)
+
+    response = client.get(f"/v0/users/{user.id}/history/?action=update")
+
+    (event,) = response.json()["results"]
+    assert event["changes"]["last_login"] == [None, None]
+
+
+@pytest.mark.django_db
 def test_a_password_change_is_recorded_but_never_served(client):
     # UserSerializer doesn't expose "password" at all - changed straight on the model here rather
     # than through a real password-change request (test_auth.py's own job to cover end to end).
