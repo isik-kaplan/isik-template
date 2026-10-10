@@ -5,8 +5,8 @@ from unittest.mock import patch
 
 import pytest
 from allauth.core.context import request_context
-from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core import mail
 from django.test import RequestFactory
 from django.utils import translation
 
@@ -15,17 +15,19 @@ from apps.users.adapters.social_account import SocialAccountAdapter
 
 
 @pytest.mark.django_db
-def test_send_mail_renders_and_sends_with_the_request_bound_by_allauth():
+def test_send_mail_renders_with_the_request_bound_by_allauth_and_leaves_the_sending_to_a_task():
     request = RequestFactory().get("/", HTTP_HOST="auth.example.test")
 
     with (
         request_context(request),
         patch("apps.users.adapters.account.mjml_template", return_value="<html>body</html>") as mjml,
         patch("apps.users.adapters.account.text_template", side_effect=["text body", "  Subject line  \n"]) as text,
-        patch("apps.users.adapters.account.send_mail") as send,
+        patch("apps.users.adapters.account.send_account_mail") as task,
+        patch("apps.users.tasks.account_mail.send_mail") as smtp,
     ):
         AccountAdapter().send_mail("account/email/email_confirmation", "jane@example.test", {"key": "abc"})
 
+    smtp.assert_not_called()
     mjml.assert_called_once_with(
         "account/email/email_confirmation/message.html", {"key": "abc", "email": "jane@example.test"}, request
     )
@@ -33,14 +35,7 @@ def test_send_mail_renders_and_sends_with_the_request_bound_by_allauth():
         (("account/email/email_confirmation/message.txt", {"key": "abc", "email": "jane@example.test"}, request),),
         (("account/email/email_confirmation/subject.txt", {"key": "abc", "email": "jane@example.test"}, request),),
     ]
-    send.assert_called_once_with(
-        "Subject line",
-        "text body",
-        settings.DEFAULT_FROM_EMAIL,
-        ["jane@example.test"],
-        fail_silently=False,
-        html_message="<html>body</html>",
-    )
+    task.delay.assert_called_once_with("Subject line", "text body", "<html>body</html>", "jane@example.test")
 
 
 def _languages_a_mail_renders_in(user):
@@ -55,7 +50,7 @@ def _languages_a_mail_renders_in(user):
         request_context(RequestFactory().get("/")),
         patch("apps.users.adapters.account.mjml_template", side_effect=render),
         patch("apps.users.adapters.account.text_template", side_effect=render),
-        patch("apps.users.adapters.account.send_mail"),
+        patch("apps.users.adapters.account.send_account_mail"),
     ):
         AccountAdapter().send_mail("account/email/email_confirmation", "jane@example.test", {"user": user})
     return set(seen)
@@ -88,14 +83,13 @@ def test_mail_waits_for_the_transaction_that_asked_for_it(django_capture_on_comm
         request_context(request),
         patch("apps.users.adapters.account.mjml_template", return_value="<html>body</html>"),
         patch("apps.users.adapters.account.text_template", side_effect=["text body", "Subject line"]),
-        patch("apps.users.adapters.account.send_mail") as send,
     ):
         with django_capture_on_commit_callbacks(execute=True):
             AccountAdapter().send_mail("account/email/email_confirmation", "jane@example.test", {"key": "abc"})
-            send.assert_not_called()
+            assert mail.outbox == []
 
-    send.assert_called_once()
-    assert send.call_args.args[3] == ["jane@example.test"]
+    (sent,) = mail.outbox
+    assert sent.to == ["jane@example.test"]
 
 
 def test_populate_user_gives_the_unsaved_user_a_real_timestamp_not_the_db_default_sentinel():

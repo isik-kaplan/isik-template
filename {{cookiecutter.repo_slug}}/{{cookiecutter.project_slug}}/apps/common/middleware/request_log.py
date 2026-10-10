@@ -20,12 +20,18 @@ class RequestLogMiddleware(Middleware):
 
     def __call__(self, request):
         started = time.monotonic()
-        # Read before the view, which is the only time it is the *request's* count rather than the
-        # count plus whatever the response rendering went on to do.
-        queries_before = len(connection.queries_log)
         # Taken before the response, because a view may consume the stream and leave nothing behind.
         body = body_of(request)
-        response = self.get_response(request)
+        queries = 0
+
+        # Counted rather than read off `queries_log`, which Django fills only under DEBUG.
+        def count(execute, *query):
+            nonlocal queries
+            queries += 1
+            return execute(*query)
+
+        with connection.execute_wrapper(count):
+            response = self.get_response(request)
         elapsed_ms = round((time.monotonic() - started) * 1000)
         if worth_logging(response.status_code, elapsed_ms):
             log(
@@ -34,7 +40,7 @@ class RequestLogMiddleware(Middleware):
                 path=request.path,
                 status=response.status_code,
                 duration_ms=elapsed_ms,
-                db_queries=len(connection.queries_log) - queries_before,
+                db_queries=queries,
                 client_ip=client_ip_of(request),
                 query=query_of(request) or None,
                 body=body or None,

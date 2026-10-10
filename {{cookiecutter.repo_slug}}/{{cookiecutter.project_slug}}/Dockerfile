@@ -20,9 +20,12 @@ COPY . /{{ cookiecutter.project_slug }}/
 # file's root package entry is self-referential (name = "<project_slug>"), so one shipped in the
 # template would mismatch every project generated under a different name. See
 # hooks/post_gen_project.py's generate_lock_files().
+# Outside the source tree, which docker-compose.yml bind-mounts over: a venv inside it would need a
+# volume to survive the mount, and Compose re-attaches that volume's stale copy after every rebuild.
+ENV UV_PROJECT_ENVIRONMENT=/venv
 RUN uv sync --frozen
 
-ENV PATH="/{{ cookiecutter.project_slug }}/.venv/bin:$PATH"
+ENV PATH="/venv/bin:$PATH"
 
 EXPOSE 80
 

@@ -2,6 +2,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
+from allauth.usersessions.models import UserSession
 from django.conf import settings
 from django.contrib.admin.sites import site
 from django.contrib.sessions.backends.db import SessionStore
@@ -29,9 +30,11 @@ def superuser(client, db):
 
 
 def _a_session_of(user):
+    """A signed-in session, with the row allauth writes beside it on every sign-in."""
     store = SessionStore()
     store["_auth_user_id"] = str(user.pk)
     store.create()
+    UserSession.objects.create(user=user, session_key=store.session_key, ip="127.0.0.1")
     return store.session_key
 
 

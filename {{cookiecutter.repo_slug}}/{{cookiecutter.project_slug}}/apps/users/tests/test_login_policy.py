@@ -7,6 +7,8 @@ from django.contrib.auth import authenticate
 from django.contrib.sessions.backends.db import SessionStore
 from django.contrib.sessions.models import Session
 from django.core.exceptions import ValidationError
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from hypothesis import given
 from hypothesis import strategies as st
@@ -125,6 +127,39 @@ def test_the_sweep_signs_out_everybody_the_rung_excludes_and_nobody_else(alice, 
     assert [(line["event"], line["policy"], line["sessions"]) for line in audited] == [
         ("login_policy.swept", LoginPolicy.STAFF, 1)
     ]
+
+
+def _queries_of_a_sweep_over(people):
+    for n in range(people):
+        _session_of(User.objects.create_user(username=f"member-{people}-{n}", email=f"m{people}-{n}@example.test"))
+    with CaptureQueriesContext(connection) as captured:
+        assert login_policy.sweep(LoginPolicy.STAFF) == people
+    return len(captured)
+
+
+@pytest.mark.django_db
+def test_the_sweep_costs_the_same_queries_however_many_it_signs_out():
+    """One admin request and one transaction: a sweep that grew with the users would hold both for as
+    long as the user table is long."""
+    assert _queries_of_a_sweep_over(1) == _queries_of_a_sweep_over(5)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("policy", "shut_out"),
+    [
+        (LoginPolicy.EVERYONE, set()),
+        (LoginPolicy.STAFF, {"member"}),
+        (LoginPolicy.SUPERUSERS, {"member", "staff"}),
+    ],
+)
+def test_who_is_shut_out_is_asked_of_the_database_as_the_ladder_says(policy, shut_out):
+    User.objects.create_user(username="member", email="member@example.test")
+    User.objects.create_user(username="staff", email="staff@example.test", is_staff=True)
+    User.objects.create_user(username="root", email="root@example.test", is_superuser=True)
+    User.objects.create_user(username="both", email="both@example.test", is_staff=True, is_superuser=True)
+
+    assert set(login_policy.shut_out(policy).values_list("username", flat=True)) == shut_out
 
 
 @pytest.mark.django_db

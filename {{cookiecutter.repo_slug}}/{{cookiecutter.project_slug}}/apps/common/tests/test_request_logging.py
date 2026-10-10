@@ -9,10 +9,11 @@ import json
 import time
 
 import pytest
+from allauth.account.adapter import get_adapter
 from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.test import RequestFactory
-from django.test.utils import CaptureQueriesContext
 from hypothesis import given
 from hypothesis import strategies as st
 
@@ -150,6 +151,44 @@ class TestWhatItMaySay:
 
         assert body_of(request) == {"unparsed_bytes": len(sent)}
 
+    def test_a_json_body_past_the_in_memory_limit_is_reported_by_size_without_being_read(self, settings):
+        """`request.body` raises past the limit, so reading it would refuse a request the view accepts."""
+        settings.DATA_UPLOAD_MAX_MEMORY_SIZE = 10
+        sent = json.dumps({"password": "hunter2"}).encode()
+        request = RequestFactory().post("/x/", data=sent, content_type="application/json")
+
+        assert body_of(request) == {"unparsed_bytes": len(sent)}
+        assert not hasattr(request, "_body"), "the stream was read"
+
+    def test_a_json_body_exactly_at_the_limit_is_still_read(self, settings):
+        sent = json.dumps({"page": "2"}).encode()
+        settings.DATA_UPLOAD_MAX_MEMORY_SIZE = len(sent)
+
+        assert body_of(RequestFactory().post("/x/", data=sent, content_type="application/json")) == {"page": "2"}
+
+    def test_no_limit_at_all_reads_any_json_body(self, settings):
+        settings.DATA_UPLOAD_MAX_MEMORY_SIZE = None
+        request = RequestFactory().post("/x/", data=json.dumps({"page": "2"}), content_type="application/json")
+
+        assert body_of(request) == {"page": "2"}
+
+    def test_a_form_is_reported_by_size_without_being_read(self):
+        """Django parses a form off the stream itself, so reading the body here would buffer an upload whole."""
+        request = RequestFactory().post("/x/", data={"password": "hunter2"})
+
+        assert body_of(request) == {"unparsed_bytes": int(request.META["CONTENT_LENGTH"])}
+        assert not hasattr(request, "_body"), "the stream was read"
+
+    @pytest.mark.parametrize("declared", [None, "not-a-number"], ids=["missing", "garbled"])
+    def test_a_length_nobody_can_read_is_a_body_nobody_sent(self, declared):
+        """Django reads no further than the declared length either, so what it would hand a view is empty."""
+        request = RequestFactory().post("/x/", data=b"\x89PNG", content_type="image/png")
+        del request.META["CONTENT_LENGTH"]
+        if declared is not None:
+            request.META["CONTENT_LENGTH"] = declared
+
+        assert body_of(request) == {}
+
     def test_the_three_headers_worth_stealing_are_not_kept(self):
         """`Authorization`, `Cookie` and `X-CSRFToken` are the highest-value secrets in a request
         and none of them is in the body, so a body-only rule would miss all three."""
@@ -168,26 +207,33 @@ class TestWhatItMaySay:
 
 
 class TestWhoseAddress:
-    def test_it_is_the_one_nginx_saw(self):
-        """`X-Real-IP` is overwritten on every proxy pass, so it is nginx's word rather than the
-        caller's - which `X-Forwarded-For`, appended to, is not."""
-        request = RequestFactory().get("/x/", headers={"x-real-ip": "203.0.113.44"})
+    def test_it_is_the_client_behind_the_trusted_proxies_and_the_one_allauth_sees(self, settings):
+        """Behind a load balancer and nginx, the address nginx saw is the balancer's on every line."""
+        settings.ALLAUTH_TRUSTED_PROXY_COUNT = 2
+        request = RequestFactory().get("/x/", headers={"x-forwarded-for": "203.0.113.44, 10.0.0.2"})
+        request.META["REMOTE_ADDR"] = "172.20.0.5"
 
         assert client_ip_of(request) == "203.0.113.44"
+        assert client_ip_of(request) == get_adapter().get_client_ip(request)
 
-    def test_an_address_nobody_recorded_is_empty_rather_than_missing(self):
+    def test_with_no_proxy_trusted_the_header_is_the_callers_word_and_ignored(self, settings):
+        settings.ALLAUTH_TRUSTED_PROXY_COUNT = 0
+        request = RequestFactory().get("/x/", headers={"x-forwarded-for": "1.2.3.4"})
+        request.META["REMOTE_ADDR"] = "172.20.0.1"
+
+        assert client_ip_of(request) == "172.20.0.1"
+
+    def test_an_address_nobody_recorded_is_empty_rather_than_a_refused_request(self):
         request = RequestFactory().get("/x/")
         del request.META["REMOTE_ADDR"]
 
         assert client_ip_of(request) == ""
 
-    def test_a_caller_cannot_claim_one_by_sending_the_header_itself(self):
-        """Not a property of this function - nginx replaces it - but pinned so a change to reading
-        `X-Forwarded-For` instead has to argue with this test first."""
-        request = RequestFactory().get("/x/", headers={"x-forwarded-for": "1.2.3.4"})
-        request.META["REMOTE_ADDR"] = "172.20.0.1"
+    def test_a_header_shorter_than_the_proxies_trusted_is_empty_rather_than_a_crash(self, settings):
+        settings.ALLAUTH_TRUSTED_PROXY_COUNT = 2
+        request = RequestFactory().get("/x/", headers={"x-forwarded-for": "203.0.113.44"})
 
-        assert client_ip_of(request) == "172.20.0.1"
+        assert client_ip_of(request) == ""
 
 
 @pytest.mark.django_db
@@ -231,13 +277,31 @@ def test_the_line_carries_what_a_write_sent_and_who_sent_it(logged):
         path="/x/",
         data=json.dumps({"page": "2", "password": "hunter2"}),
         content_type="application/json",
-        headers={"x-real-ip": "203.0.113.44"},
     )
 
     (written,) = logged
     assert written["body"] == {"page": "2", "password": REDACTED}
-    assert written["client_ip"] == "203.0.113.44"
+    assert written["client_ip"] == "127.0.0.1"
     assert written["query"] is None
+
+
+@pytest.mark.django_db
+def test_an_upload_past_the_in_memory_limit_reaches_the_view_whole(logged):
+    """A multipart upload is streamed to disk by Django and only the body cap would refuse it - which
+    reading `request.body` for the log line used to apply to every file."""
+    content = b"x" * (3 * 1024 * 1024)
+    assert len(content) > settings.DATA_UPLOAD_MAX_MEMORY_SIZE
+    request = RequestFactory().post("/x/", data={"file": SimpleUploadedFile("big.bin", content)})
+    received = []
+
+    def view(request):
+        received.append(request.FILES["file"].read())
+        return type("R", (), {"status_code": 400})()
+
+    RequestLogMiddleware(get_response=view)(request)
+
+    assert received == [content]
+    assert logged[0]["body"] == {"unparsed_bytes": int(request.META["CONTENT_LENGTH"])}
 
 
 @pytest.mark.django_db
@@ -248,20 +312,21 @@ def test_an_empty_write_leaves_the_body_off_the_line(logged):
 
 
 @pytest.mark.django_db
-def test_the_line_counts_the_requests_own_queries_and_nobody_elses(logged):
-    """What the request did, not what the process had done before it: a count read as a total is
-    the number that makes every later request look worse than the one before."""
+def test_the_line_counts_the_requests_own_queries_and_nobody_elses(logged, settings):
+    """What the request did, not what the process had done before it - and with DEBUG off, which is
+    where somebody hunting an N+1 is reading it."""
+    settings.DEBUG = False
 
-    def two_queries(_):
-        connection.cursor().execute("SELECT 1")
-        connection.cursor().execute("SELECT 2")
+    def three_queries(_):
+        for n in range(3):
+            connection.cursor().execute(f"SELECT {n}")
         return type("R", (), {"status_code": 500})()
 
-    with CaptureQueriesContext(connection):
-        connection.cursor().execute("SELECT 0")
-        RequestLogMiddleware(get_response=two_queries)(RequestFactory().get("/x/"))
+    connection.cursor().execute("SELECT 0")
+    RequestLogMiddleware(get_response=three_queries)(RequestFactory().get("/x/"))
+    connection.cursor().execute("SELECT 4")
 
-    assert logged[0]["db_queries"] == 2
+    assert logged[0]["db_queries"] == 3
 
 
 @pytest.mark.django_db

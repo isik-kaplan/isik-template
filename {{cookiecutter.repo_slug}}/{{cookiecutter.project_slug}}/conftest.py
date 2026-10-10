@@ -13,6 +13,7 @@ from isik.django.apps.idempotency.drf import IdempotencyMixin
 from apps.common.logging.emit import AUDIT_LOGGER, LOGGER
 from apps.common.logging.events import PAYLOAD
 
+from {{ cookiecutter.project_slug }}.celery import app as celery_app
 from {{ cookiecutter.project_slug }}.config import CONFIG as config
 
 
@@ -41,6 +42,14 @@ def _commit_callbacks_run_where_a_request_would_commit(request, monkeypatch):
         return
     monkeypatch.setattr(transaction, "on_commit", lambda callback, using=None, robust=False: callback())
     yield
+
+
+@pytest.fixture(autouse=True)
+def _tasks_run_in_process(monkeypatch):
+    """A dispatched task runs where it was sent, failures and all, because no worker or broker exists
+    here - account mail goes through one, and a suite that cannot see it sent sees no mail at all."""
+    monkeypatch.setattr(celery_app.conf, "task_always_eager", True)
+    monkeypatch.setattr(celery_app.conf, "task_eager_propagates", True)
 
 
 @pytest.fixture(autouse=True)

@@ -14,6 +14,9 @@ would miss all three.
 
 import json
 
+from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured, PermissionDenied
+
 from {{ cookiecutter.project_slug }}.config import CONFIG
 
 
@@ -37,19 +40,34 @@ def values_of(pairs) -> dict:
 def body_of(request) -> dict | None:
     """What a write carried, by name.
 
-    Read off the already-buffered body rather than the stream: Django reads a form body itself, and
-    consuming it here would empty what the view is about to parse. A body that is not JSON is
-    reported by size alone - it may be an upload, and an upload's content is never a log line.
+    Only a JSON body within Django's in-memory limit is read: `request.body` raises past that limit,
+    which a multipart upload streamed to disk never would, and anything else - an upload above all,
+    whose content is never a log line - is reported by size alone without touching the stream.
     """
     if request.method not in ("POST", "PUT", "PATCH"):
         return None
+    size = size_of(request)
+    # Django reads no further than the declared length, so nothing declared is nothing sent.
+    if not size:
+        return {}
+    limit = settings.DATA_UPLOAD_MAX_MEMORY_SIZE
+    if request.content_type != "application/json" or (limit is not None and size > limit):
+        return {"unparsed_bytes": size}
     try:
-        parsed = json.loads(request.body or b"{}")
+        parsed = json.loads(request.body)
     except (ValueError, UnicodeDecodeError):
-        return {"unparsed_bytes": len(request.body)}
+        return {"unparsed_bytes": size}
     if not isinstance(parsed, dict):
-        return {"unparsed_bytes": len(request.body)}
+        return {"unparsed_bytes": size}
     return values_of(parsed.items())
+
+
+def size_of(request) -> int:
+    """The body's declared length, read the way Django reads it, so an unreadable one counts as none."""
+    try:
+        return int(request.META.get("CONTENT_LENGTH") or 0)
+    except ValueError:
+        return 0
 
 
 def query_of(request) -> dict:
@@ -61,15 +79,18 @@ def headers_of(request) -> dict:
 
 
 def client_ip_of(request) -> str:
-    """The address nginx saw, not the one the caller claimed.
+    """The caller's address the way allauth reads it, so this line and its rate limits agree.
 
-    `X-Real-IP` is set from `$remote_addr` and *overwritten* on every proxy pass, so a client sending
-    one of its own has it replaced - unlike `X-Forwarded-For`, which appends and whose left-hand
-    entries are whatever the caller wrote. A proxy in front of nginx makes this that proxy's
-    address, which is a deployment fact rather than something this can correct.
+    allauth honours `TRUSTED_PROXY_COUNT` over `X-Forwarded-For`; a request whose address it cannot
+    work out is still worth its line, so that refusal is an empty address here.
     """
-    # Read from META rather than `headers`, whose case-insensitive lookup no test could tell apart.
-    return request.META.get("HTTP_X_REAL_IP") or request.META.get("REMOTE_ADDR", "")
+    # Imported here: settings.py imports this module, and allauth's adapter needs the apps loaded.
+    from allauth.account.adapter import get_adapter
+
+    try:
+        return get_adapter().get_client_ip(request)
+    except (PermissionDenied, ImproperlyConfigured):
+        return ""
 
 
 def worth_logging(status: int, elapsed_ms: int) -> bool:

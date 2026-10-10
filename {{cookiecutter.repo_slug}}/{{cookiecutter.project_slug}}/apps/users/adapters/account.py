@@ -1,14 +1,12 @@
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.core import context as allauth_context
-from django.conf import settings
-from django.core.mail import send_mail
-from django.db import transaction
 from django.utils import translation
 
 from apps.common.email import mjml_template, text_template
 from apps.common.language import saved_language
 from apps.users.login_policy import admits
 from apps.users.models.site_settings import SiteSettings
+from apps.users.tasks.account_mail import send_account_mail
 
 
 class AccountAdapter(DefaultAccountAdapter):
@@ -41,15 +39,6 @@ class AccountAdapter(DefaultAccountAdapter):
             html_content = mjml_template(f"{prefix}/message.html", context, request)
             text_content = text_template(f"{prefix}/message.txt", context, request)
             subject = text_template(f"{prefix}/subject.txt", context, request).strip()
-        # After the transaction that asked for it, if there is one: mail cannot be rolled back, and a
-        # message about a row that never landed is worse than one that arrives late.
-        transaction.on_commit(
-            lambda: send_mail(
-                subject,
-                text_content,
-                settings.DEFAULT_FROM_EMAIL,
-                [email],
-                fail_silently=False,
-                html_message=html_content,
-            )
-        )
+        # Rendered here, where the request is, and sent by the worker: an SMTP host that hangs or refuses
+        # holds up a task rather than this request. The task waits for the transaction that asked for it.
+        send_account_mail.delay(subject, text_content, html_content, email)

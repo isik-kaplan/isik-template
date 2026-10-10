@@ -501,6 +501,9 @@ EMAIL_PORT = config.EMAIL.SMTP.PORT
 EMAIL_HOST_USER = config.EMAIL.SMTP.USER
 EMAIL_HOST_PASSWORD = config.EMAIL.SMTP.PASSWORD
 EMAIL_USE_TLS = config.EMAIL.SMTP.USE_TLS
+# Without one a mail host that drops packets holds the sending worker forever; with one it raises, and
+# the account-mail task retries.
+EMAIL_TIMEOUT = 10
 DEFAULT_FROM_EMAIL = config.EMAIL.DEFAULT_FROM
 
 if config.SENTRY.DSN:  # see pyproject.toml's coverage exclude_lines for why

@@ -67,7 +67,6 @@ services:
     env_file: .env
     volumes:
       - ./{{ cookiecutter.project_slug }}:/{{ cookiecutter.project_slug }}
-      - /{{ cookiecutter.project_slug }}/.venv
     networks:
       internal:
         # nginx's named upstream (server/template.nginx.conf) targets this, not the bare
@@ -98,7 +97,6 @@ services:
     env_file: .env
     volumes:
       - ./{{ cookiecutter.project_slug }}:/{{ cookiecutter.project_slug }}
-      - /{{ cookiecutter.project_slug }}/.venv
     networks:
       - internal
       - external
@@ -117,7 +115,6 @@ services:
     env_file: .env
     volumes:
       - ./{{ cookiecutter.project_slug }}:/{{ cookiecutter.project_slug }}
-      - /{{ cookiecutter.project_slug }}/.venv
     networks:
       - internal
       - external

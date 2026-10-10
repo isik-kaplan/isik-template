@@ -455,3 +455,32 @@ def test_tls_termination_self_has_no_local_https_override(cookies):
     proc = subprocess.run(["bash", "scripts/dev-tls.sh"], cwd=result.project_path, capture_output=True, text=True)
     assert proc.returncode == 1
     assert "already serves https" in proc.stderr
+
+
+def test_uwsgi_stops_on_sigterm_and_names_its_worker_count_once(cookies):
+    result = cookies.bake(extra_context=load_context("default"))
+    assert result.exit_code == 0
+
+    ini = (result.project_path / result.context["project_slug"] / "uwsgi.ini").read_text()
+    keys = [line.split("=", 1)[0].strip() for line in ini.splitlines() if "=" in line and not line.startswith(";")]
+
+    # Without it uWSGI 2.0 reads `docker stop`'s SIGTERM as a reload.
+    assert "die-on-term" in keys
+    # `workers` is an alias of `processes`, so two of them leave one silently overriding the other.
+    assert [key for key in keys if key in ("processes", "workers")] == ["processes"]
+    assert "harakiri" in keys
+
+
+def test_the_backend_venv_lives_outside_the_bind_mounted_source(cookies):
+    """Compose re-attaches a recreated container's anonymous volumes, so a venv kept in one hides the
+    rebuilt image's dependencies until somebody remembers `up -V`."""
+    result = cookies.bake(extra_context=load_context("default"))
+    assert result.exit_code == 0
+
+    compose = yaml.safe_load((result.project_path / "docker-compose.yml").read_text())
+    mounts = [volume for service in compose["services"].values() for volume in service.get("volumes", [])]
+    assert not [volume for volume in mounts if ".venv" in volume]
+
+    dockerfile = (result.project_path / result.context["project_slug"] / "Dockerfile").read_text()
+    assert "ENV UV_PROJECT_ENVIRONMENT=/venv" in dockerfile
+    assert 'ENV PATH="/venv/bin:$PATH"' in dockerfile

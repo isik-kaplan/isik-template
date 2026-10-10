@@ -154,7 +154,9 @@ ends up configured with; a visitor with no preference gets their browser's own l
 - **Every request is a transaction** (`ATOMIC_REQUESTS`). A view opts out only through
   `apps.common.transactions.not_atomic(reason)`, and a system check refuses one that used Django's
   `non_atomic_requests` directly. Anything that cannot roll back (mail, Celery dispatch) waits for
-  `transaction.on_commit` - `OnCommitTask` and `AccountAdapter.send_mail` already do.
+  `transaction.on_commit` - `OnCommitTask` and `AccountAdapter.send_mail` already do. Account mail
+  is rendered in the request and sent by the `worker`, which retries an SMTP outage, so under DEBUG
+  the console backend prints it in the worker's log rather than the backend's.
 - **Every POST takes an `Idempotency-Key` header** (a UUID per attempt, not per call). `BaseModelViewSet`
   carries isik's `IdempotencyMixin`, so a retried request replays the first answer rather than doing the
   work twice; a system check refuses a routed POST that neither honours a key nor names a
