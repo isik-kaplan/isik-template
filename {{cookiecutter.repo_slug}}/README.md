@@ -95,6 +95,11 @@ deployment mode writes for you, adding one per further proxy. `.env.example` set
 development, where the browser reaches nginx directly - left at `1` behind a load balancer, every
 visitor shares its address and one rate-limit bucket.
 
+nginx publishes on `127.0.0.1` only, which suits a load balancer on the same host. One on another host
+(an AWS ALB, say) reaches it once `{{ cookiecutter.config_prefix }}__HTTP_BIND` is set to this host's private address. Firewall
+that port to the load balancer alone: a request that reaches nginx directly skips it, and the proxy count
+above then trusts an entry the client wrote.
+
 ### Local HTTPS
 
 Some browser APIs exist only in a secure context - WebAuthn/passkeys, service workers, parts of the
@@ -230,6 +235,33 @@ as gated or not an act.
 For an incident, **Site settings** in the admin holds a "who may sign in" ladder (everyone, staff,
 superusers only). Raising it signs out everybody it excludes straight away and refuses them on both
 the password and the social sign-in; only a superuser can choose the top rung.
+
+## Starter kit
+
+These ship tested and mutation-clean but with nothing calling them yet: building blocks for what most projects
+grow into. Use one where it fits, or delete it with its tests and catalog entries the day it is clear it never
+will.
+
+- **`RemoteCombobox`** (`components/app/RemoteCombobox.tsx`): a picker that searches the server as you type,
+  for choosing among more rows than one page holds. Pass `search(term, page)`, wrapping a list call in
+  `pageOf(...)`, and `onPick`.
+- **`Editor`** (`components/app/Editor.tsx`): a tiptap rich-text editor that reports HTML through `onChange`.
+  Add tiptap extensions as the content model needs them.
+- **`Markdown`** (`components/app/Markdown.tsx`): renders a Markdown string as a styled page, for content
+  policy, terms or a changelog. `<Markdown>{source}</Markdown>`.
+- **`LoadingOverlay`** (`components/app/LoadingOverlay.tsx`): dims a table, form or panel while it loads
+  without unmounting it, so scroll position and layout survive. Wrap the content and pass `loading`.
+- **`dialog`** (`components/base/dialog.tsx`): the modal primitives (`Dialog`, `DialogTrigger`,
+  `DialogContent`, ...), for a confirmation or a short form over the page.
+- **`skeleton`** (`components/base/skeleton.tsx`): a placeholder block that holds a shape while data loads.
+  `<Skeleton className="h-4 w-32" />`.
+- **`EncryptedField`** (`apps/common/fields/encrypted.py`): a column for a secret to somebody else's system,
+  stored enciphered. Declare `EncryptedField()`, add a `BuiltTrigger` built from
+  `apps.common.sql.refuse_plaintext`, and set `CREDENTIAL_KEY` (`scripts/setup.sh` generates one for a
+  deployment).
+- **The DRF reauthentication gate** (`apps/common/api/reauthentication.py`): the same "prove it is you" step
+  the account routes use, for your own viewsets. Mix `ProvesWhoTheyAre` into the viewset and name exempt
+  actions in `reauthentication_exempt_actions` with a reason; everything else is gated.
 
 ## Testing
 

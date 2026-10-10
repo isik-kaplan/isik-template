@@ -7,6 +7,7 @@ for a line carrying a password beside them.
 
 import json
 import time
+from urllib.parse import urlencode
 
 import pytest
 from allauth.account.adapter import get_adapter
@@ -356,6 +357,21 @@ class TestSentryKeepsTheSameRule:
         event = scrub_event({"request": {"data": {"page": "2", "password": "hunter2"}}}, hint=None)
 
         assert event == {"request": {"data": {"page": "2", "password": REDACTED}}}
+
+    def test_a_query_string_is_narrowed_the_same_way(self):
+        event = scrub_event({"request": {"query_string": "page=2&key=s%20ecret&blank="}}, hint=None)
+
+        assert event == {"request": {"query_string": {"page": "2", "key": REDACTED, "blank": REDACTED}}}
+
+    @given(st.dictionaries(st.text(min_size=1), st.text()))
+    def test_no_query_value_outside_the_allowlist_survives(self, sent):
+        event = scrub_event({"request": {"query_string": urlencode(sent)}}, hint=None)
+
+        for name, value in event["request"]["query_string"].items():
+            assert value == (sent[name] if name in LOGGABLE else REDACTED)
+
+    def test_a_query_string_not_sent_as_a_string_is_left_alone(self):
+        assert scrub_event({"request": {"query_string": None}}, hint=None) == {"request": {"query_string": None}}
 
     def test_a_body_it_could_not_parse_is_left_as_sentry_already_cut_it(self):
         """Sentry sends an unparsed body as a size marker string, which has no names to allow."""

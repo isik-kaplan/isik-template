@@ -1,7 +1,7 @@
 [project]
 name = "{{ cookiecutter.project_slug }}"
 dynamic = ["version"]
-description = "{{ cookiecutter.description }}"
+description = {{ cookiecutter.description|tojson }}
 requires-python = ">={{ cookiecutter.python_version }}"
 dependencies = [
     "django>=6.0",

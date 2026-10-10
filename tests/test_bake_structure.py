@@ -1,3 +1,4 @@
+import ast
 import json
 import os
 import subprocess
@@ -97,6 +98,10 @@ def test_license_file_matches_choice(cookies):
         ({"domain": "localhost"}, "bare localhost domain"),
         ({"domain": "admin.localhost"}, "*.localhost domain"),
         ({"domain": "no-dot-domain"}, "domain with no dot"),
+        ({"domain": 'ex"ample.test'}, "domain with a quote"),
+        ({"project_name": "My App (v2)"}, "project_name whose slugs aren't identifiers"),
+        ({"project_name": "Test Project", "project_slug": "2fast"}, "project_slug starting with a digit"),
+        ({"description": 'A "simple" app'}, "description with a double quote"),
         ({"social_login_providers": "not-a-real-provider"}, "unknown provider slug"),
         ({"social_login_provider_icons": "no-equals-sign"}, "icon entry missing '='"),
         ({"social_login_provider_icons": "=https://example.test/x.svg"}, "icon entry with blank provider id"),
@@ -118,6 +123,26 @@ def test_license_file_matches_choice(cookies):
 def test_pre_gen_validation_rejects(cookies, override, reason):
     result = cookies.bake(extra_context={**load_context("default"), **override})
     assert result.exit_code != 0, f"expected rejection for {reason}"
+
+
+def test_free_text_with_quotes_reaches_python_and_toml_intact(cookies):
+    # tojson escaping: before it, a quote in any of these broke the hooks' own syntax.
+    description = "A team's café & <app>"
+    author_name = 'O\'Brien "Q" \\'
+    result = cookies.bake(
+        extra_context={**load_context("default"), "description": description, "author_name": author_name}
+    )
+    assert result.exit_code == 0, result.exception
+
+    backend = result.project_path / result.context["project_slug"]
+    pyproject = tomllib.loads((backend / "pyproject.toml").read_text())
+    assert pyproject["project"]["description"] == description
+    settings_py = (backend / result.context["project_slug"] / "settings.py").read_text()
+    described = next(line for line in settings_py.splitlines() if '"DESCRIPTION":' in line)
+    assert ast.literal_eval(described.split(":", 1)[1].strip().rstrip(",")) == description
+    assert author_name in (result.project_path / "LICENSE").read_text()
+    layout = result.project_path / f"{result.context['project_slug']}-frontend/apps/web/src/app/layout.tsx"
+    assert f'  description: "{description}",' in layout.read_text()
 
 
 def test_all_keyword_accepted_for_providers(cookies):
@@ -218,6 +243,8 @@ def test_tls_termination_self_adds_certbot_and_443(cookies):
     assert "acme-challenge" in nginx_conf
     assert "apk add --no-cache openssl" in dockerfile
     assert f"{result.context['config_prefix']}__TLS__ACME_EMAIL" in env_example
+    # Every interface already: there is no load balancer to pick an address for.
+    assert "__HTTP_BIND" not in env_example
     # nginx is the edge here, so its own scheme is the truth and a client-sent header is not.
     assert nginx_conf.count("proxy_set_header X-Forwarded-Proto $scheme;") == 2
     assert "$http_x_forwarded_proto" not in nginx_conf
@@ -245,6 +272,7 @@ def test_tls_termination_external_has_no_certbot_or_443(cookies):
     assert "acme-challenge" not in nginx_conf
     assert "openssl" not in dockerfile
     assert "__TLS__ACME_EMAIL" not in env_example
+    assert f"\n#{result.context['config_prefix']}__HTTP_BIND=\n" in env_example
     assert not (result.project_path / server_dir / "certificate.sh").exists()
     # The load balancer terminated TLS, so nginx's own $scheme is always http: its header is forwarded instead.
     assert "map $http_x_forwarded_proto $forwarded_proto {" in nginx_conf

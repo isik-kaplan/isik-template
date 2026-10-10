@@ -17,7 +17,12 @@ import { ThemeProvider } from 'next-themes'
 
 export const metadata: Metadata = {
   title: '{{ cookiecutter.project_name }}',
-  description: '{{ cookiecutter.description }}',
+{#- Prettier's own quote choice: double quotes only when the text has an apostrophe (_validate.py bans '"'). #}
+  description: {% if "'" in cookiecutter.description -%}
+    "{{ cookiecutter.description }}"
+  {%- else -%}
+    '{{ cookiecutter.description }}'
+  {%- endif %},
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

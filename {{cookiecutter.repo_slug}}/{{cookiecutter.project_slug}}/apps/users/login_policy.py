@@ -31,6 +31,13 @@ def admits_signing_in(user):
     return False
 
 
+def admits_session(user):
+    """`admits_signing_in()` for a session's user, asked on every request. The cached settings may only
+    let somebody in: a refusal is read again from the database, so lowering the ladder never waits on a
+    stale cache, and raising it has already ended the sessions it excludes."""
+    return admits(user, SiteSettings.cached().login_policy) or admits_signing_in(user)
+
+
 def shut_out(policy):
     """Everybody `policy` no longer admits, as one query: each combination of flags the ladder refuses,
     asked of the ladder itself rather than restated here."""

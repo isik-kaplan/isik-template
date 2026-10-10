@@ -1,3 +1,4 @@
+import time
 from datetime import timedelta
 
 import pytest
@@ -6,8 +7,9 @@ from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.sessions.backends.db import SessionStore
 from django.contrib.sessions.models import Session
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.db import connection
+from django.db import IntegrityError, connection, transaction
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from hypothesis import given
@@ -80,6 +82,103 @@ def test_the_settings_are_the_one_row_there_is():
     assert SiteSettings.current() == row
     with pytest.raises(ValidationError):
         SiteSettings.objects.create()
+
+
+@pytest.mark.django_db
+def test_an_authenticated_request_reads_the_settings_from_the_cache(client, alice):
+    SiteSettings.objects.create(login_policy=LoginPolicy.EVERYONE)
+    client.force_login(alice)
+    client.get("/v0/users/me/")
+
+    with CaptureQueriesContext(connection) as queries:
+        response = client.get("/v0/users/me/")
+
+    assert response.status_code == 200
+    assert not [query for query in queries if SiteSettings._meta.db_table in query["sql"]]
+
+
+@pytest.mark.django_db
+def test_a_change_made_behind_the_caches_back_shows_within_five_seconds(monkeypatch):
+    SiteSettings.objects.create(login_policy=LoginPolicy.EVERYONE)
+    assert SiteSettings.cached().login_policy == LoginPolicy.EVERYONE
+    SiteSettings.objects.update(login_policy=LoginPolicy.STAFF)
+    started = time.time()
+
+    monkeypatch.setattr(time, "time", lambda: started + 4.5)
+    assert SiteSettings.cached().login_policy == LoginPolicy.EVERYONE
+    monkeypatch.setattr(time, "time", lambda: started + 5.5)
+    assert SiteSettings.cached().login_policy == LoginPolicy.STAFF
+
+
+@pytest.mark.django_db
+def test_saving_clears_the_cache_straight_away(django_capture_on_commit_callbacks):
+    row = SiteSettings.objects.create(login_policy=LoginPolicy.EVERYONE)
+    assert SiteSettings.cached().login_policy == LoginPolicy.EVERYONE
+
+    with django_capture_on_commit_callbacks(execute=False):
+        row.login_policy = LoginPolicy.STAFF
+        row.save()
+        assert SiteSettings.cached().login_policy == LoginPolicy.STAFF
+
+
+@pytest.mark.django_db
+def test_the_uncached_settings_never_lag():
+    SiteSettings.objects.create(login_policy=LoginPolicy.EVERYONE)
+    SiteSettings.cached()
+    SiteSettings.objects.update(login_policy=LoginPolicy.STAFF)
+
+    assert SiteSettings.current().login_policy == LoginPolicy.STAFF
+
+
+@pytest.mark.django_db
+def test_a_stale_cache_still_admits_whoever_it_admitted(alice, logged):
+    """Raising the ladder has already ended the sessions it excludes, so this costs a few seconds at most."""
+    SiteSettings.objects.create(login_policy=LoginPolicy.EVERYONE)
+    SiteSettings.cached()
+    SiteSettings.objects.update(login_policy=LoginPolicy.STAFF)
+
+    assert login_policy.admits_session(alice)
+    assert logged == []
+
+
+@pytest.mark.django_db
+def test_a_stale_cache_never_refuses_on_its_own(alice):
+    """Lowering the ladder lets people straight back in, whatever any process cached."""
+    SiteSettings.objects.create(login_policy=LoginPolicy.STAFF)
+    SiteSettings.cached()
+    SiteSettings.objects.update(login_policy=LoginPolicy.EVERYONE)
+
+    assert login_policy.admits_session(alice)
+
+
+@pytest.mark.django_db
+def test_a_session_both_agree_to_refuse_is_refused_and_recorded(alice, logged):
+    SiteSettings.objects.create(login_policy=LoginPolicy.STAFF)
+
+    assert not login_policy.admits_session(alice)
+    assert [(line["event"], line["user"]) for line in logged] == [("login.refused_by_policy", str(alice.pk))]
+
+
+@pytest.mark.django_db
+def test_saving_passes_its_options_on():
+    row = SiteSettings.objects.create()
+
+    with pytest.raises(IntegrityError), transaction.atomic():
+        row.save(force_insert=True)
+
+
+@pytest.mark.django_db
+def test_saving_clears_the_cache_again_at_commit(django_capture_on_commit_callbacks):
+    """Another thread may cache the old row between the write and the commit that publishes it."""
+    row = SiteSettings.objects.create(login_policy=LoginPolicy.EVERYONE)
+    stale = SiteSettings.cached()
+
+    with django_capture_on_commit_callbacks(execute=True):
+        row.login_policy = LoginPolicy.STAFF
+        row.save()
+        cache.set("site_settings", stale)
+
+    assert SiteSettings.cached().login_policy == LoginPolicy.STAFF
 
 
 @pytest.mark.django_db

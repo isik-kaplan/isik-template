@@ -3,10 +3,10 @@
 name there is still a mutant left alive. Run right after `scripts/mutmut_run.py run` - it reads
 `mutmut results`.
 
-Entries are keyed by mutant, named after the mutation itself (scripts/mutation_naming.py), so an entry
-excuses exactly the mutation its reason describes: a new mutant in the same function needs its own,
-and an edit that removes the mutation leaves the entry stale - which fails here rather than quietly
-excusing nothing.
+Entries are keyed by mutant, named after the mutation itself (the generated project's
+scripts/mutation_naming.py), so an entry excuses exactly the mutation its reason describes: a new
+mutant in the same function needs its own, and an edit that removes the mutation leaves the entry
+stale - which fails here rather than quietly excusing nothing.
 """
 
 import subprocess

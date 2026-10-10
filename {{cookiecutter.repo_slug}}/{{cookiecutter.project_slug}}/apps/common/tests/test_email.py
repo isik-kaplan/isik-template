@@ -14,7 +14,7 @@ def test_mjml_template_adds_site_name_and_request_host():
 
     mocked.assert_called_once_with(
         "some/template.html",
-        {"site_name": "{{ cookiecutter.project_name }}", "site_url": f"auth.{settings.PARENT_HOST}", "extra": "value"},
+        {"site_name": {{ cookiecutter.project_name|tojson }}, "site_url": f"auth.{settings.PARENT_HOST}", "extra": "value"},
         request,
     )
 
@@ -27,7 +27,7 @@ def test_text_template_adds_site_name_and_request_host():
 
     mocked.assert_called_once_with(
         "some/template.txt",
-        {"site_name": "{{ cookiecutter.project_name }}", "site_url": f"auth.{settings.PARENT_HOST}", "extra": "value"},
+        {"site_name": {{ cookiecutter.project_name|tojson }}, "site_url": f"auth.{settings.PARENT_HOST}", "extra": "value"},
         request,
     )
 

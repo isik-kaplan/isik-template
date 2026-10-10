@@ -1,8 +1,9 @@
 # Every mutant `mutmut run` leaves alive - survived, no tests, timeout, anything but killed - has to
 # be either killed by a real behavioral test, or explained here - never silently accepted. Keyed by
-# mutant, and a mutant is named after the mutation itself (scripts/mutation_naming.py), so an entry
-# excuses exactly the change its reason describes: another mutant of the same function needs its own,
-# and an entry whose mutation is edited away goes stale and fails the build.
+# mutant, and a mutant is named after the mutation itself (the generated project's
+# scripts/mutation_naming.py), so an entry excuses exactly the change its reason describes: another
+# mutant of the same function needs its own, and an entry whose mutation is edited away goes stale
+# and fails the build.
 #
 # scripts/check_mutants.py enforces this file against `mutmut results` in CI. Run mutmut through
 # scripts/mutmut_run.py, or the names it generates are positional and match nothing here.

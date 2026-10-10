@@ -1,4 +1,5 @@
-from django.db import models
+from django.core.cache import cache
+from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
 from isik.django.apps.common.db import track_events
 
@@ -12,7 +13,14 @@ class SiteSettings(BaseModel):
 
     There may be no row at all - `current()` then answers with the defaults, so nothing has to be
     seeded for a fresh install to behave.
+
+    `cached()` is `current()` for every authenticated request, where the login ladder checks the
+    session's user. Saving clears it, but a process with a cache of its own sees the change only within
+    `CACHE_SECONDS`, so whoever reads it decides what that lag may cost.
     """
+
+    CACHE_KEY = "site_settings"
+    CACHE_SECONDS = 5
 
     class LoginPolicy(models.TextChoices):
         """Who may still sign in: an ordered ladder for incidents, named for who gets in rather than
@@ -60,3 +68,18 @@ class SiteSettings(BaseModel):
     @classmethod
     def current(cls):
         return cls.objects.first() or cls()
+
+    @classmethod
+    def cached(cls):
+        found = cache.get(cls.CACHE_KEY)
+        if found is None:
+            found = cls.current()
+            cache.set(cls.CACHE_KEY, found, cls.CACHE_SECONDS)
+        return found
+
+    def save(self, **kwargs):
+        super().save(**kwargs)
+        # Again at commit: another thread may have cached the old row in between, its transaction
+        # unable to see this one's write yet.
+        cache.delete(self.CACHE_KEY)
+        transaction.on_commit(lambda: cache.delete(self.CACHE_KEY))

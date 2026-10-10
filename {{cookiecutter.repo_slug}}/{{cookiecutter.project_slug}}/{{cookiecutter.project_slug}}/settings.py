@@ -249,7 +249,7 @@ USERSESSIONS_TRACK_ACTIVITY = False
 MFA_SUPPORTED_TYPES = ["totp", "recovery_codes", "webauthn"]
 MFA_ADAPTER = "apps.users.adapters.mfa.MFAAdapter"
 # Otherwise the authenticator app shows the Site row's name, "example.com" until someone renames it.
-MFA_TOTP_ISSUER = "{{ cookiecutter.project_name }}"
+MFA_TOTP_ISSUER = {{ cookiecutter.project_name|tojson }}
 # A passkey is a second factor here, never a replacement for the password. Leaving this on would
 # mount a passwordless login route nothing calls and advertise it in the headless config.
 MFA_PASSKEY_LOGIN_ENABLED = False
@@ -461,8 +461,8 @@ REST_FRAMEWORK = {
 }
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "{{ cookiecutter.project_name }} API",
-    "DESCRIPTION": "{{ cookiecutter.description }}",
+    "TITLE": {{ (cookiecutter.project_name ~ " API")|tojson }},
+    "DESCRIPTION": {{ cookiecutter.description|tojson }},
     "VERSION": __version__,
     "COMPONENT_SPLIT_REQUEST": True,
     "POSTPROCESSING_HOOKS": [

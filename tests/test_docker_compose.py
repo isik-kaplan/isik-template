@@ -184,3 +184,23 @@ def test_self_tls_bakes_no_tls_proxy_override(cookies):
     assert not (result.project_path / "e2e" / "docker-compose.tls-proxy-for-e2e.yml").exists()
     assert not (result.project_path / "e2e" / "tls-proxy.conf").exists()
     assert "tls-proxy" not in (result.project_path / ".github" / "workflows" / "ci.yml").read_text()
+
+
+@pytest.mark.parametrize(("bind", "host_ip"), [(None, "127.0.0.1"), ("10.0.0.5", "10.0.0.5")])
+def test_external_tls_nginx_binds_to_loopback_unless_told_otherwise(cookies, bind, host_ip):
+    result = cookies.bake(extra_context=load_context("default"))
+    assert result.exit_code == 0
+
+    env = {key: value for key, value in os.environ.items() if not key.endswith("__HTTP_BIND")}
+    if bind is not None:
+        env[f"{result.context['config_prefix']}__HTTP_BIND"] = bind
+    proc = subprocess.run(
+        ["docker", "compose", "config", "--format", "json"],
+        cwd=result.project_path,
+        capture_output=True,
+        text=True,
+        check=True,
+        env=env,
+    )
+    server = json.loads(proc.stdout)["services"]["server"]
+    assert [(port["host_ip"], port["published"]) for port in server["ports"]] == [(host_ip, "80")]

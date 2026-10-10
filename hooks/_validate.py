@@ -5,12 +5,29 @@ script itself is a Jinja template (cookiecutter renders it, then runs it as a su
 neither pytest nor mutmut's coverage tracking can see into.
 """
 
+import re
+
 
 class AnswersInvalid(ValueError):
     """Raised with the exact message the hook should print and exit 1 over."""
 
 
 REQUIRED_FIELDS = ("project_name", "description", "author_name", "author_email", "domain")
+
+# The slugs name the Python package, the Docker services and the npm workspace, none of which take
+# spaces, punctuation or a leading digit.
+SLUG_PATTERNS = {"project_slug": r"[a-z][a-z0-9_]*", "repo_slug": r"[a-z][a-z0-9-]*"}
+
+# Characters each free-text answer can't carry: hooks, settings and pyproject escape answers with
+# tojson, but the same answers also land unescaped in TS literals, shell strings, .env and .po files.
+FORBIDDEN_CHARACTERS = {
+    # project_name also sits inside single-quoted TS strings and a double-quoted shell echo.
+    "project_name": "\"\\'`$",
+    "description": '"\\',
+    "author_email": '"\\',
+}
+
+DOMAIN_PATTERN = r"[a-z0-9.-]+"
 
 # allauth.socialaccount.providers/* provider ids, minus non-provider dirs (base, oauth, oauth2)
 # and internal subdirs (__pycache__, static, templates, data, migrations). Keep in sync with the
@@ -262,6 +279,23 @@ def validate_required_fields(**fields: str) -> None:
             )
 
 
+def validate_slugs(**slugs: str) -> None:
+    for slug_name, value in slugs.items():
+        pattern = SLUG_PATTERNS[slug_name]
+        if not re.fullmatch(pattern, value):
+            raise AnswersInvalid(
+                f"'{slug_name}' ({value!r}) must match {pattern} - pick a project_name made of letters, digits, "
+                f"spaces, '-' and '_', or answer '{slug_name}' directly."
+            )
+
+
+def validate_free_text(**fields: str) -> None:
+    for field_name, value in fields.items():
+        forbidden = sorted(set(FORBIDDEN_CHARACTERS[field_name]) & set(value))
+        if forbidden:
+            raise AnswersInvalid(f"'{field_name}' ({value!r}) can't contain {' '.join(forbidden)}.")
+
+
 def validate_domain(domain: str) -> None:
     normalized = domain.strip().lower()
     if normalized in {"localhost", "127.0.0.1", "0.0.0.0"} or normalized.endswith(".localhost"):
@@ -272,6 +306,8 @@ def validate_domain(domain: str) -> None:
         )
     if "." not in normalized:
         raise AnswersInvalid(f"'domain' ({domain!r}) needs at least one dot, e.g. myproject.test or myproject.com.")
+    if not re.fullmatch(DOMAIN_PATTERN, normalized):
+        raise AnswersInvalid(f"'domain' ({domain!r}) can only contain letters, digits, '.' and '-'.")
 
 
 def parse_requested_providers(social_login_providers: str) -> list[str]:
@@ -359,6 +395,8 @@ def validate_requested_languages(requested_languages: list[str]) -> None:
 def validate_answers(
     *,
     project_name: str,
+    project_slug: str,
+    repo_slug: str,
     description: str,
     author_name: str,
     author_email: str,
@@ -377,6 +415,8 @@ def validate_answers(
         # domain too, via its own "needs at least one dot" check.
         domain=domain,
     )
+    validate_slugs(project_slug=project_slug, repo_slug=repo_slug)
+    validate_free_text(project_name=project_name, description=description, author_email=author_email)
     validate_domain(domain)
     requested_providers = parse_requested_providers(social_login_providers)
     validate_requested_providers(requested_providers)

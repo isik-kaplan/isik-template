@@ -7,16 +7,20 @@ from hooks._validate import (
     parse_requested_providers,
     validate_answers,
     validate_domain,
+    validate_free_text,
     validate_provider_icons,
     validate_requested_languages,
     validate_requested_providers,
     validate_required_fields,
+    validate_slugs,
 )
 
 
 def valid_answers(**overrides: str) -> dict:
     return {
         "project_name": "Test Project",
+        "project_slug": "test_project",
+        "repo_slug": "test-project",
         "description": "A test project.",
         "author_name": "Jane Doe",
         "author_email": "jane@example.test",
@@ -88,7 +92,99 @@ def test_rejects_a_domain_with_no_dot():
 
 
 def test_accepts_a_real_domain():
-    validate_domain("example.test")  # does not raise
+    validate_domain("my-app2.example.test")  # does not raise
+
+
+@pytest.mark.parametrize("domain", ['ex"ample.test', "example.test/path", "exa mple.test", "example_x.test"])
+def test_rejects_a_domain_with_characters_a_hostname_cannot_have(domain):
+    with pytest.raises(AnswersInvalid) as excinfo:
+        validate_domain(domain)
+    assert str(excinfo.value) == f"'domain' ({domain!r}) can only contain letters, digits, '.' and '-'."
+
+
+def test_accepts_an_uppercase_domain_as_its_lowercase_form():
+    validate_domain("Example.TEST")  # does not raise
+
+
+@pytest.mark.parametrize(
+    ("slug_name", "value"),
+    [("project_slug", "a"), ("project_slug", "my_app_2"), ("repo_slug", "a"), ("repo_slug", "my-app-2")],
+)
+def test_accepts_valid_slugs(slug_name, value):
+    validate_slugs(**{slug_name: value})  # does not raise
+
+
+@pytest.mark.parametrize(
+    ("slug_name", "value", "pattern"),
+    [
+        ("project_slug", "my_app_(v2)", "[a-z][a-z0-9_]*"),
+        ("project_slug", "my-app", "[a-z][a-z0-9_]*"),
+        ("project_slug", "2app", "[a-z][a-z0-9_]*"),
+        ("project_slug", "My_app", "[a-z][a-z0-9_]*"),
+        ("project_slug", "", "[a-z][a-z0-9_]*"),
+        ("project_slug", "app\n", "[a-z][a-z0-9_]*"),
+        ("repo_slug", "my-app-(v2)", "[a-z][a-z0-9-]*"),
+        ("repo_slug", "my_app", "[a-z][a-z0-9-]*"),
+        ("repo_slug", "-app", "[a-z][a-z0-9-]*"),
+        ("repo_slug", "app\n", "[a-z][a-z0-9-]*"),
+    ],
+)
+def test_rejects_invalid_slugs(slug_name, value, pattern):
+    with pytest.raises(AnswersInvalid) as excinfo:
+        validate_slugs(**{slug_name: value})
+    assert str(excinfo.value) == (
+        f"'{slug_name}' ({value!r}) must match {pattern} - pick a project_name made of letters, digits, "
+        f"spaces, '-' and '_', or answer '{slug_name}' directly."
+    )
+
+
+@pytest.mark.parametrize(
+    ("field_name", "value"),
+    [("project_name", "My App-2_x"), ("description", "A team's $5 app"), ("author_email", "o'brien@example.test")],
+)
+def test_accepts_free_text_without_forbidden_characters(field_name, value):
+    validate_free_text(**{field_name: value})  # does not raise
+
+
+@pytest.mark.parametrize(
+    ("field_name", "value", "listed"),
+    [
+        ("project_name", 'A "quoted" app', '"'),
+        ("project_name", "back\\slash", "\\"),
+        ("project_name", "Bob's app", "'"),
+        ("project_name", "run `this`", "`"),
+        ("project_name", "cash $app", "$"),
+        ("project_name", "all \" \\ ' ` $", "\" $ ' \\ `"),
+        ("description", 'A "simple" app', '"'),
+        ("description", "back\\slash", "\\"),
+        ("author_email", 'a"b@example.test', '"'),
+        ("author_email", "a\\b@example.test", "\\"),
+    ],
+)
+def test_rejects_free_text_with_forbidden_characters(field_name, value, listed):
+    with pytest.raises(AnswersInvalid) as excinfo:
+        validate_free_text(**{field_name: value})
+    assert str(excinfo.value) == f"'{field_name}' ({value!r}) can't contain {listed}."
+
+
+@pytest.mark.parametrize(
+    ("override", "match"),
+    [
+        ({"project_slug": "my_app_(v2)"}, "'project_slug'"),
+        ({"repo_slug": "my-app-(v2)"}, "'repo_slug'"),
+        ({"project_name": 'A "quoted" app'}, "'project_name'"),
+        ({"description": 'A "simple" app'}, "'description'"),
+        ({"author_email": 'a"b@example.test'}, "'author_email'"),
+    ],
+)
+def test_validate_answers_checks_slugs_and_free_text_too(override, match):
+    with pytest.raises(AnswersInvalid, match=match):
+        validate_answers(**valid_answers(**override))
+
+
+def test_author_name_may_carry_any_character():
+    # It only lands in tojson-escaped hook literals, the LICENSE and .po comments.
+    validate_answers(**valid_answers(author_name='O\'Brien "Q" \\ `x` $y'))  # does not raise
 
 
 def test_parses_requested_providers_from_a_comma_separated_string():

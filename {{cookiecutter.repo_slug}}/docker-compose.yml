@@ -216,7 +216,8 @@ services:
       - "80:80"
       - "443:443"
 {%- else %}
-      - "127.0.0.1:{{ '${' + cookiecutter.config_prefix + '__HTTP_PORT:-80}' }}:80"
+      # Loopback unless HTTP_BIND says otherwise: an off-host load balancer needs the host's private address.
+      - "{{ '${' + cookiecutter.config_prefix + '__HTTP_BIND:-127.0.0.1}' }}:{{ '${' + cookiecutter.config_prefix + '__HTTP_PORT:-80}' }}:80"
 {%- endif %}
     networks:
       internal:

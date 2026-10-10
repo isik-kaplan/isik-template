@@ -1,4 +1,4 @@
-from apps.users.login_policy import admits_signing_in
+from apps.users.login_policy import admits_session
 
 
 class AdmittedByLoginPolicyMixin:
@@ -7,8 +7,9 @@ class AdmittedByLoginPolicyMixin:
     `SocialAccountAdapter.pre_social_login`.
 
     `user_can_authenticate` is also what `ModelBackend.get_user` asks of a session's user on every
-    request, so a session the sweep missed stops working too.
+    request, so a session the sweep missed stops working too - which is why it reads the cached
+    settings. `AccountAdapter.authenticate` checks a password sign-in again against the uncached ones.
     """
 
     def user_can_authenticate(self, user):
-        return super().user_can_authenticate(user) and admits_signing_in(user)
+        return super().user_can_authenticate(user) and admits_session(user)

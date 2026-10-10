@@ -9,15 +9,15 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 
-PROJECT_NAME = "{{ cookiecutter.project_name }}"
-PROJECT_SLUG = "{{ cookiecutter.project_slug }}"
-DOMAIN = "{{ cookiecutter.domain }}"
+PROJECT_NAME = {{ cookiecutter.project_name|tojson }}
+PROJECT_SLUG = {{ cookiecutter.project_slug|tojson }}
+DOMAIN = {{ cookiecutter.domain|tojson }}
 INCLUDE_MOBILE = {{ cookiecutter.include_mobile }}
-TLS_TERMINATION = "{{ cookiecutter.tls_termination }}"
-AUTHOR_NAME = "{{ cookiecutter.author_name }}"
-AUTHOR_EMAIL = "{{ cookiecutter.author_email }}"
+TLS_TERMINATION = {{ cookiecutter.tls_termination|tojson }}
+AUTHOR_NAME = {{ cookiecutter.author_name|tojson }}
+AUTHOR_EMAIL = {{ cookiecutter.author_email|tojson }}
 # "en" first, always - see hooks/_validate.py's own validate_requested_languages().
-LANGUAGES = [code.strip() for code in "{{ cookiecutter.languages }}".split(",") if code.strip()]
+LANGUAGES = [code.strip() for code in {{ cookiecutter.languages|tojson }}.split(",") if code.strip()]
 EXTRA_LANGUAGES = LANGUAGES[1:]
 
 WEB_SRC = Path(f"{PROJECT_SLUG}-frontend/apps/web/src")
