@@ -1,6 +1,10 @@
 /** @type {import('jest').Config} */
 module.exports = {
   preset: 'jest-expo',
+  // Let Stryker kill a mutant at its first failing test, not after every test covering it, which can
+  // outlast its timeout. Absolute paths, since Stryker loads the environment itself without <rootDir>.
+  testEnvironment: require.resolve('./jest/StopAtFirstKillEnvironment.js'),
+  testSequencer: require.resolve('./jest/NarrowestFirstSequencer.js'),
   // tsconfig.json's own "paths" only resolves @/ for type-checking (tsc, editors) - Jest needs its
   // own, separate mapping to actually resolve the alias at test-run time.
   moduleNameMapper: {

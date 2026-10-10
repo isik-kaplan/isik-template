@@ -243,50 +243,6 @@
       ]
     }
   ],
-  "components/ErrorText.tsx": [
-    {
-      "mutator": "BlockStatement",
-      "fingerprint": "a9d8200f05c4",
-      "reason": [
-        "Genuinely a hang, not a slow test: this mutant replaces the component's whole body with {} (an",
-        "implicit `return undefined`). @testing-library/react-native's `render()` - awaited by every test",
-        "here - never settles when the root component itself renders nothing, confirmed by hand: raising",
-        "Stryker's own timeoutMS to 30000 (6x the default) made no difference, so jest's own per-test timeout",
-        "never gets a chance to fire either - this blocks synchronously, it doesn't just run long. The",
-        "component's real behavior (rendering its children inside the shared wrapper) is fully covered by",
-        "this same file's tests; only the mutated, empty-body version hangs."
-      ]
-    }
-  ],
-  "components/ListRow.tsx": [
-    {
-      "mutator": "BlockStatement",
-      "fingerprint": "ccb2cb5605f6",
-      "reason": [
-        "Genuinely a hang, not a slow test: this mutant replaces the component's whole body with {} (an",
-        "implicit `return undefined`). @testing-library/react-native's `render()` - awaited by ListRow's own",
-        "tests, which render it as the root - never settles when the root component renders nothing; two",
-        "reruns of this file alone timed out the same way. The profile screens' tests that render ListRow",
-        "inside a tree would kill it, but which tests reach a mutant first is Stryker's call, not ours. Its",
-        "real behavior (children inside the shared row layout) is fully covered by this same file's tests."
-      ]
-    }
-  ],
-  "components/Screen.tsx": [
-    {
-      "mutator": "BlockStatement",
-      "fingerprint": "9fcc28f77185",
-      "reason": [
-        "Genuinely a hang, not a slow test: this mutant replaces the component's whole body with {} (an",
-        "implicit `return undefined`). @testing-library/react-native's `render()` - awaited by every test",
-        "here - never settles when the root component itself renders nothing, confirmed by hand: raising",
-        "Stryker's own timeoutMS to 30000 (6x the default) made no difference, so jest's own per-test timeout",
-        "never gets a chance to fire either - this blocks synchronously, it doesn't just run long. The",
-        "component's real behavior (rendering its children inside the shared wrapper) is fully covered by",
-        "this same file's tests; only the mutated, empty-body version hangs."
-      ]
-    }
-  ],
   "app/(authenticated)/prove.tsx": [
     {
       "mutator": "ConditionalExpression",
