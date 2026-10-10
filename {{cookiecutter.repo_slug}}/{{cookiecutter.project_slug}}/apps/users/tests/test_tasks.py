@@ -41,9 +41,11 @@ def test_each_one_is_mailed_in_their_own_language(a_second_language):
     """The worker has no request whose language could stand in, so the recipient's own is the only one."""
     member = User.objects.create_user(username="member", email="member@example.test", language="tr")
     seen = []
+    templates = []
 
-    def render(*args):
+    def render(name, *args):
         seen.append(translation.get_language())
+        templates.append(name)
         return "rendered"
 
     with (
@@ -54,6 +56,9 @@ def test_each_one_is_mailed_in_their_own_language(a_second_language):
         tell_one_person_a_rung_signed_out(str(member.pk))
 
     assert set(seen) == {"tr"}
+    # By exact name: a case-insensitive filesystem would find these templates under any spelling.
+    prefix = "account/email/logins_closed"
+    assert sorted(templates) == [f"{prefix}/message.html", f"{prefix}/message.txt", f"{prefix}/subject.txt"]
     (sent,) = mail.outbox
     assert sent.to == ["member@example.test"]
 

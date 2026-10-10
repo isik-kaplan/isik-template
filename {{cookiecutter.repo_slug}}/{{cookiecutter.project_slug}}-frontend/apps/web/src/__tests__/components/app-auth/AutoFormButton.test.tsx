@@ -1,5 +1,7 @@
 import { AutoFormButton } from '@/components/app-auth/AutoFormButton'
 
+import { collectUncaught } from '@/__tests__/support/uncaught'
+
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import Cookies from 'js-cookie'
@@ -69,6 +71,17 @@ describe('AutoFormButton', () => {
     await user.click(screen.getByRole('button', { name: 'Continue' }))
 
     expect(globalThis.fetch).not.toHaveBeenCalled()
+  })
+
+  it('needs no onClick of its own', async () => {
+    const user = userEvent.setup()
+    render(<AutoFormButton action="https://auth.example.test/o/authorize/">Continue</AutoFormButton>)
+    const uncaught = collectUncaught()
+
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+
+    expect(await uncaught.stop()).toEqual([])
+    expect(HTMLFormElement.prototype.submit).toHaveBeenCalledOnce()
   })
 
   it('respects a custom csrfCookieName and calls the provided onClick', async () => {

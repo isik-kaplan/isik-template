@@ -1,5 +1,7 @@
 import { Editor } from '@/components/app/Editor'
 
+import { collectUncaught } from '@/__tests__/support/uncaught'
+
 import { render, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -52,9 +54,10 @@ describe('Editor', () => {
       return el
     })
 
+    const uncaught = collectUncaught()
     editable.textContent = 'Hello world'
-    expect(() =>
-      editable.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText' }))
-    ).not.toThrow()
+    editable.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText' }))
+
+    expect(await uncaught.stop()).toEqual([])
   })
 })

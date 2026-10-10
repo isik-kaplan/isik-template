@@ -258,6 +258,20 @@
       ]
     }
   ],
+  "components/ListRow.tsx": [
+    {
+      "mutator": "BlockStatement",
+      "fingerprint": "ccb2cb5605f6",
+      "reason": [
+        "Genuinely a hang, not a slow test: this mutant replaces the component's whole body with {} (an",
+        "implicit `return undefined`). @testing-library/react-native's `render()` - awaited by ListRow's own",
+        "tests, which render it as the root - never settles when the root component renders nothing; two",
+        "reruns of this file alone timed out the same way. The profile screens' tests that render ListRow",
+        "inside a tree would kill it, but which tests reach a mutant first is Stryker's call, not ours. Its",
+        "real behavior (children inside the shared row layout) is fully covered by this same file's tests."
+      ]
+    }
+  ],
   "components/Screen.tsx": [
     {
       "mutator": "BlockStatement",

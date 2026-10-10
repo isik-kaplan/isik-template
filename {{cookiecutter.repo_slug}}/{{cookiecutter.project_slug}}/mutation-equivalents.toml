@@ -32,6 +32,13 @@ allauth's DefaultSocialAccountAdapter.populate_user() never reads its request pa
 touches `data` and `sociallogin.user` - so no test can observe which one was passed."""
 verified_by = "apps/common/tests/test_library_assumptions.py::test_populate_user_never_reads_the_request"
 
+["apps.users.adapters.account.xǁAccountAdapterǁsave_user__mutmut__70a6420569e2"]
+reason = """Passes None instead of the request to super().save_user(request, user, form, commit=commit).
+allauth's DefaultAccountAdapter.save_user() only hands its request to populate_username(), which never
+reads it either - it fills a username from the user's own fields - so no test can observe which one was
+passed."""
+verified_by = "apps/common/tests/test_library_assumptions.py::test_save_user_never_reads_the_request"
+
 ["apps.users.api.viewsets.user.x__mark_partial__mutmut__1a1b3d6410e6"]
 reason = """Flips `serializer.partial = True` to False. Nothing in UserSerializer is required
 (id/created_at/updated_at are read-only, username/email are read-only on update via

@@ -1,5 +1,7 @@
 import { RecoveryCodesSection } from '@/components/app-auth/RecoveryCodesSection'
 
+import { collectUncaught } from '@/__tests__/support/uncaught'
+
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { toast } from 'sonner'
@@ -52,9 +54,11 @@ describe('RecoveryCodesSection', () => {
     globalThis.fetch = vi.fn(async () => jsonResponse(500, {}))
     const user = userEvent.setup()
     render(<RecoveryCodesSection unused={1} total={10} />)
+    const uncaught = collectUncaught()
 
     await user.click(screen.getByRole('button', { name: 'Generate new codes' }))
 
+    expect(await uncaught.stop()).toEqual([])
     expect(screen.queryByRole('listitem')).toBeNull()
     expect(toast.error).toHaveBeenCalledWith('Could not generate new recovery codes.')
     expect(refresh).not.toHaveBeenCalled()

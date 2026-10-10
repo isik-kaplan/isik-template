@@ -13,6 +13,7 @@ reason is about, not a stand-in that happens to look similar.
 from types import SimpleNamespace
 
 import pytest
+from allauth.account.adapter import DefaultAccountAdapter
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from celery.local import Proxy
 from django.contrib.auth import get_user_model
@@ -61,6 +62,21 @@ def test_populate_user_never_reads_the_request():
 
     assert object.__getattribute__(watched, "reads") == []
     assert users[0] == users[1] == ("ada", "ada@example.test", "Ada", "Lovelace")
+
+
+def test_save_user_never_reads_the_request():
+    """AccountAdapter.save_user passes its request straight through to allauth's, which hands it only to
+    populate_username - and that never reads it either - so what is passed as the request cannot matter."""
+    data = {"username": "ada", "email": "ada@example.test", "password1": "correct horse battery staple"}
+    watched = _Watched()
+    users = []
+    for request in (watched, None):
+        user = get_user_model()()
+        DefaultAccountAdapter().save_user(request, user, SimpleNamespace(cleaned_data=dict(data)), commit=False)
+        users.append((user.username, user.email, user.has_usable_password()))
+
+    assert object.__getattribute__(watched, "reads") == []
+    assert users[0] == users[1] == ("ada", "ada@example.test", True)
 
 
 def test_a_shared_task_is_a_proxy_rather_than_the_task_itself():

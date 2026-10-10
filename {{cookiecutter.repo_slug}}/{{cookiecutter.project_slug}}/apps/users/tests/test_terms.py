@@ -7,6 +7,7 @@ from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import RequestFactory
 from django.utils import timezone
 
+from apps.users.adapters.account import AccountAdapter
 from apps.users.adapters.social_account import SocialAccountAdapter
 from apps.users.models.user import User
 from apps.users.tests.conftest import PASSWORD
@@ -95,3 +96,14 @@ def test_an_account_made_outside_signup_records_no_acceptance(published):
 
     assert user.terms_version == ""
     assert user.terms_accepted_at is None
+
+
+@pytest.mark.django_db
+def test_a_caller_that_saves_the_account_itself_gets_it_unsaved_with_the_acceptance_on_it(published):
+    """`commit=False` is how a signup that still has fields to add asks for the account: recorded, not saved."""
+    form = SimpleNamespace(cleaned_data={"username": "later", "email": "later@example.test", "password1": PASSWORD})
+
+    user = AccountAdapter().save_user(RequestFactory().get("/"), User(), form, commit=False)
+
+    assert (user.username, user.terms_version) == ("later", VERSION)
+    assert not User.objects.filter(username="later").exists()
