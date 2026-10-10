@@ -474,6 +474,16 @@ jobs:
       - name: Run the auth e2e suite
         working-directory: e2e
         run: docker compose run --build --rm playwright npx playwright test --reporter=list
+{%- if cookiecutter.tls_termination == "external" %}
+      # Again behind a TLS-terminating proxy, the shape of production: nginx itself only ever sees http there.
+      - name: Run social login behind a TLS-terminating proxy
+        working-directory: e2e
+        run: |
+          export COMPOSE_FILE="$(sed -n 's/^COMPOSE_FILE=//p' .env):docker-compose.tls-proxy-for-e2e.yml"
+          docker compose up -d --wait tls-proxy dns
+          docker compose run --rm -e E2E_BASE_URL=https://{{ cookiecutter.domain }} playwright \
+            npx playwright test auth/social-login.spec.ts --reporter=list
+{%- endif %}
       # A service failing its own healthcheck reports only "unhealthy" in the step above - the
       # reason lives in that service's own log, which `up`/`run` never print on their own.
       - if: failure()
@@ -489,4 +499,4 @@ jobs:
           retention-days: 7
       - if: always()
         working-directory: e2e
-        run: docker compose down -v
+        run: docker compose down -v --remove-orphans

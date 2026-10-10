@@ -1,4 +1,5 @@
 import json
+import os
 import shutil
 import subprocess
 
@@ -147,3 +148,39 @@ def test_only_the_backend_services_receive_the_backends_secrets(cookies, context
     assert services["server"]["environment"] == {f"{prefix}__DOMAIN": result.context["domain"]}
     for name in ("backend", "worker", "scheduler"):
         assert f"{prefix}__SECRET_KEY" in services[name]["environment"], name
+
+
+def test_e2e_tls_proxy_override_fronts_every_name_the_browser_uses(cookies):
+    """The external-mode variant: a TLS-terminating proxy in front of nginx, as in production, with dnsmasq sending
+    the browser to it instead of to nginx."""
+    result = cookies.bake(extra_context=load_context("default"))
+    assert result.exit_code == 0
+    e2e_path = result.project_path / "e2e"
+    compose_file = next(
+        line.removeprefix("COMPOSE_FILE=")
+        for line in (e2e_path / ".env").read_text().splitlines()
+        if line.startswith("COMPOSE_FILE=")
+    )
+
+    proc = subprocess.run(
+        ["docker", "compose", "config", "--format", "json"],
+        cwd=e2e_path,
+        env={**os.environ, "COMPOSE_FILE": f"{compose_file}:docker-compose.tls-proxy-for-e2e.yml"},
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    services = json.loads(proc.stdout)["services"]
+    proxy_ip = services["tls-proxy"]["networks"]["internal"]["ipv4_address"]
+    assert f"--address=/{result.context['domain']}/{proxy_ip}" in services["dns"]["command"]
+    assert services["tls-proxy"]["depends_on"]["server"]["condition"] == "service_healthy"
+    assert "proxy_set_header X-Forwarded-Proto $scheme;" in (e2e_path / "tls-proxy.conf").read_text()
+
+
+def test_self_tls_bakes_no_tls_proxy_override(cookies):
+    result = cookies.bake(extra_context=load_context("self-tls"))
+    assert result.exit_code == 0
+
+    assert not (result.project_path / "e2e" / "docker-compose.tls-proxy-for-e2e.yml").exists()
+    assert not (result.project_path / "e2e" / "tls-proxy.conf").exists()
+    assert "tls-proxy" not in (result.project_path / ".github" / "workflows" / "ci.yml").read_text()

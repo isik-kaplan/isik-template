@@ -3,7 +3,9 @@ import subprocess
 import sys
 
 import pytest
+from allauth.utils import build_absolute_uri
 from django.conf import settings
+from django.test import RequestFactory, override_settings
 
 from {{ cookiecutter.project_slug }}.config import CONFIG as config
 from {{ cookiecutter.project_slug }}.settings import _origins, _social_app_config
@@ -93,3 +95,18 @@ def test_outside_debug_browsers_stay_on_https_for_a_year_across_subdomains(debug
     result = subprocess.run([sys.executable, "-c", script], env=env, capture_output=True, text=True, check=True)
 
     assert result.stdout.splitlines()[-1].split() == expected
+def test_allauth_forces_https_links_exactly_when_the_frontend_is_https():
+    assert settings.ACCOUNT_DEFAULT_HTTP_PROTOCOL == ("http" if config.DEBUG else "https")
+
+
+def test_absolute_uris_follow_the_forwarded_https_scheme():
+    request = RequestFactory().get("/", HTTP_HOST=f"auth.{config.DOMAIN}", HTTP_X_FORWARDED_PROTO="https")
+
+    assert build_absolute_uri(request, "/callback/") == f"https://auth.{config.DOMAIN}/callback/"
+
+
+@override_settings(ACCOUNT_DEFAULT_HTTP_PROTOCOL="https")
+def test_absolute_uris_are_https_outside_debug_even_without_the_forwarded_scheme():
+    request = RequestFactory().get("/", HTTP_HOST=f"auth.{config.DOMAIN}")
+
+    assert build_absolute_uri(request, "/callback/") == f"https://auth.{config.DOMAIN}/callback/"

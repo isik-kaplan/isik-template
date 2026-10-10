@@ -27,6 +27,9 @@ entries:
       redirect_uris:
         - matching_mode: strict
           url: http://auth.{{ cookiecutter.domain }}/v0/provider-callback/oidc/authentik/login/callback/
+        # The same callback reached through docker-compose.tls-proxy-for-e2e.yml's https front door.
+        - matching_mode: strict
+          url: https://auth.{{ cookiecutter.domain }}/v0/provider-callback/oidc/authentik/login/callback/
       signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
       # Without these the id_token/userinfo response carries no claims beyond "sub" - allauth's
       # openid_connect provider has no email to extract then, and since ACCOUNT_SIGNUP_FIELDS

@@ -6,6 +6,9 @@ import { expect, test } from '@playwright/test'
    does NOT mean a button exists here to click. Only an explicit openid_connect gets one. #}
 {%- if 'openid_connect' in providers and providers != 'all' %}
 
+// Authentik's authorization endpoint, which the provider redirect lands on with allauth's redirect_uri.
+const AUTHORIZE_PATH = '/application/o/authorize/'
+
 // Drives a real OAuth redirect through the disposable Authentik instance seeded by
 // e2e/authentik-blueprints/oidc-test-idp.yaml (docker-compose.authentik-for-e2e.yml) - the one
 // e2e spec that proves social login actually works end to end, not just that the settings-based
@@ -22,7 +25,13 @@ import { expect, test } from '@playwright/test'
 // whichever one actually happens rather than asserting a single fixed path.
 test('logging in with the OIDC test IdP provisions an account pending email verification', async ({ page }) => {
   await page.goto('/auth/login')
+  const scheme = new URL(page.url()).protocol
+  const authorize = page.waitForRequest((request) => new URL(request.url()).pathname === AUTHORIZE_PATH)
   await page.getByRole('button', { name: 'Continue with Openid Connect' }).click()
+
+  // allauth builds redirect_uri from the scheme the proxies forward; behind a TLS-terminating one it must stay https.
+  const redirectUri = new URL((await authorize).url()).searchParams.get('redirect_uri') ?? ''
+  expect(new URL(redirectUri).protocol).toBe(scheme)
 
   // Now on authentik.{{ cookiecutter.domain }}'s own login form.
   await expect(page).toHaveURL(/authentik\./)

@@ -218,6 +218,15 @@ def test_tls_termination_self_adds_certbot_and_443(cookies):
     assert "acme-challenge" in nginx_conf
     assert "apk add --no-cache openssl" in dockerfile
     assert f"{result.context['config_prefix']}__TLS__ACME_EMAIL" in env_example
+    # nginx is the edge here, so its own scheme is the truth and a client-sent header is not.
+    assert nginx_conf.count("proxy_set_header X-Forwarded-Proto $scheme;") == 2
+    assert "$http_x_forwarded_proto" not in nginx_conf
+    # The placeholder lives outside certbot's live directory, which certbot refuses to issue into otherwise.
+    certificate_sh = (result.project_path / server_dir / "certificate.sh").read_text()
+    assert "/etc/letsencrypt/live" not in nginx_conf
+    assert nginx_conf.count("ssl_certificate /etc/nginx/certificate/fullchain.pem;") == 2
+    assert "PLACEHOLDER_DIR=/etc/nginx/placeholder-cert" in certificate_sh
+    assert "/server/certificate.sh" in (result.project_path / server_dir / "entrypoint.sh").read_text()
 
 
 def test_tls_termination_external_has_no_certbot_or_443(cookies):
@@ -236,6 +245,11 @@ def test_tls_termination_external_has_no_certbot_or_443(cookies):
     assert "acme-challenge" not in nginx_conf
     assert "openssl" not in dockerfile
     assert "__TLS__ACME_EMAIL" not in env_example
+    assert not (result.project_path / server_dir / "certificate.sh").exists()
+    # The load balancer terminated TLS, so nginx's own $scheme is always http: its header is forwarded instead.
+    assert "map $http_x_forwarded_proto $forwarded_proto {" in nginx_conf
+    assert nginx_conf.count("proxy_set_header X-Forwarded-Proto $forwarded_proto;") == 2
+    assert "X-Forwarded-Proto $scheme" not in nginx_conf
 
 
 @pytest.mark.parametrize("context_name", ["default", "self-tls"])

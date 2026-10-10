@@ -66,11 +66,12 @@ which only works once `{{ cookiecutter.domain }}`, `api.{{ cookiecutter.domain }
 `admin.{{ cookiecutter.domain }}`, and `auth.{{ cookiecutter.domain }}` resolve, over real DNS, to
 this host's public IP. Point DNS there *before* the first `docker compose up -d` - nginx starts
 immediately either way (off a throwaway self-signed certificate, see
-`{{ cookiecutter.project_slug }}-server/entrypoint.sh`), but every client sees that placeholder
-cert, with a browser warning, until certbot's first real one lands. Running this locally instead
-(the `/etc/hosts` setup above) never satisfies that challenge - expect the self-signed cert there
-and either accept the browser warning or add it to your local store yourself, the same way
-`.env.example`'s dev defaults already assume plain HTTP for local work in the first place.
+`{{ cookiecutter.project_slug }}-server/certificate.sh`), but every client sees that placeholder
+cert, with a browser warning, until certbot's first real one lands - nginx switches to it within a
+minute. Running this locally instead (the `/etc/hosts` setup above) never satisfies that challenge -
+expect the self-signed cert there and either accept the browser warning or add it to your local
+store yourself, the same way `.env.example`'s dev defaults already assume plain HTTP for local work
+in the first place.
 
 A real deployment of this project must be reachable on both `80` and `443` directly - nothing else
 is meant to sit in front of it. That is also what `{{ cookiecutter.config_prefix }}__TRUSTED_PROXY_COUNT` defaults

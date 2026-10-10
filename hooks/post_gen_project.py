@@ -251,6 +251,11 @@ def main() -> None:
     if TLS_TERMINATION == "self":
         shutil.rmtree(f"{PROJECT_SLUG}-server/dev-tls")
         os.remove("docker-compose.dev-tls.yml")
+        # Stands in for the load balancer external mode puts in front; self mode has none.
+        os.remove("e2e/docker-compose.tls-proxy-for-e2e.yml")
+        os.remove("e2e/tls-proxy.conf")
+    else:
+        os.remove(f"{PROJECT_SLUG}-server/certificate.sh")
 
     translation_files, web_namespaces = scaffold_translation_files()
     if EXTRA_LANGUAGES:

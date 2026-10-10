@@ -1,0 +1,51 @@
+# Layered over a self-mode bake's docker-compose.yml by test_self_tls.py: Pebble stands in for Let's Encrypt,
+# and the challenge still goes through the generated nginx on :80, as in production.
+services:
+  # Pebble's ACME endpoint is https, so certbot needs a certificate it can verify. The server image carries openssl.
+  pebble-certs:
+    image: ${COMPOSE_PROJECT_NAME}-server:latest
+    entrypoint: ["sh", "-c"]
+    command:
+      - >-
+        openssl req -x509 -newkey rsa:2048 -nodes -days 2 -keyout /certs/key.pem -out /certs/cert.pem
+        -subj /CN=pebble -addext subjectAltName=DNS:pebble 2>/dev/null && chmod 644 /certs/key.pem
+    volumes: [pebble_certs:/certs]
+    network_mode: none
+
+  pebble:
+    image: ghcr.io/letsencrypt/pebble:2.7.0
+    command: ["-config", "/config/pebble-config.json"]
+    environment:
+      PEBBLE_VA_NOSLEEP: "1"
+      # Pebble rejects a share of valid nonces by default, to exercise clients' retries; not what this test is about.
+      PEBBLE_WFE_NONCEREJECT: "0"
+    volumes:
+      - ./pebble/pebble-config.json:/config/pebble-config.json:ro
+      - pebble_certs:/certs:ro
+    networks: [internal]
+
+  # nginx resolves its upstreams at startup; the certificate path needs nothing behind them.
+  upstreams:
+    image: nginx:1.27-alpine
+    networks:
+      internal:
+        aliases: [backend-internal, frontend-internal]
+
+  server:
+    # Nothing published: several stacks may run on one host, and the test talks to nginx from inside.
+    ports: !reset []
+    networks:
+      internal:
+        # The subdomains are already aliases; Pebble validates the bare domain too.
+        aliases: ["${PEBBLE_DOMAIN}"]
+
+  certbot:
+    environment:
+      REQUESTS_CA_BUNDLE: /pebble-certs/cert.pem
+    volumes:
+      - pebble_certs:/pebble-certs:ro
+      - ./pebble/cli.ini:/etc/letsencrypt/cli.ini:ro
+    networks: [internal]
+
+volumes:
+  pebble_certs:

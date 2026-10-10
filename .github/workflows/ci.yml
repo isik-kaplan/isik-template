@@ -89,3 +89,15 @@ jobs:
           enable-cache: true
       - run: uv sync
       - run: uv run pytest tests/test_e2e.py
+
+  # tls_termination: self against Pebble: certbot really issues through the generated nginx, and nginx really serves
+  # the result. Only the server image is built, so it stays out of the slow e2e jobs.
+  self-tls-certificate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv sync
+      - run: uv run pytest tests/test_self_tls.py

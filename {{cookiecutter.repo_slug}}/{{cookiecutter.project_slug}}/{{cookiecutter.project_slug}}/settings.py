@@ -264,6 +264,9 @@ HEADLESS_ADAPTER = "apps.users.headless.HeadlessAdapter"
 
 FRONTEND_SCHEME = "http" if DEBUG else "https"
 FRONTEND_ORIGIN = f"{FRONTEND_SCHEME}://{config.DOMAIN}"
+# A backstop for the proxy headers: outside DEBUG, every emailed link and OAuth redirect_uri allauth builds is https
+# even if a proxy in front drops X-Forwarded-Proto.
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = FRONTEND_SCHEME
 # Absolute, not relative: the frontend lives on the bare domain, a different origin than these
 # headless endpoints (auth.<domain>) - a bare-path fallback here would resolve against auth.<domain>
 # instead of where the frontend actually serves these pages. Built via string concatenation, not an
