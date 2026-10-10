@@ -27,7 +27,6 @@ dependencies = [
     "django-celery-beat>=2.9.0",
     "django-celery-results>=2.6.0",
     "django-storages[s3]>=1.14.0",
-    "boto3>=1.35.0",
 ]
 
 [tool.uv]
@@ -59,16 +58,21 @@ fix = true
 extend-exclude = ["*/migrations/*"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "TID251"]
+# T20 bans `print`: a management command writes to `self.stdout`, which a test can capture, and
+# everything else logs.
+select = ["E", "F", "I", "UP", "B", "T20", "TID251"]
 fixable = ["ALL"]
 unfixable = []
 
 # A logger taken by hand writes outside the declared vocabulary in apps/common/logging/events.py.
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "logging.getLogger".msg = "Declare an event in apps/common/logging/events.py and write it with log() or audit()."
+"logging.Logger".msg = "Declare an event in apps/common/logging/events.py and write it with log() or audit()."
 
 [tool.ruff.lint.per-file-ignores]
 "apps/common/logging/emit.py" = ["TID251"]
+# The tooling is a command somebody runs and reads; its output is the product.
+"scripts/*" = ["T20"]
 
 [tool.ruff.lint.isort]
 lines-after-imports = 2

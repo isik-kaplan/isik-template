@@ -6,8 +6,9 @@ import { TotpSetup } from '@/components/app-auth/TotpSetup'
 
 import { isLocalDevHost } from '@/lib/isLocalDevHost'
 
-import { AuthApi, extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api'
+import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
+import { detailOf } from '@isikk/core/allauth'
 import { getRequestOrigin } from '@isikk/core/next/request'
 
 export default async function ProfileTwoFactorPage() {
@@ -36,7 +37,7 @@ export default async function ProfileTwoFactorPage() {
         active={Boolean(totp.data)}
         secret={setup?.secret}
         totpUrl={setup?.totp_url}
-        blockedReason={extractAuthErrors(totp.error)?.[0]?.message}
+        blockedReason={detailOf(totp.error)}
       />
       {recoveryCodes && (
         <RecoveryCodesSection

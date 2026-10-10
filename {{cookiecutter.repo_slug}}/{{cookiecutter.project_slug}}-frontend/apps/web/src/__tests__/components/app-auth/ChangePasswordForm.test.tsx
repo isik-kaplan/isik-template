@@ -88,6 +88,20 @@ describe('ChangePasswordForm', () => {
     expect(newPasswordGroup.querySelector('.text-destructive')).toBeNull()
   })
 
+  it('shows a refusal that names no field beneath the form', async () => {
+    globalThis.fetch = vi.fn(async () =>
+      jsonResponse(400, { status: 400, errors: [{ code: 'too_many', message: 'Slow down.' }] })
+    )
+    const user = userEvent.setup()
+    render(<ChangePasswordForm />)
+
+    await user.type(screen.getByLabelText('Current password'), 'wrong')
+    await user.type(screen.getByLabelText('New password'), 'correct-horse-battery')
+    await user.click(screen.getByRole('button', { name: 'Change password' }))
+
+    expect(await screen.findByText('Slow down.')).toBeTruthy()
+  })
+
   it('falls back to a generic error message when the response has no errors array', async () => {
     globalThis.fetch = vi.fn(async () => jsonResponse(400, { status: 400 }))
     const user = userEvent.setup()
@@ -97,6 +111,6 @@ describe('ChangePasswordForm', () => {
     await user.type(screen.getByLabelText('New password'), 'correct-horse-battery')
     await user.click(screen.getByRole('button', { name: 'Change password' }))
 
-    expect(await screen.findByText('Could not change your password.')).toBeTruthy()
+    await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('Could not change your password.'))
   })
 })

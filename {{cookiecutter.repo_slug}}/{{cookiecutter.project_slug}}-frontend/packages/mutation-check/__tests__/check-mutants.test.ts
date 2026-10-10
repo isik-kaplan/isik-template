@@ -22,7 +22,11 @@ function mutant(line: number, status: string) {
 }
 
 function entry(line: number) {
-  return { mutator: 'ArithmeticOperator', fingerprint: fingerprint(SOURCE, mutant(line, '').location), reason: ['x'] }
+  return {
+    mutator: 'ArithmeticOperator',
+    fingerprint: fingerprint(SOURCE, mutant(line, '').location),
+    reason: ['equivalent mutant: both sides of this sum are constants nothing reads.'],
+  }
 }
 
 function arrange(mutants: ReturnType<typeof mutant>[] | null, catalog?: object) {
@@ -115,5 +119,36 @@ describe('check-mutants', () => {
     expect(code).toBe(0)
     expect(out).toContain('1 exemption(s) match more mutants than they have entries')
     expect(out).toContain(`src/a.ts  ArithmeticOperator  (fingerprint ${entry(1).fingerprint})  2 mutants`)
+  })
+
+  it('fails a mutant that never ran, saying the run measured less than it reports', () => {
+    arrange([mutant(1, 'Killed'), mutant(2, 'RuntimeError')])
+
+    const { out, code } = check()
+
+    expect(code).toBe(1)
+    expect(out).toContain('1 mutant(s) neither ran nor died - the run measured less than it reports')
+    expect(out).toContain('src/a.ts:2:18  ArithmeticOperator  status: RuntimeError')
+  })
+
+  it('fails an exemption whose reason is no reason', () => {
+    arrange([mutant(2, 'Survived')], { 'src/a.ts': [{ ...entry(2), reason: ['not worth testing'] }] })
+
+    const { out, code } = check()
+
+    expect(code).toBe(1)
+    expect(out).toContain('1 exemption(s) give no reason no test can kill them')
+    expect(out).toContain(`src/a.ts  ArithmeticOperator  (fingerprint ${entry(2).fingerprint})`)
+  })
+
+  it('fails an inline directive in a file the run mutated', () => {
+    writeFileSync(join(app, 'src/a.ts'), [...SOURCE, '// Stryker disable all'].join('\n'))
+    arrange([mutant(1, 'Killed')])
+
+    const { out, code } = check()
+
+    expect(code).toBe(1)
+    expect(out).toContain('1 inline Stryker directive(s) - exemptions belong in mutation-exemptions.json')
+    expect(out).toContain('  src/a.ts:3\n')
   })
 })

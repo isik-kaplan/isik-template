@@ -89,12 +89,15 @@ RECOVERY_CODES_REGENERATED = declare("recovery_codes.regenerated", logging.WARNI
 PASSKEY_ADDED = declare("passkey.added", logging.WARNING, ("user",), audited=True)
 PASSKEY_REMOVED = declare("passkey.removed", logging.WARNING, ("user",), audited=True)
 
-# Proving it is you again before an act. A provider's proof is recorded by this project (a password
-# or a factor's code is allauth's own record); spending one is the act it was asked for going ahead.
+# Proving it is you again before an act. "We asked" and "they answered" are different facts, and only
+# the pair says a gate was crossed. A provider's proof is recorded by this project (a password or a
+# factor's code is allauth's own record); spending one is the act it was asked for going ahead.
+REAUTHENTICATION_DEMANDED = declare("reauthentication.demanded", logging.INFO, ("user", "act"))
 REAUTHENTICATION_PROVED = declare("reauthentication.proved", logging.INFO, ("user", "method"))
-REAUTHENTICATION_SPENT = declare("reauthentication.spent", logging.INFO, ("user",))
+REAUTHENTICATION_SPENT = declare("reauthentication.spent", logging.INFO, ("user", "act"))
 
 # The login ladder. A refused sign-in is the ladder working; raising it signs people out, which moves
-# control of every account it shuts out, so that line is audited.
+# control of every account it shuts out, so that line is audited. `refused_by_policy` rather than a bare
+# `refused`, so a ladder refusal never reads as `login.failed`'s wrong password beside it.
 LOGIN_REFUSED_BY_POLICY = declare("login.refused_by_policy", logging.WARNING, ("user", "policy"))
 LOGIN_POLICY_SWEPT = declare("login_policy.swept", logging.WARNING, ("policy", "sessions"), audited=True)

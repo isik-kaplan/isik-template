@@ -58,15 +58,15 @@ def test_an_enciphered_column_keeps_the_options_it_was_declared_with():
     assert field.plaintext_without_a_key is False
 
 
-def test_a_value_already_enciphered_is_not_enciphered_again(credential_key):
-    """`get_prep_value` runs on every save, and wrapping twice reads back as a ciphertext."""
+def test_a_secret_that_merely_looks_enciphered_is_enciphered_all_the_same(credential_key):
+    """The prefix is a marker this field writes, not a claim a caller gets to make: skipping a value
+    carrying it would store `fernet:hunter2` in the clear, past the trigger, and every read would raise."""
     field = EncryptedField()
 
-    stored = field.get_prep_value("a secret")
+    stored = field.get_prep_value(f"{EncryptedField.PREFIX}hunter2")
 
-    assert stored.startswith(EncryptedField.PREFIX)
-    assert field.get_prep_value(stored) == stored
-    assert field.from_db_value(stored, None, None) == "a secret"
+    assert stored != f"{EncryptedField.PREFIX}hunter2"
+    assert field.from_db_value(stored, None, None) == f"{EncryptedField.PREFIX}hunter2"
 
 
 def test_nothing_at_all_is_stored_as_nothing_rather_than_as_a_ciphertext():

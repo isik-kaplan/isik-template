@@ -9,7 +9,9 @@ import { Button } from '@/components/base/button'
 import { useClientTranslation } from '@/i18n/client'
 import { authOrigin } from '@/lib/authOrigin'
 
-import { AuthApi, extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api'
+import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
+
+import { detailOf } from '@isikk/core/allauth'
 
 export function VerifyEmailButton({ verificationKey }: { verificationKey: string }) {
   const { t } = useClientTranslation(['auth'])
@@ -20,9 +22,8 @@ export function VerifyEmailButton({ verificationKey }: { verificationKey: string
     const { data, error: apiError, response } = await new AuthApi(authOrigin()).verifyEmail(verificationKey)
     // A confirmed-but-not-yet-authenticated key still comes back as a 401 (see schema.ts) - only
     // an actually invalid/expired key carries a non-empty `errors` array, so that's what a real
-    // failure looks like here, not the response's HTTP status. ?.length, not just a truthiness
-    // check - extractAuthErrors can return `[]` (present but empty), which is truthy in JS.
-    if (data || !extractAuthErrors(apiError)?.length) {
+    // failure looks like here, not the response's HTTP status.
+    if (data || detailOf(apiError) === undefined) {
       router.push(response.status === 200 ? '/' : '/auth/login')
       return
     }

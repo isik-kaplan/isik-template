@@ -11,7 +11,7 @@ import { Label } from '@/components/base/label'
 import { useClientTranslation } from '@/i18n/client'
 import { createAuthApi } from '@/lib/apiClients'
 import { authOrigin } from '@/lib/authOrigin'
-import { useValidatedFormState } from '@/lib/useValidatedFormState'
+import { useAuthValidatedFormState } from '@/lib/submit'
 
 import { PasswordInput } from './PasswordInput'
 import { z } from 'zod'
@@ -20,15 +20,16 @@ export function ProvePasswordForm({ next }: { next: string }) {
   const { t } = useClientTranslation(['auth'])
   const router = useRouter()
   const schema = useMemo(() => z.object({ password: z.string().min(1, t('auth:validationPasswordRequired')) }), [t])
-  const { formState, formErrors, handleFormStateEvent, isSubmitting, submit } = useValidatedFormState(schema, {
+  const { formState, formErrors, handleFormStateEvent, isSubmitting, submit } = useAuthValidatedFormState(schema, {
     password: '',
   })
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
 
-    await submit(() => createAuthApi(authOrigin()).reauthenticate(formState.password), {
+    await submit(({ password }) => createAuthApi(authOrigin()).reauthenticate(password), {
       failure: t('auth:provePasswordError'),
+      leavesOnSuccess: true,
       onSuccess: () => router.replace(next),
     })
   }

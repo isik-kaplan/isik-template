@@ -13,10 +13,9 @@ import { authOrigin } from '@/lib/authOrigin'
 import { provePath } from '@/lib/reauthentication'
 import { SOCIAL_PROVIDERS } from '@/lib/socialProviders'
 
-import { extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api'
-
 import { AutoFormButton } from './AutoFormButton'
 import { ProviderIcon } from './ProviderIcon'
+import { detailOf } from '@isikk/core/allauth'
 import { toast } from 'sonner'
 
 // allauth's own code for a connect the backend's re-authentication gate turned back.
@@ -83,7 +82,7 @@ export function ConnectionsList({ initialProviders, connectAction, callbackUrl, 
       return
     }
 
-    toast.error(extractAuthErrors(error)?.[0]?.message ?? t('auth:profileConnectionsDisconnectError'))
+    toast.error(detailOf(error) ?? t('auth:profileConnectionsDisconnectError'))
   }
 
   if (SOCIAL_PROVIDERS.length === 0) {

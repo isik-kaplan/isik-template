@@ -12,9 +12,8 @@ import { createAuthApi } from '@/lib/apiClients'
 import { authOrigin } from '@/lib/authOrigin'
 import { formatUserAgent } from '@/lib/formatUserAgent'
 
-import { extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api'
-
 import { toDate } from '@isikk/core'
+import { detailOf } from '@isikk/core/allauth'
 import { toast } from 'sonner'
 
 type Session = {
@@ -50,7 +49,7 @@ export function SessionsList({ initialSessions }: SessionsListProps) {
       return
     }
 
-    toast.error(extractAuthErrors(error)?.[0]?.message ?? t('auth:profileSessionsRevokeError'))
+    toast.error(detailOf(error) ?? t('auth:profileSessionsRevokeError'))
   }
 
   return (

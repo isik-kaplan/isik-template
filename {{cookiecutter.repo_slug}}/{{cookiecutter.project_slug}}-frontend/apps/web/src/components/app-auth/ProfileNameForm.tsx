@@ -10,11 +10,10 @@ import { Label } from '@/components/base/label'
 import { useClientTranslation } from '@/i18n/client'
 import { createApi } from '@/lib/apiClients'
 import { apiOrigin } from '@/lib/apiOrigin'
+import { useValidatedFormState } from '@/lib/submit'
 
 import type { ApiType } from '@{{ cookiecutter.repo_slug }}/api'
 
-import { useValidatedFormState } from '@isikk/core/hooks'
-import { toast } from 'sonner'
 import { z } from 'zod'
 
 // Django's own max_length on both name columns.
@@ -29,12 +28,10 @@ export function ProfileNameForm({ user, onSaved }: { user: ProfileUser; onSaved:
     const name = z.string().max(NAME_MAX_LENGTH, t('auth:validationNameTooLong'))
     return z.object({ first_name: name, last_name: name })
   }, [t])
-  // The main API is DRF, so the library's own submit hooks read its refusals as they are written.
   const { formState, formErrors, handleFormStateEvent, isSubmitting, submit } = useValidatedFormState(
     schema,
     // Optional in the document because a write may leave them out; a read always carries both.
-    { first_name: user.first_name ?? '', last_name: user.last_name ?? '' },
-    toast
+    { first_name: user.first_name ?? '', last_name: user.last_name ?? '' }
   )
 
   async function handleSubmit(event: React.FormEvent) {

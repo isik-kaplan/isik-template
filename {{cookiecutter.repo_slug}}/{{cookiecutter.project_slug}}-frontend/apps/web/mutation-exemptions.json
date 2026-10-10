@@ -713,9 +713,9 @@
       "mutator": "StringLiteral",
       "fingerprint": "7e0a6e1dccbf",
       "reason": [
-        "equivalent mutant, unreachable rather than untested - useApiSubmit only falls back to this string",
-        "when toFormErrors(error) is undefined, which by isSuccess above already means this call counted as a",
-        "success."
+        "equivalent mutant, unreachable rather than untested - the submit hook only falls back to this",
+        "string when allauth's refusal carries no message, which by isSuccess above already means this call",
+        "counted as a success."
       ]
     }
   ],
@@ -898,9 +898,9 @@
       "mutator": "StringLiteral",
       "fingerprint": "d42079a6d745",
       "reason": [
-        "equivalent mutant, unreachable rather than untested - useApiSubmit only falls back to this string",
-        "when toFormErrors(error) is undefined, which by isSuccess above already means this call counted as a",
-        "success."
+        "equivalent mutant, unreachable rather than untested - the submit hook only falls back to this",
+        "string when allauth's refusal carries no message, which by isSuccess above already means this call",
+        "counted as a success."
       ]
     }
   ],
@@ -1249,26 +1249,6 @@
       ]
     }{% endif %}
   ],
-  "src/lib/useValidatedFormState.ts": [
-    {
-      "mutator": "ConditionalExpression",
-      "fingerprint": "f4a1832ccad9",
-      "reason": [
-        "equivalent mutant. Losing the \"field === 'non_field_errors'\" half of this check just moves a",
-        "non_field_errors entry into `orphaned` instead of `mine` directly - the recombination below puts its",
-        "messages back under mine.non_field_errors either way, in the same order."
-      ]
-    },
-    {
-      "mutator": "StringLiteral",
-      "fingerprint": "f4a1832ccad9",
-      "reason": [
-        "equivalent mutant. Losing the \"field === 'non_field_errors'\" half of this check just moves a",
-        "non_field_errors entry into `orphaned` instead of `mine` directly - the recombination below puts its",
-        "messages back under mine.non_field_errors either way, in the same order."
-      ]
-    }
-  ],
   "src/lib/utils.ts": [
     {
       "mutator": "MethodExpression",
@@ -1360,15 +1340,6 @@
         "equivalent mutant. cva's own defaultVariants fallback treats an empty-string variant the same as",
         "unset, so \"\" renders identically to 'default' here (verified directly against class-variance-",
         "authority)."
-      ]
-    },
-    {
-      "mutator": "OptionalChaining",
-      "fingerprint": "bb6072a15999",
-      "reason": [
-        "equivalent mutant. This schema only recognizes 'email', so any server error not on that field lands",
-        "in non_field_errors instead (see useValidatedFormState's acceptServerErrors) - whenever",
-        "formErrors.email is missing, formErrors.non_field_errors is guaranteed present."
       ]
     }
   ]

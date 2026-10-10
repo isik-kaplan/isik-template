@@ -168,26 +168,33 @@ def test_it_names_the_file_the_classes_and_the_way_out(tree, capsys):
     tree("shop/api/serializers.py", TWO_SERIALIZERS)
 
     assert layout_check.main() == 1
-    said = capsys.readouterr().err
-    assert "layout-check: apps/shop/api/serializers.py holds 2: ASerializer, BSerializer." in said
-    assert "Make it a folder with one of them per file." in said
-    assert "A deliberate exception goes in EXCEPTIONS in this script, with its reason." in said
+    assert capsys.readouterr().err == (
+        "layout-check: apps/shop/api/serializers.py holds 2: ASerializer, BSerializer.\n"
+        "              Make it a folder with one of them per file.\n"
+        "              A deliberate exception goes in EXCEPTIONS in this script, with its reason.\n"
+    )
 
 
 def test_a_file_inside_a_package_is_told_to_split(tree, capsys):
     tree("shop/api/serializers/order.py", TWO_SERIALIZERS)
 
     assert layout_check.main() == 1
-    assert "One per file - give the others their own." in capsys.readouterr().err
+    assert capsys.readouterr().err == (
+        "layout-check: apps/shop/api/serializers/order.py holds 2: ASerializer, BSerializer.\n"
+        "              One per file - give the others their own.\n"
+        "              A deliberate exception goes in EXCEPTIONS in this script, with its reason.\n"
+    )
 
 
 def test_it_says_what_to_do_with_a_stranger(tree, capsys):
     tree("shop/api/serializers/order.py", "class OrderSerializer: pass\n\n\ndef helper(): return []\n")
 
     assert layout_check.main() == 1
-    said = capsys.readouterr().err
-    assert "layout-check: apps/shop/api/serializers/order.py also holds helper." in said
-    assert "A file holds what its name declares" in said
+    assert capsys.readouterr().err == (
+        "layout-check: apps/shop/api/serializers/order.py also holds helper.\n"
+        "              A file holds what its name declares - move these onto the model, or into a utility module.\n"
+        "              A deliberate exception goes in EXCEPTIONS in this script, with its reason.\n"
+    )
 
 
 def test_it_says_what_to_do_with_a_stale_exception(tree, monkeypatch, capsys):
@@ -195,9 +202,43 @@ def test_it_says_what_to_do_with_a_stale_exception(tree, monkeypatch, capsys):
     tree("shop/utils.py", "")
 
     assert layout_check.main() == 1
-    said = capsys.readouterr().err
-    assert "layout-check: apps/gone.py is in EXCEPTIONS, and passes without it." in said
-    assert "take it out of EXCEPTIONS" in said
+    assert capsys.readouterr().err == (
+        "layout-check: apps/gone.py is in EXCEPTIONS, and passes without it.\n"
+        "              Nothing here needs excusing any more - take it out of EXCEPTIONS.\n"
+        "              A deliberate exception goes in EXCEPTIONS in this script, with its reason.\n"
+    )
+
+
+def test_two_offending_files_get_their_own_advice_and_one_way_out(tree, capsys):
+    tree("shop/api/serializers.py", TWO_SERIALIZERS)
+    tree("shop/api/viewsets/order.py", "class OrderViewSet: pass\n\n\ndef helper(): return []\n")
+
+    assert layout_check.main() == 1
+    assert capsys.readouterr().err == (
+        "layout-check: apps/shop/api/serializers.py holds 2: ASerializer, BSerializer.\n"
+        "              Make it a folder with one of them per file.\n"
+        "layout-check: apps/shop/api/viewsets/order.py also holds helper.\n"
+        "              A file holds what its name declares - move these onto the model, or into a utility module.\n"
+        "              A deliberate exception goes in EXCEPTIONS in this script, with its reason.\n"
+    )
+
+
+def test_a_mutated_tree_reads_the_same_as_the_real_one(tree):
+    """mutmut rewrites a function into variants beside a dispatcher, and this suite runs in that tree."""
+    source = (
+        "def x_order__mutmut_orig(): pass\n"
+        "def x_order__mutmut_1(): pass\n"
+        "def order(): pass\n"
+        "class OrderSerializer: pass\n"
+    )
+
+    assert tree("shop/api/serializers/order.py", source) == []
+
+
+def test_a_helper_merely_starting_with_x_is_still_a_stranger(tree):
+    found = tree("shop/api/serializers/order.py", "class OrderSerializer: pass\n\n\ndef x_helper(): pass\n")
+
+    assert found == [("apps/shop/api/serializers/order.py", "stranger", ["x_helper"])]
 
 
 def test_a_clean_tree_says_nothing_and_passes(tree, capsys):

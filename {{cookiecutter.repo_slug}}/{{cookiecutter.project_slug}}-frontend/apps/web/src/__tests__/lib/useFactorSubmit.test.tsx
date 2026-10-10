@@ -61,18 +61,46 @@ describe('useFactorSubmit', () => {
       value: { href: '', pathname: '/profile/two-factor', search: '?tab=1' },
       writable: true,
     })
+    const onSuccess = vi.fn()
     const { result } = renderHook(() => useFactorSubmit())
+    let answer: unknown = 'unset'
     await act(async () => {
-      await result.current.submit(
+      answer = await result.current.submit(
         async () => refused(401, { data: { flows: [{ id: 'reauthenticate' }] }, meta: { is_authenticated: true } }),
-        { failure: 'Failed.' }
+        { success: 'Done.', failure: 'Failed.', onSuccess }
       )
     })
 
     const sentTo = window.location.href
     Object.defineProperty(window, 'location', { value: originalLocation, writable: true })
     expect(sentTo).toBe('/auth/prove?next=%2Fprofile%2Ftwo-factor%3Ftab%3D1')
+    expect(answer).toBeNull()
     expect(toast.error).not.toHaveBeenCalled()
+    expect(toast.success).not.toHaveBeenCalled()
+    expect(onSuccess).not.toHaveBeenCalled()
+  })
+
+  it('hands a success to onSuccess, and stays quiet without a success message', async () => {
+    const onSuccess = vi.fn()
+    const answered = { ...ok, data: { status: 200 } }
+    const { result } = renderHook(() => useFactorSubmit())
+    await act(async () => {
+      await result.current.submit(async () => answered, { failure: 'Failed.', onSuccess })
+    })
+
+    expect(onSuccess).toHaveBeenCalledWith(answered, { replayed: false })
+    expect(toast.success).not.toHaveBeenCalled()
+  })
+
+  it('counts an answer with no body as a failure', async () => {
+    const { result } = renderHook(() => useFactorSubmit())
+    let answer: unknown = 'unset'
+    await act(async () => {
+      answer = await result.current.submit(async () => ok, { failure: 'Failed.' })
+    })
+
+    expect(answer).toBeNull()
+    expect(toast.error).toHaveBeenCalledWith('Failed.')
   })
 
   it('hands the refusal to onFailure instead of toasting, when given one', async () => {

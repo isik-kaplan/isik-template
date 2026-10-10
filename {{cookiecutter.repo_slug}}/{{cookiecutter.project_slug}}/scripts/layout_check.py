@@ -115,9 +115,17 @@ def strangers_in(tree, words, stem):
     functions = [
         node.name
         for node in tree.body
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name != stem
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name != stem
+        and not _generated_by_mutmut(node.name)
     ]
     return foreign + functions
+
+
+def _generated_by_mutmut(name):
+    """mutmut rewrites a function into `x_<name>__mutmut_<n>` variants beside a dispatcher, and the whole
+    suite - this gate's own test included - runs in that tree."""
+    return name.startswith("x_") and "__mutmut_" in name
 
 
 def kind_of(path):

@@ -6,6 +6,7 @@ place an attacker is not - anybody holding a session can call the endpoint direc
 
 from allauth.headless.base.response import ReauthenticationResponse
 
+from apps.common.logging import REAUTHENTICATION_DEMANDED, log
 from apps.users.reauthentication.proof import has_proven_who_they_are, spend_the_proof
 
 
@@ -38,11 +39,17 @@ class ProvesWhoTheyAre:
     def is_an_act(self):
         return self.request.method in self.reauthentication_methods
 
+    def act_of(self, request):
+        # An allauth view has no DRF `action`; its class and method are what name the act instead.
+        return f"{type(self).__name__}.{request.method}"
+
     def refuse_unproven(self):
         """None when this request may go on, or the response refusing it."""
         if not self.is_an_act():
             return None
         if not has_proven_who_they_are(self.request):
+            # Here rather than in `refusal()`, which a view may override with a shape of its own.
+            log(REAUTHENTICATION_DEMANDED, user=str(self.request.user.pk), act=self.act_of(self.request))
             return self.refusal()
         self.spends_a_proof = True
         return None
@@ -63,4 +70,4 @@ class ProvesWhoTheyAre:
         # Spent on success only, so a refused act does not cost a proof somebody just went through a
         # challenge to get.
         if self.spends_a_proof and response.status_code < 400:
-            spend_the_proof(request)
+            spend_the_proof(request, self.act_of(request))

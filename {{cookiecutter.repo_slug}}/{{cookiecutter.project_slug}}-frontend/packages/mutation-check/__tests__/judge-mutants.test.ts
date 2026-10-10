@@ -1,9 +1,9 @@
-import { fingerprint, judgeMutants } from '../judge-mutants.mjs'
+import { SHORTEST_USEFUL_REASON, fingerprint, inlineDirectives, judgeMutants, weakReasons } from '../judge-mutants.mjs'
 import { describe, expect, it } from 'vitest'
 
 const SOURCE = ['const a = 1 + 2', 'const b = a > 0', "const c = 'x' + 'y'"]
 
-type Status = 'Killed' | 'Survived' | 'NoCoverage' | 'Timeout' | 'CompileError'
+type Status = 'Killed' | 'Survived' | 'NoCoverage' | 'Timeout' | 'CompileError' | 'RuntimeError'
 
 function mutant(line: number, status: Status, mutatorName = 'ArithmeticOperator') {
   return { mutatorName, status, replacement: '?', location: { start: { line, column: 1 }, end: { line, column: 9 } } }
@@ -36,7 +36,7 @@ describe('judgeMutants', () => {
   it('passes a killed mutant and an exempt survivor, and counts both', () => {
     const verdict = judge({ 'src/a.ts': [mutant(1, 'Killed'), mutant(2, 'Survived')] }, { 'src/a.ts': [entry(2)] })
 
-    expect(verdict).toEqual({ total: 2, alive: 1, unexplained: [], stale: [], plural: [], orphaned: [] })
+    expect(verdict).toEqual({ total: 2, alive: 1, unexplained: [], stale: [], plural: [], broken: [], orphaned: [] })
   })
 
   it.each(['Survived', 'NoCoverage', 'Timeout'] as const)(
@@ -125,5 +125,50 @@ describe('judgeMutants', () => {
     judgeMutants(report, {}, { readLines: (file: string) => (read.push(file), SOURCE), exists: () => true })
 
     expect(read).toEqual(['src/b.ts'])
+  })
+})
+
+describe('what the gate refuses besides survivors', () => {
+  it('names a mutant that never ran, since the run measured less than it reports', () => {
+    const compiled = mutant(1, 'CompileError')
+    const crashed = mutant(2, 'RuntimeError')
+
+    expect(judge({ 'src/a.ts': [compiled, crashed, mutant(3, 'Killed')] }, {}).broken).toEqual([
+      { file: 'src/a.ts', mutant: compiled },
+      { file: 'src/a.ts', mutant: crashed },
+    ])
+  })
+
+  it('refuses a reason too short to be one, or one that only says a test is missing', () => {
+    const long = 'equivalent mutant. Both spellings render the same markup to the same reader.'
+    const catalog = {
+      'src/a.ts': [
+        { mutator: 'StringLiteral', fingerprint: 'a', reason: ['equivalent'] },
+        { mutator: 'StringLiteral', fingerprint: 'b', reason: [long] },
+        { mutator: 'StringLiteral', fingerprint: 'c', reason: ['Hard to test from here, and', long] },
+        { mutator: 'StringLiteral', fingerprint: 'd', reason: long },
+      ],
+      'src/b.ts': [{ mutator: 'StringLiteral', fingerprint: 'e' }],
+    }
+
+    expect(weakReasons(catalog).map(({ file, entry }) => `${file}:${entry.fingerprint}`)).toEqual([
+      'src/a.ts:a',
+      'src/a.ts:c',
+      'src/b.ts:e',
+    ])
+  })
+
+  it('accepts a reason exactly as long as the bar', () => {
+    const catalog = { 'src/a.ts': [{ mutator: 'x', fingerprint: 'a', reason: ['x'.repeat(SHORTEST_USEFUL_REASON)] }] }
+
+    expect(weakReasons(catalog)).toEqual([])
+    expect(weakReasons({ 'src/a.ts': [{ ...catalog['src/a.ts'][0], reason: ['x'.repeat(39)] }] })).toHaveLength(1)
+  })
+
+  it('finds an inline directive on the line it sits on', () => {
+    const sources = { 'src/a.ts': 'const a = 1\n// Stryker disable next-line all\nconst b = 2', 'src/b.ts': 'clean' }
+
+    expect(inlineDirectives(sources)).toEqual([{ file: 'src/a.ts', line: 2 }])
+    expect(inlineDirectives({ 'src/c.ts': '// Stryker restore all' })).toEqual([{ file: 'src/c.ts', line: 1 }])
   })
 })

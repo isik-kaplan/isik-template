@@ -8,14 +8,16 @@ afterEach(() => {
 })
 
 // jsdom has no layout engine, so it never implemented matchMedia - next-themes and sonner both
-// call it unconditionally on mount to read the OS color scheme.
-window.matchMedia ??= (query: string) => ({
-  matches: false,
-  media: query,
-  onchange: null,
-  addListener: () => {},
-  removeListener: () => {},
-  addEventListener: () => {},
-  removeEventListener: () => {},
-  dispatchEvent: () => false,
-})
+// call it unconditionally on mount to read the OS color scheme. Guarded, because the server
+// project runs this file under `node`, which has no window at all.
+if (typeof window !== 'undefined')
+  window.matchMedia ??= (query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  })

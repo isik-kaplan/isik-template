@@ -1,7 +1,8 @@
+import { SERVER_TEST_FILES } from './vitest.server-tests'
 import react from '@vitejs/plugin-react'
 import { statSync } from 'fs'
 import path from 'path'
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 import { BaseSequencer, type TestSpecification } from 'vitest/node'
 
 // The narrowest test files first, by size and then by path, whatever the last run's cache says. A
@@ -15,9 +16,25 @@ class NarrowestFirst extends BaseSequencer {
   }
 }
 
+// Everything a run needs that is not about *which* environment it runs in. Exported so
+// `scripts/server-test-candidates.mjs` runs the same suite under `node` without copying it.
+export const sharedPlugins = [react()]
+
+export const sharedResolve = { alias: { '@': path.resolve(__dirname, './src') } }
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: sharedPlugins,
   test: {
+    // Two environments, because jsdom hands server code ambient globals production never has - see
+    // vitest.server-tests.ts for what is on that list and why it is a list.
+    projects: [
+      { extends: true, test: { name: 'server', environment: 'node', include: SERVER_TEST_FILES } },
+      // `exclude` replaces the default rather than adding to it, so the default is carried over.
+      {
+        extends: true,
+        test: { name: 'browser', environment: 'jsdom', exclude: [...configDefaults.exclude, ...SERVER_TEST_FILES] },
+      },
+    ],
     environment: 'jsdom',
     globals: false,
     setupFiles: ['./vitest.setup.ts'],
@@ -43,9 +60,5 @@ export default defineConfig({
       reporter: ['text', 'html', 'json'],
     },
   },
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
+  resolve: sharedResolve,
 })

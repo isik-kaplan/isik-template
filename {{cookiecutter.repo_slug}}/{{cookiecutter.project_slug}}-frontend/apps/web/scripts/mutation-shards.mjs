@@ -52,8 +52,7 @@ export const SHARDS = {
     'src/lib/serverApi.ts',
     'src/lib/sessionChannel.ts',
     'src/lib/socialProviders.ts',
-    'src/lib/useApiSubmit.ts',
-    'src/lib/useValidatedFormState.ts',
+    'src/lib/submit.ts',
     'src/proxy.ts',
   ],
   // Signing in and up, and every screen of that flow.

@@ -2,7 +2,10 @@ import { SignupForm } from '@/components/app-auth/SignupForm'
 
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 const push = vi.fn()
 
@@ -25,6 +28,7 @@ describe('SignupForm', () => {
   const originalFetch = globalThis.fetch
 
   beforeEach(() => {
+    vi.mocked(toast.error).mockClear()
     push.mockClear()
   })
 
@@ -94,6 +98,8 @@ describe('SignupForm', () => {
     await fillAndSubmit(user)
 
     expect(push).toHaveBeenCalledWith('/auth/signup-email-sent')
+    // The screen is leaving, so the button stays shut rather than offering a second submit.
+    expect(screen.getByRole('button', { name: 'Sign up' })).toHaveProperty('disabled', true)
   })
 
   it('treats a 401 pending verify_email flow as success', async () => {
@@ -138,7 +144,7 @@ describe('SignupForm', () => {
 
     await fillAndSubmit(user)
 
-    expect(await screen.findByText('Could not sign you up.')).toBeTruthy()
+    await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('Could not sign you up.'))
     expect(push).not.toHaveBeenCalled()
   })
 
@@ -149,7 +155,7 @@ describe('SignupForm', () => {
 
     await fillAndSubmit(user)
 
-    expect(await screen.findByText('Unauthorized.')).toBeTruthy()
+    await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('Unauthorized.'))
     expect(push).not.toHaveBeenCalled()
   })
 
@@ -162,7 +168,7 @@ describe('SignupForm', () => {
 
     await fillAndSubmit(user)
 
-    expect(await screen.findByText('Could not sign you up.')).toBeTruthy()
+    await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('Could not sign you up.'))
     expect(push).not.toHaveBeenCalled()
   })
 
@@ -175,8 +181,20 @@ describe('SignupForm', () => {
 
     await fillAndSubmit(user)
 
-    expect(await screen.findByText('Could not sign you up.')).toBeTruthy()
+    await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('Could not sign you up.'))
     expect(push).not.toHaveBeenCalled()
+  })
+
+  it('shows a refusal that names no field beneath the form', async () => {
+    globalThis.fetch = vi.fn(async () =>
+      jsonResponse(400, { status: 400, errors: [{ code: 'too_many', message: 'Slow down.' }] })
+    )
+    const user = userEvent.setup()
+    render(<SignupForm />)
+
+    await fillAndSubmit(user)
+
+    expect(await screen.findByText('Slow down.')).toBeTruthy()
   })
 
   it('falls back to a generic error message when the response has no errors array', async () => {
@@ -186,6 +204,6 @@ describe('SignupForm', () => {
 
     await fillAndSubmit(user)
 
-    expect(await screen.findByText('Could not sign you up.')).toBeTruthy()
+    await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('Could not sign you up.'))
   })
 })

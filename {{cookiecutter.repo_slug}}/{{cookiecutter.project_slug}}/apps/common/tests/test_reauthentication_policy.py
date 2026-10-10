@@ -59,6 +59,7 @@ def call(session):
         kwargs = {"pk": pk} if pk else {}
         return GatedViewSet.as_view({method: action})(request, **kwargs)
 
+    call.user = user
     return call
 
 
@@ -68,6 +69,26 @@ def _prove(session):
 
 def _refused(response):
     return response.status_code == 403 and response["X-Reauthentication-Required"] == "1"
+
+
+def _acts(logged, event):
+    return [(line["user"], line["act"]) for line in logged if line["event"] == event]
+
+
+def test_demanding_a_proof_is_written_down_against_the_act_that_asked(call, logged):
+    call("post", "create")
+
+    assert _acts(logged, "reauthentication.demanded") == [(str(call.user.pk), "create")]
+    assert _acts(logged, "reauthentication.spent") == []
+
+
+def test_spending_a_proof_is_written_down_against_the_act_it_bought(call, session, logged):
+    _prove(session)
+
+    call("patch", "partial_update", {"is_active": False}, pk="1")
+
+    assert _acts(logged, "reauthentication.spent") == [(str(call.user.pk), "partial_update")]
+    assert _acts(logged, "reauthentication.demanded") == []
 
 
 def test_an_act_is_refused_without_a_proof_and_says_which_gate_stopped_it(call):

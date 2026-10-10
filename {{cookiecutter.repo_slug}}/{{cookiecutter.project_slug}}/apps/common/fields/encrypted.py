@@ -36,7 +36,9 @@ class EncryptedField(models.TextField):
 
     def get_prep_value(self, value):
         value = super().get_prep_value(value)
-        if not value or value.startswith(self.PREFIX):
+        # No "already enciphered" skip: `from_db_value` deciphers on the way out, so this only ever sees
+        # cleartext, and a skip would store a secret that merely starts with the prefix as it stands.
+        if not value:
             return value
         if self.plaintext_without_a_key and not settings.CREDENTIAL_KEY:
             return value

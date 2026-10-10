@@ -138,11 +138,14 @@ def has_proven_who_they_are(request):
     )
 
 
-def spend_the_proof(request):
+def spend_the_proof(request, act):
     """Single-use by default: the act it was asked for is the act it covers, and the next one asks
-    again. Everything recorded up to now stops counting, so no record has to be removed."""
+    again. Everything recorded up to now stops counting, so no record has to be removed.
+
+    `act` is what the proof bought, which is the whole content of the line - that one was spent is
+    already knowable from the demand before it."""
     request.session[SPENT_AT_SESSION_KEY] = time.time()
-    log(REAUTHENTICATION_SPENT, user=str(request.user.pk))
+    log(REAUTHENTICATION_SPENT, user=str(request.user.pk), act=act)
 
 
 def ways_to_prove(request):

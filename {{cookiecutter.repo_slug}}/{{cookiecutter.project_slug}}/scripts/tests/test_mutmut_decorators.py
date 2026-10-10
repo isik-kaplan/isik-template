@@ -239,10 +239,17 @@ class A:
     assert mutants(source) == []
 
 
-def test_an_undecorated_function_is_untouched_by_any_of_this(patched):
+def test_an_undecorated_function_is_untouched_by_any_of_this(as_it_was):
+    """Against stock mutmut rather than against itself: comparing one patched run to another says only
+    that generation is deterministic."""
     source = "def work(left, right):\n    return left + right\n"
 
-    assert mutants(source) == mutants(source)
+    mutmut_decorators.uninstall()
+    stock = mutants(source)
+    mutmut_decorators.install()
+
+    assert stock, "stock mutmut generated nothing, so this proves nothing"
+    assert mutants(source) == stock
 
 
 DECORATED_CLASS = """
@@ -310,10 +317,17 @@ def test_a_pragma_on_a_method_of_a_decorated_class_is_still_honoured(patched):
     assert all("delete" in name for name in mutants(source))
 
 
-def test_an_undecorated_class_is_untouched_by_any_of_this(patched):
+def test_an_undecorated_class_is_untouched_by_any_of_this(as_it_was):
+    """Against stock mutmut rather than against itself: comparing one patched run to another says only
+    that generation is deterministic."""
     source = "class A:\n    def held(self):\n        return 1 + 2\n"
 
-    assert mutants(source) == mutants(source)
+    mutmut_decorators.uninstall()
+    stock = mutants(source)
+    mutmut_decorators.install()
+
+    assert stock, "stock mutmut generated nothing, so this proves nothing"
+    assert mutants(source) == stock
 
 
 def test_taking_it_off_puts_mutmut_back(as_it_was):

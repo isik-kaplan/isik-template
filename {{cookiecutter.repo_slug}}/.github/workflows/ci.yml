@@ -267,6 +267,13 @@ jobs:
           docker compose run --rm --no-deps backend python -m scripts.check_mutants \
             --confirmed mutants/mutmut-confirmed.json --queue unsettled.txt --summary mutants/summary.md
 
+      # A question rather than a gate: where two case-only spellings of one literal got different
+      # verdicts, one of them is wrong, and which one is for whoever reads this.
+      - name: Ask whether two spellings of one literal agree
+        if: always()
+        continue-on-error: true
+        run: docker compose run --rm --no-deps backend python -m scripts.case_only_mutants
+
       - name: Add the mutation table to the job summary
         if: always()
         run: cat {{ cookiecutter.project_slug }}/mutants/summary.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true

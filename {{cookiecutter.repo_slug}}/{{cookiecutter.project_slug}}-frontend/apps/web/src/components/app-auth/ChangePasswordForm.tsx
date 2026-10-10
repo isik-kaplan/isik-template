@@ -9,7 +9,7 @@ import { Label } from '@/components/base/label'
 import { useClientTranslation } from '@/i18n/client'
 import { createAuthApi } from '@/lib/apiClients'
 import { authOrigin } from '@/lib/authOrigin'
-import { useValidatedFormState } from '@/lib/useValidatedFormState'
+import { useAuthValidatedFormState } from '@/lib/submit'
 
 import { PasswordInput } from './PasswordInput'
 import { z } from 'zod'
@@ -28,7 +28,7 @@ export function ChangePasswordForm() {
       }),
     [t]
   )
-  const { formState, formErrors, handleFormStateEvent, setFormState, isSubmitting, submit } = useValidatedFormState(
+  const { formState, formErrors, handleFormStateEvent, setFormState, isSubmitting, submit } = useAuthValidatedFormState(
     schema,
     { current_password: '', new_password: '' }
   )
@@ -36,7 +36,7 @@ export function ChangePasswordForm() {
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
 
-    await submit(() => createAuthApi(authOrigin()).changePassword(formState), {
+    await submit((value) => createAuthApi(authOrigin()).changePassword(value), {
       success: t('auth:changePasswordSuccess'),
       failure: t('auth:changePasswordError'),
       onSuccess: () => setFormState({ current_password: '', new_password: '' }),

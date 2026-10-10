@@ -280,7 +280,7 @@ describe('EmailsList', () => {
     await user.type(screen.getByPlaceholderText('Email'), 'taken@example.com')
     await user.click(screen.getByRole('button', { name: 'Add email' }))
 
-    expect(await screen.findByText('Could not add email.')).toBeTruthy()
+    await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('Could not add email.'))
   })
 
   test.prop([fc.uniqueArray(fc.string({ minLength: 1 }), { minLength: 1, maxLength: 5 })])(

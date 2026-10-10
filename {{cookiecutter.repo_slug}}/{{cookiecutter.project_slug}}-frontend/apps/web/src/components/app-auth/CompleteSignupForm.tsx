@@ -11,11 +11,12 @@ import { Label } from '@/components/base/label'
 
 import { useClientTranslation } from '@/i18n/client'
 import { authOrigin } from '@/lib/authOrigin'
-import { useValidatedFormState } from '@/lib/useValidatedFormState'
+import { useAuthValidatedFormState } from '@/lib/submit'
 
-import { AuthApi, extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api'
+import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
 import { PasswordInput } from './PasswordInput'
+import { detailOf } from '@isikk/core/allauth'
 import { z } from 'zod'
 
 export type CompleteSignupFormProps = {
@@ -37,7 +38,7 @@ export function CompleteSignupForm({ email, suggestedUsername = '' }: CompleteSi
       }),
     [t]
   )
-  const { formState, formErrors, handleFormStateEvent, isSubmitting, submit } = useValidatedFormState(schema, {
+  const { formState, formErrors, handleFormStateEvent, isSubmitting, submit } = useAuthValidatedFormState(schema, {
     username: suggestedUsername,
     password: '',
   })
@@ -46,11 +47,12 @@ export function CompleteSignupForm({ email, suggestedUsername = '' }: CompleteSi
     event.preventDefault()
 
     const authApi = new AuthApi(authOrigin())
-    await submit(() => authApi.completeProviderSignup({ ...formState, email }), {
+    await submit((value) => authApi.completeProviderSignup({ ...value, email }), {
       // Same 401-can-mean-success shape as every other auth endpoint here (see VerifyEmailButton) -
       // mandatory email verification means the account can be created without becoming logged in.
-      isSuccess: ({ data, error }) => Boolean(data) || !extractAuthErrors(error)?.length,
+      isSuccess: ({ data, error }) => Boolean(data) || detailOf(error) === undefined,
       failure: t('auth:completeSignupError'),
+      leavesOnSuccess: true,
       onSuccess: ({ response }) => router.push(response.status === 200 ? '/' : '/auth/login'),
     })
   }

@@ -246,15 +246,27 @@ describe('TotpSetup', () => {
     expect(screen.getByRole('group', { name: 'Authentication code' })).toBeTruthy()
   })
 
-  it('draws no error line until there is an error, and then a paragraph holding it', async () => {
+  it('toasts its own message when turning it on fails for no stated reason', async () => {
     serve(on('POST', TOTP, 500, {}))
+    render(<TotpSetup active={false} secret="A" />)
+
+    const user = await typeCode('123456')
+    await user.click(screen.getByRole('button', { name: 'Turn on' }))
+
+    await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('Could not turn on two-factor authentication.'))
+  })
+
+  it('draws no error line until there is an error, and then a paragraph holding it', async () => {
+    serve(
+      on('POST', TOTP, 400, { status: 400, errors: [{ code: 'incorrect_code', param: 'code', message: 'Wrong.' }] })
+    )
     const { container } = render(<TotpSetup active={false} secret="A" />)
     expect(container.querySelector('.text-destructive')).toBeNull()
 
     const user = await typeCode('123456')
     await user.click(screen.getByRole('button', { name: 'Turn on' }))
 
-    expect((await screen.findByText('Could not turn on two-factor authentication.')).tagName).toBe('P')
+    expect((await screen.findByText('Wrong.')).tagName).toBe('P')
   })
 
   it('reports a refused turn-off in its own words when the server gives none', async () => {

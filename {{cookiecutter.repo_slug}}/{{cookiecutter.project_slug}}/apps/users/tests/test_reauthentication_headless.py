@@ -54,6 +54,35 @@ def test_a_proof_buys_one_act_and_the_next_one_asks_again(headless, signed_in):
     assert _refused(second)
 
 
+def _acts(logged, event):
+    return [(line["user"], line["act"]) for line in logged if line["event"] == event]
+
+
+@pytest.mark.django_db
+def test_demanding_a_proof_is_written_down_against_the_act_that_asked(headless, signed_in, logged):
+    _add_email(headless)
+
+    assert _acts(logged, "reauthentication.demanded") == [(str(signed_in.pk), "ManageEmailView.POST")]
+    assert _acts(logged, "reauthentication.spent") == []
+
+
+@pytest.mark.django_db
+def test_spending_a_proof_is_written_down_against_the_act_it_bought(headless, signed_in, logged):
+    headless.prove()
+
+    _add_email(headless)
+
+    assert _acts(logged, "reauthentication.spent") == [(str(signed_in.pk), "ManageEmailView.POST")]
+    assert _acts(logged, "reauthentication.demanded") == []
+
+
+@pytest.mark.django_db
+def test_a_refusal_shaped_by_its_view_is_still_written_down(client, signed_in, providers, logged):
+    _redirect_to_provider(client, "connect")
+
+    assert _acts(logged, "reauthentication.demanded") == [(str(signed_in.pk), "RedirectToProviderView.POST")]
+
+
 @pytest.mark.django_db
 def test_a_wrong_password_proves_nothing(headless, signed_in):
     attempt = headless.call("POST", "account:reauthenticate", {"password": "not-it"})

@@ -11,7 +11,7 @@ import { Label } from '@/components/base/label'
 
 import { useClientTranslation } from '@/i18n/client'
 import { authOrigin } from '@/lib/authOrigin'
-import { useValidatedFormState } from '@/lib/useValidatedFormState'
+import { useAuthValidatedFormState } from '@/lib/submit'
 
 import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
@@ -21,7 +21,7 @@ export function ForgotPasswordForm() {
   const { t } = useClientTranslation(['auth'])
   const router = useRouter()
   const schema = useMemo(() => z.object({ email: z.email(t('auth:validationEmailInvalid')) }), [t])
-  const { formState, formErrors, handleFormStateEvent, validate } = useValidatedFormState(schema, { email: '' })
+  const { formState, formErrors, handleFormStateEvent, validate } = useAuthValidatedFormState(schema, { email: '' })
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()

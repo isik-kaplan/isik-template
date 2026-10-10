@@ -12,7 +12,7 @@ import { SegmentedCodeInput } from '@/components/base/segmented-code-input'
 
 import { useClientTranslation } from '@/i18n/client'
 import { authOrigin } from '@/lib/authOrigin'
-import { useApiSubmit } from '@/lib/useApiSubmit'
+import { useAuthAPISubmit } from '@/lib/submit'
 
 import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
@@ -58,7 +58,7 @@ export function MfaChallengeForm({ types, redirectTo, purpose = 'login' }: MfaCh
   const [useRecoveryCode, setUseRecoveryCode] = useState(!types.includes('totp'))
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const { isSubmitting, submit } = useApiSubmit()
+  const { isSubmitting, submit } = useAuthAPISubmit()
   const passkeysUsable = useBrowserSupportsPasskeys()
 
   function finish() {
@@ -78,6 +78,7 @@ export function MfaChallengeForm({ types, redirectTo, purpose = 'login' }: MfaCh
     await submit(() => calls.code(new AuthApi(authOrigin()), code.trim()), {
       failure: t('auth:twoFactorError'),
       setFormErrors: (errors) => setError(Object.values(errors)[0][0]),
+      leavesOnSuccess: true,
       onSuccess: finish,
     })
   }
@@ -91,6 +92,7 @@ export function MfaChallengeForm({ types, redirectTo, purpose = 'login' }: MfaCh
     await submit(() => calls.passkey(authApi, credential), {
       failure: t('auth:twoFactorPasskeyError'),
       setFormErrors: (errors) => setError(Object.values(errors)[0][0]),
+      leavesOnSuccess: true,
       onSuccess: finish,
     })
   }

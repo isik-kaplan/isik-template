@@ -209,11 +209,13 @@ def test_nobody_signed_in_has_proven_anything():
 def test_spending_the_proof_makes_every_earlier_record_stop_counting(alice, now, logged):
     request = _request(alice, [_record(0)])
 
-    proof.spend_the_proof(request)
+    proof.spend_the_proof(request, "an_act")
 
     assert request.session[proof.SPENT_AT_SESSION_KEY] == NOW
     assert not proof.has_proven_who_they_are(request)
-    assert [(line["event"], line["user"]) for line in logged] == [("reauthentication.spent", str(alice.pk))]
+    assert [(line["event"], line["user"], line["act"]) for line in logged] == [
+        ("reauthentication.spent", str(alice.pk), "an_act")
+    ]
 
 
 @pytest.mark.django_db

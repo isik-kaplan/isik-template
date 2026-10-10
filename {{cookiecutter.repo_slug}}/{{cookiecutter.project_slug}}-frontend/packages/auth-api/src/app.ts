@@ -4,9 +4,9 @@ import type { paths } from './schema'
 // Re-exported here rather than left to './index' - errors.ts has no browser dependency, but
 // index.ts also re-exports client.ts (js-cookie), and this subpath exists specifically so a
 // React Native bundle never has to pull that in.
-export { extractAuthErrors, toFormErrors } from './errors'
+export { extractAuthErrors } from './errors'
 export { needsReauthentication, pendingMfaTypes } from './flows'
-export type { AllauthError, AllauthErrorResponse, FormErrors } from './errors'
+export type { AllauthError, AllauthErrorResponse } from './errors'
 export { hasPendingVerifyEmail } from './flows'
 
 export type AppAuthApiOptions = {

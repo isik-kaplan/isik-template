@@ -12,7 +12,7 @@ import { Label } from '@/components/base/label'
 import { useClientTranslation } from '@/i18n/client'
 import { authOrigin } from '@/lib/authOrigin'
 import { VERIFY_EMAIL_REQUIRED_PATH } from '@/lib/sessionChannel'
-import { useValidatedFormState } from '@/lib/useValidatedFormState'
+import { useAuthValidatedFormState } from '@/lib/submit'
 
 import { AuthApi, hasPendingVerifyEmail, pendingMfaTypes } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
@@ -30,7 +30,7 @@ export function LoginForm({ redirectTo = '/' }: { redirectTo?: string }) {
       }),
     [t]
   )
-  const { formState, formErrors, handleFormStateEvent, isSubmitting, submit } = useValidatedFormState(schema, {
+  const { formState, formErrors, handleFormStateEvent, isSubmitting, submit } = useAuthValidatedFormState(schema, {
     login: '',
     password: '',
   })
@@ -39,19 +39,17 @@ export function LoginForm({ redirectTo = '/' }: { redirectTo?: string }) {
     event.preventDefault()
 
     const authApi = new AuthApi(authOrigin())
-    const isEmail = formState.login.includes('@')
     await submit(
-      () =>
-        authApi.login({
-          ...(isEmail ? { email: formState.login } : { username: formState.login }),
-          password: formState.password,
-        }),
+      ({ login, password }) =>
+        authApi.login({ ...(login.includes('@') ? { email: login } : { username: login }), password }),
       {
         // None of these is a wrong password: a 409 means the visitor was already logged in, a pending
         // verify_email flow means the address is still unconfirmed, and a pending second factor is owed.
         isSuccess: ({ data, error, response }) =>
           Boolean(data) || response.status === 409 || hasPendingVerifyEmail(error) || pendingMfaTypes(error) !== null,
         failure: t('auth:loginError'),
+        // Every branch below takes this form off the screen.
+        leavesOnSuccess: true,
         onSuccess: ({ error }) => {
           if (hasPendingVerifyEmail(error)) {
             router.push(VERIFY_EMAIL_REQUIRED_PATH)

@@ -5,7 +5,10 @@ import { VERIFY_EMAIL_REQUIRED_PATH } from '@/lib/sessionChannel'
 import { expectUniqueAccessibleNames } from '@isikk/core/testing'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 const push = vi.fn()
 const refresh = vi.fn()
@@ -22,6 +25,7 @@ describe('LoginForm', () => {
   const originalFetch = globalThis.fetch
 
   beforeEach(() => {
+    vi.mocked(toast.error).mockClear()
     push.mockClear()
     refresh.mockClear()
   })
@@ -85,6 +89,8 @@ describe('LoginForm', () => {
     await user.click(screen.getByRole('button', { name: 'Log in' }))
 
     expect(push).toHaveBeenCalledWith('/dashboard')
+    // The screen is leaving, so the button stays shut rather than offering a second submit.
+    expect(screen.getByRole('button', { name: 'Log in' })).toHaveProperty('disabled', true)
     expect(refresh).toHaveBeenCalled()
   })
 
@@ -190,7 +196,7 @@ describe('LoginForm', () => {
     await user.type(screen.getByLabelText('Password'), 'secret123')
     await user.click(screen.getByRole('button', { name: 'Log in' }))
 
-    expect(await screen.findByText('Could not log you in.')).toBeTruthy()
+    await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('Could not log you in.'))
     expect(push).not.toHaveBeenCalled()
   })
 
@@ -203,7 +209,7 @@ describe('LoginForm', () => {
     await user.type(screen.getByLabelText('Password'), 'wrong')
     await user.click(screen.getByRole('button', { name: 'Log in' }))
 
-    expect(await screen.findByText('Could not log you in.')).toBeTruthy()
+    await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('Could not log you in.'))
   })
 
   it('sends a right password with a factor still owed on to the two-factor step, keeping "next"', async () => {

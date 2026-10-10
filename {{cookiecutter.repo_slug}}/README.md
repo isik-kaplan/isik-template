@@ -44,11 +44,13 @@ domain/SMTP/OAuth/Sentry config instead of leaving `.env.example`'s dev defaults
 
 Uploads (`FileField`/`ImageField`, anything through `default_storage`) go to S3 via django-storages.
 Locally that is the `storage` service, LocalStack running only S3, pinned to `4.14.0`: every
-LocalStack release from `2026.03.0` on refuses to start without an account and auth token. The
-backend's `setup` command (run on every boot) creates `{{ cookiecutter.config_prefix }}__STORAGE__BUCKET_NAME` if
-it is missing. LocalStack's community edition keeps nothing across a restart, so treat it as dev
-and demo storage only - point the `{{ cookiecutter.config_prefix }}__STORAGE__*` variables at a real S3-compatible
-bucket for a deployment (`bash scripts/setup.sh` asks for them). Inspect it by hand on the
+LocalStack release from `2026.03.0` on refuses to start without an account and auth token. The app
+never creates a bucket - `s3:CreateBucket` is a provisioning permission the web process should not
+hold - so LocalStack creates `{{ cookiecutter.config_prefix }}__STORAGE__BUCKET_NAME` itself when it comes up
+(`localstack/init/ready.d/create-bucket.sh`), and a real deployment provisions its own. LocalStack's
+community edition keeps nothing across a restart, so treat it as dev and demo storage only - point the
+`{{ cookiecutter.config_prefix }}__STORAGE__*` variables at a real S3-compatible bucket for a deployment
+(`bash scripts/setup.sh` asks for them, and you create the bucket). Inspect it by hand on the
 loopback port it publishes:
 
 ```
@@ -305,6 +307,10 @@ docker compose run --rm --no-deps backend python -m scripts.toolbox.check_exempt
 
 `MUTMUT_DB_TEMPLATE` (see `scripts/mutation_template.py build`/`name`) makes any test run - a hunt, or
 an ordinary `pytest -n auto` - clone a migrated database instead of migrating one per session.
+A hunt killed outright (`kill -9`, a closed terminal) leaves its `test_*hunt<slot>` databases behind,
+and enough of them end in Postgres's "out of shared memory"; drop them, or `docker compose down -v`.
+After a mutation run, `python -m scripts.case_only_mutants` lists literals whose upper- and lower-cased
+mutants got different verdicts - one of each pair is wrong, and CI prints the same list without failing.
 
 The web app is held to the same bar by Stryker, sharded by what a file is for
 (`apps/web/scripts/mutation-shards.mjs`, one CI job per shard). Run one shard locally with

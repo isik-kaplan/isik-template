@@ -2,7 +2,10 @@ import { ProvePasswordForm } from '@/components/app-auth/ProvePasswordForm'
 
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 const replace = vi.fn()
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace }) }))
@@ -15,6 +18,7 @@ describe('ProvePasswordForm', () => {
   const originalFetch = globalThis.fetch
 
   beforeEach(() => {
+    vi.mocked(toast.error).mockClear()
     vi.clearAllMocks()
     document.cookie = 'csrftoken=token'
   })
@@ -44,6 +48,8 @@ describe('ProvePasswordForm', () => {
     await user.click(screen.getByRole('button', { name: 'Confirm' }))
 
     await vi.waitFor(() => expect(replace).toHaveBeenCalledWith('/profile/emails'))
+    // The screen is leaving, so the button stays shut rather than offering a second submit.
+    expect(screen.getByRole('button', { name: 'Confirm' })).toHaveProperty('disabled', true)
     const [request] = vi.mocked(globalThis.fetch).mock.calls[0] as [Request]
     expect(request.url).toContain('/v0/browser/v1/auth/reauthenticate')
     expect(await request.json()).toEqual({ password: 'correct-horse' })
@@ -65,6 +71,19 @@ describe('ProvePasswordForm', () => {
     expect(replace).not.toHaveBeenCalled()
   })
 
+  it('shows a refusal that names no field beneath the form', async () => {
+    globalThis.fetch = vi.fn(async () =>
+      jsonResponse(400, { status: 400, errors: [{ code: 'too_many', message: 'Slow down.' }] })
+    )
+    const user = userEvent.setup()
+    render(<ProvePasswordForm next="/profile" />)
+
+    await user.type(screen.getByLabelText('Password'), 'whatever')
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
+
+    expect(await screen.findByText('Slow down.')).toBeTruthy()
+  })
+
   it('falls back to its own message when the server gives no reason', async () => {
     globalThis.fetch = vi.fn(async () => jsonResponse(500, {}))
     const user = userEvent.setup()
@@ -73,6 +92,6 @@ describe('ProvePasswordForm', () => {
     await user.type(screen.getByLabelText('Password'), 'whatever')
     await user.click(screen.getByRole('button', { name: 'Confirm' }))
 
-    expect(await screen.findByText('That password is not right.')).toBeTruthy()
+    await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('That password is not right.'))
   })
 })

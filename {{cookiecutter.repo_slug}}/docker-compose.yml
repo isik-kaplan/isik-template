@@ -38,11 +38,16 @@ services:
   # S3-compatible object storage for local dev and demos. Pinned to the last release that starts
   # without a LocalStack account and auth token - every release from 2026.03.0 on requires one.
   # No docker.sock and no Lambda port range: only S3 runs. Community edition keeps nothing across a
-  # restart, so `setup` recreates the bucket on every backend boot.
+  # restart, so the init hook below recreates the bucket on every start.
   storage:
     image: localstack/localstack:4.14.0
     environment:
       SERVICES: s3
+      # Read by the init hook, which creates the bucket - the app never does.
+      BUCKET_NAME: {{ '${' + cookiecutter.config_prefix + '__STORAGE__BUCKET_NAME}' }}
+      REGION_NAME: {{ '${' + cookiecutter.config_prefix + '__STORAGE__REGION_NAME}' }}
+    volumes:
+      - ./localstack/init:/etc/localstack/init
     networks:
       - internal
       # Only so the port below can be published at all - Docker publishes nothing for a container
@@ -54,7 +59,8 @@ services:
       - "127.0.0.1:{{ '${' + cookiecutter.config_prefix + '__STORAGE__PORT:-4566}' }}:4566"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      # The bucket rather than the service, so a backend never starts against one not made yet.
+      test: ["CMD-SHELL", "awslocal s3api head-bucket --bucket \"$$BUCKET_NAME\""]
       interval: 10s
       timeout: 5s
       retries: 10

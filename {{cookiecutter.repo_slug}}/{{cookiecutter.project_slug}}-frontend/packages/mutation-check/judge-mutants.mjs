@@ -5,6 +5,13 @@ import { createHash } from 'node:crypto'
 // Timeout counts as alive, same as mutmut's backend equivalent (survived/suspicious/timeout/
 // no_tests/segfault) - a mutant the suite never gave a real verdict on is a hole, not a pass.
 export const ALIVE = new Set(['Survived', 'NoCoverage', 'Timeout'])
+// Neither a kill nor a survival: the mutant never ran, so the run measured less than it reports.
+export const BROKEN = new Set(['CompileError', 'RuntimeError'])
+
+// Shorter than this is a placeholder rather than an explanation - the backend's registry uses the same.
+export const SHORTEST_USEFUL_REASON = 40
+// The words that mean "nobody wrote the test", which is a missing test rather than an exemption.
+const EXCUSES = /\b(hard to test|difficult|not worth|too fiddly|covered elsewhere|todo)\b/i
 
 export function fingerprint(sourceLines, location) {
   const snippet = sourceLines.slice(location.start.line - 1, location.end.line).join('\n')
@@ -18,8 +25,8 @@ export function fingerprint(sourceLines, location) {
  * file is still on disk. The catalog holds one entry per mutant, so identical entries are counted
  * against the alive mutants their (mutator, fingerprint) matches. Returns every alive mutant no
  * entry excuses (`unexplained`), every entry beyond the mutants left for it (`stale`), every key
- * matching more mutants than it has entries (`plural`), and every catalog file that is gone
- * (`orphaned`).
+ * matching more mutants than it has entries (`plural`), every mutant that never ran (`broken`), and
+ * every catalog file that is gone (`orphaned`).
  *
  * Only files in the report are judged. A sharded run reports its own files alone, and an entry for
  * another shard's file says nothing about this run.
@@ -30,6 +37,7 @@ export function judgeMutants(report, catalog, { readLines, exists }) {
   const unexplained = []
   const stale = []
   const plural = []
+  const broken = []
 
   for (const [file, data] of Object.entries(report.files)) {
     const keys = new Map()
@@ -42,6 +50,7 @@ export function judgeMutants(report, catalog, { readLines, exists }) {
 
     for (const mutant of data.mutants) {
       total++
+      if (BROKEN.has(mutant.status)) broken.push({ file, mutant })
       if (!ALIVE.has(mutant.status)) continue
       alive++
       lines ??= readLines(file)
@@ -60,5 +69,29 @@ export function judgeMutants(report, catalog, { readLines, exists }) {
 
   const orphaned = Object.keys(catalog).filter((file) => !exists(file))
 
-  return { total, alive, unexplained, stale, plural, orphaned }
+  return { total, alive, unexplained, stale, plural, broken, orphaned }
+}
+
+/**
+ * Catalog entries whose reason is too short to be one, or says only that a test is absent or awkward.
+ * An exemption claims no test CAN kill the mutant, not that none does yet.
+ */
+export function weakReasons(catalog) {
+  return Object.entries(catalog).flatMap(([file, entries]) =>
+    entries
+      .filter(({ reason }) => {
+        const said = [reason ?? []].flat().join(' ').trim()
+        return said.length < SHORTEST_USEFUL_REASON || EXCUSES.test(said)
+      })
+      .map((entry) => ({ file, entry }))
+  )
+}
+
+/** Lines carrying a Stryker directive: an exemption the catalog cannot see and the gate cannot re-check. */
+export function inlineDirectives(sources) {
+  return Object.entries(sources).flatMap(([file, text]) =>
+    text
+      .split('\n')
+      .flatMap((line, index) => (/Stryker (disable|restore)/.test(line) ? [{ file, line: index + 1 }] : []))
+  )
 }

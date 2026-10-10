@@ -10,31 +10,32 @@ import { Label } from '@/components/base/label'
 
 import { useClientTranslation } from '@/i18n/client'
 import { authOrigin } from '@/lib/authOrigin'
-import { useValidatedFormState } from '@/lib/useValidatedFormState'
+import { useAuthValidatedFormState } from '@/lib/submit'
 
-import { AuthApi, extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api'
+import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
 import { PasswordInput } from './PasswordInput'
+import { detailOf } from '@isikk/core/allauth'
 import { z } from 'zod'
 
 export function ResetPasswordForm({ resetKey }: { resetKey: string }) {
   const { t } = useClientTranslation(['auth'])
   const router = useRouter()
   const schema = useMemo(() => z.object({ password: z.string().min(8, t('auth:validationPasswordMinLength')) }), [t])
-  const { formState, formErrors, handleFormStateEvent, isSubmitting, submit } = useValidatedFormState(schema, {
+  const { formState, formErrors, handleFormStateEvent, isSubmitting, submit } = useAuthValidatedFormState(schema, {
     password: '',
   })
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
 
-    await submit(() => new AuthApi(authOrigin()).resetPassword(resetKey, formState.password), {
+    await submit(({ password }) => new AuthApi(authOrigin()).resetPassword(resetKey, password), {
       // A confirmed-but-not-yet-authenticated key still comes back as a 401 (see schema.ts) - only
       // an actually invalid/expired key carries a non-empty `errors` array, so that's what a real
-      // failure looks like here, not the response's HTTP status. ?.length, not just a truthiness
-      // check - extractAuthErrors can return `[]` (present but empty), which is truthy in JS.
-      isSuccess: ({ data, error }) => Boolean(data) || !extractAuthErrors(error)?.length,
+      // failure looks like here, not the response's HTTP status.
+      isSuccess: ({ data, error }) => Boolean(data) || detailOf(error) === undefined,
       failure: t('auth:resetPasswordError'),
+      leavesOnSuccess: true,
       onSuccess: ({ response }) => router.push(response.status === 200 ? '/' : '/auth/login'),
     })
   }

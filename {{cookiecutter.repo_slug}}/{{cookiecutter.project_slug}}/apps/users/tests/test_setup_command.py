@@ -1,11 +1,7 @@
-import uuid
 from io import StringIO
 
 import pytest
-from django.conf import settings
-from django.core.files.storage import storages
 from django.core.management import call_command
-from django.test import override_settings
 
 from apps.users.models.user import User
 
@@ -51,20 +47,3 @@ def test_setup_is_a_noop_when_a_superuser_already_exists():
 def test_setup_prints_a_skip_message_when_a_superuser_already_exists():
     User.objects.create_superuser(username="existing", email="existing@example.test", password="x")
     assert _setup_output()[-1] == "A superuser already exists, skipping."
-
-
-@pytest.mark.django_db
-def test_setup_says_the_storage_bucket_is_already_there_when_it_is():
-    # conftest.py already made this session's bucket.
-    bucket = storages["default"].bucket_name
-    assert _setup_output()[0] == f"Storage bucket '{bucket}' already exists, skipping."
-
-
-@pytest.mark.django_db
-def test_setup_creates_a_missing_storage_bucket_and_says_so():
-    bucket = f"test-setup-{uuid.uuid4().hex[:12]}"
-    default = {**settings.STORAGES["default"]}
-    default["OPTIONS"] = {**default["OPTIONS"], "bucket_name": bucket}
-    with override_settings(STORAGES={**settings.STORAGES, "default": default}):
-        assert _setup_output()[0] == f"Created storage bucket '{bucket}'."
-        storages["default"].connection.meta.client.head_bucket(Bucket=bucket)

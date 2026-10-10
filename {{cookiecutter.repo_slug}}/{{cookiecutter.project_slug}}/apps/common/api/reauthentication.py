@@ -35,4 +35,4 @@ class ProvesWhoTheyAre(RequestPoliciesMixin):
         # act does not cost a proof somebody just went through a challenge to get.
         exempt = self.action in self.request_policy_exemptions(RecentlyProvedWhoTheyAre)
         if not exempt and response.status_code < 400 and RecentlyProvedWhoTheyAre.names_a_serious_field(request, self):
-            spend_the_proof(request)
+            spend_the_proof(request, self.action)

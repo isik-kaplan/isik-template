@@ -94,6 +94,8 @@ describe('CompleteSignupForm', () => {
     await user.click(screen.getByRole('button', { name: 'Finish signing up' }))
 
     expect(push).toHaveBeenCalledWith('/')
+    // The screen is leaving, so the button stays shut rather than offering a second submit.
+    expect(screen.getByRole('button', { name: 'Finish signing up' })).toHaveProperty('disabled', true)
   })
 
   it('redirects to login on a 401 with no errors array (mandatory verification)', async () => {

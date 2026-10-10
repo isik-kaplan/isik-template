@@ -2,6 +2,7 @@ from django.utils.translation import gettext_lazy as _
 from isik.django.drf.viewsets.request_policies import RequestPolicy
 from rest_framework.exceptions import ValidationError
 
+from apps.common.logging import REAUTHENTICATION_DEMANDED, log
 from apps.users.reauthentication.gate import REAUTHENTICATION_REQUIRED_HEADER
 from apps.users.reauthentication.proof import has_proven_who_they_are
 
@@ -39,6 +40,7 @@ class RecentlyProvedWhoTheyAre(RequestPolicy):
         return has_proven_who_they_are(request)
 
     def refused(self, request, view, response):
+        log(REAUTHENTICATION_DEMANDED, user=str(request.user.pk), act=view.action)
         # DRF renders a permission's `detail` and never its `code`, so this is the only signal the
         # client gets about which gate stopped it.
         response[REAUTHENTICATION_REQUIRED_HEADER] = "1"

@@ -2,7 +2,10 @@ import { MfaChallengeForm } from '@/components/app-auth/MfaChallengeForm'
 
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 const push = vi.fn()
 const refresh = vi.fn()
@@ -58,6 +61,7 @@ describe('MfaChallengeForm', () => {
   const get = vi.fn()
 
   beforeEach(() => {
+    vi.mocked(toast.error).mockClear()
     vi.clearAllMocks()
     document.cookie = 'csrftoken=test-token'
     Object.defineProperty(window, 'PublicKeyCredential', { value: function () {}, configurable: true })
@@ -80,6 +84,8 @@ describe('MfaChallengeForm', () => {
 
     expect(await requests()[0].json()).toEqual({ code: '123456' })
     expect(push).toHaveBeenCalledWith('/dashboard')
+    // The screen is leaving, so the button stays shut rather than offering a second submit.
+    expect(screen.getByRole('button', { name: 'Verify' })).toHaveProperty('disabled', true)
     expect(refresh).toHaveBeenCalled()
   })
 
@@ -109,7 +115,7 @@ describe('MfaChallengeForm', () => {
     await user.keyboard('000000')
     await user.click(screen.getByRole('button', { name: 'Verify' }))
 
-    expect(await screen.findByText("That code didn't work. Try again.")).toBeTruthy()
+    await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith("That code didn't work. Try again."))
   })
 
   it('switches to a recovery code, trimming what is pasted in', async () => {
@@ -183,6 +189,8 @@ describe('MfaChallengeForm', () => {
     const answered = await requests()[1].json()
     expect(answered.credential.response.signature).toBe('aGk')
     expect(push).toHaveBeenCalledWith('/next')
+    // The screen is leaving, so the button stays shut rather than offering a second submit.
+    expect(screen.getByRole('button', { name: 'Use a passkey' })).toHaveProperty('disabled', true)
   })
 
   it('proves it is them with the authenticator code, for the act that asked', async () => {
@@ -230,7 +238,22 @@ describe('MfaChallengeForm', () => {
 
     await user.click(screen.getByRole('button', { name: 'Use a passkey' }))
 
-    expect(await screen.findByText("That passkey couldn't be verified.")).toBeTruthy()
+    await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith("That passkey couldn't be verified."))
+    expect(push).not.toHaveBeenCalled()
+  })
+
+  it('shows why the server refused a passkey where the code would go', async () => {
+    serve(
+      on('GET', WEBAUTHN, 200, { status: 200, data: { request_options: { publicKey: { challenge: 'aGk' } } } }),
+      on('POST', WEBAUTHN, 400, { status: 400, errors: [{ code: 'incorrect_code', message: 'Not that one.' }] })
+    )
+    get.mockResolvedValue(ASSERTION)
+    const user = userEvent.setup()
+    render(<MfaChallengeForm types={['webauthn', 'recovery_codes']} redirectTo="/" />)
+
+    await user.click(screen.getByRole('button', { name: 'Use a passkey' }))
+
+    expect(await screen.findByText('Not that one.')).toBeTruthy()
     expect(push).not.toHaveBeenCalled()
   })
 

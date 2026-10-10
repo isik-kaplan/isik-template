@@ -12,9 +12,9 @@ import { Input } from '@/components/base/input'
 import { useClientTranslation } from '@/i18n/client'
 import { createAuthApi } from '@/lib/apiClients'
 import { authOrigin } from '@/lib/authOrigin'
+import { useAuthValidatedFormState } from '@/lib/submit'
 import type { EmailAddress } from '@/lib/useEmailRowActions'
 import { useEmailRowActions } from '@/lib/useEmailRowActions'
-import { useValidatedFormState } from '@/lib/useValidatedFormState'
 
 import { z } from 'zod'
 
@@ -26,16 +26,14 @@ export function EmailsList({ initialEmails }: EmailsListProps) {
   const { t } = useClientTranslation(['auth'])
   const addEmailSchema = useMemo(() => z.object({ email: z.email(t('auth:validationEmailInvalid')) }), [t])
   const [emails, setEmails] = useState(initialEmails)
-  const { formState, handleFormStateEvent, formErrors, isSubmitting, submit, resetFormState } = useValidatedFormState(
-    addEmailSchema,
-    { email: '' }
-  )
+  const { formState, handleFormStateEvent, formErrors, isSubmitting, submit, resetFormState } =
+    useAuthValidatedFormState(addEmailSchema, { email: '' })
   const { makePrimary, resendVerification, remove } = useEmailRowActions(t, setEmails)
 
   async function handleAddEmail(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    await submit(() => createAuthApi(authOrigin()).addEmail(formState.email), {
+    await submit(({ email }) => createAuthApi(authOrigin()).addEmail(email), {
       success: t('auth:profileEmailAdded'),
       failure: t('auth:profileEmailAddError'),
       // data is defined here: onSuccess only runs once the default isSuccess (Boolean(data)) held.
@@ -119,7 +117,7 @@ export function EmailsList({ initialEmails }: EmailsListProps) {
           placeholder={t('auth:emailLabel')}
           value={formState.email}
           onChange={handleFormStateEvent('email')}
-          errorText={formErrors?.email?.join('\n') ?? formErrors?.non_field_errors?.join('\n')}
+          errorText={(formErrors?.email ?? formErrors?.non_field_errors)?.join('\n')}
         />
         <Button type="submit" disabled={isSubmitting}>
           {t('auth:profileEmailAddAction')}

@@ -64,6 +64,30 @@ def test_object_storage_is_a_pinned_s3_only_localstack_the_backend_waits_for(coo
     assert services["backend"]["depends_on"]["storage"]["condition"] == "service_healthy"
 
 
+def test_localstack_provisions_the_bucket_the_backend_is_configured_with(cookies):
+    """The app holds no s3:CreateBucket, so the storage service makes the bucket itself, and is healthy
+    only once that bucket exists."""
+    result = cookies.bake(extra_context=load_context("default"))
+    assert result.exit_code == 0
+    shutil.copy(result.project_path / ".env.example", result.project_path / ".env")
+
+    proc = subprocess.run(
+        ["docker", "compose", "config", "--format", "json"],
+        cwd=result.project_path,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    storage = json.loads(proc.stdout)["services"]["storage"]
+    hook = result.project_path / "localstack" / "init" / "ready.d" / "create-bucket.sh"
+
+    assert storage["environment"]["BUCKET_NAME"] == "test-project"
+    assert storage["environment"]["REGION_NAME"] == "us-east-1"
+    assert [volume["target"] for volume in storage["volumes"]] == ["/etc/localstack/init"]
+    assert "head-bucket" in " ".join(storage["healthcheck"]["test"])
+    assert hook.stat().st_mode & 0o111
+
+
 def test_frontend_suites_run_in_the_dockerfile_tester_stage_only_on_request(cookies):
     result = cookies.bake(extra_context=load_context("default"))
     assert result.exit_code == 0

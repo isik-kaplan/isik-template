@@ -4,7 +4,7 @@ import type { Translate } from '@/i18n/config'
 
 import { createAuthApi } from './apiClients'
 import { authOrigin } from './authOrigin'
-import { useApiSubmit } from './useApiSubmit'
+import { useAuthAPISubmit } from './submit'
 
 export type EmailAddress = { email: string; primary: boolean; verified: boolean }
 
@@ -12,7 +12,7 @@ export type EmailAddress = { email: string; primary: boolean; verified: boolean 
  * component so they're unit-testable on their own - EmailsList.test.tsx can't reach them: opening
  * its Popover-based menu and then awaiting anything hangs under jsdom. */
 export function useEmailRowActions(t: Translate, setEmails: (emails: EmailAddress[]) => void) {
-  const { submit } = useApiSubmit()
+  const { submit } = useAuthAPISubmit()
 
   async function makePrimary(email: string) {
     await submit(() => createAuthApi(authOrigin()).makeEmailPrimary(email), {
@@ -24,8 +24,6 @@ export function useEmailRowActions(t: Translate, setEmails: (emails: EmailAddres
 
   async function resendVerification(email: string) {
     await submit(() => createAuthApi(authOrigin()).resendEmailVerification(email), {
-      // No `data` on success here - just the absence of a refusal.
-      isSuccess: ({ error }) => !error,
       success: t('auth:profileEmailVerificationResent'),
       failure: t('auth:profileEmailResendError'),
     })

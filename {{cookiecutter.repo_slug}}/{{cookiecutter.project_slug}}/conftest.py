@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import os
 import uuid
@@ -108,10 +109,9 @@ def _a_storage_bucket_of_its_own():
     with a callable storage called it once at import and kept the instance, so those are rebuilt.
     """
     from django.apps import apps as django_apps
+    from django.core.files.storage import storages
     from django.db import models
     from django.test import override_settings
-
-    from apps.common.storage import ensure_bucket
 
     suffix = (os.environ.get("MUTMUT_DB_SUFFIX"), os.environ.get("PYTEST_XDIST_WORKER"))
     bucket = "-".join(filter(None, (config.STORAGE.BUCKET_NAME, "test", *suffix)))
@@ -122,7 +122,13 @@ def _a_storage_bucket_of_its_own():
             for field in model._meta.get_fields():
                 if isinstance(field, models.FileField) and hasattr(field, "_storage_callable"):
                     field.storage = field._storage_callable()
-        ensure_bucket()
+        # The app never creates a bucket, so a worker's is this fixture's to make. LocalStack keeps one
+        # across runs until it restarts; the region is the one S3 takes no LocationConstraint for.
+        client = storages["default"].connection.meta.client
+        region = storages["default"].region_name
+        options = {} if region == "us-east-1" else {"CreateBucketConfiguration": {"LocationConstraint": region}}
+        with contextlib.suppress(client.exceptions.BucketAlreadyOwnedByYou):
+            client.create_bucket(Bucket=bucket, **options)
         yield
 
 

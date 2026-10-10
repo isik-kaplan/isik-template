@@ -148,6 +148,7 @@ if [ -n "$storage_endpoint" ]; then
   set_var "${PREFIX}__STORAGE__REGION_NAME" "$(ask "Region" "us-east-1")"
   set_var "${PREFIX}__STORAGE__ACCESS_KEY_ID" "$(ask "Access key ID" "")"
   set_var "${PREFIX}__STORAGE__SECRET_ACCESS_KEY" "$(ask_secret "Secret access key")"
+  echo "Create that bucket yourself: the app never creates one, so its keys need no s3:CreateBucket."
 else
   echo "Kept LocalStack - uploads will not survive a restart of the storage container."
 fi

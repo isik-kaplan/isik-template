@@ -46,6 +46,8 @@ describe('ResetPasswordForm', () => {
     await user.click(screen.getByRole('button', { name: 'Set new password' }))
 
     expect(push).toHaveBeenCalledWith('/')
+    // The screen is leaving, so the button stays shut rather than offering a second submit.
+    expect(screen.getByRole('button', { name: 'Set new password' })).toHaveProperty('disabled', true)
   })
 
   it('redirects to login on a 401 with no errors array (valid key, separate login required)', async () => {

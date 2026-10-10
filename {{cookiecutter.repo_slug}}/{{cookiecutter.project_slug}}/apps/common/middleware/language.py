@@ -1,16 +1,14 @@
 from django.conf import settings
 from django.utils import translation
+from isik.django.apps.common.middleware import Middleware
 
 
-class UserLanguageMiddleware:
+class UserLanguageMiddleware(Middleware):
     """Activates the signed-in user's saved language, or the browser's, or the default.
 
     Not Django's own LocaleMiddleware: that only ever looks at the cookie/session/Accept-Language
     header, with no way to prefer a value stored on the user themselves.
     """
-
-    def __init__(self, get_response):
-        self.get_response = get_response
 
     def __call__(self, request):
         supported = dict(settings.LANGUAGES)

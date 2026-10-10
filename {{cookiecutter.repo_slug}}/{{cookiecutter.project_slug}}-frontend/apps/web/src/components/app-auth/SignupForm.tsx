@@ -11,7 +11,7 @@ import { Label } from '@/components/base/label'
 
 import { useClientTranslation } from '@/i18n/client'
 import { authOrigin } from '@/lib/authOrigin'
-import { useValidatedFormState } from '@/lib/useValidatedFormState'
+import { useAuthValidatedFormState } from '@/lib/submit'
 
 import { AuthApi, hasPendingVerifyEmail } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
@@ -30,7 +30,7 @@ export function SignupForm() {
       }),
     [t]
   )
-  const { formState, formErrors, handleFormStateEvent, isSubmitting, submit } = useValidatedFormState(schema, {
+  const { formState, formErrors, handleFormStateEvent, isSubmitting, submit } = useAuthValidatedFormState(schema, {
     username: '',
     email: '',
     password: '',
@@ -40,12 +40,13 @@ export function SignupForm() {
     event.preventDefault()
 
     const authApi = new AuthApi(authOrigin())
-    await submit(() => authApi.signup(formState), {
+    await submit((value) => authApi.signup(value), {
       // Mandatory email verification: a successful signup is still a 401, with a pending
       // verify_email flow, not a 2xx - it means "go check your inbox", not "you're in".
       isSuccess: ({ data, error, response }) =>
         Boolean(data) || (response.status === 401 && hasPendingVerifyEmail(error)),
       failure: t('auth:signupError'),
+      leavesOnSuccess: true,
       onSuccess: () => router.push('/auth/signup-email-sent'),
     })
   }
