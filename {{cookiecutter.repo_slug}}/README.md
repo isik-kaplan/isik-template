@@ -86,10 +86,12 @@ the right, so a proxy added in front later has to append to that header and rais
 This project serves plain HTTP (`:80`) only - it expects a TLS-terminating load balancer or
 reverse proxy in front of it in any real deployment (a platform's own (Fly.io/Render/Railway/an
 AWS ALB/Cloudflare), or your own nginx/Caddy on the same host), which forwards to this stack's
-`server` container and sets `X-Forwarded-Proto`/`X-Forwarded-Host` the way
+`server` container and sets `X-Forwarded-Proto` the way
 `{{ cookiecutter.project_slug }}-server/template.nginx.conf`'s own comments describe - get that
 wrong and `settings.py`'s `SECURE_PROXY_SSL_HEADER` trusts whatever the client sent instead,
-which lets anyone choose the scheme of an emailed password-reset link. Regenerate with
+which lets anyone choose the scheme of an emailed password-reset link. It must pass the browser's
+`Host` through unchanged: nginx answers only this project's names and sets `X-Forwarded-Host` from
+`Host` itself, so a balancer that rewrites it gets every request dropped. Regenerate with
 `tls_termination: self` instead if you'd rather this project terminate its own TLS via certbot,
 with no separate proxy to run.
 
@@ -102,8 +104,9 @@ visitor shares its address and one rate-limit bucket.
 
 nginx publishes on `127.0.0.1` only, which suits a load balancer on the same host. One on another host
 (an AWS ALB, say) reaches it once `{{ cookiecutter.config_prefix }}__HTTP_BIND` is set to this host's private address. Firewall
-that port to the load balancer alone: a request that reaches nginx directly skips it, and the proxy count
-above then trusts an entry the client wrote.
+that port to the load balancer alone: a request that reaches nginx directly skips it, so the proxy count
+above trusts an `X-Forwarded-For` entry the client wrote, and nginx passes on the client's own
+`X-Forwarded-Proto`, letting it choose the scheme of emailed links and OAuth redirects.
 
 ### Local HTTPS
 

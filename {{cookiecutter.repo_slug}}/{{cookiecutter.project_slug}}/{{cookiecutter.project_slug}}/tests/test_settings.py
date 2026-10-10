@@ -95,6 +95,8 @@ def test_outside_debug_browsers_stay_on_https_for_a_year_across_subdomains(debug
     result = subprocess.run([sys.executable, "-c", script], env=env, capture_output=True, text=True, check=True)
 
     assert result.stdout.splitlines()[-1].split() == expected
+
+
 def test_allauth_forces_https_links_exactly_when_the_frontend_is_https():
     assert settings.ACCOUNT_DEFAULT_HTTP_PROTOCOL == ("http" if config.DEBUG else "https")
 

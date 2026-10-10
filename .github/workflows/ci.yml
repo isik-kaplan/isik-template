@@ -20,7 +20,9 @@ jobs:
         with:
           node-version: "22"
       - run: uv sync
-      - run: uv run pytest tests/test_bake_structure.py tests/test_pre_gen_validate.py tests/test_lockfiles.py
+      - run: >-
+          uv run pytest tests/test_bake_structure.py tests/test_pre_gen_validate.py tests/test_lockfiles.py
+          tests/test_legal.py
 
   pre-gen-validate-mutation:
     runs-on: ubuntu-latest
