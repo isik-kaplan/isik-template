@@ -35,7 +35,8 @@ test('revoking a single session and revoking the rest both end those sessions fo
   await expect(pageC.getByText(`Signed in as ${username}.`)).toBeVisible()
 
   await page.goto('/profile/sessions')
-  const rows = page.getByRole('listitem')
+  // Within the page, not the footer's own list of legal links.
+  const rows = page.getByRole('main').getByRole('listitem')
   await expect(rows).toHaveCount(3)
   await expect(page.getByRole('button', { name: 'Sign out 2 other devices' })).toBeVisible()
 
@@ -80,7 +81,7 @@ test('a session is recorded under the visitor\'s address, whatever X-Forwarded-F
 
   await page.goto('/profile/sessions')
 
-  const row = page.getByRole('listitem')
+  const row = page.getByRole('main').getByRole('listitem')
   await expect(row).toHaveCount(1)
   await expect(row).toContainText(`${ownAddress()} ·`)
   await expect(row).not.toContainText(spoofed)

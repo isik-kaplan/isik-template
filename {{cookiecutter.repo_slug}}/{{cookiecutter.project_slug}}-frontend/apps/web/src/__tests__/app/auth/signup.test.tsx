@@ -35,6 +35,14 @@ describe('SignupPage', () => {
     expect(loginLink.getAttribute('href')).toBe('/auth/login')
   })
 
+  it('says signing up, by either route, is agreeing to the legal documents', async () => {
+    render(await SignupPage())
+
+    expect(screen.getByText(/By continuing, you agree to the/)).toBeTruthy()
+    expect(screen.getByRole('link', { name: /Terms of Service/ }).getAttribute('href')).toBe('/legal/terms-of-service')
+    expect(screen.getByRole('link', { name: /Privacy Policy/ }).getAttribute('href')).toBe('/legal/privacy-policy')
+  })
+
   it('builds the social login action and callback URL from the request origin', async () => {
     HTMLFormElement.prototype.submit = vi.fn()
     globalThis.fetch = vi.fn(async () => new Response(null, { status: 200 }))

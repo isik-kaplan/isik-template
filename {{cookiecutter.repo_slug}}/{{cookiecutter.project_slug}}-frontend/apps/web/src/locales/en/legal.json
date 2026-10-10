@@ -1,0 +1,30 @@
+{% raw -%}
+{
+  "termsOfServiceTitle": "Terms of Service",
+  "privacyPolicyTitle": "Privacy Policy",
+
+  "documentsNavLabel": "Legal documents",
+  "backHome": "Back to home",
+  "missingTitle": "This document hasn't been added yet",
+  "missingBody": "Its text will appear here once it has been published.",
+  "fallbackNotice": "This document isn't available in your language yet, so it is shown in English.",
+
+  "consentNotice": "By continuing, you agree to the {{documents}}.",
+  "opensInNewTab": "(opens in a new tab)",
+
+  "footerNavLabel": "Legal",
+  "footerStorageNotice": "This site uses only the cookies and storage it needs to sign you in and remember your choices.",
+  "footerStorageLink": "Cookies and storage",
+
+  "storageHeading": "Cookies and storage",
+  "storageIntro": "Everything this site stores in your browser is listed here. Each item is needed to sign you in and keep your account secure, or remembers a choice you made. None of it is used for analytics or advertising.",
+  "storageNameColumn": "Name",
+  "storageKindColumn": "Type",
+  "storagePurposeColumn": "Purpose",
+  "storageKindCookie": "Cookie",
+  "storageKindLocalStorage": "Local storage",
+  "storagePurposeSession": "Keeps you signed in between pages.",
+  "storagePurposeCsrf": "Protects your account from forged requests made by other sites.",
+  "storagePurposeTheme": "Remembers the light or dark theme you picked."
+}
+{%- endraw %}

@@ -28,6 +28,12 @@ never a URL segment. `languages` (cookiecutter) names which languages a generate
 `en` is always first and any others get real, empty catalogs scaffolded (not machine-translated) -
 see the generated project's own `post_gen_project.py` printout for exactly which files to fill in.
 
+Legal pages come as rendering without text: `/legal/<slug>` serves each document a generated project's owner writes
+(terms of service and privacy policy by default), every footer links them, signup records which version was
+accepted, and a cookie disclosure stands in for a banner, since nothing the app stores needs consent. Generation ends
+by naming each file to write, and the generated `SETUP.md` covers that and every other first step, including an
+optional draft from the AGPL-licensed app-privacy-policy-generator that never enters the generated repository.
+
 ## Usage
 
 ```

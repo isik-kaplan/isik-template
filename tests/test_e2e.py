@@ -1,6 +1,8 @@
 import os
 import shutil
 import subprocess
+import sys
+from pathlib import Path
 
 import pytest
 from conftest import load_context
@@ -14,6 +16,8 @@ from conftest import load_context
 # infinite redirect loop) - none of them visible to a faster tier. Skips only if docker itself isn't
 # available, same as the build tests.
 pytestmark = pytest.mark.skipif(shutil.which("docker") is None, reason="docker not available")
+
+LEGAL_FIXTURES = Path(__file__).parent / "fixtures" / "legal"
 
 
 def _compose(e2e_path, *args, check=False):
@@ -31,6 +35,14 @@ def _reclaim_ownership(project_path):
     )
 
 
+def _publish_fixture_legal_documents(project_path, project_slug):
+    """A bake ships no legal text, so the legal specs would only ever see the not-added-yet state: these give them
+    real documents to render, and a TERMS_VERSION for signup to record, the way an owner's commit would."""
+    shutil.copytree(LEGAL_FIXTURES, project_path / f"{project_slug}-frontend/apps/web/src/legal", dirs_exist_ok=True)
+    # Exits 1 for "rewritten", which is the point here.
+    subprocess.run([sys.executable, "scripts/pre-commit/legal_version.py"], cwd=project_path, capture_output=True)
+
+
 def test_generated_project_passes_its_own_e2e_suite(cookies):
     """The one test that proves the auth flows the template ships (signup, verify-email, login,
     logout, password reset) actually work end to end in a browser, not just that the code compiles
@@ -42,6 +54,7 @@ def test_generated_project_passes_its_own_e2e_suite(cookies):
     scripts/bake_and_trigger_real_ci.py."""
     result = cookies.bake(extra_context=load_context("no-social-login"))
     assert result.exit_code == 0
+    _publish_fixture_legal_documents(result.project_path, result.context["project_slug"])
     e2e_path = result.project_path / "e2e"
 
     try:

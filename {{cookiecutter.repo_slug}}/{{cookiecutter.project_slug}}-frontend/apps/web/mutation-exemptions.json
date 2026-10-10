@@ -261,6 +261,42 @@
       ]
     }
   ],
+  "src/app/legal/[doc]/page.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "dbeed507b247",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'legal:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "dbeed507b247",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'legal:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
+  "src/app/legal/layout.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "dbeed507b247",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'legal:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "dbeed507b247",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'legal:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
   "src/app/page.tsx": [
     {
       "mutator": "ArrayDeclaration",
@@ -523,6 +559,78 @@
       "fingerprint": "56eb6d8002e5",
       "reason": [
         "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
+  "src/components/app-legal/LegalConsentNotice.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "a0664b395a5a",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'legal:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "a0664b395a5a",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'legal:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
+  "src/components/app-legal/LegalTabsList.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "a0664b395a5a",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'legal:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "a0664b395a5a",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'legal:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
+  "src/components/app-legal/SiteFooter.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "a0664b395a5a",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'legal:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "a0664b395a5a",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'legal:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
+  "src/components/app-legal/StorageDisclosure.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "a0664b395a5a",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'legal:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "a0664b395a5a",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'legal:key', so this array only matters for an",
         "unprefixed lookup - none of them are."
       ]
     }

@@ -6,7 +6,7 @@ import { stripEmptyQueryParams } from '@isikk/core/next/middleware'
 // by each page/layout that calls requireSession(). django's sessionid cookie name, hardcoded:
 // this proxy runs before any Django response exists to read the real cookie name from.
 const SESSION_COOKIE_NAME = 'sessionid'
-const PUBLIC_PATH = /^\/$|^\/auth(\/|$)/
+const PUBLIC_PATH = /^\/$|^\/(auth|legal)(\/|$)/
 
 function redirectAnonymousToAuth(request: NextRequest): NextResponse | undefined {
   if (PUBLIC_PATH.test(request.nextUrl.pathname)) return

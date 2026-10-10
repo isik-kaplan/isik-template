@@ -22,3 +22,9 @@ export function apiOrigin(): string {
 export function authOrigin(): string {
   return requireEnv('EXPO_PUBLIC_AUTH_ORIGIN')
 }
+
+// The web app's origin, where the legal documents live: the auth origin without its subdomain, the same
+// relationship the web app itself relies on.
+export function webOrigin(): string {
+  return authOrigin().replace('://auth.', '://')
+}

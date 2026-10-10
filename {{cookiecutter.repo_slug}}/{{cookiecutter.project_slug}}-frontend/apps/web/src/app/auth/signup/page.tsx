@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import { AuthCard, AuthCardFooterLink } from '@/components/app-auth/AuthCard'
 import { SignupForm } from '@/components/app-auth/SignupForm'
 import { SocialLoginSection } from '@/components/app-auth/SocialLoginSection'
+import { LegalConsentNotice } from '@/components/app-legal/LegalConsentNotice'
 
 import { sUseTranslation } from '@/i18n'
 import { redirectIfAuthenticated } from '@/lib/getSession'
@@ -33,6 +34,8 @@ export default async function SignupPage() {
         dividerText={t('auth:orDivider')}
       />
       <SignupForm />
+      {/* Below both the provider buttons and the form, so it covers every way an account starts here. */}
+      <LegalConsentNotice />
     </AuthCard>
   )
 }

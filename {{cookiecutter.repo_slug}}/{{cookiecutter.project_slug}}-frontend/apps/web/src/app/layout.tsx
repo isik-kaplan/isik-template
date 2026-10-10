@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 
 import type React from 'react'
 
+import { SiteFooter } from '@/components/app-legal/SiteFooter'
 import { Toaster } from '@/components/base/sonner'
 import { TooltipProvider } from '@/components/base/tooltip'
 
@@ -34,13 +35,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         <MonkeyPatches />
       </head>
-      <body>
+      {/* A column, so every page's own flex-1 fills the screen above the footer rather than pushing it off. */}
+      <body className="flex min-h-svh flex-col">
         <PublicConfigScript />
         <ThemeProvider attribute="data-theme" defaultTheme="system" enableSystem>
           <SessionProvider session={session}>
             <LanguageProvider language={language}>
               <TooltipProvider>
-                {children}
+                <div className="flex flex-1 flex-col">{children}</div>
+                <SiteFooter />
                 <Toaster />
               </TooltipProvider>
             </LanguageProvider>

@@ -42,6 +42,12 @@ describe('CompleteSignup', () => {
     expect(screen.getByTestId('password-input').props.placeholder).toBe('Password')
   })
 
+  it('says finishing a social signup is agreeing to the legal documents', async () => {
+    mockPendingProviderSignup.mockResolvedValue(pending)
+    await render(<CompleteSignup />)
+    await waitFor(() => expect(screen.getByTestId('legal-consent-notice')).toBeTruthy())
+  })
+
   it('shows the idle "Finish signing up" label before any submission', async () => {
     mockPendingProviderSignup.mockResolvedValue(pending)
     await render(<CompleteSignup />)

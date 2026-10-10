@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 
 import { AuthCard } from '@/components/app-auth/AuthCard'
 import { CompleteSignupForm } from '@/components/app-auth/CompleteSignupForm'
+import { LegalConsentNotice } from '@/components/app-legal/LegalConsentNotice'
 
 import { sUseTranslation } from '@/i18n'
 import { isLocalDevHost } from '@/lib/isLocalDevHost'
@@ -30,6 +31,7 @@ export default async function CompleteSignupPage() {
   return (
     <AuthCard title={t('auth:completeSignupTitle')}>
       <CompleteSignupForm email={data.data.user.email} suggestedUsername={data.data.user.username} />
+      <LegalConsentNotice />
     </AuthCard>
   )
 }

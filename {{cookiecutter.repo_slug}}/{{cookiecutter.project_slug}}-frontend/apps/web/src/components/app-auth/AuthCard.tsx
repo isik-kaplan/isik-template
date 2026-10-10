@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { cn } from '@/lib/utils'
 
 export function AuthCenteredLayout({ children }: { children: React.ReactNode }) {
-  return <div className="flex min-h-svh w-full items-center justify-center p-6">{children}</div>
+  return <div className="flex w-full flex-1 items-center justify-center p-6">{children}</div>
 }
 
 export function AuthCard({

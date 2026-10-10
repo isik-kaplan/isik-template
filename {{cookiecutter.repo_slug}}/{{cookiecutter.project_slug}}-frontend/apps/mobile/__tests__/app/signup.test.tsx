@@ -28,6 +28,13 @@ describe('Signup', () => {
     expect(mockSignup).toHaveBeenCalledWith({ username: 'jane', email: 'jane@test.test', password: 'correct-horse' })
   })
 
+  it('says signing up, by either route, is agreeing to the legal documents', async () => {
+    process.env.EXPO_PUBLIC_AUTH_ORIGIN = 'http://auth.example.test'
+    await render(<Signup />)
+    expect(screen.getByTestId('legal-consent-notice')).toBeTruthy()
+    expect(screen.getByTestId('legal-link-terms-of-service')).toBeTruthy()
+  })
+
   it('starts with empty username, email and password fields', async () => {
     await render(<Signup />)
     expect(screen.getByTestId('username-input').props.value).toBe('')

@@ -1,5 +1,6 @@
 import authEn from '../locales/en/auth.json'
 import commonEn from '../locales/en/common.json'
+import legalEn from '../locales/en/legal.json'
 import notFoundEn from '../locales/en/notFound.json'
 import themeToggleEn from '../locales/en/themeToggle.json'
 import type { InitOptions, TFunction } from 'i18next'
@@ -9,7 +10,7 @@ import type { InitOptions, TFunction } from 'i18next'
 // Extra languages (see cookiecutter.json's "languages") regenerate this whole file - see
 // hooks/post_gen_project.py - rather than growing this list by hand.
 export const languages = ['en'] as const
-export const namespaces = ['auth', 'common', 'themeToggle', 'notFound'] as const
+export const namespaces = ['auth', 'common', 'themeToggle', 'notFound', 'legal'] as const
 
 export type Language = (typeof languages)[number]
 export type Namespace = (typeof namespaces)[number]
@@ -20,6 +21,7 @@ export const resources = {
     common: commonEn,
     themeToggle: themeToggleEn,
     notFound: notFoundEn,
+    legal: legalEn,
   },
 } as const
 

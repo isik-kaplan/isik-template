@@ -27,6 +27,21 @@ class User(AbstractUser, BaseModel):
         help_text="The language this user chose for the interface, or blank to follow their browser's.",
         db_comment="A code from settings.LANGUAGES, or empty for no preference: Accept-Language decides then.",
     )
+    # A column despite the history log: a later terms change asks whoever accepted an older version to accept again,
+    # which makes this a live input rather than an audit record.
+    terms_version = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        help_text="The version of the legal documents this user agreed to at signup, or blank if none were published.",
+        db_comment="apps.users.terms.TERMS_VERSION when the account was created; empty if no documents existed.",
+    )
+    terms_accepted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this user agreed to the legal documents, or empty if none were published at signup.",
+        db_comment="Set with terms_version at signup; null when there was nothing to agree to.",
+    )
 
     class Meta(AbstractUser.Meta):
         swappable = "AUTH_USER_MODEL"

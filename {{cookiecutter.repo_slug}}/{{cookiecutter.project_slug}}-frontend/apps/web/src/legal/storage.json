@@ -1,0 +1,7 @@
+{
+  "items": [
+    { "name": "sessionid", "kind": "cookie", "purpose": "session" },
+    { "name": "csrftoken", "kind": "cookie", "purpose": "csrf" },
+    { "name": "theme", "kind": "localStorage", "purpose": "theme" }
+  ]
+}

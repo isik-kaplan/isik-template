@@ -51,6 +51,17 @@ describe('CompleteSignupPage', () => {
     expect((screen.getByLabelText('Username') as HTMLInputElement).value).toBe('jane')
   })
 
+  it('says finishing a social signup is agreeing to the legal documents', async () => {
+    pendingProviderSignup.mockResolvedValue({
+      data: { data: { user: { email: 'jane@example.test', username: 'jane' } } },
+    })
+
+    render(await CompleteSignupPage())
+
+    expect(screen.getByText(/By continuing, you agree to the/)).toBeTruthy()
+    expect(screen.getByRole('link', { name: /Privacy Policy/ }).getAttribute('href')).toBe('/legal/privacy-policy')
+  })
+
   it('redirects to login when there is no pending signup', async () => {
     pendingProviderSignup.mockResolvedValue({ data: undefined })
 

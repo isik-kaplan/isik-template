@@ -24,6 +24,16 @@ describe('RootLayout', () => {
     expect(screen.getByTestId('public-config-script')).toBeTruthy()
   })
 
+  it('ends every page with the footer, below the page itself', async () => {
+    getSession.mockResolvedValue(null)
+
+    render(await RootLayout({ children: <p>content</p> }))
+
+    const footer = screen.getByRole('contentinfo')
+    expect(screen.getByRole('link', { name: 'Privacy Policy' })).toBeTruthy()
+    expect(screen.getByText('content').compareDocumentPosition(footer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('sets the page title and description from this project', () => {
     expect(metadata.title).toBe('{{ cookiecutter.project_name }}')
     expect(metadata.description).toBeTruthy()

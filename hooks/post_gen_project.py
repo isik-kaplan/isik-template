@@ -21,6 +21,7 @@ LANGUAGES = [code.strip() for code in {{ cookiecutter.languages|tojson }}.split(
 EXTRA_LANGUAGES = LANGUAGES[1:]
 
 WEB_SRC = Path(f"{PROJECT_SLUG}-frontend/apps/web/src")
+LEGAL = WEB_SRC / "legal"
 MOBILE_LIB = Path(f"{PROJECT_SLUG}-frontend/apps/mobile/lib")
 # This whole file is itself a Jinja template (cookiecutter renders it, then runs it - see
 # pre_gen_project.py's own comment on the same thing) - an f-string's own doubled "{{"/"}}" brace
@@ -195,6 +196,28 @@ def regenerate_mobile_i18n() -> None:
     (MOBILE_LIB / "i18n.ts").write_text(content)
 
 
+def legal_checklist() -> str:
+    """The documents a signup agrees to that the owner still has to write, at their exact paths - read from the
+    same definition the pages, the footer and the signup line render from, so it names every document they do."""
+    slugs = [document["slug"] for document in json.loads((LEGAL / "documents.json").read_text())["documents"]]
+    required = "\n".join(f"  [ ] {LEGAL / 'en' / f'{slug}.md'}" for slug in slugs)
+    lines = [
+        "Before launch, add the legal documents every signup agrees to. Until they exist, their pages say they",
+        "have not been added yet and signups record no acceptance:",
+        required,
+    ]
+    if EXTRA_LANGUAGES:
+        translations = "\n".join(
+            f"      {LEGAL / language / f'{slug}.md'}" for language in EXTRA_LANGUAGES for slug in slugs
+        )
+        lines += ["Translations are optional - English is shown in their place until they exist:", translations]
+    lines += [
+        "To draft them from this project's answers: bash scripts/generate-legal.sh (have the result reviewed).",
+        "SETUP.md walks through this and everything else to do before launch.",
+    ]
+    return "\n".join(lines)
+
+
 def generate_lock_files() -> list[str]:
     """Resolves and writes `uv.lock`/`package-lock.json` for the real, rendered project - safe
     only now, after cookiecutter has already resolved every placeholder, since a lock file's root
@@ -289,11 +312,14 @@ def main() -> None:
     for warning in lock_warnings:
         print(f"\n{warning}\n")
 
-    # Last step, deliberately - writes .env, prompting for a real deployment's secrets/config if
+    # The last step that prompts, deliberately - writes .env, prompting for a real deployment's secrets/config if
     # this is a real terminal, or just copying .env.example's already-working dev values if not
     # (a CI bake, or this script fed from a pipe - see its own isatty check). Everything above
     # should already be on screen before scripts/setup.sh's own prompts show up.
     subprocess.run(["bash", "scripts/setup.sh"], check=True)
+
+    # After setup.sh's own prompts, so it is the last thing on screen.
+    print(f"\n{legal_checklist()}\n")
 
 
 if __name__ == "__main__":

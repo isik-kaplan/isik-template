@@ -36,6 +36,12 @@
   "completeSignupSubmit": "Finish signing up",
   "completeSignupSubmitting": "Saving…",
 
+  "legalConsentNotice": "By continuing, you agree to the {{documents}}.",
+  "legalListSeparator": ", ",
+  "legalListFinalSeparator": " and ",
+  "termsOfServiceTitle": "Terms of Service",
+  "privacyPolicyTitle": "Privacy Policy",
+
   "homeHeading": "You're logged in",
   "homeHeadingWithEmail": "You're logged in as {{email}}",
   "homeProfileLink": "Profile",

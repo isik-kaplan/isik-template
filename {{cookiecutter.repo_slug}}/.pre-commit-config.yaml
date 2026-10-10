@@ -46,6 +46,14 @@ repos:
         pass_filenames: false
         files: ^{{ cookiecutter.project_slug }}/.*\.py$
 
+      # TERMS_VERSION is what a signup records, so it may never lag the documents it names.
+      - id: legal-version
+        name: legal-version
+        entry: python scripts/pre-commit/legal_version.py
+        language: python
+        pass_filenames: false
+        files: ^({{ cookiecutter.project_slug }}-frontend/apps/web/src/legal/|{{ cookiecutter.project_slug }}/apps/users/terms\.py$)
+
       - id: lint-frontend
         name: lint-frontend
         entry: scripts/pre-commit/lint_frontend.sh

@@ -1,4 +1,4 @@
-import { apiOrigin, authOrigin } from '@/lib/config'
+import { apiOrigin, authOrigin, webOrigin } from '@/lib/config'
 
 describe('config', () => {
   const originalEnv = process.env
@@ -19,6 +19,11 @@ describe('config', () => {
   it('reads EXPO_PUBLIC_AUTH_ORIGIN for authOrigin()', () => {
     process.env.EXPO_PUBLIC_AUTH_ORIGIN = 'http://auth.example.test'
     expect(authOrigin()).toBe('http://auth.example.test')
+  })
+
+  it('derives webOrigin() from the auth origin, dropping only the auth subdomain', () => {
+    process.env.EXPO_PUBLIC_AUTH_ORIGIN = 'https://auth.auth-tools.example.test'
+    expect(webOrigin()).toBe('https://auth-tools.example.test')
   })
 
   it('throws a clear error when EXPO_PUBLIC_API_ORIGIN is unset', () => {

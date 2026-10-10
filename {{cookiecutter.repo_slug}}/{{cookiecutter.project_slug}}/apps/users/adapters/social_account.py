@@ -1,3 +1,4 @@
+from allauth.account.adapter import get_adapter as get_account_adapter
 from allauth.core.exceptions import ImmediateHttpResponse
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from allauth.socialaccount.providers.base.constants import AuthProcess
@@ -51,3 +52,7 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
         user.created_at = now
         user.updated_at = now
         return user
+
+    def save_user(self, request, sociallogin, form=None):
+        get_account_adapter().accept_terms(sociallogin.user)
+        return super().save_user(request, sociallogin, form=form)

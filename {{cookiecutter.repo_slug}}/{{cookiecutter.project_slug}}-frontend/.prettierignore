@@ -10,3 +10,5 @@ apps/web/src/components/base
 packages/*/src/schema.ts
 # Written by next build/dev, and not this project's to format.
 apps/web/next-env.d.ts
+# Legal text is content, and reformatting it would change the version every signup records.
+apps/web/src/legal/**/*.md

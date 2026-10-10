@@ -42,6 +42,18 @@ describe('proxy', () => {
     expect(response.headers.get('location')).toBe('https://example.test/profile/emails')
   })
 
+  it('lets an anonymous visitor read the legal documents, which signup links to', async () => {
+    for (const path of ['/legal', '/legal/terms-of-service']) {
+      expect((await proxy(requestFor(path))).headers.get('location')).toBeNull()
+    }
+  })
+
+  it('redirects a path that only starts like /legal', async () => {
+    const response = await proxy(requestFor('/legalese'))
+
+    expect(response.headers.get('location')).toBe('https://example.test/auth/login?next=%2Flegalese')
+  })
+
   it('treats bare "/auth" (no trailing slash) as public too', async () => {
     const response = await proxy(requestFor('/auth'))
 

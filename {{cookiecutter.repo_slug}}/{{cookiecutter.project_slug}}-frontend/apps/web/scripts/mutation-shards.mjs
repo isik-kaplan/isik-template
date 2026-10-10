@@ -123,6 +123,19 @@ export const SHARDS = {
     'src/components/app-auth/TotpSetup.tsx',
     'src/lib/useFactorSubmit.ts',
   ],
+  // The legal pages, the signup line and footer that link to them, and the cookie disclosure.
+  legal: [
+    'src/app/legal/[doc]/page.tsx',
+    'src/app/legal/layout.tsx',
+    'src/app/legal/page.tsx',
+    'src/components/app-legal/LegalConsentNotice.tsx',
+    'src/components/app-legal/LegalTabsList.tsx',
+    'src/components/app-legal/SiteFooter.tsx',
+    'src/components/app-legal/StorageDisclosure.tsx',
+    'src/lib/legalDocuments.ts',
+    'src/lib/readLegalDocument.ts',
+    'src/lib/storageDisclosure.ts',
+  ],
   // The app shell and the components every screen is built from.
   ui: [
     'src/app/layout.tsx',

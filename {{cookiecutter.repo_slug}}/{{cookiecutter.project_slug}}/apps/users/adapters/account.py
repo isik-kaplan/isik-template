@@ -1,12 +1,13 @@
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.core import context as allauth_context
-from django.utils import translation
+from django.utils import timezone, translation
 
 from apps.common.email import mjml_template, text_template
 from apps.common.language import saved_language
 from apps.users.login_policy import admits
 from apps.users.models.site_settings import SiteSettings
 from apps.users.tasks.account_mail import send_account_mail
+from apps.users.terms import TERMS_VERSION
 
 
 class AccountAdapter(DefaultAccountAdapter):
@@ -25,6 +26,17 @@ class AccountAdapter(DefaultAccountAdapter):
         # would wave somebody the login policy shuts out straight through. The backend logged it.
         user = super().authenticate(request, **credentials)
         return user if user is None or admits(user, SiteSettings.current().login_policy) else None
+
+    def save_user(self, request, user, form, commit=True):
+        self.accept_terms(user)
+        return super().save_user(request, user, form, commit=commit)
+
+    def accept_terms(self, user):
+        """Records the documents the signup page told this person they agree to. The social adapter calls it too, so
+        every way an account starts records the same thing. Nothing is recorded while no documents exist."""
+        if TERMS_VERSION:
+            user.terms_version = TERMS_VERSION
+            user.terms_accepted_at = timezone.now()
 
     # allauth_context.request, not a `request` param - send_mail() isn't given one; the
     # request-scoped ContextVar allauth's own view layer sets is the only way to reach it here,

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { Button, ErrorText, Heading, Screen, TextField } from '@/components'
+import { Button, ErrorText, Heading, LegalConsentNotice, Screen, TextField } from '@/components'
 
 import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
@@ -86,6 +86,7 @@ export default function CompleteSignup() {
         onPress={() => submit(email)}
         label={submitting ? t('completeSignupSubmitting') : t('completeSignupSubmit')}
       />
+      <LegalConsentNotice />
     </Screen>
   )
 }

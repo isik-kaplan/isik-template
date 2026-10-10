@@ -6,6 +6,9 @@ Generated from [isik-template](https://github.com/isik-kaplan/isik-template).
 
 ## Before you start
 
+**[SETUP.md](SETUP.md)** is the checklist of everything to do after generating this project - `.env`, the first
+superuser, DNS and TLS, social login providers, the legal documents and more. What follows explains how it works.
+
 This app is **not servable at plain `localhost`** - cross-subdomain session/CSRF cookies (shared
 across `api.`, `admin.`, `auth.{{ cookiecutter.domain }}`) need a real registrable domain. Add to
 `/etc/hosts`:
@@ -177,7 +180,9 @@ ends up configured with; a visitor with no preference gets their browser's own l
 - **No column repeats what the history log records.** A tracked model gets no `*_at`/`*_by` field for a
   fact its event table already holds - a second source of truth that can disagree with the first. The
   exceptions are a column read in a hot-path `WHERE` (keep a status field, take the timestamp from
-  history) and one that is a live authorization input rather than an audit record.
+  history), one that is a live authorization input rather than an audit record, and `User.terms_version` /
+  `terms_accepted_at`: a later terms change asks whoever accepted an older version to accept again, which makes
+  them an input to that rather than a record of it.
 - **The permission catalog is protected in the database**: `auth_permission` refuses a delete or an
   identity change, and `django_content_type` a delete. Retire one on purpose inside `pgtrigger.ignore(...)`.
 
@@ -249,8 +254,6 @@ will.
   `pageOf(...)`, and `onPick`.
 - **`Editor`** (`components/app/Editor.tsx`): a tiptap rich-text editor that reports HTML through `onChange`.
   Add tiptap extensions as the content model needs them.
-- **`Markdown`** (`components/app/Markdown.tsx`): renders a Markdown string as a styled page, for content
-  policy, terms or a changelog. `<Markdown>{source}</Markdown>`.
 - **`LoadingOverlay`** (`components/app/LoadingOverlay.tsx`): dims a table, form or panel while it loads
   without unmounting it, so scroll position and layout survive. Wrap the content and pass `loading`.
 - **`dialog`** (`components/base/dialog.tsx`): the modal primitives (`Dialog`, `DialogTrigger`,
@@ -264,6 +267,34 @@ will.
 - **The DRF reauthentication gate** (`apps/common/api/reauthentication.py`): the same "prove it is you" step
   the account routes use, for your own viewsets. Mix `ProvesWhoTheyAre` into the viewset and name exempt
   actions in `reauthentication_exempt_actions` with a reason; everything else is gated.
+## Legal pages and cookies
+
+`/legal/<slug>` renders each document `apps/web/src/legal/documents.json` names from
+`apps/web/src/legal/<language>/<slug>.md`, falling back to English, and says a document has not been added yet while
+its file is missing. The footer links every document; signup (password or social, web and mobile) says continuing
+means agreeing to them, and the account adapter records `User.terms_version` and `terms_accepted_at`. The template
+ships no legal text - [SETUP.md](SETUP.md) covers writing or generating it.
+
+There is no cookie banner because nothing needs one: the session and CSRF cookies are strictly necessary, and the
+theme, kept in local storage, is a choice the visitor made. Both kinds need disclosing, not consent, so the footer
+carries a one-line disclosure and the privacy policy page renders a cookies section from
+`apps/web/src/legal/storage.json`. `e2e/playwright/tests/legal/storage-disclosure.spec.ts` signs up, signs in and walks
+the app, then fails on any cookie or storage key that list leaves out.
+
+Adding analytics, advertising, embedded third-party content or anything else not strictly necessary means consent
+first, under GDPR and the ePrivacy rules, before anything is set:
+
+- Add a consent banner (shadcn's dialog or drawer, in `components/base/`, will do) with accept and reject offered
+  equally, and keep the choice in a cookie or local storage key of its own, itself listed in `storage.json`.
+- Expose the choice through one provider in `app/layout.tsx`, beside `SiteFooter`, and load every non-essential
+  script only from a component that renders once consent is given (`next/script` inside it), never from the page
+  head.
+- Let people change their mind: a "cookie settings" link in `SiteFooter` that reopens the banner, and removal of
+  whatever the refused category had already set.
+- List each new item in `storage.json` with its purpose. The e2e spec above keeps failing until you do, which is the
+  point - and update the privacy policy to name the service and what it receives.
+
+No consent hook ships with the template: with nothing to gate, it would be code no test can give a reason to exist.
 
 ## Testing
 

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { Button, ErrorText, Heading, Screen, SocialLoginButtons, TextField } from '@/components'
+import { Button, ErrorText, Heading, LegalConsentNotice, Screen, SocialLoginButtons, TextField } from '@/components'
 
 import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
@@ -68,6 +68,7 @@ export default function Signup() {
         label={submitting ? t('signupSubmitting') : t('signupSubmit')}
       />
       <SocialLoginButtons onError={setError} />
+      <LegalConsentNotice />
       <Link href="/login" testID="login-link">
         <Text>{t('signupLoginLink')}</Text>
       </Link>
