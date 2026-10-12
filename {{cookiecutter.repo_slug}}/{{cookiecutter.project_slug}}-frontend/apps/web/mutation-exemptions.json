@@ -315,42 +315,6 @@
       ]
     }
   ],
-{%- if not cookiecutter.social_login_providers.strip() %}
-  "src/app/profile/(tabs)/connections/page.tsx": [
-    {
-      "mutator": "LogicalOperator",
-      "fingerprint": "867b981ecb4b",
-      "reason": [
-        "equivalent mutant, and only in a project with no social provider configured: ConnectionsList then",
-        "shows that nothing is configured and never reads the providers it was handed."
-      ]
-    },
-    {
-      "mutator": "ArrayDeclaration",
-      "fingerprint": "867b981ecb4b",
-      "reason": [
-        "equivalent mutant, and only in a project with no social provider configured: ConnectionsList then",
-        "shows that nothing is configured and never reads the providers it was handed."
-      ]
-    },
-    {
-      "mutator": "StringLiteral",
-      "fingerprint": "b5adf6b115d0",
-      "reason": [
-        "equivalent mutant, and only in a project with no social provider configured: ConnectionsList then",
-        "renders no connect button, so neither the form action nor the callback URL is ever read."
-      ]
-    },
-    {
-      "mutator": "StringLiteral",
-      "fingerprint": "7b79094fbe8c",
-      "reason": [
-        "equivalent mutant, and only in a project with no social provider configured: ConnectionsList then",
-        "renders no connect button, so neither the form action nor the callback URL is ever read."
-      ]
-    }
-  ],
-{%- endif %}
   "src/app/profile/(tabs)/layout.tsx": [
     {
       "mutator": "ArrayDeclaration",

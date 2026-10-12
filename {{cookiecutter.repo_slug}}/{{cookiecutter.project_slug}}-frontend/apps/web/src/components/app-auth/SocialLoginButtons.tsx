@@ -1,7 +1,7 @@
 'use client'
 
 import { useClientTranslation } from '@/i18n/client'
-import { SOCIAL_PROVIDERS } from '@/lib/socialProviders'
+import { socialProviders } from '@/lib/socialProviders'
 
 import { AutoFormButton } from './AutoFormButton'
 import { ProviderIcon } from './ProviderIcon'
@@ -15,11 +15,12 @@ export type SocialLoginButtonsProps = {
 
 export function SocialLoginButtons({ action, callbackUrl }: SocialLoginButtonsProps) {
   const { t } = useClientTranslation(['auth'])
-  if (SOCIAL_PROVIDERS.length === 0) return null
+  const providers = socialProviders()
+  if (providers.length === 0) return null
 
   return (
     <div className="flex flex-col gap-2">
-      {SOCIAL_PROVIDERS.map((provider) => {
+      {providers.map((provider) => {
         const payload = { provider: provider.id, callback_url: callbackUrl, process: 'login' }
         return (
           <AutoFormButton key={provider.id} variant="outline" action={action} payload={payload}>

@@ -78,10 +78,10 @@ jobs:
           GH_TOKEN: ${{ secrets.BAKE_SANDBOX_TOKEN }}
         run: uv run python scripts/bake_and_trigger_real_ci.py
 
-  # The "no-social-login" context renders a different login/signup page (no provider buttons, no
-  # divider above the form) that bake-real-ci's "default" bake never exercises - it's how a bare
-  # "or" divider with nothing above it once shipped unnoticed. Everything else about that job's e2e
-  # coverage (default context, every other spec) now runs for real via bake-real-ci instead.
+  # With social login switched off, the login/signup page renders differently (no provider buttons,
+  # no divider above the form), which bake-real-ci's run - OIDC on, as e2e/.env ships - never
+  # exercises. It's how a bare "or" divider with nothing above it once shipped unnoticed. Every
+  # other spec runs for real via bake-real-ci instead.
   e2e-no-social-login:
     runs-on: ubuntu-latest
     steps:

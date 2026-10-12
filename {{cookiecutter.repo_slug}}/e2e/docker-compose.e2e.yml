@@ -94,6 +94,9 @@ services:
     # The seeded superuser's credentials (SETUP__SUPERUSER__*), read from the same file the backend
     # seeds it from - auth/login-ladder.spec.ts signs in to the admin with them.
     env_file: [.env]
+    environment:
+      # Which social specs have a button to press - the same value the app's containers get.
+      {{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS: {{ '${' + cookiecutter.config_prefix + '__SOCIAL_LOGIN__PROVIDERS:-}' }}
     depends_on:
       server:
         condition: service_healthy

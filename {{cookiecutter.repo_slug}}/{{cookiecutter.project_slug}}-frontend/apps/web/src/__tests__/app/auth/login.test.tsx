@@ -12,7 +12,7 @@ vi.mock('@/lib/getSession', () => ({
 vi.mock('next/headers', () => ({ headers: async () => new Headers({ host: 'test-project.test' }) }))
 const push = vi.fn()
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }))
-vi.mock('@/lib/socialProviders', () => ({ SOCIAL_PROVIDERS: [{ id: 'google', name: 'Google', icon: '' }] }))
+vi.mock('@/lib/socialProviders', () => ({ socialProviders: () => [{ id: 'google', name: 'Google', icon: '' }] }))
 
 function jsonResponse(status: number, body: unknown) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })

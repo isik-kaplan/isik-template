@@ -1,0 +1,8 @@
+{
+  "project_name": "Minimal Project",
+  "description": "Validates every optional answer left at its default: no mobile app, English only, external TLS.",
+  "author_name": "Test Author",
+  "author_email": "test@example.test",
+  "domain": "minimal.test",
+  "license": "Apache-2.0"
+}

@@ -41,7 +41,7 @@ def test_the_bake_ends_with_every_legal_file_to_write_at_its_exact_path(cookies,
 
 
 def test_an_english_only_bake_lists_no_translations(cookies, capfd):
-    result = _bake(cookies, "no-social-login")
+    result = _bake(cookies, "minimal")
     output = capfd.readouterr().out
 
     assert "Translations are optional" not in output
@@ -49,12 +49,12 @@ def test_an_english_only_bake_lists_no_translations(cookies, capfd):
 
 
 def test_the_terms_and_the_privacy_policy_are_the_documents_a_signup_agrees_to(cookies):
-    result = _bake(cookies, "no-social-login")
+    result = _bake(cookies, "minimal")
 
     assert _slugs(result.project_path, result.context["project_slug"]) == ["terms-of-service", "privacy-policy"]
 
 
-@pytest.mark.parametrize("context_name", ["default", "no-social-login", "self-tls"])
+@pytest.mark.parametrize("context_name", ["default", "minimal", "self-tls"])
 def test_setup_md_is_linked_from_the_readme_and_covers_every_first_step(cookies, context_name):
     result = _bake(cookies, context_name)
     slug = result.context["project_slug"]
@@ -74,12 +74,13 @@ def test_setup_md_is_linked_from_the_readme_and_covers_every_first_step(cookies,
 
 def test_setup_md_follows_the_answers_that_change_what_there_is_to_set_up(cookies):
     default = (_bake(cookies, "default").project_path / "SETUP.md").read_text()
-    bare = (_bake(cookies, "no-social-login").project_path / "SETUP.md").read_text()
+    bare = (_bake(cookies, "minimal").project_path / "SETUP.md").read_text()
     self_tls = (_bake(cookies, "self-tls").project_path / "SETUP.md").read_text()
 
-    assert "https://auth.testproject.test/v0/provider-callback/google/login/callback/" in default
-    assert "/v0/provider-callback/oidc/<PROVIDER_ID>/login/callback/" in default
-    assert "Social login providers" not in bare
+    # Social login is configured at runtime, so every project gets the same walkthrough.
+    assert "TEST_PROJECT__SOCIAL_LOGIN__PROVIDERS" in default
+    assert "MINIMAL_PROJECT__SOCIAL_LOGIN__PROVIDERS" in bare
+    assert "/v0/provider-callback/oidc/<PROVIDER_ID>/login/callback/" in bare
     assert "## 9. Translations" in default and "Translations" not in bare
     assert "## 10. The mobile app" in default and "mobile app" not in bare
     assert "certbot" in self_tls and "certbot" not in default
@@ -113,7 +114,7 @@ def test_terms_version_is_kept_by_a_pre_commit_hook(cookies):
 
 @pytest.fixture
 def legal_version(cookies):
-    result = _bake(cookies, "no-social-login")
+    result = _bake(cookies, "minimal")
     module = runpy.run_path(str(result.project_path / "scripts/pre-commit/legal_version.py"))
     return module, Path(module["LEGAL"]), Path(module["TERMS"])
 

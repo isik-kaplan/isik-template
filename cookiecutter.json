@@ -8,8 +8,6 @@
   "author_email": "",
   "domain": "",
   "tls_termination": ["external", "self"],
-  "social_login_providers": "",
-  "social_login_provider_icons": "",
   "languages": "en",
   "license": ["MIT", "Apache-2.0", "BSD-3-Clause", "GPL-3.0", "Unlicense", "Proprietary"],
   "python_version": "3.14",

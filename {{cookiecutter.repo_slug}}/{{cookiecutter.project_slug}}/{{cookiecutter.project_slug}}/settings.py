@@ -1,9 +1,12 @@
 import os
+import pkgutil
 import sys
 from pathlib import Path
 
+import allauth.socialaccount.providers as _providers_package
 import sentry_sdk
 from django.conf.locale import LANG_INFO
+from django.core.exceptions import ImproperlyConfigured
 
 from apps.common.logging.scrub import scrub_event
 
@@ -29,32 +32,23 @@ ALLOWED_HOSTS = [
     "localhost",
 ]
 
-# Resolved here, at cookiecutter-render time, not at Django runtime - the answer is fixed for the
-# life of this generated project, so branching on it at runtime would just be dead code the test
-# suite could never cover the other side of. "all" is expanded by introspecting allauth's own
-# providers package (more accurate than a hardcoded list here staying in sync by hand - it can
-# never drift from whatever allauth version ends up installed) rather than by pre_gen_project.py,
-# which validates the answer but can't feed a computed value back into what Jinja renders.
-{%- if cookiecutter.social_login_providers.strip() == "all" %}
-import pkgutil
 
-import allauth.socialaccount.providers as _providers_pkg
+def _social_login_provider_ids(requested: list[str]) -> list[str]:
+    """The allauth provider ids SOCIAL_LOGIN__PROVIDERS names, read once at startup. A name allauth
+    does not ship, or one named twice, stops startup: either would otherwise surface only as a login
+    button that leads nowhere."""
+    ids = [provider_id.strip() for provider_id in requested if provider_id.strip()]
+    shipped = {name for _, name, is_package in pkgutil.iter_modules(_providers_package.__path__) if is_package}
+    unknown = sorted(set(ids) - (shipped - {"base", "oauth", "oauth2"}))
+    if unknown:
+        raise ImproperlyConfigured(f"SOCIAL_LOGIN__PROVIDERS names unknown providers: {', '.join(unknown)}")
+    repeated = sorted({provider_id for provider_id in ids if ids.count(provider_id) > 1})
+    if repeated:
+        raise ImproperlyConfigured(f"SOCIAL_LOGIN__PROVIDERS names a provider more than once: {', '.join(repeated)}")
+    return ids
 
 
-SOCIAL_LOGIN_PROVIDER_IDS = sorted(
-    name
-    for _, name, ispkg in pkgutil.iter_modules(_providers_pkg.__path__)
-    if ispkg and name not in {"base", "oauth", "oauth2"}
-)
-{%- elif cookiecutter.social_login_providers.strip() %}
-SOCIAL_LOGIN_PROVIDER_IDS = [
-{%- for provider in cookiecutter.social_login_providers.split(',') %}
-    "{{ provider.strip() }}",
-{%- endfor %}
-]
-{%- else %}
-SOCIAL_LOGIN_PROVIDER_IDS = []
-{%- endif %}
+SOCIAL_LOGIN_PROVIDER_IDS = _social_login_provider_ids(config.SOCIAL_LOGIN.PROVIDERS)
 
 INSTALLED_APPS = [
     "django_hosts",
@@ -280,27 +274,16 @@ HEADLESS_FRONTEND_URLS = {
 }
 
 
-{% set client_id_line = '        "client_id": os.environ.get(f"' ~ cookiecutter.config_prefix ~ '__OAUTH__{provider_id.upper()}__CLIENT_ID", ""),' -%}
-{% set secret_line = '        "secret": os.environ.get(f"' ~ cookiecutter.config_prefix ~ '__OAUTH__{provider_id.upper()}__CLIENT_SECRET", ""),' -%}
-# config_prefix's length (derived from the project name) changes where ruff format's line-splitting
-# kicks in, so these two lines and the ones further down pick their own layout at generation time
-# instead of hardcoding one that only some project names would pass `ruff format --check` with.
+# Read straight from the environment rather than through config.py: which providers exist is itself
+# configuration, so there is no fixed schema to declare their credentials in.
+_OAUTH_PREFIX = "{{ cookiecutter.config_prefix }}__OAUTH"
+
+
 def _social_app_config(provider_id: str) -> dict:
+    prefix = f"{_OAUTH_PREFIX}__{provider_id.upper()}"
     config = {
-{%- if client_id_line|length <= 120 %}
-{{ client_id_line }}
-{%- else %}
-        "client_id": os.environ.get(
-            f"{{ cookiecutter.config_prefix }}__OAUTH__{provider_id.upper()}__CLIENT_ID", ""
-        ),
-{%- endif %}
-{%- if secret_line|length <= 120 %}
-{{ secret_line }}
-{%- else %}
-        "secret": os.environ.get(
-            f"{{ cookiecutter.config_prefix }}__OAUTH__{provider_id.upper()}__CLIENT_SECRET", ""
-        ),
-{%- endif %}
+        "client_id": os.environ.get(f"{prefix}__CLIENT_ID", ""),
+        "secret": os.environ.get(f"{prefix}__CLIENT_SECRET", ""),
         "key": "",
     }
     if provider_id == "openid_connect":
@@ -312,23 +295,9 @@ def _social_app_config(provider_id: str) -> dict:
         # has to match whatever redirect_uri is registered on the IdP's side exactly. server_url
         # is the one thing every other provider gets for free from allauth's own provider
         # directory (a fixed, known IdP) but this provider has to be told explicitly.
-{%- set provider_id_line = '        config["provider_id"] = os.environ.get("' ~ cookiecutter.config_prefix ~ '__OAUTH__OPENID_CONNECT__PROVIDER_ID", "openid_connect")' %}
-{%- set server_url_line = '        config["settings"] = {"server_url": os.environ.get("' ~ cookiecutter.config_prefix ~ '__OAUTH__OPENID_CONNECT__SERVER_URL", "")}' %}
-{%- if provider_id_line|length <= 120 %}
-{{ provider_id_line }}
-{%- else %}
-        config["provider_id"] = os.environ.get(
-            "{{ cookiecutter.config_prefix }}__OAUTH__OPENID_CONNECT__PROVIDER_ID", "openid_connect"
-        )
-{%- endif %}
+        config["provider_id"] = os.environ.get(f"{prefix}__PROVIDER_ID", "openid_connect")
         config["name"] = "OpenID Connect"
-{%- if server_url_line|length <= 120 %}
-{{ server_url_line }}
-{%- else %}
-        config["settings"] = {
-            "server_url": os.environ.get("{{ cookiecutter.config_prefix }}__OAUTH__OPENID_CONNECT__SERVER_URL", "")
-        }
-{%- endif %}
+        config["settings"] = {"server_url": os.environ.get(f"{prefix}__SERVER_URL", "")}
     return config
 
 

@@ -166,6 +166,9 @@ services:
     environment:
 {%- set server_sentry_dsn = cookiecutter.config_prefix + '_SERVER__SENTRY__DSN' %}
       {{ cookiecutter.config_prefix }}__DOMAIN: {{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
+      # The same list the backend installs its providers from, so the two can't disagree.
+      {{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS: {{ '${' + cookiecutter.config_prefix + '__SOCIAL_LOGIN__PROVIDERS:-}' }}
+      {{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__ICONS: {{ '${' + cookiecutter.config_prefix + '__SOCIAL_LOGIN__ICONS:-}' }}
       {{ server_sentry_dsn }}: {{ '${' + server_sentry_dsn + ':-}' }}
 {%- if cookiecutter.tls_termination == "external" %}
       # Set in .env by scripts/dev-tls.sh, local dev only.

@@ -5,13 +5,58 @@ import sys
 import pytest
 from allauth.utils import build_absolute_uri
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.test import RequestFactory, override_settings
 
 from {{ cookiecutter.project_slug }}.config import CONFIG as config
-from {{ cookiecutter.project_slug }}.settings import _origins, _social_app_config
+from {{ cookiecutter.project_slug }}.settings import _origins, _social_app_config, _social_login_provider_ids
 
 
 PREFIX = "{{ cookiecutter.config_prefix }}__OAUTH"
+
+
+def test_social_login_names_the_providers_it_was_given_in_order_without_blanks():
+    requested = ["github", " google ", "", "openid_connect"]
+
+    assert _social_login_provider_ids(requested) == ["github", "google", "openid_connect"]
+
+
+def test_social_login_is_off_when_no_provider_is_named():
+    assert _social_login_provider_ids([]) == []
+
+
+@pytest.mark.parametrize("requested", [["google", "not_a_provider", "also_not"], ["oauth2"], ["base"], ["oauth"]])
+def test_social_login_refuses_to_start_with_a_provider_allauth_does_not_ship(requested):
+    unknown = ", ".join(sorted(set(requested) - {"google"}))
+
+    with pytest.raises(ImproperlyConfigured) as error:
+        _social_login_provider_ids(requested)
+
+    assert str(error.value) == f"SOCIAL_LOGIN__PROVIDERS names unknown providers: {unknown}"
+
+
+def test_social_login_refuses_to_start_with_a_provider_named_twice():
+    with pytest.raises(ImproperlyConfigured) as error:
+        _social_login_provider_ids(["google", "github", "google", " github", "apple"])
+
+    assert str(error.value) == "SOCIAL_LOGIN__PROVIDERS names a provider more than once: github, google"
+
+
+def test_social_login_installs_and_configures_exactly_the_named_providers():
+    """The variable is read in a fresh interpreter, since settings are built once, at import."""
+    script = (
+        "from {{ cookiecutter.project_slug }} import settings; "
+        "print([app for app in settings.INSTALLED_APPS if '.providers.' in app]); "
+        "print(sorted(settings.SOCIALACCOUNT_PROVIDERS))"
+    )
+    env = {**os.environ, "{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS": "github,google"}
+
+    result = subprocess.run([sys.executable, "-c", script], env=env, capture_output=True, text=True, check=True)
+
+    assert result.stdout.splitlines()[-2:] == [
+        "['allauth.socialaccount.providers.github', 'allauth.socialaccount.providers.google']",
+        "['github', 'google']",
+    ]
 
 
 def test_social_app_config_reads_client_credentials_from_env(monkeypatch):

@@ -1,7 +1,7 @@
 import { BRAND_ICONS } from './icons/brands'
 
 // A bundled brand icon always wins when one exists (crisp, no extra request); iconUrl - the
-// generation-time value from social_login_provider_icons, see socialProviders.ts - only fills the
+// deployment's SOCIAL_LOGIN__ICONS entry for it, see socialProviders.ts - only fills the
 // gap for providers with no bundled icon, typically a deployment's own openid_connect/SAML IdP,
 // which by definition has no single "brand" this template could ship for it.
 export function ProviderIcon({ providerId, name, iconUrl }: { providerId: string; name: string; iconUrl: string }) {

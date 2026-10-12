@@ -33,14 +33,14 @@ describe('SocialLoginButtons', () => {
     Platform.OS = originalOS
   })
 
-  it("defaults to this project's generated config when no override is passed", async () => {
-    // Coupled to this generated project's own social_login_providers answer (see
-    // lib/socialProviders.ts) rather than a prop override, specifically to prove the real default
-    // wiring works end to end, not just the override path every other test here exercises.
+  it("defaults to the build's own configuration when no override is passed", async () => {
+    // The real default wiring, not the override path every other test here exercises.
+    process.env.EXPO_PUBLIC_SOCIAL_LOGIN_PROVIDERS = 'github,google'
     Platform.OS = 'ios'
     await render(<SocialLoginButtons onError={jest.fn()} />)
     expect(screen.getByTestId('google-signin')).toBeTruthy()
     expect(screen.queryByTestId('apple-signin')).toBeNull()
+    delete process.env.EXPO_PUBLIC_SOCIAL_LOGIN_PROVIDERS
   })
 
   it('renders nothing when neither provider is enabled', async () => {

@@ -1,12 +1,8 @@
 import { expect, test } from '@playwright/test'
 
-import { login, proveWithPassword, signUpAndVerify } from '../helpers'
+import { OIDC_CONFIGURED, login, proveWithPassword, signUpAndVerify } from '../helpers'
 
-{%- set providers = cookiecutter.social_login_providers.strip() %}
-{#- Same guard as auth/social-login.spec.ts: "all" renders no provider buttons at all
-   (SocialLoginButtons.tsx), and ConnectionsList's own "Connect" button follows the same list -
-   only an explicit openid_connect gets a real row to click through. #}
-{%- if 'openid_connect' in providers and providers != 'all' %}
+test.skip(!OIDC_CONFIGURED, 'SOCIAL_LOGIN__PROVIDERS does not name openid_connect, so there is no button to press')
 
 // Drives the real OIDC test IdP (see auth/social-login.spec.ts), through the profile page's own
 // "Connect" button rather than the login page's, so this exercises AutoFormButton/ConnectionsList
@@ -68,12 +64,3 @@ test('connecting the OIDC test IdP either links it and can be undone, or is sile
   await expect(page.getByText('Account disconnected.')).toBeVisible()
   await expect(oidcRow.getByText('Not connected')).toBeVisible()
 })
-{%- else %}
-
-// social_login_providers doesn't include an explicit openid_connect for this project (or is
-// "all", which renders no connect buttons at all - see SocialLoginButtons.tsx/ConnectionsList),
-// so there's no "Openid Connect" row here to click - see auth/social-login.spec.ts's own skip.
-test.skip('connecting the OIDC test IdP either links it and can be undone, or is refused as already linked', () => {
-  // no-op: see the guard above
-})
-{%- endif %}

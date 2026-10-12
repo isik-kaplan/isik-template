@@ -32,8 +32,6 @@ try:
         author_name={{ cookiecutter.author_name|tojson }},
         author_email={{ cookiecutter.author_email|tojson }},
         domain={{ cookiecutter.domain|tojson }},
-        social_login_providers={{ cookiecutter.social_login_providers|tojson }},
-        social_login_provider_icons={{ cookiecutter.social_login_provider_icons|tojson }},
         languages={{ cookiecutter.languages|tojson }},
     )
 except AnswersInvalid as error:

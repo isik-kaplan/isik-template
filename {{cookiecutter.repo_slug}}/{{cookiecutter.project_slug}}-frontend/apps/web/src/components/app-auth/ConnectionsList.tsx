@@ -11,7 +11,7 @@ import { useClientTranslation } from '@/i18n/client'
 import { createAuthApi } from '@/lib/apiClients'
 import { authOrigin } from '@/lib/authOrigin'
 import { provePath } from '@/lib/reauthentication'
-import { SOCIAL_PROVIDERS } from '@/lib/socialProviders'
+import { socialProviders } from '@/lib/socialProviders'
 
 import { AutoFormButton } from './AutoFormButton'
 import { ProviderIcon } from './ProviderIcon'
@@ -85,7 +85,8 @@ export function ConnectionsList({ initialProviders, connectAction, callbackUrl, 
     toast.error(detailOf(error) ?? t('auth:profileConnectionsDisconnectError'))
   }
 
-  if (SOCIAL_PROVIDERS.length === 0) {
+  const providers = socialProviders()
+  if (providers.length === 0) {
     return <p className="text-sm text-muted-foreground">{t('auth:profileConnectionsEmpty')}</p>
   }
 
@@ -93,7 +94,7 @@ export function ConnectionsList({ initialProviders, connectAction, callbackUrl, 
     <div className="flex flex-col gap-4">
       {errorMessage && <p className="text-destructive text-sm">{errorMessage}</p>}
       <ul className="divide-y divide-border">
-        {SOCIAL_PROVIDERS.map((provider) => {
+        {providers.map((provider) => {
           const account = connected.find((connectedAccount) => connectedAccount.provider.id === provider.id)
           const connectPayload = { provider: provider.id, callback_url: callbackUrl, process: 'connect' }
 

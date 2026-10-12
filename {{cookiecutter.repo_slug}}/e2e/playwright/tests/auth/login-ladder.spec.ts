@@ -1,9 +1,7 @@
-{%- set providers = cookiecutter.social_login_providers.strip() -%}
-{%- set oidc = 'openid_connect' in providers and providers != 'all' -%}
 import type { Browser, Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 
-import { login, {% if oidc %}signInAtAuthentik, {% endif %}signUpAndVerify } from '../helpers'
+import { OIDC_CONFIGURED, login, signInAtAuthentik, signUpAndVerify } from '../helpers'
 
 // The graduated "who may still sign in" switch, raised and lowered the way an operator does it in an
 // incident: from the admin, as the seeded superuser (SETUP__SUPERUSER__*, see docker-compose.e2e.yml).
@@ -53,14 +51,14 @@ test('raising the ladder signs out and shuts out whoever it excludes, on both do
   await login(page, username, password)
   await expect(page).toHaveURL(/\/auth\/login/)
   await expect(page.getByText(/username and\/or password you specified are not correct/i)).toBeVisible()
-{%- if oidc %}
 
   // The social door answers to the same ladder, before any account is made.
-  await page.getByRole('button', { name: 'Continue with Openid Connect' }).click()
-  await signInAtAuthentik(page, 'oidc-e2e-user-4')
-  await expect(page).toHaveURL('/auth/provider-error?error=logins_closed', { timeout: 30_000 })
-  await expect(page.getByText('Signing in is restricted')).toBeVisible()
-{%- endif %}
+  if (OIDC_CONFIGURED) {
+    await page.getByRole('button', { name: 'Continue with Openid Connect' }).click()
+    await signInAtAuthentik(page, 'oidc-e2e-user-4')
+    await expect(page).toHaveURL('/auth/provider-error?error=logins_closed', { timeout: 30_000 })
+    await expect(page.getByText('Signing in is restricted')).toBeVisible()
+  }
 
   const lowered = await setLoginPolicy(browser, 'Everyone')
   await lowered.context().close()

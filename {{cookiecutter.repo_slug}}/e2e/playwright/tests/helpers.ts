@@ -3,6 +3,13 @@ import { expect } from '@playwright/test'
 
 import { extractLinkFromEmail } from './mailpit'
 
+/** Whether the stack under test offers the OIDC test IdP (e2e/.env names it in
+ * SOCIAL_LOGIN__PROVIDERS) - read from the same variable the app's own containers are configured
+ * with, so the social specs run exactly when there is a button for them to press. */
+export const OIDC_CONFIGURED = (process.env.{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS ?? '')
+  .split(',')
+  .some((provider) => provider.trim() === 'openid_connect')
+
 /** Signs up and verifies a brand-new account through the real UI - every other spec that needs a
  * logged-in-capable user builds on this rather than seeding one out of band, so a break in signup
  * or verification shows up immediately in whatever spec runs after it, not silently. */

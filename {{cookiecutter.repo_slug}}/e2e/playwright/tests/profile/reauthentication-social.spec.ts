@@ -1,10 +1,6 @@
-{%- set providers = cookiecutter.social_login_providers.strip() %}
-{#- Same guard as auth/social-login.spec.ts: only an explicit openid_connect renders a button to sign
-   up with, and this spec needs an account that was made through one. #}
-{%- if 'openid_connect' in providers and providers != 'all' -%}
 import { expect, test } from '@playwright/test'
 
-import { login, proveWithPassword, signInAtAuthentik } from '../helpers'
+import { OIDC_CONFIGURED, login, proveWithPassword, signInAtAuthentik } from '../helpers'
 import { extractLinkFromEmail } from '../mailpit'
 
 // An account made through a provider has no password, so allauth has nothing to challenge it with -
@@ -13,6 +9,8 @@ import { extractLinkFromEmail } from '../mailpit'
 // (e2e/authentik-blueprints/oidc-test-idp.yaml), so no other spec's account is involved.
 const IDENTITY = 'oidc-e2e-user-3'
 const IDENTITY_EMAIL = 'oidc-e2e-user-3@example.com'
+
+test.skip(!OIDC_CONFIGURED, 'SOCIAL_LOGIN__PROVIDERS does not name openid_connect, so there is no button to press')
 
 test('somebody with no password proves it at their provider, and can set a password by email instead', async ({
   page,
@@ -91,12 +89,3 @@ test('somebody with no password proves it at their provider, and can set a passw
   await page.getByRole('button', { name: 'Add email' }).click()
   await expect(page.getByRole('listitem').filter({ hasText: afterwards })).toBeVisible()
 })
-{%- else -%}
-import { test } from '@playwright/test'
-
-// social_login_providers doesn't include an explicit openid_connect for this project, so there is no
-// provider to sign up through - see auth/social-login.spec.ts's own skip.
-test.skip('somebody with no password proves it at their provider, and can set a password by email instead', () => {
-  // no-op: see the guard above
-})
-{%- endif %}

@@ -6,7 +6,7 @@ one OAuth2/OpenID provider, one application, and one test user with a fixed pass
 `e2e/playwright/tests/auth/social-login.spec.ts` can click through a real OAuth redirect - browser,
 IdP, and all - instead of only checking that `SOCIALACCOUNT_PROVIDERS` is well-formed.
 
-Only relevant when `social_login_providers` includes `openid_connect` or `all` - see
+Only used while `e2e/.env`'s `{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS` names `openid_connect` - see
 `{{ cookiecutter.config_prefix }}__OAUTH__OPENID_CONNECT__*` in `e2e/.env` for the client_id/secret/
 provider_id/server_url that have to match this blueprint's values exactly.
 

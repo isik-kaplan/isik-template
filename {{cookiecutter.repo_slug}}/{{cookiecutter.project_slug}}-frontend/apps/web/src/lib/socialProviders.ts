@@ -1,43 +1,38 @@
-// Static, not fetched from the backend - social login is settings-based (see the backend's
-// SOCIALACCOUNT_PROVIDERS), not a DB-backed SocialApp list, so there's nothing to query at
-// request time. Resolved once at generation time from the same social_login_providers answer.
-// "all" isn't expanded here the way it is in settings.py - a login page with ~90 buttons isn't
-// good UX regardless; list the providers you actually want a button for explicitly instead.
-{%- set icon_overrides = {} %}
-{%- if cookiecutter.social_login_provider_icons.strip() %}
-{%- for pair in cookiecutter.social_login_provider_icons.split(',') %}
-{%- set key = pair.split('=')[0].strip() %}
-{%- set value = pair.split('=', 1)[1].strip() %}
-{%- set _ = icon_overrides.update({key: value}) %}
-{%- endfor %}
-{%- endif %}
-{%- set entries = [] %}
-{%- if cookiecutter.social_login_providers.strip() and cookiecutter.social_login_providers.strip() != "all" %}
-{%- for provider in cookiecutter.social_login_providers.split(',') %}
-{%- set provider_id = provider.strip() %}
-{%- set icon = icon_overrides.get(provider_id, "").replace("'", "\\'") %}
-{%- set _ = entries.append("{ id: '" ~ provider_id ~ "', name: '" ~ provider_id.replace("_", " ").title() ~ "', icon: '" ~ icon ~ "' }") %}
-{%- endfor %}
-{%- endif %}
-{%- set prefix = "export const SOCIAL_PROVIDERS: SocialProvider[] = [" %}
-{%- set one_line = prefix ~ entries|join(', ') ~ "]" %}
+import { CONFIG } from '@/config/public'
 
-// icon: a static URL or local path (from social_login_provider_icons), used only when
-// ProviderIcon has no bundled brand icon for this id - see components/app-auth/icons/brands.tsx.
-// "" means no icon at all.
+// icon: a static URL or local path (from SOCIAL_LOGIN__ICONS), used only when ProviderIcon has no
+// bundled brand icon for this id - see components/app-auth/icons/brands.tsx. "" means no icon at all.
 export type SocialProvider = { id: string; name: string; icon: string }
 
-// Picks Prettier's own single- vs multi-line array layout at generation time (mirroring its
-// printWidth rule) rather than always emitting one entry per line - a short provider list left
-// multi-line in the raw output still fails `prettier --check` because Prettier would collapse it.
-{%- if entries|length == 0 %}
-export const SOCIAL_PROVIDERS: SocialProvider[] = []
-{%- elif one_line|length <= 120 %}
-{{ one_line }}
-{%- else %}
-export const SOCIAL_PROVIDERS: SocialProvider[] = [
-{%- for entry in entries %}
-  {{ entry }},
-{%- endfor %}
-]
-{%- endif %}
+// "openid_connect" reads "Openid Connect": the id is all there is to name a provider by, since the
+// backend's provider list is configuration rather than something this app asks it for.
+function nameOf(id: string): string {
+  return id
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+}
+
+// "<provider id>=<url or path>" pairs. A malformed one throws rather than quietly showing no icon.
+function iconsOf(entries: string[]): Map<string, string> {
+  const icons = new Map<string, string>()
+  for (const entry of entries) {
+    const separator = entry.indexOf('=')
+    const id = entry.slice(0, separator).trim()
+    const url = entry.slice(separator + 1).trim()
+    if (separator === -1 || !id || !url) {
+      throw new Error(`SOCIAL_LOGIN__ICONS entry ${JSON.stringify(entry)} is not <provider id>=<url or path>`)
+    }
+    icons.set(id, url)
+  }
+  return icons
+}
+
+// The same SOCIAL_LOGIN__PROVIDERS the backend installs its providers from, read per request
+// through the public config - so a provider is added by setting the variable, never by a rebuild.
+export function socialProviders(): SocialProvider[] {
+  const icons = iconsOf(CONFIG.SOCIAL_LOGIN.ICONS)
+  return CONFIG.SOCIAL_LOGIN.PROVIDERS.map((id) => id.trim())
+    .filter(Boolean)
+    .map((id) => ({ id, name: nameOf(id), icon: icons.get(id) ?? '' }))
+}

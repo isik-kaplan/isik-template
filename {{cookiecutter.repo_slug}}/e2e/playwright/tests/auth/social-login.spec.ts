@@ -1,10 +1,8 @@
 import { expect, test } from '@playwright/test'
 
-{%- set providers = cookiecutter.social_login_providers.strip() %}
-{#- SocialLoginButtons.tsx deliberately renders no buttons at all for "all" (a login page with
-   ~90 buttons isn't good UX regardless) - so unlike settings.py's SOCIALACCOUNT_PROVIDERS, "all"
-   does NOT mean a button exists here to click. Only an explicit openid_connect gets one. #}
-{%- if 'openid_connect' in providers and providers != 'all' %}
+import { OIDC_CONFIGURED } from '../helpers'
+
+test.skip(!OIDC_CONFIGURED, 'SOCIAL_LOGIN__PROVIDERS does not name openid_connect, so there is no button to press')
 
 // Authentik's authorization endpoint, which the provider redirect lands on with allauth's redirect_uri.
 const AUTHORIZE_PATH = '/application/o/authorize/'
@@ -49,11 +47,3 @@ test('logging in with the OIDC test IdP provisions an account pending email veri
 
   await expect(page).toHaveURL('/auth/login')
 })
-{%- else %}
-
-// social_login_providers doesn't include an explicit openid_connect for this project (or is
-// "all", which renders no buttons at all - see SocialLoginButtons.tsx), so there's no
-// "Continue with Openid Connect" button to click - see e2e/authentik-blueprints/README.md for
-// what this spec covers when it's enabled.
-test.skip('logging in with the OIDC test IdP creates and signs in a new account', () => {})
-{%- endif %}

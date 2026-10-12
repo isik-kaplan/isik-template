@@ -1,14 +1,12 @@
 import ProfileConnectionsPage from '@/app/profile/(tabs)/connections/page'
-{%- if cookiecutter.social_login_providers.strip() %}
-import { SOCIAL_PROVIDERS } from '@/lib/socialProviders'
 
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-{%- else %}
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { render, screen } from '@testing-library/react'
-{%- endif %}
-import { afterEach, describe, expect, it, vi } from 'vitest'
+const provider = { id: 'github', name: 'Github', icon: '' }
+const configured = vi.hoisted(() => ({ providers: [] as { id: string; name: string; icon: string }[] }))
+vi.mock('@/lib/socialProviders', () => ({ socialProviders: () => configured.providers }))
 
 const providers = vi.fn()
 const AuthApi = vi.hoisted(() => vi.fn())
@@ -33,16 +31,16 @@ vi.mock('next/navigation', () => ({
 }))
 
 const AUTH_ORIGIN = 'http://auth.{{ cookiecutter.repo_slug }}.test'
-{%- if cookiecutter.social_login_providers.strip() %}
-const [provider] = SOCIAL_PROVIDERS
 const connected = { id: 1, provider: { id: provider.id, name: provider.name }, uid: '123', display: { name: 'Jane' } }
-{%- endif %}
 
 describe('ProfileConnectionsPage', () => {
+  beforeEach(() => {
+    configured.providers = [provider]
+  })
+
   afterEach(() => {
     document.querySelectorAll('form').forEach((form) => form.remove())
   })
-{%- if cookiecutter.social_login_providers.strip() %}
 
   it('renders the connected providers', async () => {
     providers.mockResolvedValue({ data: { data: [connected] } })
@@ -51,9 +49,9 @@ describe('ProfileConnectionsPage', () => {
 
     expect(screen.getByText(provider.name)).toBeTruthy()
   })
-{%- else %}
 
-  it('says no provider is configured, since this project has none', async () => {
+  it('says no provider is configured when the deployment has none', async () => {
+    configured.providers = []
     providers.mockResolvedValue({ data: { data: [] } })
 
     render(await ProfileConnectionsPage({ searchParams: Promise.resolve({}) }))
@@ -62,6 +60,7 @@ describe('ProfileConnectionsPage', () => {
   })
 
   it('still says so when the backend returns no data', async () => {
+    configured.providers = []
     providers.mockResolvedValue({ data: undefined })
 
     render(await ProfileConnectionsPage({ searchParams: Promise.resolve({}) }))
@@ -70,13 +69,13 @@ describe('ProfileConnectionsPage', () => {
   })
 
   it('still clears a repeated error param off the address', async () => {
+    configured.providers = []
     providers.mockResolvedValue({ data: { data: [] } })
 
     render(await ProfileConnectionsPage({ searchParams: Promise.resolve({ error: ['cancelled', 'other'] }) }))
 
     expect(replace).toHaveBeenCalledWith('/profile/connections')
   })
-{%- endif %}
 
   it('renders no error message when there is none', async () => {
     providers.mockResolvedValue({ data: { data: [] } })
@@ -85,8 +84,6 @@ describe('ProfileConnectionsPage', () => {
 
     expect(screen.queryByText('Could not connect that account. Try again.')).toBeNull()
   })
-
-{%- if cookiecutter.social_login_providers.strip() %}
 
   it('renders an empty list when the backend returns no data', async () => {
     providers.mockResolvedValue({ data: undefined })
@@ -103,7 +100,6 @@ describe('ProfileConnectionsPage', () => {
 
     expect(screen.getByText('Connection canceled.')).toBeTruthy()
   })
-{%- endif %}
 
   it('builds the AuthApi client from the request origin, forwarding the incoming cookie header', async () => {
     providers.mockResolvedValue({ data: { data: [] } })
@@ -123,8 +119,6 @@ describe('ProfileConnectionsPage', () => {
     cookieHeader = 'sessionid=abc123'
   })
 
-{%- if cookiecutter.social_login_providers.strip() %}
-
   it('builds the connect action and callback URL from the request origin', async () => {
     HTMLFormElement.prototype.submit = vi.fn()
     globalThis.fetch = vi.fn(async () => new Response(null, { status: 200 }))
@@ -141,5 +135,4 @@ describe('ProfileConnectionsPage', () => {
       'http://{{ cookiecutter.repo_slug }}.test/profile/connections'
     )
   })
-{%- endif %}
 })

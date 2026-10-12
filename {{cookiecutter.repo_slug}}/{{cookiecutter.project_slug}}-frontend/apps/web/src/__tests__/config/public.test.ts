@@ -17,4 +17,18 @@ describe('CONFIG (public)', () => {
     vi.unstubAllEnvs()
     vi.resetModules()
   })
+
+  it('reads the social login providers and icons as lists, empty when unset', async () => {
+    vi.stubEnv('{{ cookiecutter.config_prefix }}__DOMAIN', 'example.test')
+    vi.stubEnv('{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS', 'github,openid_connect')
+    vi.resetModules()
+
+    const { CONFIG } = await import('@/config/public')
+
+    expect(CONFIG.SOCIAL_LOGIN.PROVIDERS).toEqual(['github', 'openid_connect'])
+    expect(CONFIG.SOCIAL_LOGIN.ICONS).toEqual([])
+
+    vi.unstubAllEnvs()
+    vi.resetModules()
+  })
 })

@@ -153,29 +153,26 @@ else
   echo "Kept LocalStack - uploads will not survive a restart of the storage container."
 fi
 
-# Discovered from .env.example itself, not a fixed list - it already carries exactly the
-# OAUTH__<PROVIDER>__CLIENT_ID lines this project was generated with (see .env.example's own
-# header comment / hooks/post_gen_project.py), so this stays correct no matter how many providers
-# "social_login_providers" named at generation time.
-oauth_providers="$(grep -oE "^#?${PREFIX}__OAUTH__[A-Z0-9_]+__CLIENT_ID=" "$EXAMPLE_FILE" 2>/dev/null \
-  | sed -E "s/^#?${PREFIX}__OAUTH__([A-Z0-9_]+)__CLIENT_ID=/\1/" | sort -u || true)"
-
-if [ -n "$oauth_providers" ]; then
-  echo
-  echo "Social login provider credentials (leave blank to configure later - that provider's button"
-  echo "just won't complete its flow until you do):"
+echo
+social_login_providers="$(ask "Social login providers, as comma-separated allauth ids (blank for none)" "")"
+if [ -n "$social_login_providers" ]; then
+  set_var "${PREFIX}__SOCIAL_LOGIN__PROVIDERS" "$social_login_providers"
+  echo "Their credentials (leave blank to configure later - that provider's button just won't"
+  echo "complete its flow until you do):"
   # Reads the provider list from fd 3, not stdin (fd 0) - ask()/ask_secret() inside the loop body
   # need stdin free to read the real answer, or each one would silently consume the next line of
-  # $oauth_providers instead of prompting, and every answer after the first would shift onto the
-  # wrong provider/question.
+  # the list instead of prompting, and every answer after the first would shift onto the wrong
+  # provider/question.
   while IFS= read -r provider <&3; do
+    [ -z "$provider" ] && continue
+    key="$(echo "$provider" | tr '[:lower:]' '[:upper:]')"
     client_id="$(ask "  $provider client ID" "")"
     if [ -n "$client_id" ]; then
-      set_var "${PREFIX}__OAUTH__${provider}__CLIENT_ID" "$client_id"
-      set_var "${PREFIX}__OAUTH__${provider}__CLIENT_SECRET" "$(ask_secret "  $provider client secret")"
+      set_var "${PREFIX}__OAUTH__${key}__CLIENT_ID" "$client_id"
+      set_var "${PREFIX}__OAUTH__${key}__CLIENT_SECRET" "$(ask_secret "  $provider client secret")"
     fi
-  done 3<<< "$oauth_providers"
-  if echo "$oauth_providers" | grep -qx "OPENID_CONNECT"; then
+  done 3<<< "$(echo "$social_login_providers" | tr ',' '\n' | tr -d ' ')"
+  if echo ",$social_login_providers," | tr -d ' ' | grep -q ",openid_connect,"; then
     echo "  openid_connect also needs ${PREFIX}__OAUTH__OPENID_CONNECT__SERVER_URL and"
     echo "  ...__PROVIDER_ID - set those in $ENV_FILE directly."
   fi

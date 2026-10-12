@@ -1,7 +1,7 @@
 import { useTranslation } from '@/lib/i18n'
 import { type ProviderToken, signInWithApple, signInWithGoogle } from '@/lib/nativeSignIn'
 import { getAuthApi } from '@/lib/session'
-import { APPLE_SIGN_IN_ENABLED, GOOGLE_SIGN_IN_ENABLED } from '@/lib/socialProviders'
+import { appleSignInEnabled, googleSignInEnabled } from '@/lib/socialProviders'
 
 import { extractAuthErrors, pendingMfaTypes } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
@@ -11,20 +11,19 @@ import { Platform } from 'react-native'
 
 type SocialLoginButtonsProps = {
   onError: (message: string) => void
-  // Default to the generated config, not hardcoded - overridable so tests can exercise every
-  // on/off combination directly, without reaching for jest.mock() gymnastics on a module whose
-  // values are baked in at generation time.
+  // Default to the build's own configuration - overridable so tests can exercise every on/off
+  // combination directly.
   googleEnabled?: boolean
   appleEnabled?: boolean
 }
 
-/** Renders nothing at all when neither provider is configured for this project (see
+/** Renders nothing at all when neither provider is configured for this build (see
  * lib/socialProviders.ts) - Apple's own button is further limited to iOS, the only platform its
  * SDK supports. */
 export function SocialLoginButtons({
   onError,
-  googleEnabled = GOOGLE_SIGN_IN_ENABLED,
-  appleEnabled = APPLE_SIGN_IN_ENABLED,
+  googleEnabled = googleSignInEnabled(),
+  appleEnabled = appleSignInEnabled(),
 }: SocialLoginButtonsProps) {
   const { t } = useTranslation()
 

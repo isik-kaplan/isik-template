@@ -12,7 +12,7 @@ const providers = vi.hoisted(() => [
 ])
 const replace = vi.hoisted(() => vi.fn())
 
-vi.mock('@/lib/socialProviders', () => ({ SOCIAL_PROVIDERS: providers }))
+vi.mock('@/lib/socialProviders', () => ({ socialProviders: () => providers }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 vi.mock('next/navigation', () => ({ usePathname: () => '/profile/connections', useRouter: () => ({ replace }) }))
 
@@ -262,7 +262,7 @@ describe('ConnectionsList connect-flow errors', () => {
 describe('ConnectionsList with no providers configured', () => {
   it('shows an empty-state message instead of a list', async () => {
     vi.resetModules()
-    vi.doMock('@/lib/socialProviders', () => ({ SOCIAL_PROVIDERS: [] }))
+    vi.doMock('@/lib/socialProviders', () => ({ socialProviders: () => [] }))
     const { ConnectionsList: EmptyConnectionsList } = await import('@/components/app-auth/ConnectionsList')
 
     render(

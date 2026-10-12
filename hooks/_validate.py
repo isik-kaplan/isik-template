@@ -29,137 +29,9 @@ FORBIDDEN_CHARACTERS = {
 
 DOMAIN_PATTERN = r"[a-z0-9.-]+"
 
-# allauth.socialaccount.providers/* provider ids, minus non-provider dirs (base, oauth, oauth2)
-# and internal subdirs (__pycache__, static, templates, data, migrations). Keep in sync with the
-# expansion list in the generated project's settings.py (see Phase 4) if this ever changes.
-KNOWN_PROVIDERS = {
-    "agave",
-    "amazon",
-    "amazon_cognito",
-    "apple",
-    "asana",
-    "atlassian",
-    "auth0",
-    "authentiq",
-    "baidu",
-    "basecamp",
-    "battlenet",
-    "bitbucket_oauth2",
-    "bitly",
-    "box",
-    "cilogon",
-    "clever",
-    "coinbase",
-    "dataporten",
-    "daum",
-    "digitalocean",
-    "dingtalk",
-    "discogs",
-    "discord",
-    "disqus",
-    "douban",
-    "doximity",
-    "draugiem",
-    "drip",
-    "dropbox",
-    "dummy",
-    "dwolla",
-    "edmodo",
-    "edx",
-    "eventbrite",
-    "eveonline",
-    "evernote",
-    "exist",
-    "facebook",
-    "feedly",
-    "figma",
-    "fivehundredpx",
-    "flickr",
-    "foursquare",
-    "frontier",
-    "fxa",
-    "gitea",
-    "github",
-    "gitlab",
-    "globus",
-    "google",
-    "gumroad",
-    "hubic",
-    "hubspot",
-    "instagram",
-    "jupyterhub",
-    "kakao",
-    "klaviyo",
-    "lemonldap",
-    "lichess",
-    "line",
-    "linkedin_oauth2",
-    "mailchimp",
-    "mailcow",
-    "mailru",
-    "mediawiki",
-    "meetup",
-    "microsoft",
-    "miro",
-    "naver",
-    "netiq",
-    "nextcloud",
-    "notion",
-    "okta",
-    "openid",
-    "openid_connect",
-    "openstreetmap",
-    "orcid",
-    "patreon",
-    "paypal",
-    "pinterest",
-    "pocket",
-    "questrade",
-    "quickbooks",
-    "reddit",
-    "robinhood",
-    "salesforce",
-    "saml",
-    "sharefile",
-    "shopify",
-    "slack",
-    "snapchat",
-    "soundcloud",
-    "spotify",
-    "stackexchange",
-    "steam",
-    "stocktwits",
-    "strava",
-    "stripe",
-    "telegram",
-    "tiktok",
-    "trainingpeaks",
-    "trello",
-    "tumblr",
-    "tumblr_oauth2",
-    "twentythreeandme",
-    "twitch",
-    "twitter",
-    "twitter_oauth2",
-    "untappd",
-    "vimeo",
-    "vimeo_oauth2",
-    "vk",
-    "wahoo",
-    "weibo",
-    "weixin",
-    "windowslive",
-    "xing",
-    "yahoo",
-    "yandex",
-    "ynab",
-    "zoho",
-    "zoom",
-}
-
 # django.conf.locale.LANG_INFO keys (Django 5.2) - the generated project's own settings.py builds
 # its LANGUAGES display names from that same dict, but this hook's environment has no Django
-# installed to import it from, so the codes are mirrored here instead, same as KNOWN_PROVIDERS above.
+# installed to import it from, so the codes are mirrored here instead.
 KNOWN_LANGUAGES = {
     "af",
     "ar",
@@ -310,66 +182,6 @@ def validate_domain(domain: str) -> None:
         raise AnswersInvalid(f"'domain' ({domain!r}) can only contain letters, digits, '.' and '-'.")
 
 
-def parse_requested_providers(social_login_providers: str) -> list[str]:
-    return [p.strip() for p in social_login_providers.split(",") if p.strip()]
-
-
-def validate_requested_providers(requested_providers: list[str]) -> None:
-    if not requested_providers or requested_providers == ["all"]:
-        return
-    unknown = sorted(set(requested_providers) - KNOWN_PROVIDERS)
-    if unknown:
-        raise AnswersInvalid(
-            f"Unknown social_login_providers: {', '.join(unknown)}. Valid values: "
-            f"{', '.join(sorted(KNOWN_PROVIDERS))}, or 'all' for every allauth-supported provider."
-        )
-
-
-def validate_provider_icons(social_login_provider_icons: str, requested_providers: list[str]) -> None:
-    # provider_id=url-or-path pairs, e.g. "openid_connect=/icons/my-idp.svg,okta=https://example.com/okta.svg"
-    # - a static, generation-time icon for providers with no bundled brand icon (see
-    # apps/web/src/components/app-auth/icons/brands.tsx). Not required to point anywhere real -
-    # nothing here fetches it, that's the browser's job at request time, same as any other <img src>.
-    icon_entries = [e.strip() for e in social_login_provider_icons.split(",") if e.strip()]
-    if not icon_entries:
-        return
-
-    icon_provider_ids = []
-    for entry in icon_entries:
-        if "=" not in entry:
-            raise AnswersInvalid(
-                f"'social_login_provider_icons' entry {entry!r} is missing '=' - each entry must be "
-                "provider_id=url-or-path, e.g. openid_connect=/icons/my-idp.svg."
-            )
-        provider_id, _, icon_ref = entry.partition("=")
-        provider_id = provider_id.strip()
-        icon_ref = icon_ref.strip()
-        if not provider_id or not icon_ref:
-            raise AnswersInvalid(
-                f"'social_login_provider_icons' entry {entry!r} needs a provider id and a URL/path "
-                "on both sides of '='."
-            )
-        if provider_id not in KNOWN_PROVIDERS:
-            raise AnswersInvalid(f"'social_login_provider_icons' names an unknown provider: {provider_id!r}.")
-        icon_provider_ids.append(provider_id)
-
-    duplicates = sorted({p for p in icon_provider_ids if icon_provider_ids.count(p) > 1})
-    if duplicates:
-        raise AnswersInvalid(
-            f"'social_login_provider_icons' lists the same provider more than once: {', '.join(duplicates)}."
-        )
-
-    # "all" enables every provider, so nothing here can be unrequested under it - only a concrete
-    # list can leave an icon pointed at a provider that isn't actually enabled.
-    if requested_providers and requested_providers != ["all"]:
-        unrequested = sorted(set(icon_provider_ids) - set(requested_providers))
-        if unrequested:
-            raise AnswersInvalid(
-                f"'social_login_provider_icons' configures an icon for provider(s) not listed in "
-                f"'social_login_providers': {', '.join(unrequested)}."
-            )
-
-
 def parse_requested_languages(languages: str) -> list[str]:
     return [code.strip() for code in languages.split(",") if code.strip()]
 
@@ -401,8 +213,6 @@ def validate_answers(
     author_name: str,
     author_email: str,
     domain: str,
-    social_login_providers: str,
-    social_login_provider_icons: str,
     languages: str = "en",
 ) -> None:
     validate_required_fields(
@@ -418,7 +228,4 @@ def validate_answers(
     validate_slugs(project_slug=project_slug, repo_slug=repo_slug)
     validate_free_text(project_name=project_name, description=description, author_email=author_email)
     validate_domain(domain)
-    requested_providers = parse_requested_providers(social_login_providers)
-    validate_requested_providers(requested_providers)
-    validate_provider_icons(social_login_provider_icons, requested_providers)
     validate_requested_languages(parse_requested_languages(languages))

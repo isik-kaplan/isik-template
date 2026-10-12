@@ -1,4 +1,3 @@
-{%- set providers = cookiecutter.social_login_providers.split(',') | map('trim') | reject('equalto', '') | list -%}
 {%- set extra_languages = cookiecutter.languages.split(',')[1:] | map('trim') | list -%}
 # Setting up {{ cookiecutter.project_name }}
 
@@ -9,9 +8,7 @@ this is the checklist.
 - [ ] [Write `.env`](#2-write-env)
 - [ ] [Sign in as the first superuser](#3-sign-in-as-the-first-superuser)
 - [ ] [DNS and TLS](#4-dns-and-tls)
-{%- if providers %}
-- [ ] [Social login providers](#5-social-login-providers)
-{%- endif %}
+- [ ] [Social login providers](#5-social-login-providers) (optional)
 - [ ] [Email, storage and error reporting](#6-email-storage-and-error-reporting)
 - [ ] [Legal documents](#7-legal-documents)
 - [ ] [Cookies and consent](#8-cookies-and-consent)
@@ -76,30 +73,28 @@ with `X-Forwarded-Proto` and `X-Forwarded-Host` set, and append to `X-Forwarded-
 `setup.sh` writes). The README's "TLS" section explains why each of these matters, and how to get local HTTPS for
 passkeys with `scripts/dev-tls.sh`.
 {% endif %}
-{%- if providers %}
+
 ## 5. Social login providers
 
-Register an OAuth application with each provider, then put its credentials in `.env` (or answer `setup.sh`'s
-prompts). A provider without credentials still shows its button, but its flow cannot complete.
-{% if cookiecutter.social_login_providers.strip() == "all" %}
-`all` was chosen, so each provider you use needs its own `{{ cookiecutter.config_prefix }}__OAUTH__<PROVIDER>__CLIENT_ID` and
-`..._CLIENT_SECRET`, and its redirect URI registered as
-`https://auth.{{ cookiecutter.domain }}/v0/provider-callback/<provider>/login/callback/`.
-{% else %}
-{%- for provider in providers %}
-{%- if provider == "openid_connect" %}
-- **openid_connect**: `{{ cookiecutter.config_prefix }}__OAUTH__OPENID_CONNECT__CLIENT_ID`, `..._CLIENT_SECRET`, `..._SERVER_URL` (the
-  issuer) and `..._PROVIDER_ID`. Redirect URI:
-  `https://auth.{{ cookiecutter.domain }}/v0/provider-callback/oidc/<PROVIDER_ID>/login/callback/`.
-{%- else %}
-- **{{ provider }}**: `{{ cookiecutter.config_prefix }}__OAUTH__{{ provider.upper() }}__CLIENT_ID` and `..._CLIENT_SECRET`. Redirect URI:
-  `https://auth.{{ cookiecutter.domain }}/v0/provider-callback/{{ provider }}/login/callback/`.
-{%- endif %}
-{%- endfor %}
-{% endif %}
+Optional: with none configured, sign-in is email and password only. To offer some, list their allauth
+provider ids in `{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS`, e.g. `google,github`. The backend and the web
+frontend both read it at startup, so adding one later is a change to `.env` and a restart, not to the
+code. Startup refuses an id allauth doesn't ship.
+
+Then register an OAuth application with each provider and put its credentials in `.env` (`setup.sh`
+asks for both). A provider without credentials still shows its button, but its flow cannot complete.
+
+- **Most providers**: `{{ cookiecutter.config_prefix }}__OAUTH__<ID>__CLIENT_ID` and `..._CLIENT_SECRET`, `<ID>` being the
+  provider id upper-cased. Redirect URI: `https://auth.{{ cookiecutter.domain }}/v0/provider-callback/<id>/login/callback/`.
+- **openid_connect** (your own identity provider) also needs `..._SERVER_URL` (the issuer) and
+  `..._PROVIDER_ID`. Redirect URI:
+  `https://auth.{{ cookiecutter.domain }}/v0/provider-callback/oidc/<PROVIDER_ID>/login/callback/`. The frontend
+  has no brand icon for it; `{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__ICONS=openid_connect=<url or path>`
+  gives it one.
+
 Use `http://` in the redirect URI for a local stack without TLS. A first sign-in through a provider lands on a
 "finish signing up" page, where the person confirms a username and sees the legal documents they agree to.
-{% endif %}
+
 ## 6. Email, storage and error reporting
 
 - **Email.** With `DEBUG=true` mail is printed to the backend's log. A deployment needs

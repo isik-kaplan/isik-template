@@ -1,14 +1,20 @@
-{#- A native app has no OAuth redirect to follow (see AppAuthApi.loginWithProviderToken's own
-   comment) - only providers with an actual on-device sign-in SDK can work here at all, unlike
-   the web app's SOCIAL_PROVIDERS list, which works for any allauth-configured provider via
-   redirect. "all" is resolved the same conservative way: only google/apple ever turn on, never
-   the rest of allauth's catalog. #}
-{%- set providers = cookiecutter.social_login_providers.split(',') | map('trim') | list %}
-{%- set all_enabled = cookiecutter.social_login_providers.strip() == 'all' -%}
+// A native app has no OAuth redirect to follow (see AppAuthApi.loginWithProviderToken's own
+// comment) - only providers with an on-device sign-in SDK can work here at all, unlike the web
+// app, which works for any allauth-configured provider via redirect. So of the provider ids the
+// backend's SOCIAL_LOGIN__PROVIDERS names, only google and apple ever turn a button on here.
+//
+// EXPO_PUBLIC_SOCIAL_LOGIN_PROVIDERS is inlined at build time like every other EXPO_PUBLIC_*
+// variable (see lib/config.ts). Both native SDKs are always installed, so this, not the dependency,
+// is what says whether the backend actually has the provider configured.
+function configured(id: string): boolean {
+  const providers: string[] = (process.env.EXPO_PUBLIC_SOCIAL_LOGIN_PROVIDERS ?? '').split(',')
+  return providers.some((provider) => provider.trim() === id)
+}
 
-// Whether this project's backend actually has each provider configured (cookiecutter's own
-// social_login_providers answer) - not just whether the native SDK dependency is installed, since
-// both packages are always in package.json regardless (there's no include_mobile-style flag for
-// individual providers, and neither button renders when its own flag here is off anyway).
-export const GOOGLE_SIGN_IN_ENABLED = {{ 'true' if all_enabled or 'google' in providers else 'false' }}
-export const APPLE_SIGN_IN_ENABLED = {{ 'true' if all_enabled or 'apple' in providers else 'false' }}
+export function googleSignInEnabled(): boolean {
+  return configured('google')
+}
+
+export function appleSignInEnabled(): boolean {
+  return configured('apple')
+}

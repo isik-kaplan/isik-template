@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-from isik.common.config import boolean, config, integer, string
+from isik.common.config import boolean, comma_separated_list, config, integer, string
 
 
 load_dotenv(verbose=True, override=False)
@@ -49,6 +49,11 @@ CONFIG = config(
             # and by user, shared across a whole test run rather than scoped to one test, and the
             # suite signs up/logs in/changes passwords far faster than any human. See settings.py.
             "RATE_LIMITS_ENABLED": boolean(missing_default=True),
+        },
+        "SOCIAL_LOGIN": {
+            # allauth provider ids, e.g. google,github,openid_connect. The frontend reads the same
+            # variable to know which buttons to show. Each one's credentials are OAUTH__<ID>__*.
+            "PROVIDERS": comma_separated_list(missing_default=[]),
         },
         "SENTRY": {
             "DSN": string(missing_default=None),

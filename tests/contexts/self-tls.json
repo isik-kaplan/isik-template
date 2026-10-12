@@ -5,6 +5,5 @@
   "author_email": "test@example.test",
   "domain": "selftls.test",
   "tls_termination": "self",
-  "social_login_providers": "google",
   "license": "MIT"
 }

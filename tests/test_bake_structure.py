@@ -15,7 +15,7 @@ from conftest import load_context
 pytestmark = pytest.mark.usefixtures("skip_lockfile_generation")
 
 
-@pytest.mark.parametrize("context_name", ["default", "no-social-login", "self-tls"])
+@pytest.mark.parametrize("context_name", ["default", "minimal", "self-tls"])
 def test_bake_succeeds(cookies, context_name):
     result = cookies.bake(extra_context=load_context(context_name))
     assert result.exit_code == 0
@@ -24,7 +24,7 @@ def test_bake_succeeds(cookies, context_name):
 
 
 def test_include_mobile_controls_whether_apps_mobile_exists(cookies):
-    # default.json has include_mobile: true; no-social-login.json omits it, so it takes
+    # default.json has include_mobile: true; minimal.json omits it, so it takes
     # cookiecutter.json's own default (false) - one bake exercises each side for free.
     with_mobile = cookies.bake(extra_context=load_context("default"))
     assert with_mobile.exit_code == 0
@@ -32,7 +32,7 @@ def test_include_mobile_controls_whether_apps_mobile_exists(cookies):
     assert mobile_dir.is_dir()
     assert (mobile_dir / "package.json").is_file()
 
-    without_mobile = cookies.bake(extra_context=load_context("no-social-login"))
+    without_mobile = cookies.bake(extra_context=load_context("minimal"))
     assert without_mobile.exit_code == 0
     no_mobile_dir = without_mobile.project_path / f"{without_mobile.context['project_slug']}-frontend/apps/mobile"
     assert not no_mobile_dir.exists()
@@ -102,22 +102,6 @@ def test_license_file_matches_choice(cookies):
         ({"project_name": "My App (v2)"}, "project_name whose slugs aren't identifiers"),
         ({"project_name": "Test Project", "project_slug": "2fast"}, "project_slug starting with a digit"),
         ({"description": 'A "simple" app'}, "description with a double quote"),
-        ({"social_login_providers": "not-a-real-provider"}, "unknown provider slug"),
-        ({"social_login_provider_icons": "no-equals-sign"}, "icon entry missing '='"),
-        ({"social_login_provider_icons": "=https://example.test/x.svg"}, "icon entry with blank provider id"),
-        ({"social_login_provider_icons": "google="}, "icon entry with blank url"),
-        (
-            {"social_login_provider_icons": "not-a-real-provider=https://example.test/x.svg"},
-            "icon for unknown provider",
-        ),
-        (
-            {"social_login_provider_icons": "google=https://a.test/g.svg,google=https://b.test/g2.svg"},
-            "icon entry listing the same provider twice",
-        ),
-        (
-            {"social_login_provider_icons": "slack=https://example.test/slack.svg"},
-            "icon for a provider not in social_login_providers",
-        ),
     ],
 )
 def test_pre_gen_validation_rejects(cookies, override, reason):
@@ -143,37 +127,6 @@ def test_free_text_with_quotes_reaches_python_and_toml_intact(cookies):
     assert author_name in (result.project_path / "LICENSE").read_text()
     layout = result.project_path / f"{result.context['project_slug']}-frontend/apps/web/src/app/layout.tsx"
     assert f'  description: "{description}",' in layout.read_text()
-
-
-def test_all_keyword_accepted_for_providers(cookies):
-    result = cookies.bake(extra_context={**load_context("default"), "social_login_providers": "all"})
-    assert result.exit_code == 0
-
-
-def test_social_login_provider_icons_renders_into_socialProviders_ts(cookies):
-    # openid_connect - one of default.json's own social_login_providers - has no bundled brand
-    # icon (apps/web/src/components/app-auth/icons/brands.tsx), so this is the realistic case a
-    # deployment would actually configure. google, also requested but left unconfigured here,
-    # exercises the "" (no override, bundled icon wins) side of the same render.
-    result = cookies.bake(
-        extra_context={
-            **load_context("default"),
-            "social_login_provider_icons": "openid_connect=https://example.test/idp-icon.svg",
-        }
-    )
-    assert result.exit_code == 0
-
-    social_providers_ts = (
-        result.project_path
-        / f"{result.context['project_slug']}-frontend"
-        / "apps"
-        / "web"
-        / "src"
-        / "lib"
-        / "socialProviders.ts"
-    ).read_text()
-    assert "icon: 'https://example.test/idp-icon.svg'" in social_providers_ts
-    assert "{ id: 'google', name: 'Google', icon: '' }" in social_providers_ts
 
 
 def test_frontend_ci_runs_the_suites_in_the_dockerfile_tester_image(cookies):
@@ -391,7 +344,7 @@ def test_log_sinks_are_named_after_the_project(cookies):
         assert f"#{result.context['config_prefix']}__LOGGING__{name}=" in env_example
 
 
-@pytest.mark.parametrize(("context_name", "union"), [("default", '"en" | "tr"'), ("no-social-login", '"en"')])
+@pytest.mark.parametrize(("context_name", "union"), [("default", '"en" | "tr"'), ("minimal", '"en"')])
 def test_the_generated_api_client_carries_the_languages_answer(cookies, context_name, union):
     # packages/api's schema.ts is openapi-typescript's output for the baked project's own document,
     # and the language enum is the one place that document depends on an answer. The baked project's
@@ -425,7 +378,7 @@ def test_the_contract_checks_are_wired_into_pre_commit_and_ci(cookies):
     assert "schema" in ci["jobs"]["e2e"]["needs"]
 
 
-@pytest.mark.parametrize("context_name", ["default", "no-social-login"])
+@pytest.mark.parametrize("context_name", ["default", "minimal"])
 def test_every_verified_by_names_a_test_file_the_bake_ships(cookies, context_name):
     # A `verified_by` buys its mutant out of the re-run, so one pointing at a test file that a given
     # bake leaves out would leave that mutant re-checked by nothing at all.

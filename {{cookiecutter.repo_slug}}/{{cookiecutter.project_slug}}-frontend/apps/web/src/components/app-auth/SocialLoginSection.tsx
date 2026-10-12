@@ -2,7 +2,7 @@
 
 import type React from 'react'
 
-import { SOCIAL_PROVIDERS } from '@/lib/socialProviders'
+import { socialProviders } from '@/lib/socialProviders'
 
 import { SeparatorWithText } from './SeparatorWithText'
 import { SocialLoginButtons } from './SocialLoginButtons'
@@ -13,10 +13,10 @@ export type SocialLoginSectionProps = {
   dividerText: React.ReactNode
 }
 
-// Buttons and their "or" divider are one unit: SOCIAL_PROVIDERS empty means neither renders,
+// Buttons and their "or" divider are one unit: no provider configured means neither renders,
 // not a bare divider sitting above an email-only form.
 export function SocialLoginSection({ action, callbackUrl, dividerText }: SocialLoginSectionProps) {
-  if (SOCIAL_PROVIDERS.length === 0) return null
+  if (socialProviders().length === 0) return null
 
   return (
     <>

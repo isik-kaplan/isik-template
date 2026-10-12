@@ -40,27 +40,29 @@ optional draft from the AGPL-licensed app-privacy-policy-generator that never en
 uvx cookiecutter gh:isik-kaplan/isik-template
 ```
 
-You'll be prompted for `project_name`, `description`, `author_name`, `author_email`, `domain`, and
-`social_login_providers` - none of these have defaults; they're the choices that actually shape the
-generated project. See `cookiecutter.json` for every field.
+You'll be prompted for `project_name`, `description`, `author_name`, `author_email` and `domain` -
+none of these have defaults; they're the choices that actually shape the generated project. See
+`cookiecutter.json` for every field.
 
 `languages` (default `en`) is a comma-separated list of ISO codes, `en` always first - e.g.
 `en,tr`. It drives the backend's `LANGUAGES`, the frontend's i18next resources, and which languages
 a signed-in user can pick between; see the generated project's own `README.md` for what an extra
 language actually needs filled in before it ships.
 
-Login/signup/connections buttons get a real brand icon for the providers the frontend bundles one
-for (google, apple, github, microsoft, facebook, slack, twitter_oauth2, linkedin_oauth2); every
-other provider (there are ~100) stays text-only unless you point `social_login_provider_icons` at
-one - `provider_id=url-or-path` pairs, comma-separated, e.g.
-`openid_connect=/icons/my-idp.svg` for a file dropped into `apps/web/public/`, or any full URL.
+Social login is not a question: a generated project offers whichever allauth providers its
+`<PREFIX>__SOCIAL_LOGIN__PROVIDERS` env var names, read at startup by the backend and the web
+frontend alike, so a provider is added later with an env change and a restart. Its buttons get a
+real brand icon for the providers the frontend bundles one for (google, apple, github, microsoft,
+facebook, slack, twitter_oauth2, linkedin_oauth2); any other stays text-only unless
+`<PREFIX>__SOCIAL_LOGIN__ICONS` points at one - `provider_id=url-or-path` pairs, comma-separated.
+The generated `SETUP.md` walks through it.
 
 `include_mobile` (default `n`) adds an Expo/React Native app (`apps/mobile`) alongside the web
 frontend, against the backend's existing `allauth.headless` app client (token-based, no cookies) -
 login/signup/session/logout (including the second-factor step for an account with TOTP or recovery
 codes), password reset, a `profile/` section (account details, emails,
 password, connected accounts, active sessions), native Sign in with Google/Apple where
-`social_login_providers` configures them, and i18next/react-i18next wired to the device's own
+the build's `EXPO_PUBLIC_SOCIAL_LOGIN_PROVIDERS` names them, and i18next/react-i18next wired to the device's own
 locale (falling back to English), same `languages` list as the backend and web. The two screens
 web reaches only via an email link
 (`password-reset/[key]`, `verify-email/[key]`) are deliberately not mirrored here - allauth's
@@ -81,13 +83,13 @@ result at increasing cost:
 
 - `test_bake_structure.py`, `test_docker_compose.py`, `test_pre_gen_validate.py` - fast, structural
   (no Docker/npm needed).
-- `test_e2e.py` - bakes the "no-social-login" context, boots the full compose stack (including a
-  disposable Authentik instance) and runs the Playwright suite against it - the one context whose
-  login/signup page ("default"'s never exercises this) is otherwise untested. Slow (minutes); skips
+- `test_e2e.py` - bakes the "minimal" context, switches social login off in its `e2e/.env`, boots the
+  full compose stack (including a disposable Authentik instance) and runs the Playwright suite
+  against it - the login/signup page without provider buttons is otherwise untested. Slow (minutes); skips
   only if `docker` itself isn't available.
 
-The "default" context (`include_mobile: true`, alongside its full `social_login_providers` list -
-the "everything on" configuration) has its backend build/coverage, backend-mutation, frontend
+The "default" context (`include_mobile: true` and two languages - the "everything on"
+configuration, with the OIDC test IdP its `e2e/.env` switches on) has its backend build/coverage, backend-mutation, frontend
 build/lint/test, frontend-mutation, mobile lint/test, mobile-mutation and e2e no longer
 hand-mirrored here at all: `scripts/bake_and_trigger_real_ci.py`
 bakes it, force-pushes the result to a dedicated sandbox repo, and waits for *that* repo's own real

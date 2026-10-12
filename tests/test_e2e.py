@@ -43,18 +43,28 @@ def _publish_fixture_legal_documents(project_path, project_slug):
     subprocess.run([sys.executable, "scripts/pre-commit/legal_version.py"], cwd=project_path, capture_output=True)
 
 
+def _switch_social_login_off(project_path):
+    """e2e/.env offers the OIDC test IdP; with no provider named, the stack serves a login page with
+    no provider buttons and no divider above the form, and the OIDC specs skip themselves."""
+    env = project_path / "e2e" / ".env"
+    text = env.read_text()
+    line = next(line for line in text.splitlines() if line.endswith("__SOCIAL_LOGIN__PROVIDERS=openid_connect"))
+    env.write_text(text.replace(line, line.removesuffix("openid_connect")))
+
+
 def test_generated_project_passes_its_own_e2e_suite(cookies):
     """The one test that proves the auth flows the template ships (signup, verify-email, login,
     logout, password reset) actually work end to end in a browser, not just that the code compiles
     - this is exactly the suite that first caught the CORS/CSRF/key-encoding bugs this template
-    used to ship with. Only the "no-social-login" context: it renders a different login/signup page
-    (no provider buttons, no divider above the form) that a "default" bake never exercises - it's
-    how a bare "or" divider with nothing above it once shipped unnoticed. The "default" context's
-    own e2e coverage now runs for real instead, via bake-real-ci - see
+    used to ship with. Run with social login switched off: that renders a different login/signup
+    page (no provider buttons, no divider above the form) that the generated project's own e2e
+    never exercises - it's how a bare "or" divider with nothing above it once shipped unnoticed.
+    The OIDC side runs for real instead, in the generated project's own CI via bake-real-ci - see
     scripts/bake_and_trigger_real_ci.py."""
-    result = cookies.bake(extra_context=load_context("no-social-login"))
+    result = cookies.bake(extra_context=load_context("minimal"))
     assert result.exit_code == 0
     _publish_fixture_legal_documents(result.project_path, result.context["project_slug"])
+    _switch_social_login_off(result.project_path)
     e2e_path = result.project_path / "e2e"
 
     try:

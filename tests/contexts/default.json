@@ -4,7 +4,6 @@
   "author_name": "Test Author",
   "author_email": "test@example.test",
   "domain": "testproject.test",
-  "social_login_providers": "google,github,openid_connect",
   "license": "MIT",
   "include_mobile": true,
   "languages": "en,tr"
