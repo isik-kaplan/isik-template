@@ -43,7 +43,8 @@ describe('RegisteredApplications', () => {
     render(<RegisteredApplications initialApplications={[]} />)
 
     expect(screen.getByText('Your apps')).toBeTruthy()
-    expect(screen.getByText(/Register an app so its users can sign in with their .* account\./)).toBeTruthy()
+    const hint = screen.getByText(/Register an app so its users can sign in with their .* account\./)
+    expect(hint.textContent).not.toContain('{')
     expect(screen.getByText('You have not registered an app.')).toBeTruthy()
   })
 
@@ -56,17 +57,19 @@ describe('RegisteredApplications', () => {
     expect(within(row).getByText('https://notes.example.test/other')).toBeTruthy()
   })
 
-  it('deletes one', async () => {
+  it('deletes one, keeping the rest', async () => {
     const fetchMock = vi.fn(async () => new Response(null, { status: 204 }))
     globalThis.fetch = fetchMock
-    render(<RegisteredApplications initialApplications={[MINE]} />)
+    render(<RegisteredApplications initialApplications={[MINE, { ...MINE, id: 9, name: 'Other' }]} />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    const row = screen.getByText('My Notes').closest('li') as HTMLElement
+    await userEvent.click(within(row).getByRole('button', { name: 'Delete' }))
 
     const [request] = fetchMock.mock.calls[0] as unknown as [Request]
     expect(request.method).toBe('DELETE')
     expect(new URL(request.url).pathname).toBe('/v0/oauth-applications/3/')
     expect(screen.queryByText('My Notes')).toBeNull()
+    expect(screen.getByText('Other')).toBeTruthy()
     expect(toast.success).toHaveBeenCalledWith('App deleted.')
   })
 
@@ -108,6 +111,8 @@ describe('RegisteredApplications', () => {
     const status = screen.getByRole('status')
     expect(within(status).getByText('Copy the client secret now')).toBeTruthy()
     expect(within(status).getByText(/It is shown this once/)).toBeTruthy()
+    expect(within(status).getByText('Client ID')).toBeTruthy()
+    expect(within(status).getByText('Client secret')).toBeTruthy()
     expect(within(status).getByText('new-client-id')).toBeTruthy()
     expect(within(status).getByText('the-secret')).toBeTruthy()
     expect(screen.getAllByRole('listitem')[0].textContent).toContain('New One')

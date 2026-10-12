@@ -1,4 +1,4 @@
-import { type Page, expect, test } from '@playwright/test'
+import { type Locator, type Page, expect, test } from '@playwright/test'
 
 import { createHash, randomBytes } from 'node:crypto'
 
@@ -8,20 +8,31 @@ import { login, proveWithPassword, signUpAndVerify } from '../helpers'
 const REDIRECT_URI = 'https://client.{{ cookiecutter.domain }}/callback'
 const PASSWORD = 'correct-horse-battery-staple'
 
-async function registerApplication(page: Page): Promise<{ clientId: string; clientSecret: string }> {
-  const fill = async () => {
-    await page.getByLabel('Name').fill('Acme Notes')
-    await page.getByLabel('Redirect URIs, one per line').fill(REDIRECT_URI)
-    await page.getByRole('button', { name: 'Register app' }).click()
+/** Does an act, proving it is them first if the gate asks - a sign-in moments ago can count as the proof. */
+async function act(page: Page, perform: () => Promise<void>, done: Locator) {
+  await perform()
+  await expect
+    .poll(async () => page.url().includes('/auth/prove') || (await done.isVisible()))
+    .toBe(true)
+  if (page.url().includes('/auth/prove')) {
+    await proveWithPassword(page, PASSWORD)
+    await perform()
   }
-  await page.goto('/profile/applications')
-  await fill()
-  // Registering is an act: proven, the page comes back empty, and the same registration goes again.
-  await proveWithPassword(page, PASSWORD)
-  await fill()
+  await expect(done).toBeVisible()
+}
 
+async function registerApplication(page: Page): Promise<{ clientId: string; clientSecret: string }> {
+  await page.goto('/profile/applications')
   const issued = page.getByRole('status')
-  await expect(issued.getByText('Copy the client secret now')).toBeVisible()
+  await act(
+    page,
+    async () => {
+      await page.getByLabel('Name').fill('Acme Notes')
+      await page.getByLabel('Redirect URIs, one per line').fill(REDIRECT_URI)
+      await page.getByRole('button', { name: 'Register app' }).click()
+    },
+    issued.getByText('Copy the client secret now')
+  )
   const values = await issued.locator('dd').allTextContents()
   return { clientId: values[0], clientSecret: values[1] }
 }
@@ -84,14 +95,13 @@ test('an application signs somebody in, reads who they are, and is shut out agai
     page.request.get(`${authOrigin}/o/userinfo/`, { headers: { Authorization: `Bearer ${accessToken}` } })
   expect(await (await userinfo()).json()).toMatchObject({ email, preferred_username: username })
 
-  // Back at the profile of the account it signed into: it is listed, and removing it is an act too.
+  // Back at the profile of the account it signed into: it is listed, and can be shut out.
   await page.goto('/profile/applications')
-  const row = page.getByRole('listitem').filter({ hasText: 'Acme Notes' }).filter({ hasText: 'Since' })
-  await row.getByRole('button', { name: 'Remove access' }).click()
-  await proveWithPassword(page, PASSWORD)
-  await page.getByRole('listitem').filter({ hasText: 'Since' }).getByRole('button', { name: 'Remove access' }).click()
-  await expect(page.getByText('Access removed.')).toBeVisible()
-  await expect(page.getByText('No app can see your account.')).toBeVisible()
+  await act(
+    page,
+    () => page.getByRole('listitem').filter({ hasText: 'Since' }).getByRole('button', { name: 'Remove access' }).click(),
+    page.getByText('No app can see your account.')
+  )
 
   expect((await userinfo()).status()).toBe(401)
 })

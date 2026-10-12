@@ -1,14 +1,13 @@
 import os
-import pkgutil
 import sys
 from pathlib import Path
 
-import allauth.socialaccount.providers as _providers_package
 import sentry_sdk
 from django.conf.locale import LANG_INFO
-from django.core.exceptions import ImproperlyConfigured
 
 from apps.common.logging.scrub import scrub_event
+from apps.oauth_provider.mode import oauth_provider_mode
+from apps.users.social_login import social_login_provider_ids
 
 from . import __version__
 from .config import CONFIG as config  # Django thinks CONFIG is a setting if it is all caps  # NOQA
@@ -33,22 +32,8 @@ ALLOWED_HOSTS = [
 ]
 
 
-def _social_login_provider_ids(requested: list[str]) -> list[str]:
-    """The allauth provider ids SOCIAL_LOGIN__PROVIDERS names, read once at startup. A name allauth
-    does not ship, or one named twice, stops startup: either would otherwise surface only as a login
-    button that leads nowhere."""
-    ids = [provider_id.strip() for provider_id in requested if provider_id.strip()]
-    shipped = {name for _, name, is_package in pkgutil.iter_modules(_providers_package.__path__) if is_package}
-    unknown = sorted(set(ids) - (shipped - {"base", "oauth", "oauth2"}))
-    if unknown:
-        raise ImproperlyConfigured(f"SOCIAL_LOGIN__PROVIDERS names unknown providers: {', '.join(unknown)}")
-    repeated = sorted({provider_id for provider_id in ids if ids.count(provider_id) > 1})
-    if repeated:
-        raise ImproperlyConfigured(f"SOCIAL_LOGIN__PROVIDERS names a provider more than once: {', '.join(repeated)}")
-    return ids
-
-
-SOCIAL_LOGIN_PROVIDER_IDS = _social_login_provider_ids(config.SOCIAL_LOGIN.PROVIDERS)
+# Read once, at startup - see apps/users/social_login.py for what it refuses.
+SOCIAL_LOGIN_PROVIDER_IDS = social_login_provider_ids(config.SOCIAL_LOGIN.PROVIDERS)
 
 INSTALLED_APPS = [
     "django_hosts",
@@ -310,25 +295,9 @@ SOCIALACCOUNT_PROVIDERS = {
     provider_id: {"APPS": [_social_app_config(provider_id)]} for provider_id in SOCIAL_LOGIN_PROVIDER_IDS
 }
 
-OAUTH_PROVIDER_MODES = ("off", "internal", "public")
-
-
-def _oauth_provider_mode(mode: str, signing_key: str) -> str:
-    """Read once at startup, like the providers above: a mode this project has no behaviour for, or an
-    issuer with nothing to sign its id_tokens with, stops startup rather than failing the first sign-in."""
-    if mode not in OAUTH_PROVIDER_MODES:
-        raise ImproperlyConfigured(f"OAUTH_PROVIDER__MODE is {mode!r}, not one of {', '.join(OAUTH_PROVIDER_MODES)}")
-    if mode != "off" and not signing_key:
-        raise ImproperlyConfigured(
-            "OAUTH_PROVIDER__SIGNING_KEY is required unless OAUTH_PROVIDER__MODE is off - generate one with "
-            "openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048"
-        )
-    return mode
-
-
 # Other apps signing their users in with this project, through django-oauth-toolkit on auth.<domain>/o/.
 # Its tables exist whatever the mode, so switching it on later is a restart, never a migration.
-OAUTH_PROVIDER_MODE = _oauth_provider_mode(config.OAUTH_PROVIDER.MODE, config.OAUTH_PROVIDER.SIGNING_KEY)
+OAUTH_PROVIDER_MODE = oauth_provider_mode(config.OAUTH_PROVIDER.MODE, config.OAUTH_PROVIDER.SIGNING_KEY)
 OAUTH_PROVIDER_APPLICATIONS_PER_USER = config.OAUTH_PROVIDER.APPLICATIONS_PER_USER
 OAUTH2_PROVIDER = {
     "OIDC_ENABLED": True,
@@ -343,6 +312,22 @@ OAUTH2_PROVIDER = {
     "REQUEST_APPROVAL_PROMPT": "auto",
     "PKCE_REQUIRED": True,
     "ALLOWED_REDIRECT_URI_SCHEMES": ["http", "https"] if DEBUG else ["https"],
+    # A replayed refresh token revokes its whole family: one of the two holders was not meant to have it.
+    "REFRESH_TOKEN_REUSE_PROTECTION": True,
+    # RFC 9700, the OAuth security best current practice, adopted ahead of DOT 4.0 making it the default:
+    # no implicit or password grant, no "plain" PKCE, no token in a query string, `iss` on every
+    # authorization response, and tokens stored hashed.
+    "COMPLIANT_BCP_RFC9700_IMPLICIT_GRANT": True,
+    "COMPLIANT_BCP_RFC9700_PASSWORD_GRANT": True,
+    "COMPLIANT_BCP_RFC9700_PKCE_METHOD": True,
+    "COMPLIANT_BCP_RFC9700_ACCESS_TOKEN_TRANSPORT": True,
+    "COMPLIANT_BCP_RFC9700_AUTHZ_RESPONSE_ISS": True,
+    "COMPLIANT_BCP_RFC9700_TOKEN_STORAGE": True,
+    # ...and a configuration that falls short of it fails check --deploy rather than warning.
+    "COMPLIANT_BCP_RFC9700_REFRESH_TOKEN": True,
+    "COMPLIANT_BCP_RFC9700_REDIRECT_URI_SCHEME": True,
+    "COMPLIANT_BCP_RFC9700_REDIRECT_URI_MATCHING": True,
+    "COMPLIANT_BCP_RFC9700_PKCE_REQUIRED": True,
 }
 # Where DOT's authorize endpoint sends somebody signed out: absolute, since it is answered on auth.<domain>
 # and the sign-in page is the frontend's. The frontend sends them back only to that one endpoint.

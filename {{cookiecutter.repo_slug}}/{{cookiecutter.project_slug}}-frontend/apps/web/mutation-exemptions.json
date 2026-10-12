@@ -897,6 +897,110 @@
       ]
     }
   ],
+  "src/app/auth/oauth/authorize/page.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "8abfebfaf906",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "8abfebfaf906",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
+  "src/components/app-auth/AuthorizedApplicationsList.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
+  "src/components/app-auth/RegisterApplicationForm.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "2b9f6a4a6bdb",
+      "reason": [
+        "equivalent mutant. t's reference only changes with the language, which this form never sees change",
+        "while it is mounted, so this memo recomputes the same schema either way."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "531fd4cde0af",
+      "reason": [
+        "equivalent mutant as far as any test can see: the select's and textarea's classes are only how they",
+        "look, matching Input's own, and nothing in jsdom renders a class into anything observable."
+      ]
+    }
+  ],
+  "src/components/app-auth/RegisteredApplications.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant, the second component's own namespace array. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant, the second component's own namespace array. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
   "src/components/app-auth/ProfileNameForm.tsx": [
     {
       "mutator": "ArrayDeclaration",

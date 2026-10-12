@@ -18,6 +18,32 @@ describe('CONFIG (public)', () => {
     vi.resetModules()
   })
 
+  it('leaves the OAuth provider off and names no social provider when neither is set', async () => {
+    vi.stubEnv('{{ cookiecutter.config_prefix }}__DOMAIN', 'example.test')
+    vi.resetModules()
+
+    const { CONFIG } = await import('@/config/public')
+
+    expect(CONFIG.OAUTH_PROVIDER.MODE).toBe('off')
+    expect(CONFIG.SOCIAL_LOGIN.PROVIDERS).toEqual([])
+
+    vi.unstubAllEnvs()
+    vi.resetModules()
+  })
+
+  it('reads the OAuth provider mode from its own variable', async () => {
+    vi.stubEnv('{{ cookiecutter.config_prefix }}__DOMAIN', 'example.test')
+    vi.stubEnv('{{ cookiecutter.config_prefix }}__OAUTH_PROVIDER__MODE', 'public')
+    vi.resetModules()
+
+    const { CONFIG } = await import('@/config/public')
+
+    expect(CONFIG.OAUTH_PROVIDER.MODE).toBe('public')
+
+    vi.unstubAllEnvs()
+    vi.resetModules()
+  })
+
   it('reads the social login providers and icons as lists, empty when unset', async () => {
     vi.stubEnv('{{ cookiecutter.config_prefix }}__DOMAIN', 'example.test')
     vi.stubEnv('{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS', 'github,openid_connect')

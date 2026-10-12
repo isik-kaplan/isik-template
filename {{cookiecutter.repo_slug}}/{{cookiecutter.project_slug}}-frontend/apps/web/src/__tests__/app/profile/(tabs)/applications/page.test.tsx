@@ -15,7 +15,10 @@ const oauthApplications = vi.fn()
 vi.mock('@/lib/serverApi', () => ({ serverApi: async () => ({ authorizedApplications, oauthApplications }) }))
 vi.mock('@/components/app-auth/AuthorizedApplicationsList', () => ({
   AuthorizedApplicationsList: ({ initialApplications }: { initialApplications: { name: string }[] }) => (
-    <p>authorized: {initialApplications.map((application) => application.name).join(',')}</p>
+    <>
+      <p>authorized: {initialApplications.map((application) => application.name).join(',')}</p>
+      <p data-testid="authorized-count">{initialApplications.length}</p>
+    </>
   ),
 }))
 vi.mock('@/components/app-auth/RegisteredApplications', () => ({
@@ -60,5 +63,6 @@ describe('ProfileApplicationsPage', () => {
     render(await ProfileApplicationsPage())
 
     expect(screen.getByText('authorized:')).toBeTruthy()
+    expect(screen.getByTestId('authorized-count').textContent).toBe('0')
   })
 })

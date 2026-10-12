@@ -32,6 +32,17 @@ def test_the_signing_key_is_published(client, provider):
     assert [key["alg"] for key in keys] == ["RS256"]
 
 
+def test_a_served_route_hands_its_view_everything_the_url_captured(settings):
+    from apps.oauth_provider.urls import served_while_on
+
+    settings.OAUTH_PROVIDER_MODE = "public"
+
+    def view(request, *args, **kwargs):
+        return (request, args, kwargs)
+
+    assert served_while_on(view)("the-request", "a", b="c") == ("the-request", ("a",), {"b": "c"})
+
+
 @pytest.mark.parametrize(
     "name",
     ["device-authorization", "dcr-register", "introspect", "register", "list", "authorized-token-list"],

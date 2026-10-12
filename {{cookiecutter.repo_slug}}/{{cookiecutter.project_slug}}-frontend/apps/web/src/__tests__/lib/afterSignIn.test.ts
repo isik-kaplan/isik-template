@@ -10,6 +10,7 @@ describe('afterSignIn', () => {
     [undefined, '/'],
     ['', '/'],
     [['/a', '/b'], '/'],
+    [['https://auth.example.test/o/authorize/'], '/'],
     ['//elsewhere.test/', '/'],
     ['https://elsewhere.test/o/authorize/', '/'],
     ['https://example.test/o/authorize/', '/'],

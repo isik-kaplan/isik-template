@@ -5,46 +5,13 @@ import sys
 import pytest
 from allauth.utils import build_absolute_uri
 from django.conf import settings
-from django.core.exceptions import ImproperlyConfigured
 from django.test import RequestFactory, override_settings
 
 from {{ cookiecutter.project_slug }}.config import CONFIG as config
-from {{ cookiecutter.project_slug }}.settings import (
-    _oauth_provider_mode,
-    _origins,
-    _social_app_config,
-    _social_login_provider_ids,
-)
+from {{ cookiecutter.project_slug }}.settings import _origins, _social_app_config
 
 
 PREFIX = "{{ cookiecutter.config_prefix }}__OAUTH"
-
-
-def test_social_login_names_the_providers_it_was_given_in_order_without_blanks():
-    requested = ["github", " google ", "", "openid_connect"]
-
-    assert _social_login_provider_ids(requested) == ["github", "google", "openid_connect"]
-
-
-def test_social_login_is_off_when_no_provider_is_named():
-    assert _social_login_provider_ids([]) == []
-
-
-@pytest.mark.parametrize("requested", [["google", "not_a_provider", "also_not"], ["oauth2"], ["base"], ["oauth"]])
-def test_social_login_refuses_to_start_with_a_provider_allauth_does_not_ship(requested):
-    unknown = ", ".join(sorted(set(requested) - {"google"}))
-
-    with pytest.raises(ImproperlyConfigured) as error:
-        _social_login_provider_ids(requested)
-
-    assert str(error.value) == f"SOCIAL_LOGIN__PROVIDERS names unknown providers: {unknown}"
-
-
-def test_social_login_refuses_to_start_with_a_provider_named_twice():
-    with pytest.raises(ImproperlyConfigured) as error:
-        _social_login_provider_ids(["google", "github", "google", " github", "apple"])
-
-    assert str(error.value) == "SOCIAL_LOGIN__PROVIDERS names a provider more than once: github, google"
 
 
 def test_social_login_installs_and_configures_exactly_the_named_providers():
@@ -62,31 +29,6 @@ def test_social_login_installs_and_configures_exactly_the_named_providers():
         "['allauth.socialaccount.providers.github', 'allauth.socialaccount.providers.google']",
         "['github', 'google']",
     ]
-
-
-@pytest.mark.parametrize("mode", ["internal", "public"])
-def test_the_oauth_provider_starts_in_a_mode_it_has_a_key_for(mode):
-    assert _oauth_provider_mode(mode, "a key") == mode
-
-
-def test_the_oauth_provider_needs_no_key_while_it_is_off():
-    assert _oauth_provider_mode("off", "") == "off"
-
-
-@pytest.mark.parametrize("mode", ["", "on", "Public"])
-def test_the_oauth_provider_refuses_to_start_in_a_mode_it_does_not_have(mode):
-    with pytest.raises(ImproperlyConfigured) as error:
-        _oauth_provider_mode(mode, "a key")
-
-    assert str(error.value) == f"OAUTH_PROVIDER__MODE is {mode!r}, not one of off, internal, public"
-
-
-@pytest.mark.parametrize("mode", ["internal", "public"])
-def test_the_oauth_provider_refuses_to_start_on_with_nothing_to_sign_with(mode):
-    with pytest.raises(ImproperlyConfigured) as error:
-        _oauth_provider_mode(mode, "")
-
-    assert str(error.value).startswith("OAUTH_PROVIDER__SIGNING_KEY is required unless OAUTH_PROVIDER__MODE is off")
 
 
 def test_the_signing_key_may_spell_its_line_breaks_as_backslash_n():

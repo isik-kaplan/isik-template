@@ -62,3 +62,26 @@ reason = """Spells the header "CONTENT-LANGUAGE" instead of "Content-Language". 
 HttpResponse.headers is case-insensitive on write and on read, so every spelling sets the same header
 and no test can observe which one was written."""
 verified_by = "apps/common/tests/test_library_assumptions.py::test_a_response_header_is_case_insensitive"
+
+["apps.oauth_provider.views.xǁAuthorizationViewǁget__mutmut__07b657780af2"]
+reason = """Drops **kwargs from the call to DOT's own AuthorizationView.get. The authorize route captures no
+URL parameters (apps/oauth_provider/urls.py routes it as a bare "authorize/"), so kwargs is always
+empty and the call is the same with or without it."""
+
+["apps.oauth_provider.views.xǁAuthorizationViewǁget__mutmut__5e386713e2aa"]
+reason = """Drops *args from the call to DOT's own AuthorizationView.get. The authorize route captures no
+URL parameters, so args is always empty and the call is the same with or without it."""
+
+["apps.oauth_provider.views.xǁAuthorizationViewǁget__mutmut__1e42aaa3c272"]
+reason = """Turns the default for a missing `prompt` from "" into "XXXX". Either way the default splits into
+words none of which is "login", so a request without `prompt` goes on to DOT's consent exactly as
+before - only the presence of the word matters, never what stands in for its absence."""
+
+["apps.oauth_provider.api.viewsets.authorized_application.xǁAuthorizedApplicationViewSetǁlist__mutmut__3ff94bdd20ea"]
+reason = """select_related(None) instead of select_related("application") on the access tokens. It only
+decides whether each token's application arrives in the same query or one more apiece; the list built
+from them is the same either way."""
+
+["apps.oauth_provider.api.viewsets.authorized_application.xǁAuthorizedApplicationViewSetǁlist__mutmut__eb4aecaf69b5"]
+reason = """select_related(None) instead of select_related("application") on the refresh tokens - the same
+query-count-only difference as the access tokens' entry above."""

@@ -2,6 +2,7 @@ import { RegisterApplicationForm } from '@/components/app-auth/RegisterApplicati
 
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
@@ -101,6 +102,17 @@ describe('RegisterApplicationForm', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Register app' }))
 
     expect(screen.getByText('You can register at most 10 applications.')).toBeTruthy()
+  })
+
+  it('says so in its own words when the registration fails with nothing to show', async () => {
+    globalThis.fetch = vi.fn(async () => new Response(null, { status: 500 }))
+    render(<RegisterApplicationForm onRegistered={onRegistered} />)
+
+    await userEvent.type(name(), 'Acme')
+    await userEvent.type(uris(), 'https://a.test/cb')
+    await userEvent.click(screen.getByRole('button', { name: 'Register app' }))
+
+    expect(toast.error).toHaveBeenCalledWith('Could not register the app.')
   })
 
   it('holds the button while the registration is out', async () => {

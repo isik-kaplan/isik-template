@@ -40,6 +40,8 @@ def test_what_is_not_known_is_left_out_rather_than_said_empty():
 def test_an_address_allauth_never_verified_says_so():
     user = User.objects.create_user(username="made-by-hand", email="admin@example.test")
     EmailAddress.objects.create(user=user, email="other@example.test", verified=True, primary=False)
+    somebody_else = User.objects.create_user(username="somebody-else")
+    EmailAddress.objects.create(user=somebody_else, email="else@example.test", verified=True, primary=True)
 
     assert _claims(user) == {
         "preferred_username": "made-by-hand",

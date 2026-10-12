@@ -54,8 +54,8 @@ def test_each_application_is_one_row_with_every_scope_it_holds_and_when_it_was_f
     client, signed_in, application, another
 ):
     first = timezone.now() - timedelta(days=3)
-    _access(signed_in, application, "openid", created=first)
     _access(signed_in, application, "openid email")
+    _access(signed_in, application, "openid", created=first)
     _access(signed_in, another, "profile")
 
     rows = client.get(LIST).json()
@@ -65,6 +65,14 @@ def test_each_application_is_one_row_with_every_scope_it_holds_and_when_it_was_f
     assert rows[0]["scopes"] == ["email", "openid"]
     assert rows[0]["granted_at"] == first.isoformat().replace("+00:00", "Z")
     assert rows[1]["scopes"] == ["profile"]
+
+
+@pytest.mark.django_db
+def test_applications_are_listed_by_name_whatever_its_case(client, signed_in, alice):
+    for name in ["aZtool", "a_tool", "Beta"]:
+        _access(signed_in, Application.objects.create(name=name, user=alice, redirect_uris=REDIRECT_URI), "openid")
+
+    assert [row["name"] for row in client.get(LIST).json()] == ["a_tool", "aZtool", "Beta"]
 
 
 @pytest.mark.django_db
@@ -87,7 +95,9 @@ def test_a_revoked_refresh_token_holds_nothing(client, signed_in, application):
 
 @pytest.mark.django_db
 def test_somebody_elses_grants_are_not_listed(client, signed_in, application):
-    _access(User.objects.create_user(username="bob"), application, "openid")
+    bob = User.objects.create_user(username="bob")
+    _access(bob, application, "openid")
+    _refresh(bob, application)
 
     assert client.get(LIST).json() == []
 
@@ -108,13 +118,35 @@ def test_shutting_an_application_out_revokes_every_token_it_holds(client, signed
     _refresh(signed_in, application, access)
     _refresh(signed_in, application)
     _access(signed_in, application, "email")
-    bobs = _access(User.objects.create_user(username="bob"), application, "openid")
+    bob = User.objects.create_user(username="bob")
+    bobs = _access(bob, application, "openid")
+    bobs_refresh = _refresh(bob, application)
+    other = Application.objects.create(name="Other", user=signed_in, redirect_uris=REDIRECT_URI)
+    others = _access(signed_in, other, "openid")
+    others_refresh = _refresh(signed_in, other)
     headless.prove()
 
     assert client.delete(_detail(application.pk)).status_code == 204
 
-    assert list(AccessToken.objects.all()) == [bobs]
+    assert set(AccessToken.objects.all()) == {bobs, others}
+    assert set(RefreshToken.objects.filter(revoked__isnull=True)) == {bobs_refresh, others_refresh}
+
+
+@pytest.mark.django_db
+def test_an_application_holding_only_a_refresh_token_is_shut_out_too(client, signed_in, application, headless):
+    _refresh(signed_in, application)
+    headless.prove()
+
+    assert client.delete(_detail(application.pk)).status_code == 204
     assert not RefreshToken.objects.filter(revoked__isnull=True).exists()
+
+
+@pytest.mark.django_db
+def test_an_application_holding_only_revoked_tokens_is_not_found(client, signed_in, application, headless):
+    _refresh(signed_in, application).revoke()
+    headless.prove()
+
+    assert client.delete(_detail(application.pk)).status_code == 404
 
 
 @pytest.mark.django_db

@@ -26,26 +26,24 @@ class AuthorizedApplicationViewSet(ProvesWhoTheyAre, viewsets.ViewSet):
     def list(self, request):
         """Every application holding a token for this account - a refresh token too, which outlives the
         access token it came with and can mint another."""
-        rows = {}
+        grants = {}
         tokens = [
             *AccessToken.objects.filter(user=request.user).select_related("application"),
             *RefreshToken.objects.filter(user=request.user, revoked__isnull=True).select_related("application"),
         ]
         for token in tokens:
-            row = rows.setdefault(
-                token.application_id,
-                {
-                    "id": token.application_id,
-                    "name": token.application.name,
-                    "scopes": set(),
-                    "granted_at": token.created,
-                },
-            )
-            row["scopes"].update(getattr(token, "scopes", {}))
-            row["granted_at"] = min(row["granted_at"], token.created)
-        answer = sorted(
-            ({**row, "scopes": sorted(row["scopes"])} for row in rows.values()), key=lambda row: row["name"].lower()
-        )
+            grant = grants.setdefault(token.application, {"scopes": set(), "granted_at": token.created})
+            grant["scopes"].update(getattr(token, "scopes", {}))
+            grant["granted_at"] = min(grant["granted_at"], token.created)
+        answer = [
+            {
+                "id": application.pk,
+                "name": application.name,
+                "scopes": sorted(grant["scopes"]),
+                "granted_at": grant["granted_at"],
+            }
+            for application, grant in sorted(grants.items(), key=lambda item: item[0].name.lower())
+        ]
         return Response(AuthorizedApplicationSerializer(answer, many=True).data)
 
     @extend_schema(parameters=[APPLICATION_ID], responses={204: None})

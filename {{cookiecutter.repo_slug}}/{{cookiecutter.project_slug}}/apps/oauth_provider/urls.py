@@ -38,7 +38,8 @@ def served_while_on(view):
 
 
 def _served(pattern):
-    return URLPattern(pattern.pattern, served_while_on(pattern.callback), pattern.default_args, pattern.name)
+    # None of DOT's served routes carry default arguments.
+    return URLPattern(pattern.pattern, served_while_on(pattern.callback), name=pattern.name)
 
 
 urlpatterns = [

@@ -7,8 +7,8 @@
 // variable (see lib/config.ts). Both native SDKs are always installed, so this, not the dependency,
 // is what says whether the backend actually has the provider configured.
 function configured(id: string): boolean {
-  const providers: string[] = (process.env.EXPO_PUBLIC_SOCIAL_LOGIN_PROVIDERS ?? '').split(',')
-  return providers.some((provider) => provider.trim() === id)
+  const providers: string[] | undefined = process.env.EXPO_PUBLIC_SOCIAL_LOGIN_PROVIDERS?.split(',')
+  return providers?.some((provider) => provider.trim() === id) ?? false
 }
 
 export function googleSignInEnabled(): boolean {

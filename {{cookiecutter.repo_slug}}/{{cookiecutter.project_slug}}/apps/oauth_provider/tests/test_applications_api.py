@@ -96,6 +96,27 @@ def test_a_redirect_uri_an_application_could_not_safely_return_to_is_refused(cli
 
 
 @pytest.mark.django_db
+def test_a_redirect_uri_names_its_scheme_problem(client, proven):
+    response = client.post(
+        LIST, {**NEW, "redirect_uris": ["ftp://client.example.test/cb"]}, content_type="application/json"
+    )
+
+    assert response.json() == {
+        "redirect_uris": ["redirect uri URI Validation error. invalid_scheme: ftp://client.example.test/cb"]
+    }
+
+
+@pytest.mark.django_db
+def test_a_redirect_uri_may_carry_a_query(client, proven):
+    uri = "https://client.example.test/callback?from=acme"
+
+    response = client.post(LIST, {**NEW, "redirect_uris": [uri]}, content_type="application/json")
+
+    assert response.status_code == 201
+    assert response.json()["redirect_uris"] == [uri]
+
+
+@pytest.mark.django_db
 def test_plain_http_is_refused_where_only_https_is_allowed(client, proven, settings):
     settings.OAUTH2_PROVIDER = {**settings.OAUTH2_PROVIDER, "ALLOWED_REDIRECT_URI_SCHEMES": ["https"]}
 
