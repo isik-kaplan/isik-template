@@ -30,18 +30,9 @@ def load_context(name):
 
 
 def clear_stale_caches():
-    """Every sandbox push is a disconnected, unrelated commit (force-pushed, no shared history
-    with whatever was there before) - but backend-mutation's own GitHub Actions cache is keyed
-    partly on a git SHA and falls back to restoring *any* prior cache with a matching prefix
-    (`restore-keys`), which normally means "resume this same commit's own interrupted progress".
-    Here it instead hands mutmut a cached tree from a completely unrelated previous commit -
-    confirmed directly: with that stale cache in place, phase one discovers zero mutants to run
-    at all (mutation_queue.py's tree-scan silently picks up the cached copy of the tree sitting
-    inside the same source path it walks), and the exemption registry looks entirely obsolete as
-    a result. A real user's normal incremental commits share actual git ancestry, so this is a
-    property of how this sandbox is exercised, not a bug in the generated project's own caching
-    design - clearing every cache before each push keeps this rig from ever hitting it, without
-    touching that design at all.
+    """Every sandbox push is a disconnected commit unrelated to the one before it, so each run starts
+    from no cache at all, as a project's first push would. The Stryker caches fall back to an earlier
+    commit's by design, which here would be a commit this one has no history with.
     """
     result = subprocess.run(
         ["gh", "cache", "list", "--repo", SANDBOX_REPO, "--json", "id", "-L", "100"],

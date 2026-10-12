@@ -167,13 +167,15 @@ jobs:
       # Restore and save are separate on purpose. The combined `actions/cache` writes nothing when
       # the job fails, and a mutation run that goes red is exactly the one whose progress is most
       # worth keeping - so saving below runs with `if: always()`.
+      # This commit's own cache only, never a fallback to an earlier commit's: phase two's verdicts
+      # are stored by mutant name, which a later commit keeps, so a kill an earlier commit's tests
+      # earned would be reused after those tests changed. An earlier tree also keeps every file
+      # deleted since. Phase one reruns every mutant either way, so the fallback saved nothing.
       - name: Restore the mutation cache
         uses: actions/cache/restore@v4
         with:
           path: {{ cookiecutter.project_slug }}/mutants
           key: {{ '${{' }} env.MUTMUT_CACHE_KEY {{ '}}' }}-{{ '${{' }} github.sha {{ '}}' }}
-          restore-keys: |
-            {{ '${{' }} env.MUTMUT_CACHE_KEY {{ '}}' }}-
 
       # Migrations are most of a mutant's cost and every mutant pays it; cloning a database this
       # builds once is a fraction of a second by comparison. `check` is not ceremony: a template that
