@@ -18,6 +18,8 @@ dependencies = [
     # (allauth.socialaccount.internal.jwtkit). Every other provider works without it.
     "pyjwt[crypto]>=2.13.0",
     "django-cors-headers>=4.4.0",
+    # "Sign in with" this project for other apps - see OAUTH_PROVIDER__MODE.
+    "django-oauth-toolkit>=3.4.1",
     # DRF rendering/parsing and session serialization on msgspec's encoder - see apps/common/api/renderers.py.
     "django-msgspec>=1.0.1",
     # Fernet, for apps/common/fields/encrypted.py.

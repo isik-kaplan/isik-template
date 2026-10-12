@@ -31,6 +31,43 @@ describe('Api', () => {
     }
   )
 
+  it.each([
+    ['oauthApplications', (api: Api) => api.oauthApplications(), 'GET', '/v0/oauth-applications/'],
+    [
+      'registerOAuthApplication',
+      (api: Api) =>
+        api.registerOAuthApplication(
+          { name: 'Acme', client_type: 'public', redirect_uris: ['https://a.test/cb'] },
+          'the-key'
+        ),
+      'POST',
+      '/v0/oauth-applications/',
+    ],
+    ['deleteOAuthApplication', (api: Api) => api.deleteOAuthApplication(7), 'DELETE', '/v0/oauth-applications/7/'],
+    ['authorizedApplications', (api: Api) => api.authorizedApplications(), 'GET', '/v0/authorized-applications/'],
+    [
+      'revokeAuthorizedApplication',
+      (api: Api) => api.revokeAuthorizedApplication(7),
+      'DELETE',
+      '/v0/authorized-applications/7/',
+    ],
+  ])('%s calls %s %s', async (_name, call, method, path) => {
+    const baseFetch = vi.fn<typeof fetch>(async () => new Response('{}', { status: 200 }))
+    await call(new Api('https://api.example.test', { baseFetch }))
+    const [request] = baseFetch.mock.calls[0]
+    expect(request instanceof Request ? request.method : undefined).toBe(method)
+    expect(String(request instanceof Request ? request.url : request)).toBe(`https://api.example.test${path}`)
+  })
+
+  it('sends the application to register as its body, under the idempotency key it was given', async () => {
+    const baseFetch = vi.fn<typeof fetch>(async () => new Response('{}', { status: 201 }))
+    const data = { name: 'Acme', client_type: 'confidential' as const, redirect_uris: ['https://a.test/cb'] }
+    await new Api('https://api.example.test', { baseFetch }).registerOAuthApplication(data, 'the-key')
+    const [request, init] = baseFetch.mock.calls[0]
+    expect(await (request as Request).json()).toEqual(data)
+    expect(new Headers(init?.headers).get('Idempotency-Key')).toBe('the-key')
+  })
+
   it("asks for one user's history through the path and passes its query through", async () => {
     const baseFetch = vi.fn<typeof fetch>(async () => new Response('{}', { status: 200 }))
     const api = new Api('https://api.example.test', { baseFetch })

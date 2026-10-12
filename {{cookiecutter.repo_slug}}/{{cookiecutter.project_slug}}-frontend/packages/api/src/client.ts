@@ -62,4 +62,32 @@ export class Api {
   async userHistory(id: string, query?: ApiQuery<'/v0/users/{id}/history/'>) {
     return this.client.GET('/v0/users/{id}/history/', { params: { path: { id }, query } })
   }
+
+  // The applications the signed-in person registered to offer "Sign in with" this project.
+  async oauthApplications() {
+    return this.client.GET('/v0/oauth-applications/')
+  }
+
+  async registerOAuthApplication(
+    data: paths['/v0/oauth-applications/']['post']['requestBody']['content']['application/json'],
+    idempotencyKey: string
+  ) {
+    return this.client.POST('/v0/oauth-applications/', {
+      body: data,
+      params: { header: { 'Idempotency-Key': idempotencyKey } },
+    })
+  }
+
+  async deleteOAuthApplication(id: number) {
+    return this.client.DELETE('/v0/oauth-applications/{id}/', { params: { path: { id } } })
+  }
+
+  // The applications the signed-in person let into their account.
+  async authorizedApplications() {
+    return this.client.GET('/v0/authorized-applications/')
+  }
+
+  async revokeAuthorizedApplication(id: number) {
+    return this.client.DELETE('/v0/authorized-applications/{id}/', { params: { path: { id } } })
+  }
 }

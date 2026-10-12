@@ -9,7 +9,12 @@ from django.core.exceptions import ImproperlyConfigured
 from django.test import RequestFactory, override_settings
 
 from {{ cookiecutter.project_slug }}.config import CONFIG as config
-from {{ cookiecutter.project_slug }}.settings import _origins, _social_app_config, _social_login_provider_ids
+from {{ cookiecutter.project_slug }}.settings import (
+    _oauth_provider_mode,
+    _origins,
+    _social_app_config,
+    _social_login_provider_ids,
+)
 
 
 PREFIX = "{{ cookiecutter.config_prefix }}__OAUTH"
@@ -57,6 +62,46 @@ def test_social_login_installs_and_configures_exactly_the_named_providers():
         "['allauth.socialaccount.providers.github', 'allauth.socialaccount.providers.google']",
         "['github', 'google']",
     ]
+
+
+@pytest.mark.parametrize("mode", ["internal", "public"])
+def test_the_oauth_provider_starts_in_a_mode_it_has_a_key_for(mode):
+    assert _oauth_provider_mode(mode, "a key") == mode
+
+
+def test_the_oauth_provider_needs_no_key_while_it_is_off():
+    assert _oauth_provider_mode("off", "") == "off"
+
+
+@pytest.mark.parametrize("mode", ["", "on", "Public"])
+def test_the_oauth_provider_refuses_to_start_in_a_mode_it_does_not_have(mode):
+    with pytest.raises(ImproperlyConfigured) as error:
+        _oauth_provider_mode(mode, "a key")
+
+    assert str(error.value) == f"OAUTH_PROVIDER__MODE is {mode!r}, not one of off, internal, public"
+
+
+@pytest.mark.parametrize("mode", ["internal", "public"])
+def test_the_oauth_provider_refuses_to_start_on_with_nothing_to_sign_with(mode):
+    with pytest.raises(ImproperlyConfigured) as error:
+        _oauth_provider_mode(mode, "")
+
+    assert str(error.value).startswith("OAUTH_PROVIDER__SIGNING_KEY is required unless OAUTH_PROVIDER__MODE is off")
+
+
+def test_the_signing_key_may_spell_its_line_breaks_as_backslash_n():
+    """So a PEM fits on one line of an .env file. Read in a fresh interpreter, since settings are built
+    once, at import."""
+    script = "from {{ cookiecutter.project_slug }} import settings; print(repr(settings.OAUTH2_PROVIDER['OIDC_RSA_PRIVATE_KEY']))"
+    env = {
+        **os.environ,
+        "{{ cookiecutter.config_prefix }}__OAUTH_PROVIDER__MODE": "public",
+        "{{ cookiecutter.config_prefix }}__OAUTH_PROVIDER__SIGNING_KEY": "-----BEGIN-----\\nkey\\n-----END-----",
+    }
+
+    result = subprocess.run([sys.executable, "-c", script], env=env, capture_output=True, text=True, check=True)
+
+    assert result.stdout.splitlines()[-1] == repr("-----BEGIN-----\nkey\n-----END-----")
 
 
 def test_social_app_config_reads_client_credentials_from_env(monkeypatch):

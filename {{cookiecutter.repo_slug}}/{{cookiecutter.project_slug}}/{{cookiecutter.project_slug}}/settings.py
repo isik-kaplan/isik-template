@@ -78,12 +78,14 @@ INSTALLED_APPS = [
     "allauth.usersessions",
     "allauth.mfa",
     "allauth.headless",
+    "oauth2_provider",
     "django_celery_beat",
     "django_celery_results",
     "apps.common.apps.CommonConfig",
     "apps.idempotency.apps.IdempotencyConfig",
     "apps.core.apps.CoreConfig",
     "apps.users.apps.UsersConfig",
+    "apps.oauth_provider.apps.OAuthProviderConfig",
     "apps.admin.apps.AdminConfig",
 ]
 
@@ -307,6 +309,44 @@ def _social_app_config(provider_id: str) -> dict:
 SOCIALACCOUNT_PROVIDERS = {
     provider_id: {"APPS": [_social_app_config(provider_id)]} for provider_id in SOCIAL_LOGIN_PROVIDER_IDS
 }
+
+OAUTH_PROVIDER_MODES = ("off", "internal", "public")
+
+
+def _oauth_provider_mode(mode: str, signing_key: str) -> str:
+    """Read once at startup, like the providers above: a mode this project has no behaviour for, or an
+    issuer with nothing to sign its id_tokens with, stops startup rather than failing the first sign-in."""
+    if mode not in OAUTH_PROVIDER_MODES:
+        raise ImproperlyConfigured(f"OAUTH_PROVIDER__MODE is {mode!r}, not one of {', '.join(OAUTH_PROVIDER_MODES)}")
+    if mode != "off" and not signing_key:
+        raise ImproperlyConfigured(
+            "OAUTH_PROVIDER__SIGNING_KEY is required unless OAUTH_PROVIDER__MODE is off - generate one with "
+            "openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048"
+        )
+    return mode
+
+
+# Other apps signing their users in with this project, through django-oauth-toolkit on auth.<domain>/o/.
+# Its tables exist whatever the mode, so switching it on later is a restart, never a migration.
+OAUTH_PROVIDER_MODE = _oauth_provider_mode(config.OAUTH_PROVIDER.MODE, config.OAUTH_PROVIDER.SIGNING_KEY)
+OAUTH_PROVIDER_APPLICATIONS_PER_USER = config.OAUTH_PROVIDER.APPLICATIONS_PER_USER
+OAUTH2_PROVIDER = {
+    "OIDC_ENABLED": True,
+    "OIDC_RSA_PRIVATE_KEY": config.OAUTH_PROVIDER.SIGNING_KEY.replace("\\n", "\n"),
+    # The consent page words each scope itself, in the reader's language - these are for discovery.
+    "SCOPES": {"openid": "Who you are", "profile": "Your name and username", "email": "Your email address"},
+    "DEFAULT_SCOPES": ["openid"],
+    # DOT's own advertises the profile and email claims and fills in neither - see the validator.
+    "OAUTH2_VALIDATOR_CLASS": "apps.oauth_provider.validators.OAuth2Validator",
+    # Asked once per application and set of scopes, not on every sign-in: an unexpired grant covering
+    # what is asked for is reused. Nothing ever skips the question entirely.
+    "REQUEST_APPROVAL_PROMPT": "auto",
+    "PKCE_REQUIRED": True,
+    "ALLOWED_REDIRECT_URI_SCHEMES": ["http", "https"] if DEBUG else ["https"],
+}
+# Where DOT's authorize endpoint sends somebody signed out: absolute, since it is answered on auth.<domain>
+# and the sign-in page is the frontend's. The frontend sends them back only to that one endpoint.
+LOGIN_URL = FRONTEND_ORIGIN + "/auth/login"
 
 LANGUAGE_CODE = "en"
 # Names come from Django's own LANG_INFO, not hand-typed here, so this list can't drift from what

@@ -65,7 +65,8 @@ text = open(".env").read()
 pattern = re.compile(rf"^#?{re.escape(key)}=.*$", re.MULTILINE)
 replacement = f"{key}={value}"
 if pattern.search(text):
-    text = pattern.sub(replacement, text, count=1)
+    # A function, not the string itself: re.sub reads backslashes in a replacement string as escapes.
+    text = pattern.sub(lambda _: replacement, text, count=1)
 else:
     text = text.rstrip("\n") + f"\n{replacement}\n"
 open(".env", "w").write(text)
@@ -176,6 +177,15 @@ if [ -n "$social_login_providers" ]; then
     echo "  openid_connect also needs ${PREFIX}__OAUTH__OPENID_CONNECT__SERVER_URL and"
     echo "  ...__PROVIDER_ID - set those in $ENV_FILE directly."
   fi
+fi
+
+echo
+oauth_provider_mode="$(ask "Let other apps sign their users in with this project? off, internal (staff register the apps) or public" "off")"
+set_var "${PREFIX}__OAUTH_PROVIDER__MODE" "$oauth_provider_mode"
+if [ "$oauth_provider_mode" != "off" ]; then
+  # One line, each line break written \n, which the backend reads back - a .env value is one line.
+  set_var "${PREFIX}__OAUTH_PROVIDER__SIGNING_KEY" \
+    "$(openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 2>/dev/null | awk '{printf "%s\\n", $0}')"
 fi
 
 echo

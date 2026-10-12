@@ -9,4 +9,6 @@ urlpatterns = [
     # Ahead of allauth's own, so the routes that carry an act resolve to the views that gate them.
     path("v0/", include("apps.users.reauthentication.urls")),
     path("v0/", include("allauth.headless.urls")),
+    # Other apps signing their users in with this project; every route 404s while the provider is off.
+    path("o/", include("apps.oauth_provider.urls")),
 ]

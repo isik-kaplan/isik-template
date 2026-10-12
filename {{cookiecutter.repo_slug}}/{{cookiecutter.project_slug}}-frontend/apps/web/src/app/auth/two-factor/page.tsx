@@ -4,14 +4,13 @@ import { AuthCard, AuthCardFooterLink } from '@/components/app-auth/AuthCard'
 import { MfaChallengeForm } from '@/components/app-auth/MfaChallengeForm'
 
 import { sUseTranslation } from '@/i18n'
+import { afterSignIn } from '@/lib/afterSignIn'
 import { getSessionState } from '@/lib/getSession'
-
-import { getSafeRedirect } from '@isikk/core/next/request'
 
 // Where a login whose password (or provider) checked out lands while a second factor is still owed.
 export default async function TwoFactorPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const { next } = await searchParams
-  const redirectTo = getSafeRedirect(next)
+  const redirectTo = afterSignIn(next)
   const { session, pendingMfaTypes } = await getSessionState()
   if (session) redirect(redirectTo)
   // Nothing pending - reached directly, or the pending login expired - so there is nothing to answer.

@@ -50,6 +50,16 @@ CONFIG = config(
             # suite signs up/logs in/changes passwords far faster than any human. See settings.py.
             "RATE_LIMITS_ENABLED": boolean(missing_default=True),
         },
+        "OAUTH_PROVIDER": {
+            # Whether other apps can offer "Sign in with" this project: off, internal (staff register
+            # the apps) or public (anybody signed in registers their own). See settings.py.
+            "MODE": string(missing_default="off"),
+            # The RSA private key id_tokens are signed with, as PEM. Required unless MODE is off. A
+            # literal \n stands for a line break, so it fits on one line of an .env file.
+            "SIGNING_KEY": string(missing_default=""),
+            # How many applications one person may register.
+            "APPLICATIONS_PER_USER": integer(missing_default=10),
+        },
         "SOCIAL_LOGIN": {
             # allauth provider ids, e.g. google,github,openid_connect. The frontend reads the same
             # variable to know which buttons to show. Each one's credentials are OAUTH__<ID>__*.

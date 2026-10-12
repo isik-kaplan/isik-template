@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 const getSession = vi.fn()
+vi.mock('@/config/public', () => ({ CONFIG: { OAUTH_PROVIDER: { MODE: 'off' } } }))
 vi.mock('@/lib/getSession', () => ({ getSession: () => getSession(), getLanguage: async () => 'en' }))
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),

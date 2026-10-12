@@ -95,6 +95,22 @@ asks for both). A provider without credentials still shows its button, but its f
 Use `http://` in the redirect URI for a local stack without TLS. A first sign-in through a provider lands on a
 "finish signing up" page, where the person confirms a username and sees the legal documents they agree to.
 
+### Other apps signing in with this one
+
+The other direction, also optional: this project as an OAuth 2.0 / OpenID Connect provider, so other apps offer
+"Sign in with {{ cookiecutter.project_name }}". `{{ cookiecutter.config_prefix }}__OAUTH_PROVIDER__MODE` decides who may register
+such an app:
+
+- **off** (the default): nothing of it is served.
+- **internal**: staff register them, from the profile's Apps tab or the admin - your own other services, say.
+- **public**: anybody signed in registers their own, up to `..._APPLICATIONS_PER_USER` (10).
+
+Any mode but off needs `{{ cookiecutter.config_prefix }}__OAUTH_PROVIDER__SIGNING_KEY`, the RSA key id_tokens are signed with
+(`setup.sh` generates one). An app is pointed at the discovery document,
+`https://auth.{{ cookiecutter.domain }}/o/.well-known/openid-configuration`, and uses the authorization code flow with PKCE.
+Every person is asked once, on this project's own page, before an app sees anything, and can take that
+back from their profile.
+
 ## 6. Email, storage and error reporting
 
 - **Email.** With `DEBUG=true` mail is printed to the backend's log. A deployment needs

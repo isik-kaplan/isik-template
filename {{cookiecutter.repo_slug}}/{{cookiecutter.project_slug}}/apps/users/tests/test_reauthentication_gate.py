@@ -38,11 +38,22 @@ GATED = {
     "ManageTOTPView": {"POST", "DELETE"},
     "ManageRecoveryCodesView": {"POST"},
     "ManageWebAuthnView": {"POST", "DELETE"},
+    # Registering an application, pointing its sign-ins somewhere else, and deleting it - and shutting
+    # an application out of your own account.
+    "ApplicationViewSet": {"create", "partial_update", "destroy"},
+    "AuthorizedApplicationViewSet": {"destroy"},
 }
 
 # Every routed write that is not an act, and the reason. Together with GATED this accounts for the
 # whole write surface - the half a per-view opt-in cannot give on its own.
 NOT_AN_ACT = {
+    ("AuthorizationView", "POST"): (
+        "consenting to an application, the step the whole flow exists for - an application wanting a fresh "
+        "sign-in asks with prompt=login"
+    ),
+    ("RevokeTokenView", "POST"): "an application giving up a token it holds",
+    ("TokenView", "POST"): "an application trading a code or refresh token, with no session involved at all",
+    ("UserInfoView", "POST"): "an application reading the claims its token was granted, which changes nothing",
     ("AuthenticateView", "POST"): "the second factor of signing in, made before there is a session to protect",
     ("AuthenticateWebAuthnView", "POST"): "a passkey as the second factor of signing in, before there is a session",
     ("ConfirmLoginCodeView", "POST"): "a step of signing in, made before there is a session to protect",

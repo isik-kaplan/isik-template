@@ -6,6 +6,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const push = vi.fn()
 let pathname = '/profile/details'
+const CONFIG = vi.hoisted(() => ({ OAUTH_PROVIDER: { MODE: 'off' } }))
+vi.mock('@/config/public', () => ({ CONFIG }))
 
 vi.mock('next/navigation', () => ({
   usePathname: () => pathname,
@@ -16,6 +18,23 @@ describe('ProfileTabsList', () => {
   beforeEach(() => {
     push.mockClear()
     pathname = '/profile/details'
+    CONFIG.OAUTH_PROVIDER.MODE = 'off'
+  })
+
+  it('has no applications tab while the backend is not an OAuth provider', () => {
+    render(<ProfileTabsList />)
+
+    expect(screen.queryByRole('tab', { name: 'Apps' })).toBeNull()
+  })
+
+  it.each(['internal', 'public'])('offers the applications tab while the provider is %s', async (mode) => {
+    CONFIG.OAUTH_PROVIDER.MODE = mode
+    pathname = '/profile/applications'
+    render(<ProfileTabsList />)
+
+    expect(screen.getByRole('tab', { name: 'Apps' }).getAttribute('aria-selected')).toBe('true')
+    await userEvent.click(screen.getByRole('tab', { name: 'Details' }))
+    expect(push).toHaveBeenCalledWith('/profile/details')
   })
 
   it('renders every tab, labelled', () => {

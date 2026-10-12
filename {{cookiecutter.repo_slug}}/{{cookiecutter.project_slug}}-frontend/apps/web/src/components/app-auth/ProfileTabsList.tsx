@@ -2,10 +2,19 @@
 
 import { usePathname, useRouter } from 'next/navigation'
 
-import { KeyRoundIcon, Link2Icon, MailIcon, MonitorSmartphoneIcon, ShieldCheckIcon, UserIcon } from 'lucide-react'
+import {
+  AppWindowIcon,
+  KeyRoundIcon,
+  Link2Icon,
+  MailIcon,
+  MonitorSmartphoneIcon,
+  ShieldCheckIcon,
+  UserIcon,
+} from 'lucide-react'
 
 import { Tabs, TabsList, TabsTrigger } from '@/components/base/tabs'
 
+import { CONFIG } from '@/config/public'
 import { useClientTranslation } from '@/i18n/client'
 
 const TABS = [
@@ -15,13 +24,16 @@ const TABS = [
   { segment: 'connections', icon: Link2Icon },
   { segment: 'sessions', icon: MonitorSmartphoneIcon },
   { segment: 'two-factor', icon: ShieldCheckIcon },
+  { segment: 'applications', icon: AppWindowIcon },
 ] as const
 
 export function ProfileTabsList() {
   const { t } = useClientTranslation(['auth'])
   const pathname = usePathname()
   const router = useRouter()
-  const active = TABS.find((tab) => pathname.endsWith(`/profile/${tab.segment}`))?.segment ?? TABS[0].segment
+  // The applications tab only exists while the backend is an OAuth provider at all.
+  const tabs = TABS.filter((tab) => tab.segment !== 'applications' || CONFIG.OAUTH_PROVIDER.MODE !== 'off')
+  const active = tabs.find((tab) => pathname.endsWith(`/profile/${tab.segment}`))?.segment ?? tabs[0].segment
 
   // i18next-parser only detects a literal string argument, not a key looked up from TABS, so
   // these are spelled out. Don't write the detected call shape into a comment - it gets collected.
@@ -32,6 +44,7 @@ export function ProfileTabsList() {
     connections: t('auth:profileConnectionsTab'),
     sessions: t('auth:profileSessionsTab'),
     'two-factor': t('auth:profileTwoFactorTab'),
+    applications: t('auth:profileApplicationsTab'),
   }
 
   return (
@@ -47,7 +60,7 @@ export function ProfileTabsList() {
           shrinking to its own text and leaving the row short of the card's edge. Six labels do not
           fit one row at the card's max-w-sm width, so the base strip wraps them onto a second. */}
       <TabsList className="w-full">
-        {TABS.map(({ segment, icon: Icon }) => (
+        {tabs.map(({ segment, icon: Icon }) => (
           <TabsTrigger key={segment} value={segment}>
             {/* Icon below `sm`, label at/above it - never both at once, which would make every trigger
                 wide enough to wrap even on a phone. */}

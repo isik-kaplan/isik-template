@@ -4,6 +4,98 @@
  */
 
 export interface paths {
+    "/v0/authorized-applications/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Every application holding a token for this account - a refresh token too, which outlives the
+         *     access token it came with and can mint another.
+         */
+        get: operations["authorized_applications_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/authorized-applications/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * @description Every token the application holds for this person, refresh tokens first and through `revoke()`:
+         *     deleting an access token leaves its refresh token alive, and that mints a new one.
+         */
+        delete: operations["authorized_applications_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/oauth-applications/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The applications the signed-in person registered. Who may register at all is the provider's
+         *     mode - see apps/oauth_provider/registration.py.
+         */
+        get: operations["oauth_applications_list"];
+        put?: never;
+        /**
+         * @description The applications the signed-in person registered. Who may register at all is the provider's
+         *     mode - see apps/oauth_provider/registration.py.
+         */
+        post: operations["oauth_applications_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/oauth-applications/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The applications the signed-in person registered. Who may register at all is the provider's
+         *     mode - see apps/oauth_provider/registration.py.
+         */
+        get: operations["oauth_applications_retrieve"];
+        put?: never;
+        post?: never;
+        /**
+         * @description The applications the signed-in person registered. Who may register at all is the provider's
+         *     mode - see apps/oauth_provider/registration.py.
+         */
+        delete: operations["oauth_applications_destroy"];
+        options?: never;
+        head?: never;
+        /**
+         * @description The applications the signed-in person registered. Who may register at all is the provider's
+         *     mode - see apps/oauth_provider/registration.py.
+         */
+        patch: operations["oauth_applications_partial_update"];
+        trace?: never;
+    };
     "/v0/users/": {
         parameters: {
             query?: never;
@@ -143,8 +235,81 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * @description An application somebody registered so it can offer "Sign in with" this project to its own users.
+         *
+         *     Only the authorization code flow, with PKCE, and never without asking: an application reaches
+         *     nobody's account until that person consents on this project's own page.
+         */
+        Application: {
+            readonly id: number;
+            /** @description Shown to everybody asked to let it in. */
+            name: string;
+            readonly client_id: string;
+            /** @description confidential for a server that keeps a secret, public for a browser or mobile app. */
+            client_type: components["schemas"]["ApplicationClientType"];
+            /** @description Where a sign-in may return to, exactly as the application will send it. */
+            redirect_uris: string[];
+            /** @description Only in the answer to registering a confidential application, and never again: it is stored hashed. Lost, the application is deleted and registered again. */
+            readonly client_secret: string | null;
+            /** Format: date-time */
+            readonly created: string;
+            /** Format: date-time */
+            readonly updated: string;
+        };
+        /** @enum {string} */
+        ApplicationClientType: "confidential" | "public";
+        /**
+         * @description An application somebody registered so it can offer "Sign in with" this project to its own users.
+         *
+         *     Only the authorization code flow, with PKCE, and never without asking: an application reaches
+         *     nobody's account until that person consents on this project's own page.
+         */
+        ApplicationRequest: {
+            /** @description Shown to everybody asked to let it in. */
+            name: string;
+            /** @description confidential for a server that keeps a secret, public for a browser or mobile app. */
+            client_type: components["schemas"]["ApplicationClientType"];
+            /** @description Where a sign-in may return to, exactly as the application will send it. */
+            redirect_uris: string[];
+        };
+        /**
+         * @description One application holding access to this account - not one token. A person thinks "it can see my
+         *     email", not "it holds four tokens", and tokens are minted and rotated behind the scenes.
+         */
+        AuthorizedApplication: {
+            /** @description The application's own id, which revoking names. */
+            readonly id: number;
+            /** @description The application's name. */
+            readonly name: string;
+            /** @description What it may see, as OAuth scopes. */
+            readonly scopes: string[];
+            /**
+             * Format: date-time
+             * @description When it was first let in.
+             */
+            readonly granted_at: string;
+        };
         /** @enum {unknown} */
         Blank: "";
+        PaginatedApplicationList: {
+            /**
+             * @description Total number of items available.
+             * @example 1102
+             */
+            count: number;
+            /**
+             * @description Number of results to return per page.
+             * @example 100
+             */
+            page_size: number;
+            /**
+             * @description Total number of pages.
+             * @example 17
+             */
+            total_pages: number;
+            results: components["schemas"]["Application"][];
+        };
         PaginatedUserHistoryList: {
             /**
              * @description Total number of items available.
@@ -180,6 +345,20 @@ export interface components {
              */
             total_pages: number;
             results: components["schemas"]["User"][];
+        };
+        /**
+         * @description An application somebody registered so it can offer "Sign in with" this project to its own users.
+         *
+         *     Only the authorization code flow, with PKCE, and never without asking: an application reaches
+         *     nobody's account until that person consents on this project's own page.
+         */
+        PatchedApplicationRequest: {
+            /** @description Shown to everybody asked to let it in. */
+            name?: string;
+            /** @description confidential for a server that keeps a secret, public for a browser or mobile app. */
+            client_type?: components["schemas"]["ApplicationClientType"];
+            /** @description Where a sign-in may return to, exactly as the application will send it. */
+            redirect_uris?: string[];
         };
         /**
          * @description `BaseSerializer` plus everything that is about a model - see each mixin's own docstring for what
@@ -307,6 +486,197 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    authorized_applications_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthorizedApplication"][];
+                };
+            };
+        };
+    };
+    authorized_applications_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The application. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    oauth_applications_list: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedApplicationList"];
+                };
+            };
+        };
+    };
+    oauth_applications_create: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+            };
+            header: {
+                /** @description A UUID of the caller's choosing. Sending the same key with the same body again returns what the first attempt answered rather than doing the work twice. It belongs to the attempt, not to the call: mint a new one when the payload changes or once a submit succeeds. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplicationRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ApplicationRequest"];
+                "multipart/form-data": components["schemas"]["ApplicationRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Application"];
+                };
+            };
+        };
+    };
+    oauth_applications_retrieve: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+            };
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this application. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Application"];
+                };
+            };
+        };
+    };
+    oauth_applications_destroy: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+            };
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this application. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    oauth_applications_partial_update: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+            };
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this application. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedApplicationRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedApplicationRequest"];
+                "multipart/form-data": components["schemas"]["PatchedApplicationRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Application"];
+                };
+            };
+        };
+    };
     users_list: {
         parameters: {
             query?: {

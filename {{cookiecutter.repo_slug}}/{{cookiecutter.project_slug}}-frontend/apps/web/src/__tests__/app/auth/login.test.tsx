@@ -12,6 +12,7 @@ vi.mock('@/lib/getSession', () => ({
 vi.mock('next/headers', () => ({ headers: async () => new Headers({ host: 'test-project.test' }) }))
 const push = vi.fn()
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }))
+vi.mock('@/config/public', () => ({ CONFIG: { DOMAIN: 'test-project.test' } }))
 vi.mock('@/lib/socialProviders', () => ({ socialProviders: () => [{ id: 'google', name: 'Google', icon: '' }] }))
 
 function jsonResponse(status: number, body: unknown) {
@@ -31,6 +32,19 @@ describe('LoginPage', () => {
     render(await LoginPage({ searchParams: Promise.resolve({ next: '/dashboard' }) }))
 
     expect(redirectIfAuthenticated).toHaveBeenCalledWith('/dashboard')
+  })
+
+  it('refuses to send anybody off this site once they are signed in', async () => {
+    render(await LoginPage({ searchParams: Promise.resolve({ next: 'https://elsewhere.test/' }) }))
+
+    expect(redirectIfAuthenticated).toHaveBeenCalledWith('/')
+  })
+
+  it("sends somebody back to the application's authorize request they came from", async () => {
+    const next = 'http://auth.test-project.test/o/authorize/?client_id=abc'
+    render(await LoginPage({ searchParams: Promise.resolve({ next }) }))
+
+    expect(redirectIfAuthenticated).toHaveBeenCalledWith(next)
   })
 
   it('defaults the redirect target to "/" when no next param is given', async () => {

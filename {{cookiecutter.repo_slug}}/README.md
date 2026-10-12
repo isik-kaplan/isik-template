@@ -246,6 +246,18 @@ For an incident, **Site settings** in the admin holds a "who may sign in" ladder
 superusers only). Raising it signs out everybody it excludes straight away and refuses them on both
 the password and the social sign-in; only a superuser can choose the top rung.
 
+## Signing in to other apps with this one
+
+`apps/oauth_provider` makes this project an OAuth 2.0 / OpenID Connect provider through
+django-oauth-toolkit, served at `auth.<domain>/o/` and switched by `OAUTH_PROVIDER__MODE` (off,
+internal or public - see SETUP.md). Its tables exist whatever the mode, and while it is off every one
+of its routes answers 404. Only the authorization code flow with PKCE is offered; DOT's device flow,
+dynamic client registration, introspection and its own unstyled pages are not routed. DOT's consent
+screen redirects to `/auth/oauth/authorize`, the frontend's page, which posts the answer straight back.
+A signed-out person goes through the ordinary sign-in first, and `next` lets sign-in return to that
+one authorize endpoint and nowhere else off-site. The profile's Apps tab lists the apps let in, with a
+way to shut each one out (revoking its refresh tokens too), and the apps the person registered.
+
 ## Starter kit
 
 These ship tested and mutation-clean but with nothing calling them yet: building blocks for what most projects

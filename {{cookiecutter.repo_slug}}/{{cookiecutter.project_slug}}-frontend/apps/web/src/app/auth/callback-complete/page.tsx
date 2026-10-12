@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation'
 
+import { afterSignIn } from '@/lib/afterSignIn'
 import { getSessionState } from '@/lib/getSession'
-
-import { getSafeRedirect } from '@isikk/core/next/request'
 
 // The provider redirect's own final landing spot after allauth's classic (non-headless) callback
 // view finishes - allauth redirects here (the callback_url the redirect started with, see
@@ -21,9 +20,9 @@ export default async function CallbackCompletePage({
   const params = await searchParams
   const { session, pendingProviderSignup, pendingMfaTypes } = await getSessionState()
   if (pendingProviderSignup) redirect('/auth/complete-signup')
-  if (session) redirect(getSafeRedirect(params.next))
+  if (session) redirect(afterSignIn(params.next))
   // The provider vouched for the first factor; an account with a second one still owes it.
-  if (pendingMfaTypes) redirect(`/auth/two-factor?next=${encodeURIComponent(getSafeRedirect(params.next))}`)
+  if (pendingMfaTypes) redirect(`/auth/two-factor?next=${encodeURIComponent(afterSignIn(params.next))}`)
   // A real failure (e.g. the provider declined, or - see the blueprint's own comment on this
   // exact failure mode - the provider sent back no usable identity data) carries an `error` param
   // here rather than throwing - allauth always redirects back to this page's own URL regardless

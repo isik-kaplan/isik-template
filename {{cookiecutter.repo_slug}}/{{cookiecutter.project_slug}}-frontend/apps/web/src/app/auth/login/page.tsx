@@ -5,6 +5,7 @@ import { LoginForm } from '@/components/app-auth/LoginForm'
 import { SocialLoginSection } from '@/components/app-auth/SocialLoginSection'
 
 import { sUseTranslation } from '@/i18n'
+import { afterSignIn } from '@/lib/afterSignIn'
 import { redirectIfAuthenticated } from '@/lib/getSession'
 import { isLocalDevHost } from '@/lib/isLocalDevHost'
 
@@ -13,8 +14,8 @@ import { PROVIDER_REDIRECT_PATH } from '@{{ cookiecutter.repo_slug }}/auth-api'
 import { getRequestOrigin } from '@isikk/core/next/request'
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
-  const { next } = await searchParams
-  await redirectIfAuthenticated(next || '/')
+  const next = afterSignIn((await searchParams).next)
+  await redirectIfAuthenticated(next)
   const { t } = await sUseTranslation(['auth'])
   const origin = getRequestOrigin(await headers(), { isLocalDevHost })
 
@@ -30,10 +31,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     >
       <SocialLoginSection
         action={`${origin.replace('://', '://auth.')}${PROVIDER_REDIRECT_PATH}`}
-        callbackUrl={`${origin}/auth/callback-complete?next=${encodeURIComponent(next || '/')}`}
+        callbackUrl={`${origin}/auth/callback-complete?next=${encodeURIComponent(next)}`}
         dividerText={t('auth:orDivider')}
       />
-      <LoginForm redirectTo={next || '/'} />
+      <LoginForm redirectTo={next} />
       <AuthCardFooterLink href="/auth/forgot-password" className="block text-center">
         {t('auth:forgotPasswordLink')}
       </AuthCardFooterLink>
