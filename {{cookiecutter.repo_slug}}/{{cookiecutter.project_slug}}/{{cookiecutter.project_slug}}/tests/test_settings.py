@@ -106,6 +106,21 @@ def test_csrf_trusts_the_frontend_and_every_backend_subdomain():
     assert settings.CSRF_TRUSTED_ORIGINS == _origins(hosts, config.DEBUG)
 
 
+@pytest.mark.django_db
+def test_the_frontend_may_send_an_idempotency_key_across_origins(client):
+    """The preflight a browser sends before a POST to api.<domain> carrying the header every write does."""
+    response = client.options(
+        "/v0/oauth-applications/",
+        HTTP_HOST=f"api.{config.DOMAIN}",
+        HTTP_ORIGIN=_origins([config.DOMAIN], config.DEBUG)[0],
+        HTTP_ACCESS_CONTROL_REQUEST_METHOD="POST",
+        HTTP_ACCESS_CONTROL_REQUEST_HEADERS="content-type,idempotency-key,x-csrftoken",
+    )
+
+    assert "idempotency-key" in response["Access-Control-Allow-Headers"].split(", ")
+    assert "x-csrftoken" in response["Access-Control-Allow-Headers"].split(", ")
+
+
 def test_cors_allows_only_the_frontend_origin():
     assert settings.CORS_ALLOWED_ORIGINS == _origins([config.DOMAIN], config.DEBUG)
 

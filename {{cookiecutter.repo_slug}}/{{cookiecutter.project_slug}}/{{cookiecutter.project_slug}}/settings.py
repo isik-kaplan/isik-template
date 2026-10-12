@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 import sentry_sdk
+from corsheaders.defaults import default_headers
 from django.conf.locale import LANG_INFO
 
 from apps.common.logging.scrub import scrub_event
@@ -415,6 +416,9 @@ CORS_ALLOW_CREDENTIALS = True
 # fetch wrapper (apiClients.ts) reads both: one sends somebody to prove it is them, the other to the
 # login page once their dead session's cookie was cleared.
 CORS_EXPOSE_HEADERS = ["X-Reauthentication-Required", "X-Session-Cleared"]
+# And a custom request header is refused at the preflight, before the request is ever sent: every
+# POST carries an Idempotency-Key (apps/idempotency), so the frontend's writes need it allowed.
+CORS_ALLOW_HEADERS = (*default_headers, "idempotency-key")
 
 REST_FRAMEWORK = {
     "PAGE_SIZE": 100,
