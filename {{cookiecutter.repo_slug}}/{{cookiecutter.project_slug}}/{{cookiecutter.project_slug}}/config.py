@@ -51,8 +51,8 @@ CONFIG = config(
             "RATE_LIMITS_ENABLED": boolean(missing_default=True),
         },
         "OAUTH_PROVIDER": {
-            # Whether other apps can offer "Sign in with" this project: off, internal (staff register
-            # the apps) or public (anybody signed in registers their own). See settings.py.
+            # Whether other apps can offer "Sign in with" this project: off, approval (a superuser
+            # approves each app anybody registers) or auto (registered is approved). See settings.py.
             "MODE": string(missing_default="off"),
             # The RSA private key id_tokens are signed with, as PEM. Required unless MODE is off. A
             # literal \n stands for a line break, so it fits on one line of an .env file.

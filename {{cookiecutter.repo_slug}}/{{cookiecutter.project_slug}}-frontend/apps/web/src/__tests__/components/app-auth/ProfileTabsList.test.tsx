@@ -27,7 +27,7 @@ describe('ProfileTabsList', () => {
     expect(screen.queryByRole('tab', { name: 'Apps' })).toBeNull()
   })
 
-  it.each(['internal', 'public'])('offers the applications tab while the provider is %s', async (mode) => {
+  it.each(['approval', 'auto'])('offers the applications tab while the provider is %s', async (mode) => {
     CONFIG.OAUTH_PROVIDER.MODE = mode
     pathname = '/profile/applications'
     render(<ProfileTabsList />)

@@ -37,7 +37,7 @@ def test_the_signing_key_may_spell_its_line_breaks_as_backslash_n():
     script = "from {{ cookiecutter.project_slug }} import settings; print(repr(settings.OAUTH2_PROVIDER['OIDC_RSA_PRIVATE_KEY']))"
     env = {
         **os.environ,
-        "{{ cookiecutter.config_prefix }}__OAUTH_PROVIDER__MODE": "public",
+        "{{ cookiecutter.config_prefix }}__OAUTH_PROVIDER__MODE": "auto",
         "{{ cookiecutter.config_prefix }}__OAUTH_PROVIDER__SIGNING_KEY": "-----BEGIN-----\\nkey\\n-----END-----",
     }
 

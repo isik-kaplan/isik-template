@@ -2,10 +2,10 @@
 
 import type React from 'react'
 
+import { CircleCheckIcon, InfoIcon, Loader2Icon, OctagonXIcon, TriangleAlertIcon } from 'lucide-react'
+
 import { useTheme } from 'next-themes'
 import { Toaster as Sonner, type ToasterProps } from 'sonner'
-
-import { CircleCheckIcon, InfoIcon, Loader2Icon, OctagonXIcon, TriangleAlertIcon } from 'lucide-react'
 
 // Hoisted out of the JSX below, not inlined as a double-curly-brace JSX object attribute - this
 // file is itself a Jinja template (cookiecutter renders every file), and that syntax is

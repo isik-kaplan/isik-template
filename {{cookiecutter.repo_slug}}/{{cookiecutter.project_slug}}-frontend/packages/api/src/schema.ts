@@ -44,6 +44,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v0/oauth-application-reviews/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Every application, for the superusers who approve and withdraw them. A second viewset over the same
+         *     model rather than the owner's one behaving differently by role, so each documents one audience.
+         */
+        get: operations["oauth_application_reviews_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/oauth-application-reviews/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Every application, for the superusers who approve and withdraw them. A second viewset over the same
+         *     model rather than the owner's one behaving differently by role, so each documents one audience.
+         */
+        get: operations["oauth_application_reviews_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/oauth-application-reviews/{id}/approve/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Approved, for these of what it asked for. Also how a withdrawn one is reinstated, and how one asking
+         *     for more since it was approved is let have it.
+         */
+        post: operations["oauth_application_reviews_approve_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/oauth-application-reviews/{id}/withdraw/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Taken down everywhere, now: every token it holds goes, and nobody signs in with it again until a
+         *     superuser approves it again.
+         */
+        post: operations["oauth_application_reviews_withdraw_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v0/oauth-applications/": {
         parameters: {
             query?: never;
@@ -52,14 +132,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description The applications the signed-in person registered. Who may register at all is the provider's
-         *     mode - see apps/oauth_provider/registration.py.
+         * @description The applications the signed-in person registered. Whether a new one works at once or waits for a
+         *     superuser is the provider's mode - see apps/oauth_provider/mode.py.
          */
         get: operations["oauth_applications_list"];
         put?: never;
         /**
-         * @description The applications the signed-in person registered. Who may register at all is the provider's
-         *     mode - see apps/oauth_provider/registration.py.
+         * @description The applications the signed-in person registered. Whether a new one works at once or waits for a
+         *     superuser is the provider's mode - see apps/oauth_provider/mode.py.
          */
         post: operations["oauth_applications_create"];
         delete?: never;
@@ -76,24 +156,98 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description The applications the signed-in person registered. Who may register at all is the provider's
-         *     mode - see apps/oauth_provider/registration.py.
+         * @description The applications the signed-in person registered. Whether a new one works at once or waits for a
+         *     superuser is the provider's mode - see apps/oauth_provider/mode.py.
          */
         get: operations["oauth_applications_retrieve"];
         put?: never;
         post?: never;
         /**
-         * @description The applications the signed-in person registered. Who may register at all is the provider's
-         *     mode - see apps/oauth_provider/registration.py.
+         * @description The applications the signed-in person registered. Whether a new one works at once or waits for a
+         *     superuser is the provider's mode - see apps/oauth_provider/mode.py.
          */
         delete: operations["oauth_applications_destroy"];
         options?: never;
         head?: never;
         /**
-         * @description The applications the signed-in person registered. Who may register at all is the provider's
-         *     mode - see apps/oauth_provider/registration.py.
+         * @description The applications the signed-in person registered. Whether a new one works at once or waits for a
+         *     superuser is the provider's mode - see apps/oauth_provider/mode.py.
          */
         patch: operations["oauth_applications_partial_update"];
+        trace?: never;
+    };
+    "/v0/oauth-applications/{id}/disable/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Its owner's own off switch: every token it holds goes now, and nobody signs in with it until it
+         *     is switched back on. The only state it may be deleted from.
+         */
+        post: operations["oauth_applications_disable_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/oauth-applications/{id}/restore/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description The applications the signed-in person registered. Whether a new one works at once or waits for a
+         *     superuser is the provider's mode - see apps/oauth_provider/mode.py.
+         */
+        post: operations["oauth_applications_restore_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/oauth-applications/{id}/rotate-secret/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description A new secret for the same client id, readable in this answer and never again. */
+        post: operations["oauth_applications_rotate_secret_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/oauth-applications/delegatable-scopes/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Every scope an application may ask for beyond signing somebody in. */
+        get: operations["oauth_applications_delegatable_scopes_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v0/users/": {
@@ -104,16 +258,13 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description The project's accounts: staff list and read all of them, anybody else signed in only their own,
-         *     and a signed-in user edits their own through `me`.
+         * @description The project's accounts. Whoever may see everybody's - staff, and holders of `users:manage:user` -
+         *     lists all of them, anybody else signed in only their own; holders of `users:manage:user` change other
+         *     people's, and everybody edits their own through `me`.
          */
         get: operations["users_list"];
         put?: never;
-        /**
-         * @description The project's accounts: staff list and read all of them, anybody else signed in only their own,
-         *     and a signed-in user edits their own through `me`.
-         */
-        post: operations["users_create"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -128,26 +279,20 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description The project's accounts: staff list and read all of them, anybody else signed in only their own,
-         *     and a signed-in user edits their own through `me`.
+         * @description The project's accounts. Whoever may see everybody's - staff, and holders of `users:manage:user` -
+         *     lists all of them, anybody else signed in only their own; holders of `users:manage:user` change other
+         *     people's, and everybody edits their own through `me`.
          */
         get: operations["users_retrieve"];
-        /**
-         * @description The project's accounts: staff list and read all of them, anybody else signed in only their own,
-         *     and a signed-in user edits their own through `me`.
-         */
-        put: operations["users_update"];
+        put?: never;
         post?: never;
-        /**
-         * @description The project's accounts: staff list and read all of them, anybody else signed in only their own,
-         *     and a signed-in user edits their own through `me`.
-         */
-        delete: operations["users_destroy"];
+        delete?: never;
         options?: never;
         head?: never;
         /**
-         * @description The project's accounts: staff list and read all of them, anybody else signed in only their own,
-         *     and a signed-in user edits their own through `me`.
+         * @description The project's accounts. Whoever may see everybody's - staff, and holders of `users:manage:user` -
+         *     lists all of them, anybody else signed in only their own; holders of `users:manage:user` change other
+         *     people's, and everybody edits their own through `me`.
          */
         patch: operations["users_partial_update"];
         trace?: never;
@@ -198,8 +343,9 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description The project's accounts: staff list and read all of them, anybody else signed in only their own,
-         *     and a signed-in user edits their own through `me`.
+         * @description The project's accounts. Whoever may see everybody's - staff, and holders of `users:manage:user` -
+         *     lists all of them, anybody else signed in only their own; holders of `users:manage:user` change other
+         *     people's, and everybody edits their own through `me`.
          */
         get: operations["users_me_retrieve"];
         put?: never;
@@ -231,26 +377,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v0/users/permissions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Every permission there is to grant, with what it lets somebody do. */
+        get: operations["users_permissions_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
-         * @description An application somebody registered so it can offer "Sign in with" this project to its own users.
+         * @description An application somebody registered, as its owner sees it.
          *
-         *     Only the authorization code flow, with PKCE, and never without asking: an application reaches
-         *     nobody's account until that person consents on this project's own page.
+         *     Only the authorization code flow, with PKCE, and never without asking: an application reaches nobody's
+         *     account until it is approved and that person consents on this project's own page.
          */
         Application: {
             readonly id: number;
             /** @description Shown to everybody asked to let it in. */
             name: string;
+            /** @description What it does, shown to everybody asked to let it in. */
+            description?: string;
             readonly client_id: string;
             /** @description confidential for a server that keeps a secret, public for a browser or mobile app. */
             client_type: components["schemas"]["ApplicationClientType"];
             /** @description Where a sign-in may return to, exactly as the application will send it. */
             redirect_uris: string[];
-            /** @description Only in the answer to registering a confidential application, and never again: it is stored hashed. Lost, the application is deleted and registered again. */
+            /** @description Where it stands. Only an approved application signs anybody in or holds working tokens. */
+            readonly approval: components["schemas"]["ApplicationApproval"];
+            /** @description What it asks to do on somebody's behalf, beyond signing them in. Each person it signs in is asked again, and a token can only ever do what that person can. */
+            requested_scopes?: string[];
+            /** @description What of that it may ask anybody for. Asking for more waits for a superuser unless nothing here does. */
+            readonly approved_scopes: string[];
+            /** @description Only in the answer to registering a confidential application, and never again: it is stored hashed. Lost, it is rotated. */
             readonly client_secret: string | null;
             /** Format: date-time */
             readonly created: string;
@@ -258,20 +429,31 @@ export interface components {
             readonly updated: string;
         };
         /** @enum {string} */
+        ApplicationApproval: "pending" | "approved" | "withdrawn" | "disabled";
+        /** @enum {string} */
         ApplicationClientType: "confidential" | "public";
         /**
-         * @description An application somebody registered so it can offer "Sign in with" this project to its own users.
+         * @description An application somebody registered, as its owner sees it.
          *
-         *     Only the authorization code flow, with PKCE, and never without asking: an application reaches
-         *     nobody's account until that person consents on this project's own page.
+         *     Only the authorization code flow, with PKCE, and never without asking: an application reaches nobody's
+         *     account until it is approved and that person consents on this project's own page.
          */
         ApplicationRequest: {
             /** @description Shown to everybody asked to let it in. */
             name: string;
+            /** @description What it does, shown to everybody asked to let it in. */
+            description?: string;
             /** @description confidential for a server that keeps a secret, public for a browser or mobile app. */
             client_type: components["schemas"]["ApplicationClientType"];
             /** @description Where a sign-in may return to, exactly as the application will send it. */
             redirect_uris: string[];
+            /** @description What it asks to do on somebody's behalf, beyond signing them in. Each person it signs in is asked again, and a token can only ever do what that person can. */
+            requested_scopes?: string[];
+        };
+        /** @description A superuser's answer to an application: what of what it asked for it may ask anybody for. */
+        ApprovalRequest: {
+            /** @description A subset of what it requested - empty approves signing people in and nothing beyond it. */
+            approved_scopes: string[];
         };
         /**
          * @description One application holding access to this account - not one token. A person thinks "it can see my
@@ -292,6 +474,62 @@ export interface components {
         };
         /** @enum {unknown} */
         Blank: "";
+        /** @description A scope an application may ask for, and what it lets the application do, in words. */
+        DelegatableScope: {
+            /** @description The scope, as an application asks for it. */
+            readonly name: string;
+            /** @description What it lets the application do. */
+            readonly label: string;
+        };
+        /**
+         * @description Somebody's account, as whoever manages accounts sees it: who they are is read-only here, and what
+         *     they may do is the point. Raising anything is a grant - see apps/users/granting.py.
+         */
+        ManagedUser: {
+            /**
+             * Format: uuid
+             * @description Identifies this record. A UUIDv7, so ids sort roughly by when they were created.
+             */
+            readonly id: string;
+            /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
+            readonly username: string;
+            /**
+             * Email address
+             * Format: email
+             */
+            readonly email: string;
+            readonly first_name: string;
+            readonly last_name: string;
+            /**
+             * Active
+             * @description Whether they may sign in at all.
+             */
+            is_active?: boolean;
+            /**
+             * Staff status
+             * @description Whether they may sign in to the admin, and read everybody's account.
+             */
+            is_staff?: boolean;
+            /**
+             * Superuser status
+             * @description Whether they may do everything, without being granted anything.
+             */
+            is_superuser?: boolean;
+            /** @description What they were granted, as permission names - not what that implies. */
+            permissions?: components["schemas"]["Permissions"][];
+            /** Format: date-time */
+            readonly last_login: string | null;
+            /**
+             * Format: date-time
+             * @description When the row was created, by the database's clock. Never changes.
+             */
+            readonly created_at: string;
+            /**
+             * Format: date-time
+             * @description When the row last changed, by the database's clock.
+             */
+            readonly updated_at: string;
+        };
         PaginatedApplicationList: {
             /**
              * @description Total number of items available.
@@ -309,6 +547,42 @@ export interface components {
              */
             total_pages: number;
             results: components["schemas"]["Application"][];
+        };
+        PaginatedManagedUserList: {
+            /**
+             * @description Total number of items available.
+             * @example 1102
+             */
+            count: number;
+            /**
+             * @description Number of results to return per page.
+             * @example 100
+             */
+            page_size: number;
+            /**
+             * @description Total number of pages.
+             * @example 17
+             */
+            total_pages: number;
+            results: components["schemas"]["ManagedUser"][];
+        };
+        PaginatedReviewedApplicationList: {
+            /**
+             * @description Total number of items available.
+             * @example 1102
+             */
+            count: number;
+            /**
+             * @description Number of results to return per page.
+             * @example 100
+             */
+            page_size: number;
+            /**
+             * @description Total number of pages.
+             * @example 17
+             */
+            total_pages: number;
+            results: components["schemas"]["ReviewedApplication"][];
         };
         PaginatedUserHistoryList: {
             /**
@@ -328,46 +602,50 @@ export interface components {
             total_pages: number;
             results: components["schemas"]["UserHistory"][];
         };
-        PaginatedUserList: {
-            /**
-             * @description Total number of items available.
-             * @example 1102
-             */
-            count: number;
-            /**
-             * @description Number of results to return per page.
-             * @example 100
-             */
-            page_size: number;
-            /**
-             * @description Total number of pages.
-             * @example 17
-             */
-            total_pages: number;
-            results: components["schemas"]["User"][];
-        };
         /**
-         * @description An application somebody registered so it can offer "Sign in with" this project to its own users.
+         * @description An application somebody registered, as its owner sees it.
          *
-         *     Only the authorization code flow, with PKCE, and never without asking: an application reaches
-         *     nobody's account until that person consents on this project's own page.
+         *     Only the authorization code flow, with PKCE, and never without asking: an application reaches nobody's
+         *     account until it is approved and that person consents on this project's own page.
          */
         PatchedApplicationRequest: {
             /** @description Shown to everybody asked to let it in. */
             name?: string;
+            /** @description What it does, shown to everybody asked to let it in. */
+            description?: string;
             /** @description confidential for a server that keeps a secret, public for a browser or mobile app. */
             client_type?: components["schemas"]["ApplicationClientType"];
             /** @description Where a sign-in may return to, exactly as the application will send it. */
             redirect_uris?: string[];
+            /** @description What it asks to do on somebody's behalf, beyond signing them in. Each person it signs in is asked again, and a token can only ever do what that person can. */
+            requested_scopes?: string[];
         };
         /**
-         * @description `BaseSerializer` plus everything that is about a model - see each mixin's own docstring for what
-         *     it adds: ModelSerializerRegistryMixin (model -> serializer lookup), FieldGuardsOnSaveMixin (the
-         *     current viewset's field guards run inside `save()`, before the write), CreateOnlyFieldsMixin
-         *     (`Meta.create_only_fields`), WriteOnlyFieldsMixin (`Meta.write_only_fields`),
-         *     FlattenedOneToOneMixin (`Meta.flattened_one_to_one_fields`).
-         *
-         *     Pick and compose the individual mixins directly instead, if a project doesn't want all of this.
+         * @description Somebody's account, as whoever manages accounts sees it: who they are is read-only here, and what
+         *     they may do is the point. Raising anything is a grant - see apps/users/granting.py.
+         */
+        PatchedManagedUserRequest: {
+            /**
+             * Active
+             * @description Whether they may sign in at all.
+             */
+            is_active?: boolean;
+            /**
+             * Staff status
+             * @description Whether they may sign in to the admin, and read everybody's account.
+             */
+            is_staff?: boolean;
+            /**
+             * Superuser status
+             * @description Whether they may do everything, without being granted anything.
+             */
+            is_superuser?: boolean;
+            /** @description What they were granted, as permission names - not what that implies. */
+            permissions?: components["schemas"]["Permissions"][];
+        };
+        /**
+         * @description The signed-in person, as they see and edit themselves. Their rank and permissions are read-only here:
+         *     nobody changes their own.
          */
         PatchedUserRequest: {
             /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
@@ -379,6 +657,19 @@ export interface components {
             /** @description The language this user chose for the interface, or blank to follow their browser's. */
             language?: components["schemas"]["UserLanguage"] | components["schemas"]["Blank"];
         };
+        /** @description A permission this project declares - see apps/users/permissions.py. */
+        PermissionDeclaration: {
+            /** @description The permission, as `where:action:what`. */
+            readonly name: string;
+            /** @description What it lets somebody do. */
+            readonly label: string;
+            /** @description Whether an application may be let act with it on somebody's behalf. */
+            readonly delegatable: boolean;
+            /** @description What holding it implies holding too. */
+            readonly requires: string[];
+        };
+        /** @enum {string} */
+        Permissions: "users:grant:rights" | "users:manage:user";
         /** @description One way to prove it is you - see `ways_to_prove()`. Only the fields its flow carries are sent. */
         ReauthenticationFlow: {
             id: string;
@@ -392,13 +683,47 @@ export interface components {
             name: string;
         };
         /**
-         * @description `BaseSerializer` plus everything that is about a model - see each mixin's own docstring for what
-         *     it adds: ModelSerializerRegistryMixin (model -> serializer lookup), FieldGuardsOnSaveMixin (the
-         *     current viewset's field guards run inside `save()`, before the write), CreateOnlyFieldsMixin
-         *     (`Meta.create_only_fields`), WriteOnlyFieldsMixin (`Meta.write_only_fields`),
-         *     FlattenedOneToOneMixin (`Meta.flattened_one_to_one_fields`).
-         *
-         *     Pick and compose the individual mixins directly instead, if a project doesn't want all of this.
+         * @description An application as a superuser reviewing it sees it: whose it is, where it signs people in to, and
+         *     what it asks for beside what it was let have.
+         */
+        ReviewedApplication: {
+            readonly id: number;
+            readonly name: string;
+            /** @description What it does, shown to everybody asked to let it in. */
+            readonly description: string;
+            readonly client_id: string;
+            readonly client_type: components["schemas"]["ApplicationClientType"];
+            /** @description Where a sign-in may return to. */
+            readonly redirect_uris: string[];
+            /** @description Where it stands. Only an approved application signs anybody in or holds working tokens. */
+            readonly approval: components["schemas"]["ApplicationApproval"];
+            /** @description Who registered it. */
+            readonly owner: string;
+            /** @description What it asks to do on somebody's behalf. */
+            readonly requested_scopes: string[];
+            /** @description What of that it may ask anybody for. */
+            readonly approved_scopes: string[];
+            /** Format: date-time */
+            readonly created: string;
+            /** Format: date-time */
+            readonly updated: string;
+        };
+        /** @description Whether the tokens already handed out go down with the old secret. */
+        RotateSecretRequest: {
+            /**
+             * @description Tokens already minted keep working until they expire, because they do not carry the secret. Set this when the old one may be in somebody else's hands.
+             * @default false
+             */
+            revoke_tokens: boolean;
+        };
+        /** @description The new client secret, the one time it is readable. */
+        RotatedSecret: {
+            /** @description Shown once, here. It is stored hashed, so this is the only copy. */
+            readonly client_secret: string;
+        };
+        /**
+         * @description The signed-in person, as they see and edit themselves. Their rank and permissions are read-only here:
+         *     nobody changes their own.
          */
         User: {
             /**
@@ -414,6 +739,18 @@ export interface components {
             last_name?: string;
             /** @description The language this user chose for the interface, or blank to follow their browser's. */
             language?: components["schemas"]["UserLanguage"] | components["schemas"]["Blank"];
+            /**
+             * Staff status
+             * @description Designates whether the user can log into this admin site.
+             */
+            readonly is_staff: boolean;
+            /**
+             * Superuser status
+             * @description Designates that this user has all permissions without explicitly assigning them.
+             */
+            readonly is_superuser: boolean;
+            /** @description Everything they may do, as permission names - what was granted and what that implies. */
+            readonly permissions: string[];
             /**
              * Format: date-time
              * @description When the row was created, by the database's clock. Never changes.
@@ -437,13 +774,31 @@ export interface components {
              */
             readonly id: string;
             /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
-            username: string;
-            /** Email address */
-            email?: string;
-            first_name?: string;
-            last_name?: string;
-            /** @description The language this user chose for the interface, or blank to follow their browser's. */
-            language?: components["schemas"]["UserLanguage"] | components["schemas"]["Blank"];
+            readonly username: string;
+            /**
+             * Email address
+             * Format: email
+             */
+            readonly email: string;
+            readonly first_name: string;
+            readonly last_name: string;
+            /**
+             * Active
+             * @description Whether they may sign in at all.
+             */
+            is_active?: boolean;
+            /**
+             * Staff status
+             * @description Whether they may sign in to the admin, and read everybody's account.
+             */
+            is_staff?: boolean;
+            /**
+             * Superuser status
+             * @description Whether they may do everything, without being granted anything.
+             */
+            is_superuser?: boolean;
+            /** Format: date-time */
+            readonly last_login: string | null;
             /**
              * Format: date-time
              * @description When the row was created, by the database's clock. Never changes.
@@ -458,25 +813,6 @@ export interface components {
         };
         /** @enum {string} */
         UserLanguage: {{ cookiecutter.languages.split(',') | map('trim') | map('tojson') | join(' | ') }};
-        /**
-         * @description `BaseSerializer` plus everything that is about a model - see each mixin's own docstring for what
-         *     it adds: ModelSerializerRegistryMixin (model -> serializer lookup), FieldGuardsOnSaveMixin (the
-         *     current viewset's field guards run inside `save()`, before the write), CreateOnlyFieldsMixin
-         *     (`Meta.create_only_fields`), WriteOnlyFieldsMixin (`Meta.write_only_fields`),
-         *     FlattenedOneToOneMixin (`Meta.flattened_one_to_one_fields`).
-         *
-         *     Pick and compose the individual mixins directly instead, if a project doesn't want all of this.
-         */
-        UserRequest: {
-            /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
-            username: string;
-            /** Email address */
-            email?: string;
-            first_name?: string;
-            last_name?: string;
-            /** @description The language this user chose for the interface, or blank to follow their browser's. */
-            language?: components["schemas"]["UserLanguage"] | components["schemas"]["Blank"];
-        };
     };
     responses: never;
     parameters: never;
@@ -523,6 +859,133 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    oauth_application_reviews_list: {
+        parameters: {
+            query?: {
+                /** @description Where it stands. Only an approved application signs anybody in or holds working tokens. */
+                approval?: "approved" | "disabled" | "pending" | "withdrawn";
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedReviewedApplicationList"];
+                };
+            };
+        };
+    };
+    oauth_application_reviews_retrieve: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+            };
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this application. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewedApplication"];
+                };
+            };
+        };
+    };
+    oauth_application_reviews_approve_create: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+            };
+            header: {
+                /** @description A UUID of the caller's choosing. Sending the same key with the same body again returns what the first attempt answered rather than doing the work twice. It belongs to the attempt, not to the call: mint a new one when the payload changes or once a submit succeeds. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                /** @description A unique integer value identifying this application. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ApprovalRequest"];
+                "multipart/form-data": components["schemas"]["ApprovalRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewedApplication"];
+                };
+            };
+        };
+    };
+    oauth_application_reviews_withdraw_create: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+            };
+            header: {
+                /** @description A UUID of the caller's choosing. Sending the same key with the same body again returns what the first attempt answered rather than doing the work twice. It belongs to the attempt, not to the call: mint a new one when the payload changes or once a submit succeeds. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                /** @description A unique integer value identifying this application. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewedApplication"];
+                };
             };
         };
     };
@@ -677,11 +1140,138 @@ export interface operations {
             };
         };
     };
+    oauth_applications_disable_create: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+            };
+            header: {
+                /** @description A UUID of the caller's choosing. Sending the same key with the same body again returns what the first attempt answered rather than doing the work twice. It belongs to the attempt, not to the call: mint a new one when the payload changes or once a submit succeeds. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                /** @description A unique integer value identifying this application. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Application"];
+                };
+            };
+        };
+    };
+    oauth_applications_restore_create: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+            };
+            header: {
+                /** @description A UUID of the caller's choosing. Sending the same key with the same body again returns what the first attempt answered rather than doing the work twice. It belongs to the attempt, not to the call: mint a new one when the payload changes or once a submit succeeds. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                /** @description A unique integer value identifying this application. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Application"];
+                };
+            };
+        };
+    };
+    oauth_applications_rotate_secret_create: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+            };
+            header: {
+                /** @description A UUID of the caller's choosing. Sending the same key with the same body again returns what the first attempt answered rather than doing the work twice. It belongs to the attempt, not to the call: mint a new one when the payload changes or once a submit succeeds. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                /** @description A unique integer value identifying this application. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RotateSecretRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RotateSecretRequest"];
+                "multipart/form-data": components["schemas"]["RotateSecretRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RotatedSecret"];
+                };
+            };
+        };
+    };
+    oauth_applications_delegatable_scopes_list: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DelegatableScope"][];
+                };
+            };
+        };
+    };
     users_list: {
         parameters: {
             query?: {
                 /** @description Drop these fields from the response - applied last, wins over only=/include=. */
                 exclude?: string[];
+                is_active?: boolean;
+                is_staff?: boolean;
+                is_superuser?: boolean;
                 /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
                 only?: string[];
                 /** @description Which field to use when ordering the results. */
@@ -704,40 +1294,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedUserList"];
-                };
-            };
-        };
-    };
-    users_create: {
-        parameters: {
-            query?: {
-                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
-                exclude?: string[];
-                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
-                only?: string[];
-            };
-            header: {
-                /** @description A UUID of the caller's choosing. Sending the same key with the same body again returns what the first attempt answered rather than doing the work twice. It belongs to the attempt, not to the call: mint a new one when the payload changes or once a submit succeeds. */
-                "Idempotency-Key": string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UserRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["UserRequest"];
-                "multipart/form-data": components["schemas"]["UserRequest"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["User"];
+                    "application/json": components["schemas"]["PaginatedManagedUserList"];
                 };
             };
         };
@@ -763,65 +1320,8 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["User"];
+                    "application/json": components["schemas"]["ManagedUser"];
                 };
-            };
-        };
-    };
-    users_update: {
-        parameters: {
-            query?: {
-                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
-                exclude?: string[];
-                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
-                only?: string[];
-            };
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UserRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["UserRequest"];
-                "multipart/form-data": components["schemas"]["UserRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["User"];
-                };
-            };
-        };
-    };
-    users_destroy: {
-        parameters: {
-            query?: {
-                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
-                exclude?: string[];
-                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
-                only?: string[];
-            };
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
         };
     };
@@ -841,9 +1341,9 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["PatchedUserRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedUserRequest"];
-                "multipart/form-data": components["schemas"]["PatchedUserRequest"];
+                "application/json": components["schemas"]["PatchedManagedUserRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedManagedUserRequest"];
+                "multipart/form-data": components["schemas"]["PatchedManagedUserRequest"];
             };
         };
         responses: {
@@ -852,7 +1352,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["User"];
+                    "application/json": components["schemas"]["ManagedUser"];
                 };
             };
         };
@@ -976,6 +1476,9 @@ export interface operations {
             query?: {
                 /** @description Drop these fields from the response - applied last, wins over only=/include=. */
                 exclude?: string[];
+                is_active?: boolean;
+                is_staff?: boolean;
+                is_superuser?: boolean;
                 /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
                 only?: string[];
                 /** @description Which field to use when ordering the results. */
@@ -995,6 +1498,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReauthenticationFlow"][];
+                };
+            };
+        };
+    };
+    users_permissions_list: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                is_active?: boolean;
+                is_staff?: boolean;
+                is_superuser?: boolean;
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PermissionDeclaration"][];
                 };
             };
         };

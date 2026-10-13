@@ -13,8 +13,9 @@ async function ownId(request: APIRequestContext): Promise<string> {
 }
 
 // An account's history says when its password changed and from where - its owner's to read (and
-// staff's), not every visitor's.
-test("an account history is its owner's to read, and refused to anybody else and to nobody signed in", async ({
+// staff's), not every visitor's. To anybody else signed in the account is not there at all, so its id says
+// nothing either.
+test("an account history is its owner's to read, not found by anybody else and refused to nobody signed in", async ({
   page,
   browser,
 }) => {
@@ -36,7 +37,7 @@ test("an account history is its owner's to read, and refused to anybody else and
   await signUpAndVerify(other, stranger, `${stranger}@example.test`, PASSWORD)
   await login(other, stranger, PASSWORD)
   await expect(other.getByText(`Signed in as ${stranger}.`)).toBeVisible()
-  expect((await other.request.get(`${API}/v0/users/${ownerId}/history/`)).status()).toBe(403)
+  expect((await other.request.get(`${API}/v0/users/${ownerId}/history/`)).status()).toBe(404)
   await otherContext.close()
 
   const anonymousContext = await browser.newContext()

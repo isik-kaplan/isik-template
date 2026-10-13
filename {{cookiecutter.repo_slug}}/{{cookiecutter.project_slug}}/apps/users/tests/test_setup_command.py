@@ -1,6 +1,7 @@
 from io import StringIO
 
 import pytest
+from allauth.account.models import EmailAddress
 from django.core.management import call_command
 
 from apps.users.models.user import User
@@ -29,6 +30,16 @@ def test_setup_creates_a_superuser_with_the_configured_credentials():
     assert user.username == config.SETUP.SUPERUSER.USERNAME
     assert user.email == config.SETUP.SUPERUSER.EMAIL
     assert user.check_password(config.SETUP.SUPERUSER.PASSWORD)
+
+
+@pytest.mark.django_db
+def test_setup_confirms_the_configured_address_so_the_superuser_can_sign_in_to_the_app():
+    call_command("setup")
+
+    address = EmailAddress.objects.get(user__is_superuser=True)
+    assert address.email == config.SETUP.SUPERUSER.EMAIL
+    assert address.verified
+    assert address.primary
 
 
 @pytest.mark.django_db

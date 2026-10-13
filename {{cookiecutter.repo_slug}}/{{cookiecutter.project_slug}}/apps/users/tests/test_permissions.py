@@ -6,21 +6,26 @@ from django.core.exceptions import ImproperlyConfigured
 from django.db.models.signals import post_migrate
 
 from apps.users.apps import CREATE_PERMISSIONS_UID
+from apps.users.permissions import VOCABULARY
+
+
+def _not_declared():
+    return Permission.objects.exclude(codename__in=[str(declaration) for declaration in VOCABULARY.by_name.values()])
 
 
 @pytest.mark.django_db
-def test_the_migrated_database_has_no_permissions_at_all():
-    assert not Permission.objects.exists()
+def test_the_migrated_database_has_only_the_declared_permissions():
+    assert not _not_declared().exists()
 
 
 @pytest.mark.django_db
-def test_a_post_migrate_broadcast_creates_nothing():
+def test_a_post_migrate_broadcast_creates_nothing_beyond_them():
     """The check above would also pass if the rows were merely deleted after the fact, so this
-    fires the signal that used to create them and asserts nobody is still listening."""
+    fires the signal that used to create them and asserts nobody else is still listening."""
     for app_config in apps.get_app_configs():
         post_migrate.send(sender=app_config, app_config=app_config, verbosity=0, interactive=False, using="default")
 
-    assert not Permission.objects.exists()
+    assert not _not_declared().exists()
 
 
 @pytest.mark.django_db

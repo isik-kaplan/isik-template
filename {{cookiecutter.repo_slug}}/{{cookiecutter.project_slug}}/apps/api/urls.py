@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 
 from apps.oauth_provider.api.viewsets.application import ApplicationViewSet
 from apps.oauth_provider.api.viewsets.authorized_application import AuthorizedApplicationViewSet
+from apps.oauth_provider.api.viewsets.reviewed_application import ReviewedApplicationViewSet
 from apps.users.api.viewsets.user import UserViewSet
 
 
@@ -14,6 +15,7 @@ router.register("users", UserViewSet, basename=UserViewSet.endpoint)
 # Registered whatever the provider's mode, so the API document - and the client generated from it - does
 # not change with an environment variable. The mode decides who may use them.
 router.register("oauth-applications", ApplicationViewSet, basename=ApplicationViewSet.endpoint)
+router.register("oauth-application-reviews", ReviewedApplicationViewSet, basename=ReviewedApplicationViewSet.endpoint)
 router.register("authorized-applications", AuthorizedApplicationViewSet, basename="authorized-applications")
 
 urlpatterns = [

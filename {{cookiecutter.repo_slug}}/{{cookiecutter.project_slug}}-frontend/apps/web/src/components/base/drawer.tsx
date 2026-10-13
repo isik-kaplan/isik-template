@@ -1,9 +1,10 @@
 'use client'
 
 import * as React from 'react'
-import { Drawer as DrawerPrimitive } from '@base-ui/react/drawer'
 
 import { cn } from '@/lib/utils'
+
+import { Drawer as DrawerPrimitive } from '@base-ui/react/drawer'
 
 type DrawerContextProps = {
   hasSnapPoints: boolean
@@ -41,7 +42,13 @@ function Drawer({
 
   return (
     <DrawerContext.Provider value={contextValue}>
-      <DrawerPrimitive.Root data-slot="drawer" modal={modal} snapPoints={snapPoints} swipeDirection={swipeDirection} {...props} />
+      <DrawerPrimitive.Root
+        data-slot="drawer"
+        modal={modal}
+        snapPoints={snapPoints}
+        swipeDirection={swipeDirection}
+        {...props}
+      />
     </DrawerContext.Provider>
   )
 }
@@ -158,13 +165,21 @@ function DrawerHeader({ className, ...props }: React.ComponentProps<'div'>) {
 
 function DrawerFooter({ className, ...props }: React.ComponentProps<'div'>) {
   return (
-    <div data-slot="drawer-footer" className={cn('mt-auto flex shrink-0 flex-col gap-2 p-4 pt-0', className)} {...props} />
+    <div
+      data-slot="drawer-footer"
+      className={cn('mt-auto flex shrink-0 flex-col gap-2 p-4 pt-0', className)}
+      {...props}
+    />
   )
 }
 
 function DrawerTitle({ className, ...props }: DrawerPrimitive.Title.Props) {
   return (
-    <DrawerPrimitive.Title data-slot="drawer-title" className={cn('text-sm font-medium text-foreground', className)} {...props} />
+    <DrawerPrimitive.Title
+      data-slot="drawer-title"
+      className={cn('text-sm font-medium text-foreground', className)}
+      {...props}
+    />
   )
 }
 

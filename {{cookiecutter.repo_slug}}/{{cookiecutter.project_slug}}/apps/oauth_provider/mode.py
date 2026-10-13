@@ -1,7 +1,9 @@
 from django.core.exceptions import ImproperlyConfigured
 
 
-MODES = ("off", "internal", "public")
+# off: no provider at all. approval: anybody signed in registers, and a superuser approves each application
+# before it signs anybody in. auto: registered is approved, for every scope it asks for.
+MODES = ("off", "approval", "auto")
 
 
 def oauth_provider_mode(mode: str, signing_key: str) -> str:

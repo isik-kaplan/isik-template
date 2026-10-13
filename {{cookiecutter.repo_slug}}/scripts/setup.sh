@@ -180,7 +180,7 @@ if [ -n "$social_login_providers" ]; then
 fi
 
 echo
-oauth_provider_mode="$(ask "Let other apps sign their users in with this project? off, internal (staff register the apps) or public" "off")"
+oauth_provider_mode="$(ask "Let other apps sign their users in with this project? off, approval (a superuser approves each app) or auto" "off")"
 set_var "${PREFIX}__OAUTH_PROVIDER__MODE" "$oauth_provider_mode"
 if [ "$oauth_provider_mode" != "off" ]; then
   # One line, each line break written \n, which the backend reads back - a .env value is one line.

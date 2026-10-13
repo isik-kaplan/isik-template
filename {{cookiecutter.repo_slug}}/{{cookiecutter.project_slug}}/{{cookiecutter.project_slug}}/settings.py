@@ -201,6 +201,8 @@ AUTH_USER_MODEL = "users.User"
 # session whose path is not listed here is anonymous from its next request.
 AUTHENTICATION_BACKENDS = [
     "apps.users.backends.authentication.AuthenticationBackend",
+    # The only one answering permission questions - see apps/users/permissions.py for the vocabulary.
+    "apps.users.backends.permissions.PermissionsBackend",
 ]
 
 # allauth - headless API only, no server-rendered account pages.
@@ -300,12 +302,16 @@ SOCIALACCOUNT_PROVIDERS = {
 # Its tables exist whatever the mode, so switching it on later is a restart, never a migration.
 OAUTH_PROVIDER_MODE = oauth_provider_mode(config.OAUTH_PROVIDER.MODE, config.OAUTH_PROVIDER.SIGNING_KEY)
 OAUTH_PROVIDER_APPLICATIONS_PER_USER = config.OAUTH_PROVIDER.APPLICATIONS_PER_USER
+# DOT's own row, swapped for one that carries its review state and the scopes it may ask for.
+OAUTH2_PROVIDER_APPLICATION_MODEL = "oauth_provider.Application"
 OAUTH2_PROVIDER = {
     "OIDC_ENABLED": True,
     "OIDC_RSA_PRIVATE_KEY": config.OAUTH_PROVIDER.SIGNING_KEY.replace("\\n", "\n"),
     # The consent page words each scope itself, in the reader's language - these are for discovery.
     "SCOPES": {"openid": "Who you are", "profile": "Your name and username", "email": "Your email address"},
     "DEFAULT_SCOPES": ["openid"],
+    # The three above for every application, plus the permissions a superuser approved for this one.
+    "SCOPES_BACKEND_CLASS": "apps.oauth_provider.token_scopes.TokenScopes",
     # DOT's own advertises the profile and email claims and fills in neither - see the validator.
     "OAUTH2_VALIDATOR_CLASS": "apps.oauth_provider.validators.OAuth2Validator",
     # Asked once per application and set of scopes, not on every sign-in: an unexpired grant covering
@@ -443,6 +449,8 @@ REST_FRAMEWORK = {
         # the X-Session-Token it got back from a headless login, without a second auth system to
         # maintain.
         "allauth.headless.contrib.rest_framework.authentication.XSessionTokenAuthentication",
+        # An application acting for somebody who let it, on the few views that say it may.
+        "apps.oauth_provider.authentication.ApplicationTokenAuthentication",
     ],
     # Adds the refusal's code beside `detail` and logs every 403 - see apps/common/api/exception_handler.py.
     "EXCEPTION_HANDLER": "apps.common.api.exception_handler.exception_handler",

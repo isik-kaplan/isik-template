@@ -1,9 +1,10 @@
 from django.conf import settings
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, _user_has_module_perms, _user_has_perm
 from django.db import models
 from isik.django.apps.common.db import track_events
 
 from apps.common.models.base import BaseModel
+from apps.users.permissions import Permission
 
 
 def language_choices():
@@ -45,3 +46,29 @@ class User(AbstractUser, BaseModel):
 
     class Meta(AbstractUser.Meta):
         swappable = "AUTH_USER_MODEL"
+
+    @property
+    def acting_through_an_application(self):
+        """Set by ApplicationTokenAuthentication for one request: an application acting for this person,
+        with only the scopes they let it have."""
+        return getattr(self, "token_scopes", None) is not None
+
+    @property
+    def may_see_every_account(self):
+        """Staff read every account, and holders of `users:manage:user` - but an application acting for
+        somebody only by the permission: being staff is a rank, never something a token was let have."""
+        if self.has_perm(Permission.USERS_MANAGE_USER):
+            return True
+        return self.is_staff and not self.acting_through_an_application
+
+    def has_perm(self, perm, obj=None):
+        """Django's, without its superuser shortcut for an application acting for one: being a superuser is
+        a rank, and what an application may do is only ever the permissions it was let have."""
+        if self.acting_through_an_application:
+            return self.is_active and _user_has_perm(self, perm, obj)
+        return super().has_perm(perm, obj)
+
+    def has_module_perms(self, app_label):
+        if self.acting_through_an_application:
+            return self.is_active and _user_has_module_perms(self, app_label)
+        return super().has_module_perms(app_label)

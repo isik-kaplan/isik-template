@@ -250,13 +250,36 @@ the password and the social sign-in; only a superuser can choose the top rung.
 
 `apps/oauth_provider` makes this project an OAuth 2.0 / OpenID Connect provider through
 django-oauth-toolkit, served at `auth.<domain>/o/` and switched by `OAUTH_PROVIDER__MODE` (off,
-internal or public - see SETUP.md). Its tables exist whatever the mode, and while it is off every one
+approval or auto - see SETUP.md). Its tables exist whatever the mode, and while it is off every one
 of its routes answers 404. Only the authorization code flow with PKCE is offered; DOT's device flow,
 dynamic client registration, introspection and its own unstyled pages are not routed. DOT's consent
 screen redirects to `/auth/oauth/authorize`, the frontend's page, which posts the answer straight back.
 A signed-out person goes through the ordinary sign-in first, and `next` lets sign-in return to that
-one authorize endpoint and nowhere else off-site. The profile's Apps tab lists the apps let in, with a
-way to shut each one out (revoking its refresh tokens too), and the apps the person registered.
+one authorize endpoint and nowhere else off-site.
+
+Anybody signed in registers an app at `/applications` - DOT's own `Application`, swapped for
+`apps.oauth_provider.models.Application`, which carries its review state and the scopes it asks for.
+In approval mode it waits for a superuser (`/staff/applications`) before it signs anybody in; in auto
+mode it is approved for what it asks the moment it is registered. A superuser can withdraw one, its
+owner can switch it off, and either takes every token it holds down with it. The profile's Apps tab
+lists the apps a person let in, with a way to shut each one out (revoking its refresh tokens too).
+
+Beyond signing somebody in, an app can ask to act for them on the API. Its scopes are this project's
+permissions (`apps/users/permissions.py`, the `where:action:what` names), and only the delegatable
+ones: a superuser approves which an app may ask for, each person chooses on the consent page, and a
+token can only ever use what both its person holds and they let it have - a superuser's token holds no
+more than it was let have either. The API takes an app's token only on the actions a viewset names in
+`application_token_actions`, so a new endpoint is closed to apps until somebody decides otherwise.
+
+## Permissions
+
+`apps/users/permissions.py` declares every permission there is, as `where:action:what` - written into
+`auth_permission` on every migrate, and the only thing `has_perm` answers about
+(`apps.users.backends.permissions.PermissionsBackend`, which also expands what each one `requires`). A
+superuser holds them all; anybody else holds what was granted. Granting follows one rule
+(`apps/users/granting.py`): you may hand on only what you hold yourself, and only staff holding
+`users:grant:rights` grant anything at all. `/staff/people` lists everybody's account for staff and
+holders of `users:manage:user`, who may also deactivate somebody or change what they may do.
 
 ## Starter kit
 

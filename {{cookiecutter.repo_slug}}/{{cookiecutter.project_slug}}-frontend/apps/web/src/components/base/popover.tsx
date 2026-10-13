@@ -1,9 +1,10 @@
 'use client'
 
 import * as React from 'react'
-import { Popover as PopoverPrimitive } from '@base-ui/react/popover'
 
 import { cn } from '@/lib/utils'
+
+import { Popover as PopoverPrimitive } from '@base-ui/react/popover'
 
 function Popover({ ...props }: PopoverPrimitive.Root.Props) {
   return <PopoverPrimitive.Root data-slot="popover" {...props} />
@@ -49,7 +50,9 @@ function PopoverHeader({ className, ...props }: React.ComponentProps<'div'>) {
 }
 
 function PopoverTitle({ className, ...props }: PopoverPrimitive.Title.Props) {
-  return <PopoverPrimitive.Title data-slot="popover-title" className={cn('text-sm font-medium', className)} {...props} />
+  return (
+    <PopoverPrimitive.Title data-slot="popover-title" className={cn('text-sm font-medium', className)} {...props} />
+  )
 }
 
 function PopoverDescription({ className, ...props }: PopoverPrimitive.Description.Props) {

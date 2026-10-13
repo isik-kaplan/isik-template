@@ -55,8 +55,25 @@ export class Api {
     return this.client.GET('/v0/users/me/reauthentication/')
   }
 
-  async users(params?: { page?: number; page_size?: number }) {
-    return this.client.GET('/v0/users/', { params: { query: params } })
+  async users(query?: ApiQuery<'/v0/users/'>) {
+    return this.client.GET('/v0/users/', { params: { query } })
+  }
+
+  // Every permission there is to grant, with what it lets somebody do.
+  async permissions() {
+    return this.client.GET('/v0/users/permissions/')
+  }
+
+  async user(id: string) {
+    return this.client.GET('/v0/users/{id}/', { params: { path: { id } } })
+  }
+
+  // Somebody else's account: whether they may sign in, their rank, and what they were granted.
+  async updateUser(
+    id: string,
+    data: NonNullable<paths['/v0/users/{id}/']['patch']['requestBody']>['content']['application/json']
+  ) {
+    return this.client.PATCH('/v0/users/{id}/', { params: { path: { id } }, body: data })
   }
 
   async userHistory(id: string, query?: ApiQuery<'/v0/users/{id}/history/'>) {
@@ -78,8 +95,65 @@ export class Api {
     })
   }
 
+  async oauthApplication(id: number) {
+    return this.client.GET('/v0/oauth-applications/{id}/', { params: { path: { id } } })
+  }
+
+  async updateOAuthApplication(
+    id: number,
+    data: NonNullable<paths['/v0/oauth-applications/{id}/']['patch']['requestBody']>['content']['application/json']
+  ) {
+    return this.client.PATCH('/v0/oauth-applications/{id}/', { params: { path: { id } }, body: data })
+  }
+
   async deleteOAuthApplication(id: number) {
     return this.client.DELETE('/v0/oauth-applications/{id}/', { params: { path: { id } } })
+  }
+
+  async disableOAuthApplication(id: number, idempotencyKey: string) {
+    return this.client.POST('/v0/oauth-applications/{id}/disable/', {
+      params: { path: { id }, header: { 'Idempotency-Key': idempotencyKey } },
+    })
+  }
+
+  async restoreOAuthApplication(id: number, idempotencyKey: string) {
+    return this.client.POST('/v0/oauth-applications/{id}/restore/', {
+      params: { path: { id }, header: { 'Idempotency-Key': idempotencyKey } },
+    })
+  }
+
+  async rotateOAuthApplicationSecret(id: number, revokeTokens: boolean, idempotencyKey: string) {
+    return this.client.POST('/v0/oauth-applications/{id}/rotate-secret/', {
+      params: { path: { id }, header: { 'Idempotency-Key': idempotencyKey } },
+      body: { revoke_tokens: revokeTokens },
+    })
+  }
+
+  // What an application may ask to do on somebody's behalf, beyond signing them in.
+  async delegatableScopes() {
+    return this.client.GET('/v0/oauth-applications/delegatable-scopes/')
+  }
+
+  // Every application, for the superusers who approve and withdraw them.
+  async oauthApplicationReviews(query?: ApiQuery<'/v0/oauth-application-reviews/'>) {
+    return this.client.GET('/v0/oauth-application-reviews/', { params: { query } })
+  }
+
+  async oauthApplicationReview(id: number) {
+    return this.client.GET('/v0/oauth-application-reviews/{id}/', { params: { path: { id } } })
+  }
+
+  async approveOAuthApplication(id: number, approvedScopes: string[], idempotencyKey: string) {
+    return this.client.POST('/v0/oauth-application-reviews/{id}/approve/', {
+      params: { path: { id }, header: { 'Idempotency-Key': idempotencyKey } },
+      body: { approved_scopes: approvedScopes },
+    })
+  }
+
+  async withdrawOAuthApplication(id: number, idempotencyKey: string) {
+    return this.client.POST('/v0/oauth-application-reviews/{id}/withdraw/', {
+      params: { path: { id }, header: { 'Idempotency-Key': idempotencyKey } },
+    })
   }
 
   // The applications the signed-in person let into their account.

@@ -1,3 +1,4 @@
+import json
 from urllib.parse import urlencode
 
 from django.conf import settings
@@ -40,7 +41,21 @@ class AuthorizationView(_AuthorizationView):
         return super().get(request, *args, **kwargs)
 
     def render_to_response(self, context, **response_kwargs):
-        params = {"application_name": context["application"].name, "scope": " ".join(context["scopes"])}
+        # DOT renders its error page through here too, for a request it cannot send back to any application -
+        # an unknown or unapproved client, a redirect URI it never registered - and there is no application to
+        # name then.
+        if "error" in context:
+            error = urlencode({"error": context["error"].error})
+            return HttpResponseRedirect(f"{settings.FRONTEND_ORIGIN}/auth/oauth/error?{error}")
+        application = context["application"]
+        params = {
+            "application_name": application.name,
+            "application_description": application.description,
+            "scope": " ".join(context["scopes"]),
+            # In request order, worded by the scopes backend: the page words the sign-in scopes itself, in the
+            # reader's language, and has only these for the permissions an application may act with.
+            "scopes_descriptions": json.dumps(context["scopes_descriptions"]),
+        }
         for field in CONSENT_FIELDS:
             value = context.get(field)
             # DOT json-dumps an absent `claims` into the string "null".

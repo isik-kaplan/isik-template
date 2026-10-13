@@ -2,13 +2,17 @@ import base64
 import hashlib
 from urllib.parse import parse_qs, urlsplit
 
+import pgtrigger
 import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from django.conf import settings
+from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from oauth2_provider.models import get_application_model
 
+from apps.users.permissions import Permission as PermissionName
 from apps.users.tests import conftest as users
 
 
@@ -41,26 +45,42 @@ def o(name):
 
 @pytest.fixture
 def provider(settings):
-    """The provider switched on, public, with a key to sign id_tokens with."""
-    settings.OAUTH_PROVIDER_MODE = "public"
+    """The provider switched on, approving nothing by itself, with a key to sign id_tokens with."""
+    settings.OAUTH_PROVIDER_MODE = "approval"
     settings.OAUTH2_PROVIDER = {**settings.OAUTH2_PROVIDER, "OIDC_RSA_PRIVATE_KEY": SIGNING_KEY}
     return settings
 
 
+def permission(name):
+    return Permission.objects.get(content_type=ContentType.objects.get_for_model(Permission), codename=str(name))
+
+
 @pytest.fixture
 def application(db, alice):
-    """A confidential application alice registered, with the secret it was issued."""
+    """A confidential application alice registered and a superuser approved, asking to read the people list
+    and approved for it, with the secret it was issued."""
     application = Application.objects.create(
         name="Acme Notes",
+        description="Notes about the people you work with.",
         user=alice,
         client_type=Application.CLIENT_CONFIDENTIAL,
         authorization_grant_type=Application.GRANT_AUTHORIZATION_CODE,
         redirect_uris=REDIRECT_URI,
         client_secret="the-client-secret",
         algorithm=Application.RS256_ALGORITHM,
+        approval=Application.Approval.APPROVED,
     )
+    application.requested_scopes.set([permission(PermissionName.USERS_MANAGE_USER)])
+    application.approved_scopes.set([permission(PermissionName.USERS_MANAGE_USER)])
     application.issued_secret = "the-client-secret"
     return application
+
+
+def set_approval(application, approval):
+    """Puts an application in any state at all, past the trigger that keeps real moves to the lifecycle."""
+    with pgtrigger.ignore("oauth_provider.Application:approval_follows_the_lifecycle"):
+        Application.objects.filter(pk=application.pk).update(approval=approval)
+    application.refresh_from_db()
 
 
 def authorize_params(application, **overrides):

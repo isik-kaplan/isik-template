@@ -10,18 +10,20 @@ import { Label } from '@/components/base/label'
 import { useClientTranslation } from '@/i18n/client'
 import { createApi } from '@/lib/apiClients'
 import { apiOrigin } from '@/lib/apiOrigin'
+import { redirectUrisFrom } from '@/lib/redirectUris'
 import { useValidatedFormState } from '@/lib/submit'
 
 import type { ApiType } from '@{{ cookiecutter.repo_slug }}/api'
 
+import { type Scope, ScopeChecklist } from './ScopeChecklist'
+import { FIELD_CLASS } from './fieldClass'
 import { z } from 'zod'
 
-const FIELD_CLASS =
-  'w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50'
-
 export function RegisterApplicationForm({
+  scopes,
   onRegistered,
 }: {
+  scopes: Scope[]
   onRegistered: (application: ApiType<'Application'>) => void
 }) {
   const { t } = useClientTranslation(['auth'])
@@ -29,41 +31,35 @@ export function RegisterApplicationForm({
     () =>
       z.object({
         name: z.string().trim().min(1, t('auth:validationApplicationNameRequired')),
+        description: z.string().trim(),
         client_type: z.enum(['confidential', 'public']),
-        // One per line, as typed; the backend says which of them it cannot return to.
         redirect_uris: z
           .string()
-          .transform((value) =>
-            value
-              .split('\n')
-              .map((uri) => uri.trim())
-              .filter(Boolean)
-          )
+          .transform(redirectUrisFrom)
           .pipe(z.array(z.string()).min(1, t('auth:validationRedirectUrisRequired'))),
+        requested_scopes: z.array(z.string()),
       }),
     [t]
   )
-  const { formState, formErrors, handleFormStateEvent, isSubmitting, submit, resetFormState } = useValidatedFormState(
-    schema,
-    { name: '', client_type: 'confidential' as 'confidential' | 'public', redirect_uris: '' }
-  )
+  const { formState, formErrors, handleFormStateEvent, handleFormStateValue, isSubmitting, submit } =
+    useValidatedFormState(schema, {
+      name: '',
+      description: '',
+      client_type: 'confidential' as 'confidential' | 'public',
+      redirect_uris: '',
+      requested_scopes: [] as string[],
+    })
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     await submit(
       (application, idempotencyKey) => createApi(apiOrigin()).registerOAuthApplication(application, idempotencyKey),
-      {
-        failure: t('auth:registerApplicationError'),
-        onSuccess: ({ data }) => {
-          onRegistered(data!)
-          resetFormState()
-        },
-      }
+      { failure: t('auth:registerApplicationError'), onSuccess: ({ data }) => onRegistered(data!) }
     )
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4 border-t border-border pt-4">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <Label htmlFor="application_name">{t('auth:registerApplicationNameLabel')}</Label>
         <Input
@@ -72,6 +68,17 @@ export function RegisterApplicationForm({
           value={formState.name}
           onChange={handleFormStateEvent('name')}
           errorText={formErrors?.name?.[0]}
+        />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="application_description">{t('auth:applicationDescriptionLabel')}</Label>
+        <textarea
+          id="application_description"
+          name="description"
+          rows={2}
+          className={FIELD_CLASS}
+          value={formState.description}
+          onChange={handleFormStateEvent('description')}
         />
       </div>
       <div className="flex flex-col gap-2">
@@ -100,6 +107,12 @@ export function RegisterApplicationForm({
         />
         {formErrors?.redirect_uris && <p className="text-sm text-destructive">{formErrors.redirect_uris[0]}</p>}
       </div>
+      <ScopeChecklist
+        legend={t('auth:applicationRequestedScopesLabel')}
+        scopes={scopes}
+        value={formState.requested_scopes}
+        onChange={handleFormStateValue('requested_scopes')}
+      />
       {formErrors?.non_field_errors && <p className="text-sm text-destructive">{formErrors.non_field_errors[0]}</p>}
       <Button type="submit" className="self-start" disabled={isSubmitting}>
         {t('auth:registerApplicationSubmit')}

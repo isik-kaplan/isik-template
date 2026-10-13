@@ -1,15 +1,20 @@
 from django_filters.rest_framework import CharFilter
 from drf_spectacular.utils import extend_schema
-from isik.django.drf.permissions import ReadOnly, guarding, is_owner, user_property
+from isik.django.drf.permissions import guarding
 from isik.django.drf.viewsets import HistoryMixin, context_filter
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.common.api.reauthentication import ProvesWhoTheyAre
 from apps.common.api.viewsets import BaseModelViewSet
+from apps.users.api.permissions.may_manage_users import MayManageUsers
+from apps.users.api.serializers.managed_user import ManagedUserSerializer
+from apps.users.api.serializers.permission_declaration import PermissionDeclarationSerializer
 from apps.users.api.serializers.reauthentication_flow import ReauthenticationFlowSerializer
 from apps.users.api.serializers.user import UserSerializer
 from apps.users.models.user import User
+from apps.users.permissions import VOCABULARY
 from apps.users.reauthentication.proof import ways_to_prove
 
 
@@ -23,35 +28,56 @@ def _mark_partial(serializer):
     serializer.partial = True
 
 
-class UserViewSet(HistoryMixin, BaseModelViewSet):
-    """The project's accounts: staff list and read all of them, anybody else signed in only their own,
-    and a signed-in user edits their own through `me`."""
+class UserViewSet(ProvesWhoTheyAre, HistoryMixin, BaseModelViewSet):
+    """The project's accounts. Whoever may see everybody's - staff, and holders of `users:manage:user` -
+    lists all of them, anybody else signed in only their own; holders of `users:manage:user` change other
+    people's, and everybody edits their own through `me`."""
 
     model = User
     endpoint = "users"
-    serializer_class = UserSerializer
-    # The history shows only UserSerializer's fields. These hidden ones still list their changes, as
-    # [None, None]: a password change or a sign-in is worth seeing, never the hash or the values.
-    history_shows_change_of = ["password", "last_login", "is_active", "is_staff", "is_superuser"]
+    serializer_class = ManagedUserSerializer
+    # Fields the serializer shows list their changes in the history as they are. These hidden ones still
+    # list theirs, as [None, None]: a password change or a sign-in is worth seeing, never the hash or values.
+    history_shows_change_of = ["password"]
     # HistoryMixin's own default assumes an integer actor pk - User.id is a uuid7.
     extra_history_filters = {"actor": context_filter("user", filter_cls=CharFilter)}
-    # An account and its history are its owner's and staff's to read, nobody else's. ReadOnly is the
-    # project default, restated because this list replaces it.
     permission_classes = [
-        ReadOnly,
-        guarding(
-            IsAuthenticated & (user_property(User.is_staff) | is_owner(lambda user: user, name="IsThatUser")),
-            actions=["list", "retrieve", "history"],
-        ),
+        IsAuthenticated,
+        guarding(MayManageUsers, actions=["partial_update"], message=MayManageUsers.message),
     ]
-    # The cross-user list is everybody's for staff, and only their own for anybody else signed in.
+    # No create or delete: accounts are made by signing up and kept, deactivated rather than deleted.
+    http_method_names = ["get", "patch", "head", "options"]
+    filterset_fields = {"is_active": ["exact"], "is_staff": ["exact"], "is_superuser": ["exact"]}
+    search_fields = ["username", "email", "first_name", "last_name"]
+    ordering_fields = ["username", "email", "created_at", "last_login"]
+    ordering = ["username"]
+    # The cross-user list is everybody's for whoever sees everybody, and only their own for anybody else.
     history_list_permission_classes = [IsAuthenticated]
     history_list_scoped_to_queryset = True
+    # Changing somebody else's account is the act; the rest only reads, or edits yourself, where your rank and
+    # permissions are read-only.
+    reauthentication_exempt_actions = {
+        "list": "reading accounts takes nothing from anybody",
+        "retrieve": "reading an account takes nothing from anybody",
+        "history": "reading what already happened changes nothing",
+        "history_list": "reading what already happened changes nothing",
+        "me": "answers who is asking, which somebody being asked to prove themselves needs",
+        "update_me": "editing your own name and language, where your rank and permissions are read-only",
+        "reauthentication": "lists the ways to prove it is you, which proving needs first",
+        "permissions": "reading what permissions exist takes nothing from anybody",
+    }
+    # An application holding `users:manage:user` for somebody who has it may read the accounts they can.
+    application_token_actions = frozenset({"list", "retrieve"})
+
+    def get_serializer_class(self):
+        if self.action in ("me", "update_me"):
+            return UserSerializer
+        return super().get_serializer_class()
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        # Narrowed rather than guarded on retrieve too, so somebody else's id is a 404, not a hint it exists.
-        if self.action in ("list", "retrieve", "history_list") and not self.request.user.is_staff:
+        queryset = super().get_queryset().prefetch_related("user_permissions")
+        # Narrowed rather than refused, so somebody else's id is a 404, not a hint it exists.
+        if not getattr(self.request.user, "may_see_every_account", False):
             return queryset.filter(pk=self.request.user.pk)
         return queryset
 
@@ -83,3 +109,11 @@ class UserViewSet(HistoryMixin, BaseModelViewSet):
     def reauthentication(self, request):
         """How the signed-in person can prove it is them, for the page an act sends them to."""
         return Response(ReauthenticationFlowSerializer(ways_to_prove(request), many=True).data)
+
+    # Not paginated: the vocabulary is a handful of names, answered as the plain list the document says.
+    @extend_schema(responses=PermissionDeclarationSerializer(many=True))
+    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated], pagination_class=None)
+    def permissions(self, request):
+        """Every permission there is to grant, with what it lets somebody do."""
+        declarations = sorted(VOCABULARY.by_name.values(), key=str)
+        return Response(PermissionDeclarationSerializer(declarations, many=True).data)

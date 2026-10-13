@@ -63,6 +63,10 @@ MODEL_PLUMBING = ("Manager", "QuerySet")
 UTILITY_PACKAGE = "apps/common/"
 
 EXCEPTIONS = {
+    "apps/users/permissions.py": (
+        "The permission vocabulary: Declaration, Vocabulary and Permission are one concept, and the "
+        "registry is only readable as a single list."
+    ),
     "apps/users/models/user.py": (
         "`language_choices` is a callable so the migration does not freeze this project's languages, "
         "and a migration can only name a callable that sits at module level."

@@ -171,6 +171,7 @@ def test_a_users_history_lists_a_hidden_change_without_its_values(client):
     user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
     user.first_name = "Alice"
     user.is_staff = True
+    user.set_password("y")
     user.save()
     client.force_login(user)
 
@@ -178,9 +179,9 @@ def test_a_users_history_lists_a_hidden_change_without_its_values(client):
 
     (_sign_in, event) = response.json()["results"]  # newest first
     assert event["changes"]["first_name"] == ["", "Alice"]
-    assert event["changes"]["is_staff"] == [None, None]
-    assert "is_staff" not in event
-    assert "last_login" not in event
+    assert event["changes"]["is_staff"] == [False, True]
+    assert event["changes"]["password"] == [None, None]
+    assert "password" not in event
 
 
 @pytest.mark.django_db
@@ -191,7 +192,8 @@ def test_a_sign_in_is_listed_as_a_last_login_change(client):
     response = client.get(f"/v0/users/{user.id}/history/?action=update")
 
     (event,) = response.json()["results"]
-    assert event["changes"]["last_login"] == [None, None]
+    assert event["changes"]["last_login"][0] is None
+    assert event["changes"]["last_login"][1] is not None
 
 
 @pytest.mark.django_db
@@ -221,14 +223,14 @@ def test_nobody_signed_out_reads_any_history(client, path):
 
 
 @pytest.mark.django_db
-def test_somebody_elses_history_is_refused(client):
+def test_somebody_elses_history_is_not_found(client):
     alice = User.objects.create_user(username="alice", email="alice@example.test", password="x")
     mallory = User.objects.create_user(username="mallory", email="mallory@example.test", password="x")
     client.force_login(mallory)
 
     response = client.get(f"/v0/users/{alice.id}/history/")
 
-    assert response.status_code == 403
+    assert response.status_code == 404
 
 
 @pytest.mark.django_db

@@ -15,10 +15,12 @@ import { toast } from 'sonner'
 
 export type AuthorizedApplicationsListProps = {
   initialApplications: ApiType<'AuthorizedApplication'>[]
+  // The backend's wording of the permissions an application may act with - see scopeLabel.
+  described?: Record<string, string>
 }
 
 /** The applications this person let into their account, and a way to shut each one out again. */
-export function AuthorizedApplicationsList({ initialApplications }: AuthorizedApplicationsListProps) {
+export function AuthorizedApplicationsList({ initialApplications, described = {} }: AuthorizedApplicationsListProps) {
   const { t } = useClientTranslation(['auth'])
   const [applications, setApplications] = useState(initialApplications)
   const [pending, setPending] = useState<number | null>(null)
@@ -49,7 +51,7 @@ export function AuthorizedApplicationsList({ initialApplications }: AuthorizedAp
               <div className="flex min-w-0 flex-1 basis-40 flex-col gap-0.5">
                 <span className="truncate font-medium">{application.name}</span>
                 <span className="text-sm text-muted-foreground">
-                  {application.scopes.map((scope) => scopeLabel(scope, t)).join(' · ')}
+                  {application.scopes.map((scope) => scopeLabel(scope, t, described)).join(' · ')}
                 </span>
                 <span className="text-sm text-muted-foreground tabular-nums">
                   {t('auth:profileAuthorizedApplicationsSince', {

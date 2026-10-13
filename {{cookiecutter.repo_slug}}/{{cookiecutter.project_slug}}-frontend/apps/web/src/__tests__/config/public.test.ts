@@ -33,12 +33,12 @@ describe('CONFIG (public)', () => {
 
   it('reads the OAuth provider mode from its own variable', async () => {
     vi.stubEnv('{{ cookiecutter.config_prefix }}__DOMAIN', 'example.test')
-    vi.stubEnv('{{ cookiecutter.config_prefix }}__OAUTH_PROVIDER__MODE', 'public')
+    vi.stubEnv('{{ cookiecutter.config_prefix }}__OAUTH_PROVIDER__MODE', 'auto')
     vi.resetModules()
 
     const { CONFIG } = await import('@/config/public')
 
-    expect(CONFIG.OAUTH_PROVIDER.MODE).toBe('public')
+    expect(CONFIG.OAUTH_PROVIDER.MODE).toBe('auto')
 
     vi.unstubAllEnvs()
     vi.resetModules()

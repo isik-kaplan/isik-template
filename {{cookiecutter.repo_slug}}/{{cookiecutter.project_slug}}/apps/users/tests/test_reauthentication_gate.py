@@ -38,15 +38,26 @@ GATED = {
     "ManageTOTPView": {"POST", "DELETE"},
     "ManageRecoveryCodesView": {"POST"},
     "ManageWebAuthnView": {"POST", "DELETE"},
-    # Registering an application, pointing its sign-ins somewhere else, and deleting it - and shutting
-    # an application out of your own account.
-    "ApplicationViewSet": {"create", "partial_update", "destroy"},
+    # Registering an application, pointing its sign-ins somewhere else or asking for more, a new secret
+    # and deleting it - and shutting an application out of your own account.
+    "ApplicationViewSet": {"create", "partial_update", "destroy", "rotate_secret"},
     "AuthorizedApplicationViewSet": {"destroy"},
+    # Letting an application ask everybody for more.
+    "ReviewedApplicationViewSet": {"approve"},
+    # Changing what somebody else may do, or whether they may sign in at all.
+    "UserViewSet": {"partial_update"},
 }
 
 # Every routed write that is not an act, and the reason. Together with GATED this accounts for the
 # whole write surface - the half a per-view opt-in cannot give on its own.
 NOT_AN_ACT = {
+    ("ApplicationViewSet", "disable"): "switching your own application off only takes access away",
+    ("ApplicationViewSet", "restore"): "switching it back on gives it no more than the approval it already had",
+    (
+        "ReviewedApplicationViewSet",
+        "create",
+    ): "refused outright: a superuser reviews applications here, not authors them",
+    ("ReviewedApplicationViewSet", "withdraw"): "taking an approval back only takes access away",
     ("AuthorizationView", "POST"): (
         "consenting to an application, the step the whole flow exists for - an application wanting a fresh "
         "sign-in asks with prompt=login"
@@ -71,11 +82,7 @@ NOT_AN_ACT = {
     ("ResetPasswordView", "POST"): "spends a key only the owner of the inbox could have read",
     ("SessionView", "DELETE"): "signing out, which only ever ends the session asking",
     ("SignupView", "POST"): "creating an account, before there is one to protect",
-    ("UserViewSet", "create"): "refused for everybody by the read-only default permission",
-    ("UserViewSet", "destroy"): "refused for everybody by the read-only default permission",
     ("UserViewSet", "update_me"): "a person's own name and language, neither of which grants anything",
-    ("UserViewSet", "partial_update"): "refused for everybody by the read-only default permission",
-    ("UserViewSet", "update"): "refused for everybody by the read-only default permission",
     ("VerifyEmailView", "POST"): "spends a key only the owner of the inbox could have read",
     ("VerifyPhoneView", "POST"): "spends a code only the owner of the phone could have read",
 }

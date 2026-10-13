@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 const ACME = { id: 7, name: 'Acme Notes', scopes: ['email', 'openid'], granted_at: '2026-01-02T03:04:05Z' }
+const MANAGE_PEOPLE = { 'users:manage:user': 'Manage people' }
 const BETA = { id: 8, name: 'Beta Sync', scopes: ['custom'], granted_at: '2026-02-03T03:04:05Z' }
 
 function rowOf(name: string) {
@@ -30,6 +31,17 @@ describe('AuthorizedApplicationsList', () => {
 
     expect(screen.getByText('Apps you let in')).toBeTruthy()
     expect(screen.getByText('No app can see your account.')).toBeTruthy()
+  })
+
+  it("words a permission an application acts with in the backend's words", () => {
+    render(
+      <AuthorizedApplicationsList
+        initialApplications={[{ ...BETA, scopes: ['openid', 'users:manage:user'] }]}
+        described={MANAGE_PEOPLE}
+      />
+    )
+
+    expect(within(rowOf('Beta Sync')).getByText('Know who you are · Manage people')).toBeTruthy()
   })
 
   it('lists each application with what it can see and since when', () => {

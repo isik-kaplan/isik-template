@@ -1,20 +1,37 @@
+from datetime import timedelta
+
 import pytest
 from django.contrib.auth.hashers import check_password
 from django.urls import reverse
-from oauth2_provider.models import get_application_model
+from django.utils import timezone
+from oauth2_provider.models import get_access_token_model, get_application_model
 
-from apps.oauth_provider.tests.conftest import REDIRECT_URI
+from apps.oauth_provider.api.viewsets.application import ApplicationViewSet
+from apps.oauth_provider.tests.conftest import REDIRECT_URI, set_approval
 from apps.users.models.user import User
 
 
+AccessToken = get_access_token_model()
 Application = get_application_model()
 
 LIST = reverse("oauth-applications-list")
 NEW = {"name": "Acme Notes", "client_type": "confidential", "redirect_uris": [REDIRECT_URI]}
 
 
+MANAGE = "users:manage:user"
+GRANT = "users:grant:rights"
+
+
 def _detail(application):
     return reverse("oauth-applications-detail", args=[application.pk])
+
+
+def _action(application, name):
+    return reverse(f"oauth-applications-{name}", args=[application.pk])
+
+
+def _later():
+    return timezone.now() + timedelta(hours=1)
 
 
 @pytest.fixture
@@ -24,22 +41,56 @@ def proven(signed_in, headless, provider):
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("mode", ["off", "internal"])
-def test_somebody_who_may_not_register_is_refused_every_action(client, settings, signed_in, mode):
-    settings.OAUTH_PROVIDER_MODE = mode
+def test_nobody_registers_while_the_provider_is_off(client, settings, signed_in):
+    settings.OAUTH_PROVIDER_MODE = "off"
 
     assert client.get(LIST).status_code == 403
     assert client.post(LIST, NEW, content_type="application/json").status_code == 403
 
 
 @pytest.mark.django_db
-def test_staff_may_register_while_the_provider_is_internal(client, settings, signed_in, headless):
-    settings.OAUTH_PROVIDER_MODE = "internal"
-    signed_in.is_staff = True
-    signed_in.save()
-    headless.prove()
+def test_a_new_application_waits_for_a_superuser_while_the_provider_asks_for_approval(client, proven):
+    body = client.post(LIST, {**NEW, "requested_scopes": [MANAGE]}, content_type="application/json").json()
 
-    assert client.post(LIST, NEW, content_type="application/json").status_code == 201
+    assert body["approval"] == "pending"
+    assert body["requested_scopes"] == [MANAGE]
+    assert body["approved_scopes"] == []
+
+
+@pytest.mark.django_db
+def test_a_new_application_is_approved_for_what_it_asks_while_the_provider_approves_by_itself(client, proven, settings):
+    settings.OAUTH_PROVIDER_MODE = "auto"
+
+    body = client.post(LIST, {**NEW, "requested_scopes": [MANAGE]}, content_type="application/json").json()
+
+    assert body["approval"] == "approved"
+    assert body["approved_scopes"] == [MANAGE]
+
+
+@pytest.mark.django_db
+def test_an_application_asks_for_nothing_beyond_signing_people_in_unless_it_says_so(client, proven):
+    body = client.post(LIST, NEW, content_type="application/json").json()
+
+    assert body["requested_scopes"] == []
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("scope", ["users:delete:everything", "openid"])
+def test_only_a_scope_an_application_may_be_given_can_be_asked_for(client, proven, scope):
+    response = client.post(LIST, {**NEW, "requested_scopes": [scope]}, content_type="application/json")
+
+    assert response.status_code == 400
+    assert "requested_scopes" in response.json()
+
+
+@pytest.mark.django_db
+def test_the_scopes_an_application_may_ask_for_are_listed_with_what_they_mean(client, signed_in, provider):
+    response = client.get(reverse("oauth-applications-delegatable-scopes"))
+
+    assert response.json() == [
+        {"name": "users:grant:rights", "label": "Change what other people may do"},
+        {"name": "users:manage:user", "label": "See everybody's account, and activate or deactivate them"},
+    ]
 
 
 @pytest.mark.django_db
@@ -209,10 +260,182 @@ def test_the_client_type_is_settled_when_it_is_registered(client, signed_in, pro
 
 @pytest.mark.django_db
 def test_deleting_one_needs_a_proof_and_then_removes_it(client, signed_in, provider, application, headless):
+    client.post(_action(application, "disable"))
+
     assert client.delete(_detail(application)).status_code == 403
     headless.prove()
     assert client.delete(_detail(application)).status_code == 204
     assert not Application.objects.exists()
+
+
+@pytest.mark.django_db
+def test_one_still_switched_on_is_not_deleted_and_nobody_proves_themselves_to_hear_it(
+    client, signed_in, provider, application
+):
+    response = client.delete(_detail(application))
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "detail": "Switch it off first: deleting it is for an application nobody is using any more."
+    }
+    assert Application.objects.exists()
+
+
+@pytest.mark.django_db
+def test_one_still_switched_on_is_not_deleted_even_by_somebody_who_proved_themselves(
+    client, proven, application, monkeypatch
+):
+    # Past the early refusal, as a race with switching it back on would be.
+    monkeypatch.setattr(ApplicationViewSet, "refuse_before_proving", lambda self, request: None)
+
+    response = client.delete(_detail(application))
+
+    assert response.status_code == 400
+    assert Application.objects.exists()
+
+
+@pytest.mark.django_db
+def test_switching_it_off_takes_every_token_with_it(client, signed_in, provider, application):
+    token = AccessToken.objects.create(user=signed_in, application=application, token="t", expires=_later())
+
+    body = client.post(_action(application, "disable")).json()
+
+    assert body["approval"] == "disabled"
+    assert not AccessToken.objects.filter(pk=token.pk).exists()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("approval", ["pending", "withdrawn"])
+def test_only_an_approved_application_is_switched_off(client, signed_in, provider, application, approval):
+    set_approval(application, approval)
+
+    response = client.post(_action(application, "disable"))
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Only an approved application can be switched off."}
+
+
+@pytest.mark.django_db
+def test_switching_it_back_on_restores_what_it_was_approved_for(client, signed_in, provider, application):
+    client.post(_action(application, "disable"))
+
+    body = client.post(_action(application, "restore")).json()
+
+    assert body["approval"] == "approved"
+    assert body["approved_scopes"] == [MANAGE]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("approval", ["approved", "withdrawn"])
+def test_only_an_application_its_owner_switched_off_is_switched_back_on(
+    client, signed_in, provider, application, approval
+):
+    """A withdrawn one especially: switching it back on is a superuser's to do."""
+    set_approval(application, approval)
+
+    response = client.post(_action(application, "restore"))
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Only an application its owner switched off can be switched back on."}
+    application.refresh_from_db()
+    assert application.approval == approval
+
+
+@pytest.mark.django_db
+def test_rotating_the_secret_hands_out_a_new_one_once_and_leaves_tokens_alone(client, proven, application):
+    token = AccessToken.objects.create(user=proven, application=application, token="t", expires=_later())
+
+    response = client.post(_action(application, "rotate-secret"), {}, content_type="application/json")
+
+    assert response.status_code == 200
+    application.refresh_from_db()
+    assert check_password(response.json()["client_secret"], application.client_secret)
+    assert not check_password("the-client-secret", application.client_secret)
+    token.refresh_from_db()
+    assert not token.is_expired()
+
+
+@pytest.mark.django_db
+def test_rotating_the_secret_can_take_the_tokens_down_with_it(client, proven, application):
+    token = AccessToken.objects.create(user=proven, application=application, token="t", expires=_later())
+
+    client.post(_action(application, "rotate-secret"), {"revoke_tokens": True}, content_type="application/json")
+
+    assert not AccessToken.objects.filter(pk=token.pk).exists()
+
+
+@pytest.mark.django_db
+def test_rotating_the_secret_needs_a_proof(client, signed_in, provider, application):
+    response = client.post(_action(application, "rotate-secret"), {}, content_type="application/json")
+
+    assert response.status_code == 403
+    assert response["X-Reauthentication-Required"] == "1"
+
+
+@pytest.mark.django_db
+def test_a_public_application_has_no_secret_to_rotate(client, proven, application):
+    Application.objects.filter(pk=application.pk).update(client_type=Application.CLIENT_PUBLIC)
+
+    response = client.post(_action(application, "rotate-secret"), {}, content_type="application/json")
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "A public application has no secret to rotate."}
+
+
+@pytest.mark.django_db
+def test_asking_for_less_narrows_what_it_was_approved_for_at_once(client, proven, application):
+    response = client.patch(_detail(application), {"requested_scopes": []}, content_type="application/json")
+
+    assert response.json()["requested_scopes"] == []
+    assert response.json()["approved_scopes"] == []
+
+
+@pytest.mark.django_db
+def test_asking_for_more_waits_for_a_superuser_while_the_provider_asks_for_approval(client, proven, application):
+    both = [GRANT, MANAGE]
+
+    body = client.patch(_detail(application), {"requested_scopes": both}, content_type="application/json").json()
+
+    assert body["requested_scopes"] == both
+    assert body["approved_scopes"] == [MANAGE]
+    assert body["approval"] == "approved"
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("approval", ["approved", "disabled"])
+def test_asking_for_more_is_approved_at_once_while_the_provider_approves_by_itself(
+    client, proven, application, settings, approval
+):
+    settings.OAUTH_PROVIDER_MODE = "auto"
+    set_approval(application, approval)
+
+    body = client.patch(
+        _detail(application), {"requested_scopes": [GRANT, MANAGE]}, content_type="application/json"
+    ).json()
+
+    assert body["approved_scopes"] == [GRANT, MANAGE]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("approval", ["pending", "withdrawn"])
+def test_asking_for_more_waits_for_a_superuser_whose_answer_is_still_due_or_was_no(
+    client, proven, application, settings, approval
+):
+    settings.OAUTH_PROVIDER_MODE = "auto"
+    set_approval(application, approval)
+
+    body = client.patch(
+        _detail(application), {"requested_scopes": [GRANT, MANAGE]}, content_type="application/json"
+    ).json()
+
+    assert body["approved_scopes"] == [MANAGE]
+
+
+@pytest.mark.django_db
+def test_asking_for_more_needs_a_proof(client, signed_in, provider, application):
+    response = client.patch(_detail(application), {"requested_scopes": [GRANT]}, content_type="application/json")
+
+    assert response.status_code == 403
 
 
 @pytest.mark.django_db

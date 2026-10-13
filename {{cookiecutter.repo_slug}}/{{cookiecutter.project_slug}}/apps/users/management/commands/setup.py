@@ -1,4 +1,6 @@
+from allauth.account.models import EmailAddress
 from django.core.management.base import BaseCommand
+from django.db import transaction
 
 from apps.users.models.user import User
 
@@ -12,9 +14,13 @@ class Command(BaseCommand):
         if User.objects.filter(is_superuser=True).exists():
             self.stdout.write("A superuser already exists, skipping.")
             return
-        User.objects.create_superuser(
-            username=config.SETUP.SUPERUSER.USERNAME,
-            email=config.SETUP.SUPERUSER.EMAIL,
-            password=config.SETUP.SUPERUSER.PASSWORD,
-        )
+        with transaction.atomic():
+            user = User.objects.create_superuser(
+                username=config.SETUP.SUPERUSER.USERNAME,
+                email=config.SETUP.SUPERUSER.EMAIL,
+                password=config.SETUP.SUPERUSER.PASSWORD,
+            )
+            # The address is the operator's own, written into their config: there is nobody to confirm it to,
+            # and without it the account could sign in only to the admin, never to the app.
+            EmailAddress.objects.create(user=user, email=user.email, verified=True, primary=True)
         self.stdout.write(self.style.SUCCESS(f"Created superuser '{config.SETUP.SUPERUSER.USERNAME}'."))

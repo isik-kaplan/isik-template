@@ -98,12 +98,13 @@ Use `http://` in the redirect URI for a local stack without TLS. A first sign-in
 ### Other apps signing in with this one
 
 The other direction, also optional: this project as an OAuth 2.0 / OpenID Connect provider, so other apps offer
-"Sign in with {{ cookiecutter.project_name }}". `{{ cookiecutter.config_prefix }}__OAUTH_PROVIDER__MODE` decides who may register
-such an app:
+"Sign in with {{ cookiecutter.project_name }}". Anybody signed in registers their own app, up to
+`..._APPLICATIONS_PER_USER` (10), and `{{ cookiecutter.config_prefix }}__OAUTH_PROVIDER__MODE` decides what happens next:
 
 - **off** (the default): nothing of it is served.
-- **internal**: staff register them, from the profile's Apps tab or the admin - your own other services, say.
-- **public**: anybody signed in registers their own, up to `..._APPLICATIONS_PER_USER` (10).
+- **approval**: a new app waits until a superuser approves it, at `/staff/applications`, and with it which of the
+  permissions it asked for it may ask people for.
+- **auto**: a new app is approved for everything it asks for the moment it is registered.
 
 Any mode but off needs `{{ cookiecutter.config_prefix }}__OAUTH_PROVIDER__SIGNING_KEY`, the RSA key id_tokens are signed with
 (`setup.sh` generates one). An app is pointed at the discovery document,

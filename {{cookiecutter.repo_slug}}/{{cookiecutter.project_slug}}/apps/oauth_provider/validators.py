@@ -1,10 +1,25 @@
 from allauth.account.models import EmailAddress
 from oauth2_provider.oauth2_validators import OAuth2Validator as _OAuth2Validator
 
+from apps.users.login_policy import admits_session
+
 
 class OAuth2Validator(_OAuth2Validator):
     """Fills in the profile and email claims DOT advertises but never populates. DOT still drops each one
     whose scope was not granted (`oidc_claim_scope`), so this can say everything it knows."""
+
+    def validate_bearer_token(self, token, scopes, request):
+        """DOT's, refusing a token whose application has since stopped being approved or whose person may
+        no longer sign in: DOT reads neither, and a token outlives both decisions until it expires."""
+        if not super().validate_bearer_token(token, scopes, request):
+            return False
+        access_token = request.access_token
+        return bool(
+            access_token.application.is_approved
+            and access_token.user is not None
+            and access_token.user.is_active
+            and admits_session(access_token.user)
+        )
 
     def get_additional_claims(self, request):
         user = request.user

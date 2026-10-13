@@ -13,7 +13,7 @@ from rest_framework import views, viewsets
 
 from apps.idempotency import checks, schema
 from apps.idempotency.exemptions import NoIdempotencyKey, NoReplay
-from apps.users.api.viewsets.user import UserViewSet
+from apps.oauth_provider.api.viewsets.application import ApplicationViewSet
 
 
 KEYLESS = NoIdempotencyKey(reason="Answers out of the index and writes nothing, so a retry costs a query.")
@@ -166,12 +166,12 @@ def test_a_plain_api_view_is_named_by_the_method_it_answers(monkeypatch):
     assert error.msg.endswith("Endpoint.POST")
 
 
-def test_the_walk_reaches_the_users_post_on_its_own_host():
-    """isik walks every urlconf django-hosts serves; the users endpoint lives on the api host."""
+def test_the_walk_reaches_a_post_on_its_own_host():
+    """isik walks every urlconf django-hosts serves; the applications endpoint lives on the api host."""
     routed = {(entry.routed.view, entry.routed.action) for entry in idempotency_coverage()}
 
-    assert (UserViewSet, "create") in routed
-    assert (UserViewSet, "list") not in routed
+    assert (ApplicationViewSet, "create") in routed
+    assert (ApplicationViewSet, "list") not in routed
 
 
 @pytest.mark.parametrize(
@@ -224,9 +224,9 @@ def test_the_header_is_declared_required():
 
 
 @pytest.mark.django_db
-def test_the_published_document_declares_it_on_the_users_post(client):
+def test_the_published_document_declares_it_on_a_post(client):
     """The hook is wired into SPECTACULAR_SETTINGS, not just importable."""
     document = client.get("/v0/schema/?format=json").json()
 
-    parameters = document["paths"]["/v0/users/"]["post"]["parameters"]
+    parameters = document["paths"]["/v0/oauth-applications/"]["post"]["parameters"]
     assert schema.PARAMETER in parameters

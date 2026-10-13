@@ -35,7 +35,7 @@ TEMPLATE = "mutation_template_{{ cookiecutter.project_slug }}"
 # Any test that requests a database triggers pytest-django's migration step - there is no fixture data
 # here worth seeding beyond that, so the cheapest one that does is the whole seed. Revisit if a future
 # app adds fixtures expensive enough to be worth baking into the template too.
-SEED_TESTS = ["apps/users/tests/test_permissions.py::test_the_migrated_database_has_no_permissions_at_all"]
+SEED_TESTS = ["apps/users/tests/test_permissions.py::test_the_migrated_database_has_only_the_declared_permissions"]
 
 # The parts of a schema a mutation verdict could plausibly depend on. Compared as sorted rows, so the
 # comparison is order-independent without having to trust either database's row order.

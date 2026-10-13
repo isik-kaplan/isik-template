@@ -34,6 +34,13 @@ accepted, and a cookie disclosure stands in for a banner, since nothing the app 
 by naming each file to write, and the generated `SETUP.md` covers that and every other first step, including an
 optional draft from the AGPL-licensed app-privacy-policy-generator that never enters the generated repository.
 
+Permissions are declared in code, as `where:action:what` names synced into `auth_permission` on every migrate, and
+granted by the one rule that you may hand on only what you hold yourself; staff run the people list at
+`/staff/people`. The project can also be an OAuth 2.0 / OpenID Connect provider for other apps
+(django-oauth-toolkit), switched by `<PREFIX>__OAUTH_PROVIDER__MODE`: `off`, `approval` (anybody signed in registers
+an app and a superuser approves it) or `auto`. An approved app signs people in with their consent, and can act for
+them on the API with the permissions they let it have - never more than they hold themselves.
+
 ## Usage
 
 ```
