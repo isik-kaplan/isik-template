@@ -167,15 +167,20 @@ jobs:
       # Restore and save are separate on purpose. The combined `actions/cache` writes nothing when
       # the job fails, and a mutation run that goes red is exactly the one whose progress is most
       # worth keeping - so saving below runs with `if: always()`.
-      # This commit's own cache only, never a fallback to an earlier commit's: phase two's verdicts
-      # are stored by mutant name, which a later commit keeps, so a kill an earlier commit's tests
-      # earned would be reused after those tests changed. An earlier tree also keeps every file
-      # deleted since. Phase one reruns every mutant either way, so the fallback saved nothing.
+      # Falling back to an earlier commit's cache is what the cache is for, and is safe only because
+      # of the two mutation_cache steps below: mutmut never notices a test edited in place, so
+      # without them a kill an earlier commit's tests earned would outlive those tests.
       - name: Restore the mutation cache
         uses: actions/cache/restore@v4
         with:
           path: {{ cookiecutter.project_slug }}/mutants
           key: {{ '${{' }} env.MUTMUT_CACHE_KEY {{ '}}' }}-{{ '${{' }} github.sha {{ '}}' }}
+          restore-keys: {{ '${{' }} env.MUTMUT_CACHE_KEY {{ '}}' }}-
+
+      # Before the tree is built, because mutmut never refreshes a copy it already has: a renamed or
+      # deleted file would keep its old copy and still be collected from inside the tree.
+      - name: Drop copies whose source is gone
+        run: docker compose run --rm --no-deps backend python -m scripts.mutation_cache prune
 
       # Migrations are most of a mutant's cost and every mutant pays it; cloning a database this
       # builds once is a fraction of a second by comparison. `check` is not ceremony: a template that
@@ -204,6 +209,13 @@ jobs:
             -e MUTMUT_DB_SUFFIX=cleanpass -e MUTMUT_DB_TEMPLATE={{ '${{' }} env.MUTMUT_DB_TEMPLATE {{ '}}' }} \
             -e PY_IGNORE_IMPORTMISMATCH=1 backend python -m pytest --no-cov
 
+      # After the tree is built, because building it is when mutmut re-keys each verdict to the
+      # source it now has - read earlier, the queue would see verdicts for code that has since
+      # changed. Clears every verdict a changed test, conftest or helper could now decide
+      # differently, and drops those tests from the map so mutmut traces them again.
+      - name: Forget what a changed test decided
+        run: docker compose run --rm --no-deps backend python -m scripts.mutation_cache invalidate
+
       # One child, always: parallel children would share one test database and fail over each other,
       # which reads as a kill. Named rather than bare so the registries' mutants are
       # skipped - each costs its whole traced set to prove what the file already says; the re-check
@@ -214,7 +226,7 @@ jobs:
             > {{ cookiecutter.project_slug }}/queue.txt
           wc -l < {{ cookiecutter.project_slug }}/queue.txt
           if [ ! -s {{ cookiecutter.project_slug }}/queue.txt ]; then
-            echo "every mutant is exempt; phase one has nothing to run"; exit 0
+            echo "every mutant is exempt or already answered; phase one has nothing to run"; exit 0
           fi
           docker compose run --rm -e MUTMUT_DB_SUFFIX=phaseone \
             -e MUTMUT_DB_TEMPLATE={{ '${{' }} env.MUTMUT_DB_TEMPLATE {{ '}}' }} backend \

@@ -388,6 +388,14 @@ entry names a test in `apps/common/tests/test_library_assumptions.py` with `veri
 test re-checks it on every push instead of a full re-run. `mutation-exemptions.toml` is only for
 whole functions mutmut's tracing cannot attribute to any test.
 
+CI restores the latest `mutants/` cache, even one from an earlier commit, and phase one runs only the
+mutants that have no answer yet. That is safe only because of `scripts/mutation_cache.py`. mutmut
+re-runs a mutant when its function changes, but never when the test that killed it changes. So
+`prune` (before the tree is built) deletes copies whose source is gone. `invalidate` (after) clears
+every kill whose killing test changed, every non-kill, and phase two's report, and makes mutmut trace
+the changed tests again. A tree you keep between local runs needs the same two steps, or a kill can
+outlive the test that earned it.
+
 To diagnose survivors locally:
 
 ```

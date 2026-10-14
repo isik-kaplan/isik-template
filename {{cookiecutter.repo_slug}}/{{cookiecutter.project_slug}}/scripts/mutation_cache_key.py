@@ -9,6 +9,12 @@ what goes in is deliberate:
   * `confirm_survivors.py` and `conftest.py`, which decide and record verdicts without being source
     files mutmut watches - a bug fixed in either otherwise leaves its false kills cached and terminal
   * `mutation_naming.py`, which names every mutant a verdict is stored under
+  * `mutation_cache.py` and `mutation_test_order.py`, which decide which stored verdicts outlive a
+    restore and record the test each kill is pinned to
+
+Deliberately not the commit. A restore from an earlier commit is what makes the cache worth keeping,
+and `mutation_cache.py` is what makes it safe: it clears every verdict a changed test or helper could
+now decide differently before the queue reads them.
 
     python scripts/mutation_cache_key.py
 """
@@ -31,6 +37,11 @@ VERDICT_TOOLING = [
     ROOT / "conftest.py",
     # Every verdict is stored under a mutant's name, and this is what decides the names.
     ROOT / "scripts" / "mutation_naming.py",
+    # Decides which stored verdicts survive a restore at all. A bug here keeps exactly the false
+    # kills it exists to clear, and nothing downstream can tell.
+    ROOT / "scripts" / "mutation_cache.py",
+    # Records the test each kill is pinned to, which is what the cache asks about a changed test.
+    ROOT / "scripts" / "mutation_test_order.py",
 ]
 
 

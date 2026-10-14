@@ -23,6 +23,23 @@ def test_an_equivalent_excuses_its_own_mutant_and_no_other_in_the_function():
     assert OTHER_MUTANT_SAME_FUNCTION not in skipped
 
 
+def test_a_mutant_the_tree_already_answered_is_not_run_again():
+    """mutmut's own reuse switches off as soon as any name is passed, so phase one, which always
+    names its mutants, has to leave the answered ones out itself - or a restored cache saves nothing."""
+    answers = {ORDINARY: 1, OTHER_MUTANT_SAME_FUNCTION: None, EQUIVALENT: 0}
+
+    assert mutation_queue.to_run(IN_TREE, EQUIVALENTS, EXEMPTIONS, answers) == {OTHER_MUTANT_SAME_FUNCTION}
+
+
+def test_a_survivor_is_an_answer_too():
+    """Run again it survives again; phase two is what settles it, and it reads the stored verdict."""
+    assert mutation_queue.to_run({ORDINARY}, {}, {}, {ORDINARY: 0}) == set()
+
+
+def test_with_nothing_answered_every_unregistered_mutant_runs():
+    assert mutation_queue.to_run(IN_TREE, EQUIVALENTS, EXEMPTIONS, {}) == {OTHER_MUTANT_SAME_FUNCTION, ORDINARY}
+
+
 def test_a_verified_entry_is_rechecked_by_its_test_rather_than_a_rerun():
     assert mutation_queue.rechecked(IN_TREE, EQUIVALENTS, EXEMPTIONS) == {EQUIVALENT, UNTRACEABLE}
 

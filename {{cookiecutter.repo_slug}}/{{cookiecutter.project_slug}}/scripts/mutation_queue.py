@@ -7,7 +7,7 @@ test set:
   * `mutation-exemptions.toml` - whole functions mutmut's tracing cannot attribute to any test, keyed
     by function, so the entry covers every mutant of it.
 
-    python -m scripts.mutation_queue --run     # names phase one should run
+    python -m scripts.mutation_queue --run     # names phase one should run, less what is answered
     python -m scripts.mutation_queue --exempt  # names to re-check afterwards
 
 An equivalent entry carrying `verified_by` is left out of `--exempt`: the test it names asserts the
@@ -25,6 +25,7 @@ from pathlib import Path
 
 import tomllib
 
+from scripts.mutation_cache import verdicts
 from scripts.mutation_naming import apply as name_mutants_by_change
 from scripts.mutation_naming import module_of
 from scripts.mutmut_decorators import install as install_mutmut_decorators
@@ -51,6 +52,20 @@ def function_of(name):
 def skipped(in_tree, equivalents, exemptions):
     """Every mutant of `in_tree` either registry names."""
     return {name for name in in_tree if name in equivalents or function_of(name) in exemptions}
+
+
+def to_run(in_tree, equivalents, exemptions, answers):
+    """What phase one has to run: every mutant neither registry names and the tree has no answer for.
+
+    Answered ones are left out here because mutmut cannot leave them out itself. Its own skip is `if
+    not mutant_names`, a check on whether any name was passed at all, so naming one mutant turns reuse
+    off for every mutant in the run - and naming them is how the registries' mutants are left out.
+    `scripts/mutation_cache.py` has already cleared every answer a changed test could overturn, so
+    what remains here is what a restored cache can vouch for.
+    """
+    answered = {name for name, code in answers.items() if code is not None}
+    # Every entry, whatever re-checks it: running a registered mutant settles nothing.
+    return in_tree - skipped(in_tree, equivalents, exemptions) - answered
 
 
 def rechecked(in_tree, equivalents, exemptions):
@@ -96,11 +111,13 @@ def main(argv):
     in_tree = _in_tree()
     equivalents, exemptions = _registry(EQUIVALENTS), _registry(EXEMPTIONS)
     if argv[0] == "--run":
-        # Every entry, whatever re-checks it: running a registered mutant settles nothing.
-        wanted = sorted(in_tree - skipped(in_tree, equivalents, exemptions))
+        wanted = sorted(to_run(in_tree, equivalents, exemptions, verdicts()))
     else:
         wanted = sorted(rechecked(in_tree, equivalents, exemptions))
-    print("\n".join(wanted))
+    # Nothing at all for an empty queue rather than a bare newline: the workflow tests the file for
+    # emptiness, and a newline passes that test as one nameless mutant.
+    if wanted:
+        print("\n".join(wanted))
     return 0
 
 
