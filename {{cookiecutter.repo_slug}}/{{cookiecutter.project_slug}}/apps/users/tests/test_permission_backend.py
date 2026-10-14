@@ -209,7 +209,7 @@ def test_who_sees_every_account(user, staff, granted, token, sees):
 
 
 @pytest.mark.django_db
-def test_a_superuser_acting_through_an_application_holds_only_what_it_was_let_have():
+def test_a_superuser_acting_through_a_token_holds_only_what_it_was_let_have():
     superuser = User.objects.create_superuser(username="boss", email="boss@example.test", password="x")
     superuser.token_scopes = set()
 
@@ -218,7 +218,7 @@ def test_a_superuser_acting_through_an_application_holds_only_what_it_was_let_ha
 
 
 @pytest.mark.django_db
-def test_an_inactive_person_acting_through_an_application_holds_nothing(user):
+def test_an_inactive_person_acting_through_a_token_holds_nothing(user):
     user.user_permissions.add(_row(MANAGE))
     user = _fresh(user)
     user.is_active = False
@@ -226,3 +226,37 @@ def test_an_inactive_person_acting_through_an_application_holds_nothing(user):
 
     assert not user.has_perm(MANAGE)
     assert not user.has_module_perms("users")
+
+
+@pytest.mark.django_db
+def test_a_token_holding_a_permission_counts_toward_its_app(user):
+    user.user_permissions.add(_row(MANAGE))
+    user = _fresh(user)
+    user.token_scopes = {MANAGE}
+
+    assert user.has_perm(MANAGE)
+    assert user.has_module_perms("users")
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("token", [None, {MANAGE}])
+def test_nothing_is_held_about_one_object_in_particular(user, token):
+    """Permissions here are global; asked about an object, the answer is no - in a session or a token."""
+    user.user_permissions.add(_row(MANAGE))
+    user = _fresh(user)
+    if token is not None:
+        user.token_scopes = token
+
+    assert not user.has_perm(MANAGE, obj=user)
+
+
+@pytest.mark.django_db
+def test_what_somebody_holds_is_read_once_per_object(user):
+    user.user_permissions.add(_row(MANAGE))
+    user = _fresh(user)
+    assert user.has_perm(MANAGE)
+
+    user.user_permissions.clear()
+
+    assert user.has_perm(MANAGE)
+    assert not _fresh(user).has_perm(MANAGE)

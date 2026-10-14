@@ -164,4 +164,45 @@ export class Api {
   async revokeAuthorizedApplication(id: number) {
     return this.client.DELETE('/v0/authorized-applications/{id}/', { params: { path: { id } } })
   }
+
+  // A device - a command line - waiting for whoever enters the code it shows to let it in.
+  async deviceAuthorization(userCode: string) {
+    return this.client.GET('/v0/device-authorizations/{user_code}/', { params: { path: { user_code: userCode } } })
+  }
+
+  async approveDevice(userCode: string, idempotencyKey: string) {
+    return this.client.POST('/v0/device-authorizations/{user_code}/approve/', {
+      params: { path: { user_code: userCode }, header: { 'Idempotency-Key': idempotencyKey } },
+    })
+  }
+
+  async denyDevice(userCode: string, idempotencyKey: string) {
+    return this.client.POST('/v0/device-authorizations/{user_code}/deny/', {
+      params: { path: { user_code: userCode }, header: { 'Idempotency-Key': idempotencyKey } },
+    })
+  }
+
+  // The tokens the signed-in person made for their own scripts.
+  async personalAccessTokens() {
+    return this.client.GET('/v0/personal-access-tokens/')
+  }
+
+  async makePersonalAccessToken(
+    data: paths['/v0/personal-access-tokens/']['post']['requestBody']['content']['application/json'],
+    idempotencyKey: string
+  ) {
+    return this.client.POST('/v0/personal-access-tokens/', {
+      body: data,
+      params: { header: { 'Idempotency-Key': idempotencyKey } },
+    })
+  }
+
+  async deletePersonalAccessToken(id: string) {
+    return this.client.DELETE('/v0/personal-access-tokens/{id}/', { params: { path: { id } } })
+  }
+
+  // What the signed-in person may give a token: the delegatable permissions they hold.
+  async personalAccessTokenScopes() {
+    return this.client.GET('/v0/personal-access-tokens/scopes/')
+  }
 }

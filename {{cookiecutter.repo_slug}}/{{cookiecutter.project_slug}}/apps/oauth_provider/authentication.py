@@ -1,6 +1,6 @@
 """An application calling the API with a token somebody let it have.
 
-Shut by default: a view takes these only for the actions it names in `application_token_actions`, so an
+Shut by default: a view takes these only for the actions it names in `token_actions`, so an
 endpoint added later is closed to applications until somebody decides otherwise. And what the person
 behind the token may do is narrowed to the scopes they let the application have - see PermissionsBackend.
 """
@@ -11,6 +11,7 @@ from oauth2_provider.contrib.rest_framework import OAuth2Authentication
 from rest_framework.authentication import get_authorization_header
 from rest_framework.exceptions import PermissionDenied
 
+from apps.common.api.token_actions import takes_a_token
 from apps.users.permissions import VOCABULARY
 
 
@@ -27,7 +28,7 @@ class ApplicationTokenAuthentication(OAuth2Authentication):
         user, access_token = authenticated
 
         view = request.parser_context.get("view")
-        if getattr(view, "action", None) not in getattr(view, "application_token_actions", ()):
+        if not takes_a_token(view):
             raise PermissionDenied(_("Applications cannot do this on anybody's behalf."))
 
         # Only what the application is still approved for: a superuser narrowing it reaches tokens already

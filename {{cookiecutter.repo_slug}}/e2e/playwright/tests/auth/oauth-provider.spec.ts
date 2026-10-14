@@ -1,29 +1,13 @@
-import { type Browser, type Locator, type Page, expect, test } from '@playwright/test'
+import { type Page, expect, test } from '@playwright/test'
 
 import { createHash, randomBytes } from 'node:crypto'
 
-import { login, proveWithPassword, signUpAndVerify } from '../helpers'
+import { SUPERUSER, SUPERUSER_PASSWORD, act, asTheSuperuser, login, signUpAndVerify } from '../helpers'
 
 // Never served by anything: the browser's arrival there, code in hand, is answered by the spec itself.
-const REDIRECT_URI = 'https://client.{{ cookiecutter.domain }}/callback'
+const REDIRECT_URI = 'https://client.testproject.test/callback'
 const PASSWORD = 'correct-horse-battery-staple'
-// The seeded superuser (SETUP__SUPERUSER__*, see docker-compose.e2e.yml), who approves applications here.
-const SUPERUSER = process.env.{{ cookiecutter.config_prefix }}__SETUP__SUPERUSER__USERNAME ?? ''
-const SUPERUSER_PASSWORD = process.env.{{ cookiecutter.config_prefix }}__SETUP__SUPERUSER__PASSWORD ?? ''
 const MANAGE_PEOPLE = "See everybody's account, and activate or deactivate them"
-
-/** Does an act, proving it is them first if the gate asks - a sign-in moments ago can count as the proof. */
-async function act(page: Page, password: string, perform: () => Promise<void>, done: Locator) {
-  await perform()
-  await expect
-    .poll(async () => page.url().includes('/auth/prove') || (await done.isVisible()))
-    .toBe(true)
-  if (page.url().includes('/auth/prove')) {
-    await proveWithPassword(page, password)
-    await perform()
-  }
-  await expect(done).toBeVisible()
-}
 
 async function registerApplication(page: Page, name: string): Promise<{ clientId: string; clientSecret: string }> {
   await page.goto('/applications/new')
@@ -43,13 +27,6 @@ async function registerApplication(page: Page, name: string): Promise<{ clientId
   await page.getByRole('link', { name: 'I have copied it, go to the app' }).click()
   await expect(page.getByText('Waiting for approval')).toBeVisible()
   return { clientId: values[0], clientSecret: values[1] }
-}
-
-async function asTheSuperuser(browser: Browser): Promise<Page> {
-  const page = await (await browser.newContext({ ignoreHTTPSErrors: true })).newPage()
-  await login(page, SUPERUSER, SUPERUSER_PASSWORD)
-  await expect(page.getByText(`Signed in as ${SUPERUSER}.`)).toBeVisible()
-  return page
 }
 
 // The whole of "Sign in with" this project, from every end: somebody registers an application, a

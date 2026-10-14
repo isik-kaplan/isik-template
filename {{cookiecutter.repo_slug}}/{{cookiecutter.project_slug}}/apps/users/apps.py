@@ -35,3 +35,5 @@ class UsersConfig(AppConfig):
         post_migrate.connect(sync_permissions, sender=self, dispatch_uid=SYNC_PERMISSIONS_UID)
         # Its @receiver decorators connect on import, and nothing else imports it.
         import_module("apps.users.receivers")
+        # drf-spectacular finds an extension by its class having been defined, and nothing else imports it.
+        import_module("apps.users.schema")

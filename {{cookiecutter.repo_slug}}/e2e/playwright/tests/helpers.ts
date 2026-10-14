@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test'
+import type { Browser, Locator, Page } from '@playwright/test'
 import { expect } from '@playwright/test'
 
 import { extractLinkFromEmail } from './mailpit'
@@ -51,4 +51,29 @@ export async function signInAtAuthentik(page: Page, username: string) {
   await page.getByRole('button', { name: /log in/i }).click()
   await page.getByLabel('Password', { exact: true }).fill('correct-horse-battery-staple')
   await page.getByRole('button', { name: /log in|continue/i }).click()
+}
+
+// The seeded superuser (SETUP__SUPERUSER__*, see docker-compose.e2e.yml), who approves applications here.
+export const SUPERUSER = process.env.{{ cookiecutter.config_prefix }}__SETUP__SUPERUSER__USERNAME ?? ''
+export const SUPERUSER_PASSWORD = process.env.{{ cookiecutter.config_prefix }}__SETUP__SUPERUSER__PASSWORD ?? ''
+
+/** Does an act, proving it is them first if the gate asks - a sign-in moments ago can count as the proof. */
+export async function act(page: Page, password: string, perform: () => Promise<void>, done: Locator) {
+  await perform()
+  await expect
+    .poll(async () => page.url().includes('/auth/prove') || (await done.isVisible()))
+    .toBe(true)
+  if (page.url().includes('/auth/prove')) {
+    await proveWithPassword(page, password)
+    await perform()
+  }
+  await expect(done).toBeVisible()
+}
+
+/** A browser of the seeded superuser's own, signed in. */
+export async function asTheSuperuser(browser: Browser): Promise<Page> {
+  const page = await (await browser.newContext({ ignoreHTTPSErrors: true })).newPage()
+  await login(page, SUPERUSER, SUPERUSER_PASSWORD)
+  await expect(page.getByText(`Signed in as ${SUPERUSER}.`)).toBeVisible()
+  return page
 }

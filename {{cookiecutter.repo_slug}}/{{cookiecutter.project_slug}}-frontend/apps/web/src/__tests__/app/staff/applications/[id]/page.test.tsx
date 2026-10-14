@@ -52,6 +52,7 @@ const ACME = {
   client_id: 'acme-client',
   approval: 'approved',
   owner: 'bob',
+  authorization_grant_type: 'authorization-code',
   redirect_uris: ['https://a.test/cb', 'https://a.test/other'],
   requested_scopes: ['users:grant:rights', 'users:manage:user'],
   approved_scopes: [],
@@ -83,10 +84,24 @@ describe('ApplicationReviewPage', () => {
     const value = (label: string) => screen.getByText(label).nextElementSibling?.textContent
     expect(value('Registered by')).toBe('bob')
     expect(value('Client ID')).toBe('acme-client')
+    expect(value('How it signs people in')).toBe('Signs people in through their browser')
     expect(value('Redirect URIs, one per line')).toBe('https://a.test/cb · https://a.test/other')
     expect(value('What it asks to do for the people who sign in')).toBe('Grant · Manage people')
     expect(value('Approved to ask for')).toBe('Signing people in, nothing more')
     expect(screen.getByText('answer 7 with ["users:grant:rights","users:manage:user"]')).toBeTruthy()
+  })
+
+  it('shows no redirect URIs for a device, which is sent back nowhere', async () => {
+    oauthApplicationReview.mockResolvedValue({
+      data: { ...ACME, authorization_grant_type: 'urn:ietf:params:oauth:grant-type:device_code', redirect_uris: [] },
+    })
+
+    render(await page())
+
+    expect(screen.getByText('How it signs people in').nextElementSibling?.textContent).toBe(
+      'Shows a code to enter here, like a command line'
+    )
+    expect(screen.queryByText('Redirect URIs, one per line')).toBeNull()
   })
 
   it('answers with no scopes to offer when they cannot be read', async () => {

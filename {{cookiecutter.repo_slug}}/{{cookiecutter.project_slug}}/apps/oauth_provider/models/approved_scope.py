@@ -18,5 +18,11 @@ class ApprovedScope(Application.approved_scopes.through):
                 operation=pgtrigger.Insert | pgtrigger.Update,
                 declare=scopes.WITHIN_REQUESTED_DECLARE,
                 build=scopes.approved_within_requested,
-            )
+            ),
+            # Widening is a superuser's decision, made through apps/oauth_provider/services.py like the
+            # approval itself. Taking one away is anybody's: it only ever narrows.
+            pgtrigger.Protect(
+                name="approved_only_through_its_services",
+                operation=pgtrigger.Insert | pgtrigger.Update,
+            ),
         ]

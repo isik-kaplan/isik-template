@@ -58,6 +58,7 @@ const ACME = {
   description: 'Notes',
   client_id: 'acme-client',
   client_type: 'confidential',
+  authorization_grant_type: 'authorization-code',
   approval: 'approved',
   requested_scopes: ['users:grant:rights', 'users:manage:user'],
   approved_scopes: ['users:manage:user'],
@@ -96,6 +97,9 @@ describe('ApplicationPage', () => {
 
     expect(screen.getByText('Approved')).toBeTruthy()
     expect(screen.getByText('Client ID').nextElementSibling?.textContent).toBe('acme-client')
+    expect(screen.getByText('How it signs people in').nextElementSibling?.textContent).toBe(
+      'Signs people in through their browser'
+    )
     expect(screen.getByText('Approved to ask for').nextElementSibling?.textContent).toBe('Manage people')
     expect(screen.getByText('Waiting for a superuser before it can ask for: Grant')).toBeTruthy()
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeTruthy()
@@ -126,6 +130,17 @@ describe('ApplicationPage', () => {
     expect(screen.getByText('Signing people in, nothing more')).toBeTruthy()
     expect(screen.queryByText(/Waiting for a superuser/)).toBeNull()
     expect(screen.getByText('edit with []')).toBeTruthy()
+  })
+
+  it.each([
+    ['urn:ietf:params:oauth:grant-type:device_code', 'Shows a code to enter here, like a command line'],
+    [undefined, 'Signs people in through their browser'],
+  ])('says how one signing people in with %s does it', async (grant, said) => {
+    oauthApplication.mockResolvedValue({ data: { ...ACME, authorization_grant_type: grant } })
+
+    render(await page())
+
+    expect(screen.getByText('How it signs people in').nextElementSibling?.textContent).toBe(said)
   })
 
   it('has no secret to rotate for a public application', async () => {

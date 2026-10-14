@@ -5,7 +5,7 @@ from django.urls import reverse
 from django.utils import timezone
 from oauth2_provider.models import get_access_token_model, get_application_model
 
-from apps.oauth_provider.tests.conftest import REDIRECT_URI, permission, set_approval
+from apps.oauth_provider.tests.conftest import REDIRECT_URI, make_application, permission, set_approval
 from apps.users.models.user import User
 from apps.users.permissions import Permission
 
@@ -41,7 +41,7 @@ def reviewer(superuser, headless, provider):
 
 @pytest.fixture
 def pending(db, alice):
-    application = Application.objects.create(
+    application = make_application(
         name="Bob's Planner",
         user=User.objects.create_user(username="bob"),
         client_type=Application.CLIENT_PUBLIC,
@@ -75,7 +75,7 @@ def test_nobody_reviews_while_the_provider_is_off(client, superuser, settings):
 def test_every_application_is_listed_waiting_ones_first_then_oldest_first(
     client, superuser, provider, application, pending
 ):
-    newest = Application.objects.create(name="Newest", user=superuser, redirect_uris=REDIRECT_URI)
+    newest = make_application(name="Newest", user=superuser)
     set_approval(newest, "approved")
 
     rows = client.get(LIST).json()["results"]
@@ -87,6 +87,7 @@ def test_every_application_is_listed_waiting_ones_first_then_oldest_first(
         "description": "",
         "client_id": pending.client_id,
         "client_type": "public",
+        "authorization_grant_type": "authorization-code",
         "redirect_uris": [REDIRECT_URI],
         "approval": "pending",
         "owner": "bob",
@@ -111,6 +112,15 @@ def test_approving_lets_it_ask_for_what_was_approved(client, reviewer, pending):
     assert response.status_code == 200
     assert response.json()["approval"] == "approved"
     assert response.json()["approved_scopes"] == [MANAGE]
+
+
+@pytest.mark.django_db
+def test_approving_for_everything_it_asked_for_is_an_answer_too(client, reviewer, pending):
+    response = client.post(
+        _action(pending, "approve"), {"approved_scopes": [GRANT, MANAGE]}, content_type="application/json"
+    )
+
+    assert response.json()["approved_scopes"] == [GRANT, MANAGE]
 
 
 @pytest.mark.django_db
@@ -189,6 +199,7 @@ def test_a_superuser_reviews_here_and_does_not_author(client, reviewer):
     response = client.post(LIST, {"name": "Mine"}, content_type="application/json")
 
     assert response.status_code == 405
+    assert response.json()["detail"] == 'Method "POST" not allowed.'
     assert not Application.objects.exists()
 
 

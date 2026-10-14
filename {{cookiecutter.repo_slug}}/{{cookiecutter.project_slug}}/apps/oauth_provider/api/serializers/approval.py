@@ -1,7 +1,7 @@
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
-from apps.oauth_provider.api.fields.scope import ScopeField
+from apps.users.api.fields.scope import ScopeField
 
 
 class ApprovalSerializer(serializers.Serializer):

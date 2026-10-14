@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from apps.common.api.serializers import BaseModelSerializer
 from apps.oauth_provider.api.fields.redirect_uris import RedirectURIsField
-from apps.oauth_provider.api.fields.scope import ScopeField
+from apps.users.api.fields.scope import ScopeField
 
 
 Application = get_application_model()
@@ -31,6 +31,7 @@ class ReviewedApplicationSerializer(BaseModelSerializer):
             "description",
             "client_id",
             "client_type",
+            "authorization_grant_type",
             "redirect_uris",
             "approval",
             "owner",

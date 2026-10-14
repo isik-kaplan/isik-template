@@ -11,7 +11,8 @@ export function scopeLabel(scope: string, t: Translate, described: Record<string
   return described[scope] ?? scope
 }
 
-/** The backend's list of scopes an application may ask for, as `scopeLabel` takes it. */
-export function describedScopes(scopes: { name: string; label: string }[]): Record<string, string> {
-  return Object.fromEntries(scopes.map((scope) => [scope.name, scope.label]))
+/** The backend's list of scopes an application may ask for, as `scopeLabel` takes it - none, when it could
+ *  not be read. */
+export function describedScopes(scopes: { name: string; label: string }[] | undefined): Record<string, string> {
+  return Object.fromEntries((scopes ?? []).map((scope) => [scope.name, scope.label]))
 }

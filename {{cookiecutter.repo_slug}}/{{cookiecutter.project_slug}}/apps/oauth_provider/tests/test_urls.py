@@ -3,7 +3,15 @@ import pytest
 from apps.oauth_provider.tests.conftest import auth_host, o
 
 
-ENDPOINTS = ["authorize", "token", "revoke-token", "oidc-connect-discovery-info", "jwks-info", "user-info"]
+ENDPOINTS = [
+    "authorize",
+    "device-authorization",
+    "token",
+    "revoke-token",
+    "oidc-connect-discovery-info",
+    "jwks-info",
+    "user-info",
+]
 
 
 @pytest.mark.django_db
@@ -45,7 +53,7 @@ def test_a_served_route_hands_its_view_everything_the_url_captured(settings):
 
 @pytest.mark.parametrize(
     "name",
-    ["device-authorization", "dcr-register", "introspect", "register", "list", "authorized-token-list"],
+    ["device", "device-confirm", "dcr-register", "introspect", "register", "list", "authorized-token-list"],
 )
 def test_the_flows_this_provider_does_not_offer_are_not_routed(name):
     from django.urls import NoReverseMatch

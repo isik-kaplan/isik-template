@@ -9,6 +9,7 @@ import {
   MailIcon,
   MonitorSmartphoneIcon,
   ShieldCheckIcon,
+  TerminalIcon,
   UserIcon,
 } from 'lucide-react'
 
@@ -24,6 +25,7 @@ const TABS = [
   { segment: 'connections', icon: Link2Icon },
   { segment: 'sessions', icon: MonitorSmartphoneIcon },
   { segment: 'two-factor', icon: ShieldCheckIcon },
+  { segment: 'tokens', icon: TerminalIcon },
   { segment: 'applications', icon: AppWindowIcon },
 ] as const
 
@@ -44,6 +46,7 @@ export function ProfileTabsList() {
     connections: t('auth:profileConnectionsTab'),
     sessions: t('auth:profileSessionsTab'),
     'two-factor': t('auth:profileTwoFactorTab'),
+    tokens: t('auth:profileTokensTab'),
     applications: t('auth:profileApplicationsTab'),
   }
 

@@ -5,7 +5,7 @@ from django.urls import reverse
 from django.utils import timezone
 from oauth2_provider.models import get_access_token_model, get_application_model, get_refresh_token_model
 
-from apps.oauth_provider.tests.conftest import REDIRECT_URI, auth_host, o, tokens_for
+from apps.oauth_provider.tests.conftest import auth_host, make_application, o, tokens_for
 from apps.users.models.user import User
 
 
@@ -41,7 +41,7 @@ def _refresh(user, application, access=None):
 
 @pytest.fixture
 def another(db, alice):
-    return Application.objects.create(name="beta Sync", user=alice, redirect_uris=REDIRECT_URI, client_type="public")
+    return make_application(name="beta Sync", user=alice, client_type="public")
 
 
 @pytest.mark.django_db
@@ -70,7 +70,7 @@ def test_each_application_is_one_row_with_every_scope_it_holds_and_when_it_was_f
 @pytest.mark.django_db
 def test_applications_are_listed_by_name_whatever_its_case(client, signed_in, alice):
     for name in ["aZtool", "a_tool", "Beta"]:
-        _access(signed_in, Application.objects.create(name=name, user=alice, redirect_uris=REDIRECT_URI), "openid")
+        _access(signed_in, make_application(name=name, user=alice), "openid")
 
     assert [row["name"] for row in client.get(LIST).json()] == ["a_tool", "aZtool", "Beta"]
 
@@ -121,7 +121,7 @@ def test_shutting_an_application_out_revokes_every_token_it_holds(client, signed
     bob = User.objects.create_user(username="bob")
     bobs = _access(bob, application, "openid")
     bobs_refresh = _refresh(bob, application)
-    other = Application.objects.create(name="Other", user=signed_in, redirect_uris=REDIRECT_URI)
+    other = make_application(name="Other", user=signed_in)
     others = _access(signed_in, other, "openid")
     others_refresh = _refresh(signed_in, other)
     headless.prove()
@@ -176,3 +176,33 @@ def test_a_revoked_application_can_no_longer_read_the_account(client, signed_in,
         HTTP_HOST=auth_host(),
     )
     assert refreshed.status_code == 400
+
+
+@pytest.mark.django_db
+def test_an_application_holding_only_an_access_token_is_shut_out_too(client, signed_in, application, headless):
+    _access(signed_in, application, "openid")
+    headless.prove()
+
+    assert client.delete(_detail(application.pk)).status_code == 204
+    assert not AccessToken.objects.exists()
+
+
+@pytest.mark.django_db
+def test_somebody_elses_tokens_for_it_are_nothing_to_shut_out(client, signed_in, application, headless):
+    bob = User.objects.create_user(username="bob")
+    _refresh(bob, application, _access(bob, application, "openid"))
+    headless.prove()
+
+    assert client.delete(_detail(application.pk)).status_code == 404
+    assert AccessToken.objects.count() == 1
+
+
+@pytest.mark.django_db
+def test_tokens_another_application_holds_are_nothing_to_shut_out_here(
+    client, signed_in, application, another, headless
+):
+    _refresh(signed_in, another, _access(signed_in, another, "openid"))
+    headless.prove()
+
+    assert client.delete(_detail(application.pk)).status_code == 404
+    assert AccessToken.objects.count() == 1

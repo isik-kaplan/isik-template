@@ -1668,10 +1668,11 @@
     },
     {
       "mutator": "ArrayDeclaration",
-      "fingerprint": "2b9f6a4a6bdb",
+      "fingerprint": "0fae1c29db66",
       "reason": [
         "equivalent mutant. t's reference only changes with the language, which this form never sees change",
-        "while it is mounted, so this memo recomputes the same schema either way."
+        "while it is mounted, and whether the application is a device is fixed for the life of the form, so",
+        "this memo recomputes the same schema either way."
       ]
     }
   ],
@@ -1734,6 +1735,14 @@
       "reason": [
         "equivalent mutant. t's reference only changes with the language, which this form never sees change",
         "while it is mounted, so this memo recomputes the same schema either way."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "ed0a72c3d09c",
+      "reason": [
+        "equivalent mutant. zod reports a superRefine issue under whatever code it is given, and the form shows",
+        "only its message, under its path - the code is read by nothing."
       ]
     }
   ],
@@ -1798,6 +1807,86 @@
       "reason": [
         "equivalent mutant as far as any test can see: the select's and textarea's classes are only how they",
         "look, matching Input's own, and nothing in jsdom renders a class into anything observable."
+      ]
+    }
+  ],
+  "src/app/device/page.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "8abfebfaf906",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "8abfebfaf906",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
+  "src/components/app-device/DeviceConsent.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
+  "src/components/app-auth/PersonalAccessTokenForm.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "2b9f6a4a6bdb",
+      "reason": [
+        "equivalent mutant. t's reference only changes with the language, which this form never sees change",
+        "while it is mounted, so this memo recomputes the same schema either way."
+      ]
+    }
+  ],
+  "src/components/app-auth/PersonalAccessTokensList.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
       ]
     }
   ]

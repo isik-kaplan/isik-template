@@ -208,3 +208,14 @@ def test_a_token_stops_working_once_the_login_policy_shuts_its_person_out(client
     userinfo = client.get(o("user-info"), HTTP_HOST=auth_host(), HTTP_AUTHORIZATION=f"Bearer {tokens['access_token']}")
 
     assert userinfo.status_code == 401
+
+
+@pytest.mark.django_db
+def test_who_somebody_is_is_read_only_with_a_token_that_was_let_ask(client, provider, application, signed_in):
+    """userinfo asks for openid; a token let have the profile alone is not one it answers."""
+    tokens = tokens_for(client, application, scope="profile")
+
+    userinfo = client.get(o("user-info"), HTTP_HOST=auth_host(), HTTP_AUTHORIZATION=f"Bearer {tokens['access_token']}")
+
+    # DOT words a token short of the scope the same as one that is no token at all.
+    assert userinfo.status_code == 401

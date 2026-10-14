@@ -10,10 +10,10 @@ from apps.common.api.viewsets import BaseModelViewSet
 from apps.idempotency.exemptions import NoReplay
 from apps.oauth_provider.api.permissions.may_register_applications import MayRegisterApplications
 from apps.oauth_provider.api.serializers.application import ApplicationSerializer
-from apps.oauth_provider.api.serializers.delegatable_scope import DelegatableScopeSerializer
 from apps.oauth_provider.api.serializers.rotate_secret import RotateSecretSerializer
 from apps.oauth_provider.api.serializers.rotated_secret import RotatedSecretSerializer
 from apps.oauth_provider.services import disable_application, restore_application, rotate_client_secret
+from apps.users.api.serializers.delegatable_scope import DelegatableScopeSerializer
 from apps.users.permissions import VOCABULARY
 
 
@@ -68,7 +68,7 @@ class ApplicationViewSet(ProvesWhoTheyAre, BaseModelViewSet):
             .exists()
         ):
             return {"detail": DISABLE_FIRST}
-        return super().refuse_before_proving(request)
+        return None
 
     def perform_destroy(self, instance):
         if instance.approval != Application.Approval.DISABLED:

@@ -21,6 +21,7 @@ const ACME: ApiType<'Application'> = {
   description: 'Notes',
   client_id: 'the-client',
   client_type: 'confidential',
+  authorization_grant_type: 'authorization-code',
   redirect_uris: ['https://a.test/cb', 'https://a.test/other'],
   approval: 'approved',
   requested_scopes: ['users:manage:user'],
@@ -98,6 +99,35 @@ describe('EditApplicationForm', () => {
     })
     expect(toast.success).toHaveBeenCalledWith('Saved.')
     expect(refresh).toHaveBeenCalled()
+  })
+
+  it('offers a device no redirect URIs, and sends none for it', async () => {
+    const device: ApiType<'Application'> = {
+      ...ACME,
+      client_type: 'public',
+      authorization_grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+      redirect_uris: [],
+    }
+    const fetchMock = vi.fn(async () => jsonResponse(200, device))
+    globalThis.fetch = fetchMock
+    render(<EditApplicationForm application={device} scopes={SCOPES} />)
+
+    expect(screen.queryByLabelText('Redirect URIs, one per line')).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    const [request] = fetchMock.mock.calls[0] as unknown as [Request]
+    expect(await request.json()).toEqual({
+      name: 'Acme',
+      description: 'Notes',
+      requested_scopes: ['users:manage:user'],
+    })
+  })
+
+  it('reads an application whose redirect URIs were not answered as none', () => {
+    const unanswered = { ...ACME, redirect_uris: undefined }
+    render(<EditApplicationForm application={unanswered} scopes={SCOPES} />)
+
+    expect(uris().value).toBe('')
   })
 
   it('asks for a name and a redirect URI before sending anything', async () => {

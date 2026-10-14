@@ -12,6 +12,7 @@ import { Label } from '@/components/base/label'
 import { useClientTranslation } from '@/i18n/client'
 import { createApi } from '@/lib/apiClients'
 import { apiOrigin } from '@/lib/apiOrigin'
+import { DEVICE_GRANT } from '@/lib/applicationGrant'
 import { redirectUrisFrom } from '@/lib/redirectUris'
 import { useValidatedFormState } from '@/lib/submit'
 
@@ -26,24 +27,28 @@ import { z } from 'zod'
 export function EditApplicationForm({ application, scopes }: { application: ApiType<'Application'>; scopes: Scope[] }) {
   const { t } = useClientTranslation(['auth'])
   const router = useRouter()
+  // A device is sent back nowhere, so it has no redirect URIs to edit - and none are sent.
+  const device = application.authorization_grant_type === DEVICE_GRANT
   const schema = useMemo(
     () =>
       z.object({
         name: z.string().trim().min(1, t('auth:validationApplicationNameRequired')),
         description: z.string().trim(),
-        redirect_uris: z
-          .string()
-          .transform(redirectUrisFrom)
-          .pipe(z.array(z.string()).min(1, t('auth:validationRedirectUrisRequired'))),
+        redirect_uris: device
+          ? z.string().transform((): undefined => undefined)
+          : z
+              .string()
+              .transform(redirectUrisFrom)
+              .pipe(z.array(z.string()).min(1, t('auth:validationRedirectUrisRequired'))),
         requested_scopes: z.array(z.string()),
       }),
-    [t]
+    [t, device]
   )
   const { formState, formErrors, handleFormStateEvent, handleFormStateValue, isSubmitting, submit } =
     useValidatedFormState(schema, {
       name: application.name,
       description: application.description ?? '',
-      redirect_uris: application.redirect_uris.join('\n'),
+      redirect_uris: (application.redirect_uris ?? []).join('\n'),
       requested_scopes: application.requested_scopes ?? [],
     })
 
@@ -80,19 +85,21 @@ export function EditApplicationForm({ application, scopes }: { application: ApiT
           onChange={handleFormStateEvent('description')}
         />
       </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="application_redirect_uris">{t('auth:registerApplicationRedirectUrisLabel')}</Label>
-        <textarea
-          id="application_redirect_uris"
-          name="redirect_uris"
-          rows={2}
-          className={FIELD_CLASS}
-          aria-invalid={formErrors?.redirect_uris ? true : undefined}
-          value={formState.redirect_uris}
-          onChange={handleFormStateEvent('redirect_uris')}
-        />
-        {formErrors?.redirect_uris && <p className="text-sm text-destructive">{formErrors.redirect_uris[0]}</p>}
-      </div>
+      {!device && (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="application_redirect_uris">{t('auth:registerApplicationRedirectUrisLabel')}</Label>
+          <textarea
+            id="application_redirect_uris"
+            name="redirect_uris"
+            rows={2}
+            className={FIELD_CLASS}
+            aria-invalid={formErrors?.redirect_uris ? true : undefined}
+            value={formState.redirect_uris}
+            onChange={handleFormStateEvent('redirect_uris')}
+          />
+          {formErrors?.redirect_uris && <p className="text-sm text-destructive">{formErrors.redirect_uris[0]}</p>}
+        </div>
+      )}
       <ScopeChecklist
         legend={t('auth:applicationRequestedScopesLabel')}
         scopes={scopes}

@@ -5,15 +5,16 @@ from django.http import Http404
 from django.urls import URLPattern, path
 from oauth2_provider import urls as oauth2_provider_urls
 
-from apps.oauth_provider.views import AuthorizationView
+from apps.oauth_provider.views.authorization import AuthorizationView
+from apps.oauth_provider.views.device_authorization import DeviceAuthorizationView
 
 
 app_name = "oauth2_provider"
 
 # What this provider serves of DOT's, named rather than filtered: everything else is a flow it does not
-# offer (device authorization, dynamic client registration - which lets anybody register a client), a
-# page the project replaces (DOT's application and token pages are unstyled templates, and its token
-# delete left the refresh token alive) or introspection, which no resource server here needs.
+# offer (dynamic client registration, which lets anybody register a client), a page the project replaces
+# (DOT's application, token and device pages are unstyled templates, and its token delete left the
+# refresh token alive) or introspection, which no resource server here needs.
 SERVED = {
     "token",
     "revoke-token",
@@ -44,5 +45,10 @@ def _served(pattern):
 
 urlpatterns = [
     path("authorize/", served_while_on(AuthorizationView.as_view()), name="authorize"),
+    path(
+        "device-authorization/",
+        served_while_on(DeviceAuthorizationView.as_view()),
+        name="device-authorization",
+    ),
     *[_served(pattern) for pattern in oauth2_provider_urls.urlpatterns if pattern.name in SERVED],
 ]

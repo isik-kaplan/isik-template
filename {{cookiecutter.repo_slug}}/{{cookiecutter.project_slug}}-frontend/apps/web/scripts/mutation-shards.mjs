@@ -93,7 +93,7 @@ export const SHARDS = {
     'src/components/app-auth/VerifyEmailButton.tsx',
     'src/components/app-auth/icons/brands.tsx',
   ],
-  // The signed-in account pages: details, emails, password, connections, sessions and applications.
+  // The signed-in account pages: details, emails, password, connections, sessions, tokens and applications.
   profile: [
     'src/app/profile/(tabs)/applications/page.tsx',
     'src/app/profile/(tabs)/connections/page.tsx',
@@ -102,6 +102,7 @@ export const SHARDS = {
     'src/app/profile/(tabs)/layout.tsx',
     'src/app/profile/(tabs)/password/page.tsx',
     'src/app/profile/(tabs)/sessions/page.tsx',
+    'src/app/profile/(tabs)/tokens/page.tsx',
     'src/app/profile/layout.tsx',
     'src/app/profile/page.tsx',
     'src/components/app-auth/ChangePasswordForm.tsx',
@@ -110,6 +111,8 @@ export const SHARDS = {
     'src/components/app-auth/ConnectionsList.tsx',
     'src/components/app-auth/EmailsList.tsx',
     'src/components/app-auth/LogoutButton.tsx',
+    'src/components/app-auth/PersonalAccessTokenForm.tsx',
+    'src/components/app-auth/PersonalAccessTokensList.tsx',
     'src/components/app-auth/ProfileDetails.tsx',
     'src/components/app-auth/ProfileNameForm.tsx',
     'src/components/app-auth/ProfileTabsList.tsx',
@@ -118,14 +121,15 @@ export const SHARDS = {
     'src/lib/historyLabels.ts',
     'src/lib/useEmailRowActions.ts',
   ],
-  // Other apps signing their users in with this one: registering and running one, the consent page, and
-  // the superusers' approvals.
+  // Other apps signing their users in with this one: registering and running one, the consent pages - a
+  // browser's and a device's - and the superusers' approvals.
   oauth: [
     'src/app/applications/[id]/page.tsx',
     'src/app/applications/layout.tsx',
     'src/app/applications/new/page.tsx',
     'src/app/applications/page.tsx',
     'src/app/auth/oauth/error/page.tsx',
+    'src/app/device/page.tsx',
     'src/app/staff/applications/[id]/page.tsx',
     'src/app/staff/applications/page.tsx',
     'src/components/app-applications/ApplicationLifecycle.tsx',
@@ -139,7 +143,9 @@ export const SHARDS = {
     'src/components/app-applications/ScopeChecklist.tsx',
     'src/components/app-applications/fieldClass.ts',
     'src/components/app-auth/ConsentSignOut.tsx',
+    'src/components/app-device/DeviceConsent.tsx',
     'src/lib/applicationApproval.ts',
+    'src/lib/applicationGrant.ts',
     'src/lib/redirectUris.ts',
   ],
   // Running the people: who may sign in, their rank and what they may do.

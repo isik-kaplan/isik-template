@@ -40,12 +40,18 @@ class Vocabulary:
 
     def delegatable(self):
         """What an application may ask to act with, in name order."""
-        return sorted((declaration for declaration in self.by_name.values() if declaration.delegatable), key=str)
+        # Declarations are strings, so they sort by name as they are.
+        return sorted(declaration for declaration in self.by_name.values() if declaration.delegatable)
 
     def not_delegatable(self, names):
         """The names here an application may not be given, sorted. One nobody declared counts as not
         delegatable: an undeclared scope is not one this deployment agreed to hand over."""
-        return sorted(str(name) for name in names if not getattr(self.by_name.get(str(name)), "delegatable", False))
+        refused = []
+        for name in names:
+            declaration = self.by_name.get(str(name))
+            if declaration is None or not declaration.delegatable:
+                refused.append(str(name))
+        return sorted(refused)
 
     def closure(self, names):
         """Expanded when checked, not when granted, so a stored grant stays a faithful record of what was

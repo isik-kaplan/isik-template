@@ -88,6 +88,20 @@ def test_me_returns_the_logged_in_user(client):
     response = client.get("/v0/users/me/")
     assert response.status_code == 200
     assert response.json()["username"] == "alice"
+    # As they see themselves, not as somebody managing them would: their language, what they may do.
+    assert set(response.json()) == {
+        "id",
+        "username",
+        "email",
+        "first_name",
+        "last_name",
+        "language",
+        "is_staff",
+        "is_superuser",
+        "permissions",
+        "created_at",
+        "updated_at",
+    }
 
 
 @pytest.mark.django_db

@@ -108,9 +108,13 @@ The other direction, also optional: this project as an OAuth 2.0 / OpenID Connec
 
 Any mode but off needs `{{ cookiecutter.config_prefix }}__OAUTH_PROVIDER__SIGNING_KEY`, the RSA key id_tokens are signed with
 (`setup.sh` generates one). An app is pointed at the discovery document,
-`https://auth.{{ cookiecutter.domain }}/o/.well-known/openid-configuration`, and uses the authorization code flow with PKCE.
-Every person is asked once, on this project's own page, before an app sees anything, and can take that
+`https://auth.{{ cookiecutter.domain }}/o/.well-known/openid-configuration`, and uses the authorization code flow with PKCE -
+or, registered as a device, shows people a code to enter at `https://{{ cookiecutter.domain }}/device`, the way a command
+line signs in. Every person is asked once, on this project's own page, before an app sees anything, and can take that
 back from their profile.
+
+Personal access tokens need none of this: whatever the mode, anybody signed in can make one for their own scripts on
+the profile's Tokens tab.
 
 ## 6. Email, storage and error reporting
 

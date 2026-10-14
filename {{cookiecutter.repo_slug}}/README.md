@@ -251,11 +251,19 @@ the password and the social sign-in; only a superuser can choose the top rung.
 `apps/oauth_provider` makes this project an OAuth 2.0 / OpenID Connect provider through
 django-oauth-toolkit, served at `auth.<domain>/o/` and switched by `OAUTH_PROVIDER__MODE` (off,
 approval or auto - see SETUP.md). Its tables exist whatever the mode, and while it is off every one
-of its routes answers 404. Only the authorization code flow with PKCE is offered; DOT's device flow,
-dynamic client registration, introspection and its own unstyled pages are not routed. DOT's consent
-screen redirects to `/auth/oauth/authorize`, the frontend's page, which posts the answer straight back.
-A signed-out person goes through the ordinary sign-in first, and `next` lets sign-in return to that
-one authorize endpoint and nowhere else off-site.
+of its routes answers 404. Two flows are offered: the authorization code flow with PKCE, for a website
+or an app that can open a browser and be sent back, and the device code flow (RFC 8628), for a command
+line that can only show a code. DOT's dynamic client registration, introspection and its own unstyled
+pages are not routed. DOT's consent screen redirects to `/auth/oauth/authorize`, the frontend's page,
+which posts the answer straight back. A signed-out person goes through the ordinary sign-in first, and
+`next` lets sign-in return to that one authorize endpoint and nowhere else off-site.
+
+A device posts its client id to `auth.<domain>/o/device-authorization/`, shows the person the code and
+the link it is handed (the frontend's `/device`), and polls `/o/token/`. Whoever enters the code there
+decides for their own account, and the device's next poll gets one token: the code is spent by it,
+and is the client's that asked for it alone (`apps/oauth_provider/device_codes.py` - DOT would mint a
+token for an authorized code every time it was presented, to any client). A device application is
+registered as public, with no redirect URIs: it keeps no secret and is sent back nowhere.
 
 Anybody signed in registers an app at `/applications` - DOT's own `Application`, swapped for
 `apps.oauth_provider.models.Application`, which carries its review state and the scopes it asks for.
@@ -263,13 +271,27 @@ In approval mode it waits for a superuser (`/staff/applications`) before it sign
 mode it is approved for what it asks the moment it is registered. A superuser can withdraw one, its
 owner can switch it off, and either takes every token it holds down with it. The profile's Apps tab
 lists the apps a person let in, with a way to shut each one out (revoking its refresh tokens too).
+Those moves are `apps/oauth_provider/services.py`'s alone: triggers refuse an approval, or an approved
+scope, written from anywhere else - DOT's admin, a shell, a stray `update()` - and check constraints
+keep DOT's own columns from skipping the consent question or naming a grant this project does not
+serve. DOT's application admin is kept for looking things up and deleting, and changes nothing.
 
 Beyond signing somebody in, an app can ask to act for them on the API. Its scopes are this project's
 permissions (`apps/users/permissions.py`, the `where:action:what` names), and only the delegatable
 ones: a superuser approves which an app may ask for, each person chooses on the consent page, and a
 token can only ever use what both its person holds and they let it have - a superuser's token holds no
-more than it was let have either. The API takes an app's token only on the actions a viewset names in
-`application_token_actions`, so a new endpoint is closed to apps until somebody decides otherwise.
+more than it was let have either. The API takes a token only on the actions a viewset names in
+`token_actions`, so a new endpoint is closed to apps until somebody decides otherwise.
+
+## Personal access tokens
+
+The profile's Tokens tab makes a token for somebody's own scripts - `Authorization: Bearer pat_...`
+calls the API as them, with no app and no browser involved. It acts the same way an app's token does:
+only on `token_actions`, only with the scopes it was given (the delegatable permissions its owner
+holds), and never with more than its owner holds when it is used. It lasts 7, 30, 90 or 365 days, or
+until it is deleted. Making one asks the person to prove it is them, the token is shown once, and only
+its SHA-256 is stored (`apps/users/personal_access_tokens.py`); a token of somebody deactivated or
+shut out by the sign-in ladder is refused.
 
 ## Permissions
 

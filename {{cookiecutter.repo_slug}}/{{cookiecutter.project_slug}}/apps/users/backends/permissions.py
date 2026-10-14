@@ -37,12 +37,12 @@ class PermissionsBackend(ModelBackend):
             return set()
         if not hasattr(user_obj, "_perm_cache"):
             granted = VOCABULARY.closure({*self.get_user_permissions(user_obj), *self.get_group_permissions(user_obj)})
-            # Set by the application token authenticator for one request: the person may hold more than the
-            # token they handed an application was granted.
+            # Set by a token's authenticator for one request: the person may hold more than the token they
+            # handed an application, or made for themselves, was given.
             token_scopes = getattr(user_obj, "token_scopes", None)
             if token_scopes is not None:
                 # Both sides expanded before they meet. Narrowing first would make a permission that is only
-                # implied impossible to grant an application on its own.
+                # implied impossible to give a token on its own.
                 granted &= VOCABULARY.closure(token_scopes)
             user_obj._perm_cache = granted
         return user_obj._perm_cache

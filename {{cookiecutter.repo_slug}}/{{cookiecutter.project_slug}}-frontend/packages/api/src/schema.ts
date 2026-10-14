@@ -44,6 +44,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v0/device-authorizations/{user_code}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description A device asking to act for whoever enters the code it shows - see apps/oauth_provider/device_codes.py.
+         *     Whoever answers decides for their own account: allowed, the device's next poll gets a token for it.
+         */
+        get: operations["device_authorizations_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/device-authorizations/{user_code}/approve/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Let the device act for the signed-in person, within what it asked for. */
+        post: operations["device_authorizations_approve_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/device-authorizations/{user_code}/deny/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Turn the device away: its next poll is told no. */
+        post: operations["device_authorizations_deny_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v0/oauth-application-reviews/": {
         parameters: {
             query?: never;
@@ -250,6 +304,71 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v0/personal-access-tokens/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The signed-in person's own tokens, for a script or a command line to call the API as them. Made and
+         *     deleted, never edited: a token that should do something else is a new one.
+         */
+        get: operations["personal_access_tokens_list"];
+        put?: never;
+        /**
+         * @description The signed-in person's own tokens, for a script or a command line to call the API as them. Made and
+         *     deleted, never edited: a token that should do something else is a new one.
+         */
+        post: operations["personal_access_tokens_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/personal-access-tokens/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The signed-in person's own tokens, for a script or a command line to call the API as them. Made and
+         *     deleted, never edited: a token that should do something else is a new one.
+         */
+        get: operations["personal_access_tokens_retrieve"];
+        put?: never;
+        post?: never;
+        /**
+         * @description The signed-in person's own tokens, for a script or a command line to call the API as them. Made and
+         *     deleted, never edited: a token that should do something else is a new one.
+         */
+        delete: operations["personal_access_tokens_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/personal-access-tokens/scopes/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description What the signed-in person may give a token: the delegatable permissions they hold. */
+        get: operations["personal_access_tokens_scopes_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v0/users/": {
         parameters: {
             query?: never;
@@ -401,8 +520,9 @@ export interface components {
         /**
          * @description An application somebody registered, as its owner sees it.
          *
-         *     Only the authorization code flow, with PKCE, and never without asking: an application reaches nobody's
-         *     account until it is approved and that person consents on this project's own page.
+         *     The authorization code flow, with PKCE, or a device showing a code for somebody to enter - and never
+         *     without asking: an application reaches nobody's account until it is approved and that person consents
+         *     on this project's own page.
          */
         Application: {
             readonly id: number;
@@ -413,8 +533,10 @@ export interface components {
             readonly client_id: string;
             /** @description confidential for a server that keeps a secret, public for a browser or mobile app. */
             client_type: components["schemas"]["ApplicationClientType"];
-            /** @description Where a sign-in may return to, exactly as the application will send it. */
-            redirect_uris: string[];
+            /** @description How it signs people in: authorization-code, the default, for a website or an app that can open a browser and be sent back; the device code grant for anything that can only show a code. */
+            authorization_grant_type?: components["schemas"]["ApplicationAuthorizationGrantType"];
+            /** @description Where a sign-in may return to, exactly as the application will send it. At least one for the authorization code flow; none for a device, which nothing is sent back to. */
+            redirect_uris?: string[];
             /** @description Where it stands. Only an approved application signs anybody in or holds working tokens. */
             readonly approval: components["schemas"]["ApplicationApproval"];
             /** @description What it asks to do on somebody's behalf, beyond signing them in. Each person it signs in is asked again, and a token can only ever do what that person can. */
@@ -431,12 +553,15 @@ export interface components {
         /** @enum {string} */
         ApplicationApproval: "pending" | "approved" | "withdrawn" | "disabled";
         /** @enum {string} */
+        ApplicationAuthorizationGrantType: "authorization-code" | "urn:ietf:params:oauth:grant-type:device_code";
+        /** @enum {string} */
         ApplicationClientType: "confidential" | "public";
         /**
          * @description An application somebody registered, as its owner sees it.
          *
-         *     Only the authorization code flow, with PKCE, and never without asking: an application reaches nobody's
-         *     account until it is approved and that person consents on this project's own page.
+         *     The authorization code flow, with PKCE, or a device showing a code for somebody to enter - and never
+         *     without asking: an application reaches nobody's account until it is approved and that person consents
+         *     on this project's own page.
          */
         ApplicationRequest: {
             /** @description Shown to everybody asked to let it in. */
@@ -445,8 +570,10 @@ export interface components {
             description?: string;
             /** @description confidential for a server that keeps a secret, public for a browser or mobile app. */
             client_type: components["schemas"]["ApplicationClientType"];
-            /** @description Where a sign-in may return to, exactly as the application will send it. */
-            redirect_uris: string[];
+            /** @description How it signs people in: authorization-code, the default, for a website or an app that can open a browser and be sent back; the device code grant for anything that can only show a code. */
+            authorization_grant_type?: components["schemas"]["ApplicationAuthorizationGrantType"];
+            /** @description Where a sign-in may return to, exactly as the application will send it. At least one for the authorization code flow; none for a device, which nothing is sent back to. */
+            redirect_uris?: string[];
             /** @description What it asks to do on somebody's behalf, beyond signing them in. Each person it signs in is asked again, and a token can only ever do what that person can. */
             requested_scopes?: string[];
         };
@@ -474,12 +601,26 @@ export interface components {
         };
         /** @enum {unknown} */
         Blank: "";
-        /** @description A scope an application may ask for, and what it lets the application do, in words. */
+        /**
+         * @description A scope a token may be given - by an application asking for it, or somebody making their own - and
+         *     what it lets the token do, in words.
+         */
         DelegatableScope: {
-            /** @description The scope, as an application asks for it. */
+            /** @description The scope, as a token is given it. */
             readonly name: string;
-            /** @description What it lets the application do. */
+            /** @description What it lets the token do. */
             readonly label: string;
+        };
+        /** @description A device waiting for somebody to let it in, as the page asking them shows it. */
+        DeviceAuthorization: {
+            /** @description The code the device shows, as stored. */
+            readonly user_code: string;
+            /** @description The application the device runs. */
+            readonly application_name: string;
+            /** @description What it does, in its owner's words. */
+            readonly application_description: string;
+            /** @description What it asks for, as OAuth scopes - the sign-in ones and permissions it may act with. */
+            readonly scopes: string[];
         };
         /**
          * @description Somebody's account, as whoever manages accounts sees it: who they are is read-only here, and what
@@ -566,6 +707,24 @@ export interface components {
             total_pages: number;
             results: components["schemas"]["ManagedUser"][];
         };
+        PaginatedPersonalAccessTokenList: {
+            /**
+             * @description Total number of items available.
+             * @example 1102
+             */
+            count: number;
+            /**
+             * @description Number of results to return per page.
+             * @example 100
+             */
+            page_size: number;
+            /**
+             * @description Total number of pages.
+             * @example 17
+             */
+            total_pages: number;
+            results: components["schemas"]["PersonalAccessToken"][];
+        };
         PaginatedReviewedApplicationList: {
             /**
              * @description Total number of items available.
@@ -605,8 +764,9 @@ export interface components {
         /**
          * @description An application somebody registered, as its owner sees it.
          *
-         *     Only the authorization code flow, with PKCE, and never without asking: an application reaches nobody's
-         *     account until it is approved and that person consents on this project's own page.
+         *     The authorization code flow, with PKCE, or a device showing a code for somebody to enter - and never
+         *     without asking: an application reaches nobody's account until it is approved and that person consents
+         *     on this project's own page.
          */
         PatchedApplicationRequest: {
             /** @description Shown to everybody asked to let it in. */
@@ -615,7 +775,9 @@ export interface components {
             description?: string;
             /** @description confidential for a server that keeps a secret, public for a browser or mobile app. */
             client_type?: components["schemas"]["ApplicationClientType"];
-            /** @description Where a sign-in may return to, exactly as the application will send it. */
+            /** @description How it signs people in: authorization-code, the default, for a website or an app that can open a browser and be sent back; the device code grant for anything that can only show a code. */
+            authorization_grant_type?: components["schemas"]["ApplicationAuthorizationGrantType"];
+            /** @description Where a sign-in may return to, exactly as the application will send it. At least one for the authorization code flow; none for a device, which nothing is sent back to. */
             redirect_uris?: string[];
             /** @description What it asks to do on somebody's behalf, beyond signing them in. Each person it signs in is asked again, and a token can only ever do what that person can. */
             requested_scopes?: string[];
@@ -670,6 +832,52 @@ export interface components {
         };
         /** @enum {string} */
         Permissions: "users:grant:rights" | "users:manage:user";
+        /** @description A token somebody made for themselves, as they see it - the token itself only in the answer to making it. */
+        PersonalAccessToken: {
+            /**
+             * Format: uuid
+             * @description Identifies this record. A UUIDv7, so ids sort roughly by when they were created.
+             */
+            readonly id: string;
+            /** @description What its owner called it, to tell it from their others. */
+            name: string;
+            /** @description What it may do, of what you hold. None at all still reads whatever needs no permission. */
+            scopes?: string[];
+            /**
+             * Format: date-time
+             * @description When it stops working - leave it out for a token that never does.
+             */
+            expires_at?: string | null;
+            /**
+             * Format: date-time
+             * @description When a request last presented it, or empty if none has.
+             */
+            readonly last_used_at: string | null;
+            /** @description Only in the answer to making it, and never again: only its checksum is kept. Lost, make another. */
+            readonly token: string | null;
+            /**
+             * Format: date-time
+             * @description When the row was created, by the database's clock. Never changes.
+             */
+            readonly created_at: string;
+            /**
+             * Format: date-time
+             * @description When the row last changed, by the database's clock.
+             */
+            readonly updated_at: string;
+        };
+        /** @description A token somebody made for themselves, as they see it - the token itself only in the answer to making it. */
+        PersonalAccessTokenRequest: {
+            /** @description What its owner called it, to tell it from their others. */
+            name: string;
+            /** @description What it may do, of what you hold. None at all still reads whatever needs no permission. */
+            scopes?: string[];
+            /**
+             * Format: date-time
+             * @description When it stops working - leave it out for a token that never does.
+             */
+            expires_at?: string | null;
+        };
         /** @description One way to prove it is you - see `ways_to_prove()`. Only the fields its flow carries are sent. */
         ReauthenticationFlow: {
             id: string;
@@ -693,6 +901,7 @@ export interface components {
             readonly description: string;
             readonly client_id: string;
             readonly client_type: components["schemas"]["ApplicationClientType"];
+            readonly authorization_grant_type: components["schemas"]["ApplicationAuthorizationGrantType"];
             /** @description Where a sign-in may return to. */
             readonly redirect_uris: string[];
             /** @description Where it stands. Only an approved application signs anybody in or holds working tokens. */
@@ -848,6 +1057,76 @@ export interface operations {
             path: {
                 /** @description The application. */
                 id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    device_authorizations_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The code the device shows, as typed. */
+                user_code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceAuthorization"];
+                };
+            };
+        };
+    };
+    device_authorizations_approve_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description A UUID of the caller's choosing. Sending the same key with the same body again returns what the first attempt answered rather than doing the work twice. It belongs to the attempt, not to the call: mint a new one when the payload changes or once a submit succeeds. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                /** @description The code the device shows, as typed. */
+                user_code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    device_authorizations_deny_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description A UUID of the caller's choosing. Sending the same key with the same body again returns what the first attempt answered rather than doing the work twice. It belongs to the attempt, not to the call: mint a new one when the payload changes or once a submit succeeds. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                /** @description The code the device shows, as typed. */
+                user_code: string;
             };
             cookie?: never;
         };
@@ -1237,6 +1516,150 @@ export interface operations {
         };
     };
     oauth_applications_delegatable_scopes_list: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DelegatableScope"][];
+                };
+            };
+        };
+    };
+    personal_access_tokens_list: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedPersonalAccessTokenList"];
+                };
+            };
+        };
+    };
+    personal_access_tokens_create: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+            };
+            header: {
+                /** @description A UUID of the caller's choosing. Sending the same key with the same body again returns what the first attempt answered rather than doing the work twice. It belongs to the attempt, not to the call: mint a new one when the payload changes or once a submit succeeds. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PersonalAccessTokenRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PersonalAccessTokenRequest"];
+                "multipart/form-data": components["schemas"]["PersonalAccessTokenRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonalAccessToken"];
+                };
+            };
+        };
+    };
+    personal_access_tokens_retrieve: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonalAccessToken"];
+                };
+            };
+        };
+    };
+    personal_access_tokens_destroy: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    personal_access_tokens_scopes_list: {
         parameters: {
             query?: {
                 /** @description Drop these fields from the response - applied last, wins over only=/include=. */

@@ -22,10 +22,11 @@ class TokenScopes(BaseScopes):
     def get_available_scopes(self, application=None, request=None, *args, **kwargs):
         """With no application - discovery, the API document - only the sign-in scopes: nothing else is
         anybody's to ask for until a superuser says so for one application."""
-        sign_in = self._settings_scopes.get_available_scopes(application, request, *args, **kwargs)
+        # SettingsScopes answers from the settings alone, whatever it is asked about.
+        sign_in = self._settings_scopes.get_available_scopes()
         if application is None:
             return sign_in
         return [*sign_in, *application.approved_scopes.values_list("codename", flat=True).order_by("codename")]
 
     def get_default_scopes(self, application=None, request=None, *args, **kwargs):
-        return self._settings_scopes.get_default_scopes(application, request, *args, **kwargs)
+        return self._settings_scopes.get_default_scopes()

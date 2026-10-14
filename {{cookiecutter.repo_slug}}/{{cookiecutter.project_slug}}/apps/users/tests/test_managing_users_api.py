@@ -220,3 +220,59 @@ def test_every_permission_there_is_to_grant_is_listed_with_what_it_does(client, 
             "requires": [],
         },
     ]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("rank", ["is_staff", "is_superuser"])
+def test_raising_somebodys_rank_is_a_grant(client, manager, bob, rank):
+    response = _patch(client, bob, {rank: True})
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "You cannot change what other people may do."
+
+
+@pytest.mark.django_db
+def test_keeping_somebody_staff_who_already_is_grants_nothing(client, manager, bob):
+    bob.is_staff = True
+    bob.save()
+
+    assert _patch(client, bob, {"is_staff": True}).status_code == 200
+
+
+@pytest.mark.django_db
+def test_lowering_somebodys_rank_is_not_a_grant(client, manager, bob):
+    bob.is_staff = True
+    bob.save()
+
+    assert _patch(client, bob, {"is_staff": False}).status_code == 200
+    assert not User.objects.get(pk=bob.pk).is_staff
+
+
+@pytest.mark.django_db
+def test_only_a_superuser_makes_a_superuser(client, granter, bob):
+    response = _patch(client, bob, {"is_superuser": True})
+
+    assert response.json() == {"is_superuser": ["You cannot make somebody a superuser."]}
+
+
+@pytest.mark.django_db
+def test_somebody_already_staff_may_be_given_the_grant_permission_on_its_own(client, granter, bob):
+    bob.is_staff = True
+    bob.save()
+
+    response = _patch(client, bob, {"permissions": [GRANT]})
+
+    assert response.status_code == 200
+    assert response.json()["permissions"] == [GRANT]
+
+
+@pytest.mark.django_db
+def test_a_grant_names_the_declared_permission_and_no_namesake(client, granter, bob):
+    """A row of the same codename under another content type - a third-party app's, say - is not it."""
+    PermissionRow.objects.create(
+        content_type=ContentType.objects.get_for_model(User), codename=MANAGE, name="A namesake"
+    )
+
+    response = _patch(client, bob, {"permissions": [MANAGE]})
+
+    assert response.json()["permissions"] == [MANAGE]

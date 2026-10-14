@@ -12,6 +12,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from oauth2_provider.models import get_application_model
 
+from apps.oauth_provider.services import APPROVAL_GUARDS, deciding
 from apps.users.permissions import Permission as PermissionName
 from apps.users.tests import conftest as users
 
@@ -59,26 +60,32 @@ def permission(name):
 def application(db, alice):
     """A confidential application alice registered and a superuser approved, asking to read the people list
     and approved for it, with the secret it was issued."""
-    application = Application.objects.create(
-        name="Acme Notes",
-        description="Notes about the people you work with.",
-        user=alice,
-        client_type=Application.CLIENT_CONFIDENTIAL,
-        authorization_grant_type=Application.GRANT_AUTHORIZATION_CODE,
-        redirect_uris=REDIRECT_URI,
-        client_secret="the-client-secret",
-        algorithm=Application.RS256_ALGORITHM,
-        approval=Application.Approval.APPROVED,
-    )
-    application.requested_scopes.set([permission(PermissionName.USERS_MANAGE_USER)])
-    application.approved_scopes.set([permission(PermissionName.USERS_MANAGE_USER)])
+    with deciding():
+        application = make_application(
+            name="Acme Notes",
+            description="Notes about the people you work with.",
+            user=alice,
+            client_type=Application.CLIENT_CONFIDENTIAL,
+            client_secret="the-client-secret",
+            algorithm=Application.RS256_ALGORITHM,
+            approval=Application.Approval.APPROVED,
+        )
+        application.requested_scopes.set([permission(PermissionName.USERS_MANAGE_USER)])
+        application.approved_scopes.set([permission(PermissionName.USERS_MANAGE_USER)])
     application.issued_secret = "the-client-secret"
     return application
 
 
+def make_application(**fields):
+    """An application for the authorization code flow returning to REDIRECT_URI, unless told otherwise."""
+    return Application.objects.create(
+        **{"authorization_grant_type": Application.GRANT_AUTHORIZATION_CODE, "redirect_uris": REDIRECT_URI, **fields}
+    )
+
+
 def set_approval(application, approval):
     """Puts an application in any state at all, past the trigger that keeps real moves to the lifecycle."""
-    with pgtrigger.ignore("oauth_provider.Application:approval_follows_the_lifecycle"):
+    with pgtrigger.ignore("oauth_provider.Application:approval_follows_the_lifecycle", *APPROVAL_GUARDS):
         Application.objects.filter(pk=application.pk).update(approval=approval)
     application.refresh_from_db()
 

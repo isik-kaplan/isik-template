@@ -2,14 +2,15 @@
 
 from drf_spectacular.extensions import OpenApiAuthenticationExtension
 
+from apps.common.api.token_actions import takes_a_token
+
 
 class ApplicationTokenScheme(OpenApiAuthenticationExtension):
     target_class = "apps.oauth_provider.authentication.ApplicationTokenAuthentication"
     name = "applicationToken"
 
     def get_security_requirement(self, auto_schema):
-        view = auto_schema.view
-        if getattr(view, "action", None) in getattr(view, "application_token_actions", ()):
+        if takes_a_token(auto_schema.view):
             return {self.name: []}
         return None
 

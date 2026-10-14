@@ -40,7 +40,7 @@ describe('ProfileTabsList', () => {
   it('renders every tab, labelled', () => {
     render(<ProfileTabsList />)
 
-    for (const label of ['Details', 'Password', 'Emails', 'Links', 'Sessions', '2FA']) {
+    for (const label of ['Details', 'Password', 'Emails', 'Links', 'Sessions', '2FA', 'Tokens']) {
       expect(screen.getByRole('tab', { name: label })).toBeTruthy()
     }
   })
@@ -90,6 +90,14 @@ describe('ProfileTabsList', () => {
     await user.click(screen.getByRole('tab', { name: 'Sessions' }))
 
     expect(push).toHaveBeenCalledWith('/profile/details/nested')
+  })
+
+  it('selects and reaches the tokens tab by its own segment, whatever the provider', async () => {
+    CONFIG.OAUTH_PROVIDER.MODE = 'off'
+    pathname = '/profile/tokens'
+    render(<ProfileTabsList />)
+
+    expect(screen.getByRole('tab', { name: 'Tokens' }).getAttribute('aria-selected')).toBe('true')
   })
 
   it('selects and reaches the two-factor tab by its own segment', async () => {

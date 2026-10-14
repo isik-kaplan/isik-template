@@ -8,6 +8,7 @@ import { PageShell } from '@/components/app/PageShell'
 
 import { sUseTranslation } from '@/i18n'
 import { approvalLabel } from '@/lib/applicationApproval'
+import { grantLabel } from '@/lib/applicationGrant'
 import { describedScopes, scopeLabel } from '@/lib/oauthScopes'
 import { serverApi } from '@/lib/serverApi'
 
@@ -37,6 +38,9 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
           <dt className="text-muted-foreground">{t('auth:applicationClientId')}</dt>
           <dd className="font-mono break-all">{application.client_id}</dd>
+          <dt className="text-muted-foreground">{t('auth:registerApplicationGrantLabel')}</dt>
+          {/* Always answered, though the API document cannot say so of a field a request may leave out. */}
+          <dd>{grantLabel(application.authorization_grant_type ?? 'authorization-code', t)}</dd>
           <dt className="text-muted-foreground">{t('auth:applicationApprovedScopes')}</dt>
           <dd>
             {application.approved_scopes.length === 0

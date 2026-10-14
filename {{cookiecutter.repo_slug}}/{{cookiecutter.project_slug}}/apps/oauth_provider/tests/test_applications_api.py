@@ -2,12 +2,15 @@ from datetime import timedelta
 
 import pytest
 from django.contrib.auth.hashers import check_password
+from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from django.utils import timezone
 from oauth2_provider.models import get_access_token_model, get_application_model
+from rest_framework.exceptions import ValidationError
 
 from apps.oauth_provider.api.viewsets.application import ApplicationViewSet
-from apps.oauth_provider.tests.conftest import REDIRECT_URI, set_approval
+from apps.oauth_provider.tests.conftest import REDIRECT_URI, make_application, set_approval
 from apps.users.models.user import User
 
 
@@ -117,6 +120,96 @@ def test_a_registered_application_can_only_use_the_code_flow_and_always_asks(cli
     assert application.skip_authorization is False
 
 
+DEVICE = {"name": "Acme CLI", "client_type": "public", "authorization_grant_type": Application.GRANT_DEVICE_CODE}
+
+
+@pytest.mark.django_db
+def test_a_command_line_registers_for_the_device_grant_with_nowhere_to_return_to(client, proven):
+    response = client.post(LIST, DEVICE, content_type="application/json")
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["authorization_grant_type"] == Application.GRANT_DEVICE_CODE
+    assert body["redirect_uris"] == []
+    assert body["client_secret"] is None
+    assert Application.objects.get(pk=body["id"]).authorization_grant_type == Application.GRANT_DEVICE_CODE
+
+
+@pytest.mark.django_db
+def test_a_device_is_never_sent_back_anywhere(client, proven):
+    response = client.post(LIST, {**DEVICE, "redirect_uris": [REDIRECT_URI]}, content_type="application/json")
+
+    assert response.status_code == 400
+    assert response.json() == {"redirect_uris": ["A device is never sent back anywhere."]}
+
+
+@pytest.mark.django_db
+def test_a_device_keeps_no_secret(client, proven):
+    response = client.post(LIST, {**DEVICE, "client_type": "confidential"}, content_type="application/json")
+
+    assert response.status_code == 400
+    assert response.json() == {"client_type": ["A device keeps no secret: register it as public."]}
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("redirect_uris", [[], None])
+def test_signing_people_in_by_redirect_needs_somewhere_to_return_to(client, proven, redirect_uris):
+    body = {key: value for key, value in NEW.items() if key != "redirect_uris"}
+    if redirect_uris is not None:
+        body["redirect_uris"] = redirect_uris
+
+    response = client.post(LIST, body, content_type="application/json")
+
+    assert response.status_code == 400
+    assert response.json() == {"redirect_uris": ["Give at least one place to return to."]}
+
+
+@pytest.mark.django_db
+def test_a_device_given_somewhere_to_return_to_later_is_refused_too(client, proven, headless):
+    application = Application.objects.get(pk=client.post(LIST, DEVICE, content_type="application/json").json()["id"])
+    headless.prove()
+
+    response = client.patch(_detail(application), {"redirect_uris": [REDIRECT_URI]}, content_type="application/json")
+
+    assert response.status_code == 400
+    assert response.json() == {"redirect_uris": ["A device is never sent back anywhere."]}
+
+
+@pytest.mark.django_db
+def test_an_application_taking_away_everywhere_it_returns_to_is_refused(client, proven, application):
+    application.user = proven
+    application.save()
+
+    response = client.patch(_detail(application), {"redirect_uris": []}, content_type="application/json")
+
+    assert response.json() == {"redirect_uris": ["Give at least one place to return to."]}
+
+
+@pytest.mark.django_db
+def test_how_it_signs_people_in_is_settled_when_it_is_registered(client, proven, application, headless):
+    application.user = proven
+    application.save()
+
+    client.patch(
+        _detail(application),
+        {"authorization_grant_type": Application.GRANT_DEVICE_CODE},
+        content_type="application/json",
+    )
+
+    application.refresh_from_db()
+    assert application.authorization_grant_type == Application.GRANT_AUTHORIZATION_CODE
+
+
+@pytest.mark.django_db
+def test_no_other_grant_is_registered(client, proven):
+    response = client.post(
+        LIST, {**NEW, "authorization_grant_type": "client-credentials"}, content_type="application/json"
+    )
+
+    assert response.status_code == 400
+    assert list(response.json()) == ["authorization_grant_type"]
+
+
 @pytest.mark.django_db
 def test_a_public_client_is_handed_no_secret_since_it_could_not_keep_one(client, proven):
     body = client.post(LIST, {**NEW, "client_type": "public"}, content_type="application/json").json()
@@ -222,8 +315,8 @@ def test_the_share_is_counted_per_person(client, proven, settings, application):
 
 @pytest.mark.django_db
 def test_somebody_sees_only_their_own_applications_newest_first(client, signed_in, provider, application):
-    newer = Application.objects.create(name="Newer", user=signed_in, redirect_uris=REDIRECT_URI, client_type="public")
-    Application.objects.create(name="Bob's", user=User.objects.create_user(username="bob"), redirect_uris=REDIRECT_URI)
+    newer = make_application(name="Newer", user=signed_in, client_type="public")
+    make_application(name="Bob's", user=User.objects.create_user(username="bob"))
 
     names = [row["name"] for row in client.get(LIST).json()["results"]]
 
@@ -373,6 +466,41 @@ def test_rotating_the_secret_needs_a_proof(client, signed_in, provider, applicat
 
 
 @pytest.mark.django_db
+def test_a_rotation_asked_for_in_nonsense_is_refused(client, proven, application):
+    application.user = proven
+    application.save()
+
+    response = client.post(
+        _action(application, "rotate-secret"), {"revoke_tokens": "perhaps"}, content_type="application/json"
+    )
+
+    assert response.status_code == 400
+    assert list(response.json()) == ["revoke_tokens"]
+
+
+@pytest.mark.django_db
+def test_one_still_switched_on_is_not_deleted_whatever_reaches_the_delete(proven, application):
+    """The check before proving answers first; this is the one standing behind it."""
+    with pytest.raises(ValidationError) as refused:
+        ApplicationViewSet().perform_destroy(application)
+
+    assert refused.value.detail == {
+        "detail": "Switch it off first: deleting it is for an application nobody is using any more."
+    }
+    assert Application.objects.filter(pk=application.pk).exists()
+
+
+@pytest.mark.django_db
+def test_a_device_is_edited_without_saying_again_that_it_is_public(client, proven):
+    application = Application.objects.get(pk=client.post(LIST, DEVICE, content_type="application/json").json()["id"])
+
+    response = client.patch(_detail(application), {"name": "Renamed CLI"}, content_type="application/json")
+
+    assert response.status_code == 200
+    assert response.json()["name"] == "Renamed CLI"
+
+
+@pytest.mark.django_db
 def test_a_public_application_has_no_secret_to_rotate(client, proven, application):
     Application.objects.filter(pk=application.pk).update(client_type=Application.CLIENT_PUBLIC)
 
@@ -445,3 +573,26 @@ def test_somebody_elses_application_is_not_found(client, proven, application):
 
     assert client.get(_detail(application)).status_code == 404
     assert client.delete(_detail(application)).status_code == 404
+
+
+@pytest.mark.django_db
+def test_a_scope_is_the_declared_permission_and_no_namesake(client, proven):
+    """A row of the same codename under another content type - a third-party app's, say - is not it."""
+    Permission.objects.create(content_type=ContentType.objects.get_for_model(User), codename=MANAGE, name="A namesake")
+
+    response = client.post(LIST, {**NEW, "requested_scopes": [MANAGE]}, content_type="application/json")
+
+    assert response.status_code == 201
+    assert response.json()["requested_scopes"] == [MANAGE]
+
+
+@pytest.mark.django_db
+def test_a_permission_row_nobody_declared_is_no_scope(client, proven):
+    stray = Permission.objects.create(
+        content_type=ContentType.objects.get_for_model(Permission), codename="stray:left:behind", name="Stray"
+    )
+
+    response = client.post(LIST, {**NEW, "requested_scopes": [stray.codename]}, content_type="application/json")
+
+    assert response.status_code == 400
+    assert list(response.json()) == ["requested_scopes"]

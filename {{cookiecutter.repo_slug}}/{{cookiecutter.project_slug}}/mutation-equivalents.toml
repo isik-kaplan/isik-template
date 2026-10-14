@@ -63,16 +63,16 @@ HttpResponse.headers is case-insensitive on write and on read, so every spelling
 and no test can observe which one was written."""
 verified_by = "apps/common/tests/test_library_assumptions.py::test_a_response_header_is_case_insensitive"
 
-["apps.oauth_provider.views.xǁAuthorizationViewǁget__mutmut__07b657780af2"]
+["apps.oauth_provider.views.authorization.xǁAuthorizationViewǁget__mutmut__07b657780af2"]
 reason = """Drops **kwargs from the call to DOT's own AuthorizationView.get. The authorize route captures no
 URL parameters (apps/oauth_provider/urls.py routes it as a bare "authorize/"), so kwargs is always
 empty and the call is the same with or without it."""
 
-["apps.oauth_provider.views.xǁAuthorizationViewǁget__mutmut__5e386713e2aa"]
+["apps.oauth_provider.views.authorization.xǁAuthorizationViewǁget__mutmut__5e386713e2aa"]
 reason = """Drops *args from the call to DOT's own AuthorizationView.get. The authorize route captures no
 URL parameters, so args is always empty and the call is the same with or without it."""
 
-["apps.oauth_provider.views.xǁAuthorizationViewǁget__mutmut__1e42aaa3c272"]
+["apps.oauth_provider.views.authorization.xǁAuthorizationViewǁget__mutmut__1e42aaa3c272"]
 reason = """Turns the default for a missing `prompt` from "" into "XXXX". Either way the default splits into
 words none of which is "login", so a request without `prompt` goes on to DOT's consent exactly as
 before - only the presence of the word matters, never what stands in for its absence."""
@@ -85,3 +85,66 @@ from them is the same either way."""
 ["apps.oauth_provider.api.viewsets.authorized_application.xǁAuthorizedApplicationViewSetǁlist__mutmut__eb4aecaf69b5"]
 reason = """select_related(None) instead of select_related("application") on the refresh tokens - the same
 query-count-only difference as the access tokens' entry above."""
+
+["apps.oauth_provider.api.viewsets.application.xǁApplicationViewSetǁget_queryset__mutmut__6a44d463dd58"]
+reason = """prefetch_related("approved_scopes") alone instead of with "requested_scopes". It only decides
+whether each application's requested scopes arrive in one query for the page or one more apiece; what
+the list says is the same either way."""
+
+["apps.oauth_provider.api.viewsets.application.xǁApplicationViewSetǁget_queryset__mutmut__b5f5432e2f52"]
+reason = """prefetch_related("requested_scopes") alone instead of with "approved_scopes" - the same
+query-count-only difference as the entry above, for the approved scopes."""
+
+["apps.oauth_provider.api.viewsets.reviewed_application.xǁReviewedApplicationViewSetǁget_queryset__mutmut__1369ae966a2d"]
+reason = """select_related(None) instead of select_related("user"). It only decides whether each
+application's owner arrives in the same query or one more apiece; the owner shown is the same."""
+
+["apps.oauth_provider.api.viewsets.reviewed_application.xǁReviewedApplicationViewSetǁget_queryset__mutmut__7187222b8f02"]
+reason = """prefetch_related("requested_scopes") alone instead of with "approved_scopes": a query count,
+not a different answer, as for the owner's own list."""
+
+["apps.oauth_provider.api.viewsets.reviewed_application.xǁReviewedApplicationViewSetǁget_queryset__mutmut__9bddde150be6"]
+reason = """prefetch_related("approved_scopes") alone instead of with "requested_scopes": a query count,
+not a different answer, as for the owner's own list."""
+
+["apps.users.api.viewsets.user.xǁUserViewSetǁget_queryset__mutmut__7aa4b59b8812"]
+reason = """prefetch_related(None) instead of prefetch_related("user_permissions"). Each account's
+granted permissions then arrive one query apiece rather than in one for the page; the permissions shown
+are the same."""
+
+["apps.users.api.viewsets.user.xǁUserViewSetǁget_queryset__mutmut__50d0818c52cb"]
+reason = """Reads a missing may_see_every_account as None instead of False. Both are falsy, so whoever
+lacks the attribute is narrowed to their own account either way."""
+
+["apps.users.api.viewsets.user.xǁUserViewSetǁget_queryset__mutmut__a977548baaf9"]
+reason = """Reads a missing may_see_every_account as True. Only somebody signed out lacks it - an
+AnonymousUser - and IsAuthenticated refuses them before any action reads the queryset, so no request
+that reaches this line is told anything different."""
+
+["apps.users.api.fields.scope.xǁScopeFieldǁ__init____mutmut__2ac5f9b8a4e4"]
+reason = """Drops the keyword arguments passed on to SlugRelatedField. ScopeField is only ever declared
+many=True, where DRF's many_init hands required, read_only and help_text to the ManyRelatedField it builds
+around this one, so the child's own keyword arguments change nothing a request or the API document sees."""
+
+["apps.users.authentication.xǁPersonalAccessTokenAuthenticationǁauthenticate__mutmut__b6e5ba0b670d"]
+reason = """select_related(None) instead of select_related("user"). The token's owner then arrives in a
+second query rather than the first; it is the same person, checked and returned the same way."""
+
+["apps.users.api.viewsets.personal_access_token.xǁPersonalAccessTokenViewSetǁget_queryset__mutmut__d82fa0044935"]
+reason = """prefetch_related(None) instead of prefetch_related("scopes"). Each token's scopes then
+arrive one query apiece rather than in one for the page; the scopes shown are the same."""
+
+["apps.users.backends.permissions.xǁPermissionsBackendǁget_all_permissions__mutmut__75d49614b768"]
+reason = """Asks whether None has a _perm_cache, which it never does, so the closure is recomputed on every
+question instead of once per user object. It is recomputed from get_user_permissions and
+get_group_permissions, which keep caches of their own on the user object (Django's ModelBackend), so
+the answer is the same one the cache would have given."""
+
+["apps.users.backends.permissions.xǁPermissionsBackendǁget_all_permissions__mutmut__8962004ce04d"]
+reason = """Looks for the cache under another attribute name than the one it is stored under, so the
+closure is recomputed every time - from the raw grants ModelBackend caches on the user object itself,
+which gives the same answer as the cached closure. See the entry above."""
+
+["apps.users.backends.permissions.xǁPermissionsBackendǁget_all_permissions__mutmut__eb488772d483"]
+reason = """Looks for the cache as _PERM_CACHE, which is never set, so the closure is recomputed every
+time from ModelBackend's own cached raw grants - the same answer. See the two entries above."""

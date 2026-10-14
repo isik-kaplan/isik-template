@@ -67,7 +67,7 @@ class UserViewSet(ProvesWhoTheyAre, HistoryMixin, BaseModelViewSet):
         "permissions": "reading what permissions exist takes nothing from anybody",
     }
     # An application holding `users:manage:user` for somebody who has it may read the accounts they can.
-    application_token_actions = frozenset({"list", "retrieve"})
+    token_actions = frozenset({"list", "retrieve"})
 
     def get_serializer_class(self):
         if self.action in ("me", "update_me"):
@@ -115,5 +115,6 @@ class UserViewSet(ProvesWhoTheyAre, HistoryMixin, BaseModelViewSet):
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated], pagination_class=None)
     def permissions(self, request):
         """Every permission there is to grant, with what it lets somebody do."""
-        declarations = sorted(VOCABULARY.by_name.values(), key=str)
+        # Declarations are strings, so they sort by name as they are.
+        declarations = sorted(VOCABULARY.by_name.values())
         return Response(PermissionDeclarationSerializer(declarations, many=True).data)

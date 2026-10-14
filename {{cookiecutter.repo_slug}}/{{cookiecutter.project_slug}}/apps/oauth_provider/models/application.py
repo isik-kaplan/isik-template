@@ -1,5 +1,6 @@
 import pgtrigger
 from django.db import models
+from django.db.models import Q
 from isik.django.apps.common.db import track_events
 from oauth2_provider.models import AbstractApplication
 
@@ -69,10 +70,32 @@ class Application(AbstractApplication):
                     ("disabled", "withdrawn"),
                 ],
             ),
+            # Every move, and every birth past pending, is a service's in apps/oauth_provider/services.py,
+            # which opens these for the one write it makes. Anything else - DOT's admin, a shell, a stray
+            # update() - cannot approve an application or take one down without revoking its tokens.
             pgtrigger.Protect(
-                name="born_pending_or_approved",
+                name="approval_moves_only_through_its_services",
+                operation=pgtrigger.Update,
+                condition=pgtrigger.Q(old__approval__df=pgtrigger.F("new__approval")),
+            ),
+            pgtrigger.Protect(
+                name="born_pending",
                 operation=pgtrigger.Insert,
-                condition=pgtrigger.Q(new__approval__in=["withdrawn", "disabled"]),
+                condition=~pgtrigger.Q(new__approval="pending"),
+            ),
+        ]
+        constraints = [
+            # DOT's own columns, which its admin offers to change: skipping the question would let an
+            # application in nobody let in, and any other grant is one this project does not serve.
+            models.CheckConstraint(condition=Q(skip_authorization=False), name="always_asks"),
+            models.CheckConstraint(
+                condition=Q(
+                    authorization_grant_type__in=[
+                        AbstractApplication.GRANT_AUTHORIZATION_CODE,
+                        AbstractApplication.GRANT_DEVICE_CODE,
+                    ]
+                ),
+                name="served_grant_types",
             ),
         ]
 

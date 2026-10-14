@@ -1,9 +1,9 @@
-from django.db.models import Case, When
+from django.db.models import Q
 from drf_spectacular.utils import extend_schema
 from isik.django.drf.viewsets.registry import ViewSetRegistryExemption
 from oauth2_provider.models import get_application_model
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import MethodNotAllowed, ValidationError
 from rest_framework.response import Response
 
 from apps.common.api.reauthentication import ProvesWhoTheyAre
@@ -46,13 +46,13 @@ class ReviewedApplicationViewSet(ProvesWhoTheyAre, BaseModelViewSet):
         return (
             Application.objects.select_related("user")
             .prefetch_related("requested_scopes", "approved_scopes")
-            .annotate(waiting=Case(When(approval=Application.Approval.PENDING, then=True), default=False))
+            .annotate(waiting=Q(approval=Application.Approval.PENDING))
         )
 
     @extend_schema(exclude=True)
     def create(self, request, *args, **kwargs):
         """Refused: registering is an owner's, on oauth-applications."""
-        return self.http_method_not_allowed(request, *args, **kwargs)
+        raise MethodNotAllowed(request.method)
 
     @extend_schema(request=ApprovalSerializer, responses=ReviewedApplicationSerializer)
     @action(detail=True, methods=["post"])

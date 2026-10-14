@@ -32,4 +32,8 @@ describe('describedScopes', () => {
       ])
     ).toEqual({ 'a:read:x': 'Read', 'b:write:x': 'Write' })
   })
+
+  it('words nothing when the list could not be read', () => {
+    expect(describedScopes(undefined)).toStrictEqual({})
+  })
 })

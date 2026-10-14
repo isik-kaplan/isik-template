@@ -7,6 +7,7 @@ from corsheaders.defaults import default_headers
 from django.conf.locale import LANG_INFO
 
 from apps.common.logging.scrub import scrub_event
+from apps.oauth_provider import device_codes
 from apps.oauth_provider.mode import oauth_provider_mode
 from apps.users.social_login import social_login_provider_ids
 
@@ -335,6 +336,11 @@ OAUTH2_PROVIDER = {
     "COMPLIANT_BCP_RFC9700_REDIRECT_URI_SCHEME": True,
     "COMPLIANT_BCP_RFC9700_REDIRECT_URI_MATCHING": True,
     "COMPLIANT_BCP_RFC9700_PKCE_REQUIRED": True,
+    # A command line signing somebody in by showing them a code to enter on the frontend's /device page.
+    "OAUTH_DEVICE_VERIFICATION_URI": FRONTEND_ORIGIN + "/device",
+    "OAUTH_DEVICE_VERIFICATION_URI_COMPLETE": FRONTEND_ORIGIN + "/device?code={user_code}",
+    "OAUTH_DEVICE_USER_CODE_GENERATOR": device_codes.user_code,
+    "OAUTH_PRE_TOKEN_VALIDATION": [device_codes.spend_device_code],
 }
 # Where DOT's authorize endpoint sends somebody signed out: absolute, since it is answered on auth.<domain>
 # and the sign-in page is the frontend's. The frontend sends them back only to that one endpoint.
@@ -449,7 +455,10 @@ REST_FRAMEWORK = {
         # the X-Session-Token it got back from a headless login, without a second auth system to
         # maintain.
         "allauth.headless.contrib.rest_framework.authentication.XSessionTokenAuthentication",
-        # An application acting for somebody who let it, on the few views that say it may.
+        # A token somebody made for themselves, then an application acting for somebody who let it - both
+        # on the few views that say a token may. After the session ones, whose answer to nobody signed in
+        # (403) is the one DRF gives.
+        "apps.users.authentication.PersonalAccessTokenAuthentication",
         "apps.oauth_provider.authentication.ApplicationTokenAuthentication",
     ],
     # Adds the refusal's code beside `detail` and logs every 403 - see apps/common/api/exception_handler.py.

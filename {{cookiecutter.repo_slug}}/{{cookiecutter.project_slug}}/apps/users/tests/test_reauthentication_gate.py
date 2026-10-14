@@ -46,6 +46,8 @@ GATED = {
     "ReviewedApplicationViewSet": {"approve"},
     # Changing what somebody else may do, or whether they may sign in at all.
     "UserViewSet": {"partial_update"},
+    # A token that acts as you, made for a script - the same as a password handed to it.
+    "PersonalAccessTokenViewSet": {"create"},
 }
 
 # Every routed write that is not an act, and the reason. Together with GATED this accounts for the
@@ -63,6 +65,12 @@ NOT_AN_ACT = {
         "sign-in asks with prompt=login"
     ),
     ("RevokeTokenView", "POST"): "an application giving up a token it holds",
+    ("DeviceAuthorizationView", "POST"): "a device asking for a code to show, with no session involved at all",
+    ("DeviceAuthorizationViewSet", "approve"): (
+        "the same consent the authorize page asks for, which nobody signs in again to give"
+    ),
+    ("DeviceAuthorizationViewSet", "deny"): "turning a device away only refuses it",
+    ("PersonalAccessTokenViewSet", "destroy"): "deleting a token only takes access away",
     ("TokenView", "POST"): "an application trading a code or refresh token, with no session involved at all",
     ("UserInfoView", "POST"): "an application reading the claims its token was granted, which changes nothing",
     ("AuthenticateView", "POST"): "the second factor of signing in, made before there is a session to protect",
