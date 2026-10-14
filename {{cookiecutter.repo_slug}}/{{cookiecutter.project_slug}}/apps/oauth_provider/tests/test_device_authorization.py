@@ -335,7 +335,10 @@ def test_only_the_code_entered_is_answered(client, provider, cli, signed_in):
     client.post(_detail(second["user_code"], "approve"))
 
     statuses = dict(DeviceGrant.objects.values_list("user_code", "status"))
-    assert statuses == {first["user_code"]: DeviceGrant.AUTHORIZATION_PENDING, second["user_code"]: DeviceGrant.AUTHORIZED}
+    assert statuses == {
+        first["user_code"]: DeviceGrant.AUTHORIZATION_PENDING,
+        second["user_code"]: DeviceGrant.AUTHORIZED,
+    }
 
 
 @pytest.mark.django_db

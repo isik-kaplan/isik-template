@@ -60,6 +60,4 @@ class PersonalAccessTokenSerializer(BaseModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        return make_token(
-            user=self.context["request"].user, scopes=validated_data.pop("scopes", []), **validated_data
-        )
+        return make_token(user=self.context["request"].user, scopes=validated_data.pop("scopes", []), **validated_data)

@@ -4,7 +4,7 @@ import { createHash, randomBytes } from 'node:crypto'
 
 import { SUPERUSER, SUPERUSER_PASSWORD, act, asTheSuperuser, login, signUpAndVerify } from '../helpers'
 
-// Never served by anything: the browser's arrival there, code in hand, is answered by the spec itself.
+// Never served by anything: the spec reads the code off the browser's request to it.
 const REDIRECT_URI = 'https://client.testproject.test/callback'
 const PASSWORD = 'correct-horse-battery-staple'
 const MANAGE_PEOPLE = "See everybody's account, and activate or deactivate them"
@@ -83,7 +83,6 @@ test('an application is approved, signs somebody in, acts for them, and is shut 
 
   // Somebody else's browser, signed out: sign-in first, then straight back to the question.
   const visitor = await (await browser.newContext({ ignoreHTTPSErrors: true })).newPage()
-  await visitor.route(`${REDIRECT_URI}**`, (route) => route.fulfill({ status: 200, body: 'back at the application' }))
   await visitor.goto(authorize.href)
   await expect(visitor).toHaveURL(/\/auth\/login\?next=/)
   await visitor.getByLabel('Username or email').fill(username)
@@ -95,10 +94,12 @@ test('an application is approved, signs somebody in, acts for them, and is shut 
   await expect(visitor.getByText('See your email address')).toBeVisible()
   await expect(visitor.getByText(MANAGE_PEOPLE)).toBeVisible()
   await expect(visitor.getByText(`Not ${username}?`)).toBeVisible()
+  // Read off the request the browser makes to it: nothing answers there, and whether the browser's own
+  // navigation can be intercepted after a form post's redirect depends on the scheme it came from.
+  const returning = visitor.waitForRequest((request) => request.url().startsWith(`${REDIRECT_URI}?`))
   await visitor.getByRole('button', { name: 'Allow' }).click()
 
-  await expect(visitor).toHaveURL(new RegExp(`^${REDIRECT_URI}\\?`))
-  const returned = new URL(visitor.url()).searchParams
+  const returned = new URL((await returning).url()).searchParams
   expect(returned.get('state')).toBe('the-state')
 
   const tokens = await page.request.post(`${authOrigin}/o/token/`, {

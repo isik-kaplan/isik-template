@@ -31,7 +31,9 @@ def test_registering_in_auto_mode_may_bring_one_into_the_world_approved(alice):
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize(("start", "end"), [("pending", "approved"), ("approved", "withdrawn"), ("approved", "disabled")])
+@pytest.mark.parametrize(
+    ("start", "end"), [("pending", "approved"), ("approved", "withdrawn"), ("approved", "disabled")]
+)
 def test_its_approval_moves_only_through_the_services_even_along_its_lifecycle(alice, start, end):
     application = _application(alice)
     set_approval(application, start)
