@@ -19,6 +19,8 @@ services:
       retries: 5
     restart: unless-stopped
 
+{%- if cookiecutter.background_jobs != "inline" %}
+
   broker:
     build:
       context: ./broker
@@ -35,35 +37,48 @@ services:
       timeout: 10s
       retries: 10
 
-  # S3-compatible object storage for local dev and demos. Pinned to the last release that starts
-  # without a LocalStack account and auth token - every release from 2026.03.0 on requires one.
-  # No docker.sock and no Lambda port range: only S3 runs. Community edition keeps nothing across a
-  # restart, so the init hook below recreates the bucket on every start.
+{%- endif %}
+{%- if cookiecutter.storage != "disk" %}
+{% if cookiecutter.storage == "garage" %}
+  # S3-compatible object storage: Garage, one node, in dev, tests and production alike.
+{%- else %}
+  # S3-compatible object storage for local dev and the test suite only - a deployment points
+  # STORAGE__* at its provider and leaves the local-storage profile off (see .env.example).
+{%- endif %}
   storage:
-    image: localstack/localstack:4.14.0
+    build:
+      context: ./storage
+    image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-storage:latest
+{%- if cookiecutter.storage == "s3" %}
+    profiles: ["local-storage"]
+{%- endif %}
     environment:
-      SERVICES: s3
-      # Read by the init hook, which creates the bucket - the app never does.
+      # The entrypoint makes sure of this key and bucket on every start - the app never creates one.
       BUCKET_NAME: {{ '${' + cookiecutter.config_prefix + '__STORAGE__BUCKET_NAME}' }}
       REGION_NAME: {{ '${' + cookiecutter.config_prefix + '__STORAGE__REGION_NAME}' }}
+      ACCESS_KEY_ID: {{ '${' + cookiecutter.config_prefix + '__STORAGE__ACCESS_KEY_ID}' }}
+      SECRET_ACCESS_KEY: {{ '${' + cookiecutter.config_prefix + '__STORAGE__SECRET_ACCESS_KEY}' }}
+      RPC_SECRET: {{ '${' + cookiecutter.config_prefix + '__STORAGE__RPC_SECRET}' }}
+      KEY_CAN_CREATE_BUCKETS: {{ '${' + cookiecutter.config_prefix + '__STORAGE__KEY_CAN_CREATE_BUCKETS}' }}
     volumes:
-      - ./localstack/init:/etc/localstack/init
+      - storage_data:/var/lib/garage
     networks:
       - internal
       # Only so the port below can be published at all - Docker publishes nothing for a container
       # whose every network is `internal`.
       - external
     ports:
-      # Loopback only, for poking at it by hand (`aws --endpoint-url=http://localhost:4566 s3 ls`);
-      # the backend reaches it as storage:4566.
-      - "127.0.0.1:{{ '${' + cookiecutter.config_prefix + '__STORAGE__PORT:-4566}' }}:4566"
+      # Loopback only, for poking at it by hand (`aws --endpoint-url=http://localhost:3900 s3 ls`);
+      # the backend reaches it as storage:3900.
+      - "127.0.0.1:{{ '${' + cookiecutter.config_prefix + '__STORAGE__PORT:-3900}' }}:3900"
     restart: unless-stopped
     healthcheck:
-      # The bucket rather than the service, so a backend never starts against one not made yet.
-      test: ["CMD-SHELL", "awslocal s3api head-bucket --bucket \"$$BUCKET_NAME\""]
+      # Ready once the key and bucket are made sure of, so a backend never starts before them.
+      test: ["CMD-SHELL", "test -f /tmp/ready && garage status >/dev/null"]
       interval: 10s
       timeout: 5s
       retries: 10
+{%- endif %}
 
   backend:
     build:
@@ -73,6 +88,9 @@ services:
     env_file: .env
     volumes:
       - ./{{ cookiecutter.project_slug }}:/{{ cookiecutter.project_slug }}
+{%- if cookiecutter.storage == "disk" %}
+      - media:/media
+{%- endif %}
     networks:
       internal:
         # nginx's named upstream (server/template.nginx.conf) targets this, not the bare
@@ -85,17 +103,26 @@ services:
     depends_on:
       database:
         condition: service_healthy
+{%- if cookiecutter.background_jobs != "inline" %}
       broker:
         condition: service_healthy
+{%- endif %}
+{%- if cookiecutter.storage != "disk" %}
       # A real dependency, not a nice-to-have: an upload is a synchronous call from the request.
       storage:
         condition: service_healthy
+{%- if cookiecutter.storage == "s3" %}
+        # Only while the local-storage profile runs it; a deployment's bucket is somebody else's.
+        required: false
+{%- endif %}
+{%- endif %}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health/"]
       interval: 10s
       timeout: 5s
       retries: 10
+{%- if cookiecutter.background_jobs != "inline" %}
 
   worker:
     image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-backend:latest
@@ -103,6 +130,9 @@ services:
     env_file: .env
     volumes:
       - ./{{ cookiecutter.project_slug }}:/{{ cookiecutter.project_slug }}
+{%- if cookiecutter.storage == "disk" %}
+      - media:/media
+{%- endif %}
     networks:
       - internal
       - external
@@ -114,6 +144,7 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
 
   scheduler:
     image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-backend:latest
@@ -121,6 +152,9 @@ services:
     env_file: .env
     volumes:
       - ./{{ cookiecutter.project_slug }}:/{{ cookiecutter.project_slug }}
+{%- if cookiecutter.storage == "disk" %}
+      - media:/media
+{%- endif %}
     networks:
       - internal
       - external
@@ -132,6 +166,8 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
+{%- endif %}
+{%- endif %}
 
   # The frontend suites in the image the app is built in, the same way CI runs them. Profiled, so
   # `docker compose up` never starts it: `docker compose run --rm frontend-test`.
@@ -209,10 +245,16 @@ services:
     # holds), and no secret.
     environment:
       {{ cookiecutter.config_prefix }}__DOMAIN: {{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
-{%- if cookiecutter.tls_termination == "self" %}
+{%- if cookiecutter.tls_termination == "self" or cookiecutter.storage == "disk" %}
     volumes:
+{%- if cookiecutter.tls_termination == "self" %}
       - letsencrypt:/etc/letsencrypt
       - acme_webroot:/var/www/certbot
+{%- endif %}
+{%- if cookiecutter.storage == "disk" %}
+      # Read-only: nginx sends stored files once the backend has said who may have one.
+      - media:/media:ro
+{%- endif %}
 {%- endif %}
     depends_on:
       backend:
@@ -241,6 +283,10 @@ services:
           - api.{{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
           - admin.{{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
           - auth.{{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
+      # Without it Docker publishes none of the ports above - it publishes nothing for a container
+      # whose every network is `internal`.{% if cookiecutter.storage == "s3" %} It is also the way out to the provider's bucket,
+      # which nginx fetches stored files from.{% endif %}
+      external:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/health"]
@@ -276,6 +322,11 @@ services:
 {% endif %}
 volumes:
   postgres_data:
+{%- if cookiecutter.storage == "disk" %}
+  media:
+{%- else %}
+  storage_data:
+{%- endif %}
 {%- if cookiecutter.tls_termination == "self" %}
   letsencrypt:
   acme_webroot:

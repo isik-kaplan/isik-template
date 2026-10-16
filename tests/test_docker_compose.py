@@ -43,49 +43,122 @@ def test_docker_compose_config_validates_with_the_local_https_override(cookies):
     assert 'published: "443"' in proc.stdout
 
 
-def test_object_storage_is_a_pinned_s3_only_localstack_the_backend_waits_for(cookies):
-    result = cookies.bake(extra_context=load_context("default"))
-    assert result.exit_code == 0
-
+def _services(project_path, *args):
+    shutil.copy(project_path / ".env.example", project_path / ".env")
     proc = subprocess.run(
-        ["docker", "compose", "config", "--format", "json"],
-        cwd=result.project_path,
+        ["docker", "compose", *args, "config", "--format", "json"],
+        cwd=project_path,
         capture_output=True,
         text=True,
         check=True,
     )
-    services = json.loads(proc.stdout)["services"]
+    return json.loads(proc.stdout)["services"]
+
+
+def test_bundled_garage_is_the_storage_the_backend_waits_for(cookies):
+    """The app holds no s3:CreateBucket, so the storage service makes sure of the key and the bucket
+    itself, and is healthy only once it has."""
+    result = cookies.bake(extra_context=load_context("default"))
+    assert result.exit_code == 0
+
+    services = _services(result.project_path)
     storage = services["storage"]
-    # Every release from 2026.03.0 on needs an account and auth token just to start.
-    assert storage["image"] == "localstack/localstack:4.14.0"
-    assert storage["environment"]["SERVICES"] == "s3"
-    assert not any("docker.sock" in str(volume) for volume in storage.get("volumes", []))
-    assert [port["host_ip"] for port in storage["ports"]] == ["127.0.0.1"]
-    assert services["backend"]["depends_on"]["storage"]["condition"] == "service_healthy"
+    prefix = result.context["config_prefix"]
+    env_example = (result.project_path / ".env.example").read_text()
 
-
-def test_localstack_provisions_the_bucket_the_backend_is_configured_with(cookies):
-    """The app holds no s3:CreateBucket, so the storage service makes the bucket itself, and is healthy
-    only once that bucket exists."""
-    result = cookies.bake(extra_context=load_context("default"))
-    assert result.exit_code == 0
-    shutil.copy(result.project_path / ".env.example", result.project_path / ".env")
-
-    proc = subprocess.run(
-        ["docker", "compose", "config", "--format", "json"],
-        cwd=result.project_path,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    storage = json.loads(proc.stdout)["services"]["storage"]
-    hook = result.project_path / "localstack" / "init" / "ready.d" / "create-bucket.sh"
-
+    assert "dxflrs/garage:" in (result.project_path / "storage" / "Dockerfile").read_text()
+    assert (result.project_path / "storage" / "entrypoint.sh").stat().st_mode & 0o111
     assert storage["environment"]["BUCKET_NAME"] == "test-project"
     assert storage["environment"]["REGION_NAME"] == "us-east-1"
-    assert [volume["target"] for volume in storage["volumes"]] == ["/etc/localstack/init"]
-    assert "head-bucket" in " ".join(storage["healthcheck"]["test"])
-    assert hook.stat().st_mode & 0o111
+    assert [volume["target"] for volume in storage["volumes"]] == ["/var/lib/garage"]
+    assert [port["host_ip"] for port in storage["ports"]] == ["127.0.0.1"]
+    assert "/tmp/ready" in " ".join(storage["healthcheck"]["test"])
+    assert "profiles" not in storage
+    assert services["backend"]["depends_on"]["storage"]["condition"] == "service_healthy"
+    assert services["backend"]["depends_on"]["storage"]["required"] is True
+    assert "COMPOSE_PROFILES" not in env_example
+    assert f"\n{prefix}__STORAGE__ENDPOINT_URL=http://storage:3900\n" in env_example
+
+
+def test_an_external_provider_runs_garage_only_under_the_local_storage_profile(cookies):
+    result = cookies.bake(extra_context=load_context("self-tls"))
+    assert result.exit_code == 0
+    env_example = (result.project_path / ".env.example").read_text()
+
+    assert "\nCOMPOSE_PROFILES=local-storage\n" in env_example
+    assert _services(result.project_path)["storage"]["profiles"] == ["local-storage"]
+    deployed = _services(result.project_path, "--env-file", "/dev/null")
+    assert "storage" not in deployed
+    assert deployed["backend"]["depends_on"]["storage"]["required"] is False
+
+
+def test_disk_storage_runs_no_storage_service_and_mounts_a_media_volume(cookies):
+    result = cookies.bake(extra_context=load_context("minimal"))
+    assert result.exit_code == 0
+
+    services = _services(result.project_path)
+    assert "storage" not in services
+    assert "storage" not in services["backend"].get("depends_on", {})
+    assert {volume["target"] for volume in services["backend"]["volumes"]} >= {"/media"}
+    assert not (result.project_path / "storage").exists()
+    assert "STORAGE__" not in (result.project_path / ".env.example").read_text()
+    media = [volume for volume in services["server"]["volumes"] if volume["target"] == "/media"]
+    assert [(volume["source"], volume["read_only"]) for volume in media] == [("media", True)]
+
+
+@pytest.mark.parametrize(
+    ("context_name", "location", "absent"),
+    [
+        ("minimal", "location /internal/media/ {", "/internal/storage/"),
+        ("default", "location = /internal/storage/ {", "/internal/media/"),
+        ("self-tls", "location = /internal/storage/ {", "/internal/media/"),
+    ],
+)
+def test_nginx_sends_stored_files_only_from_an_internal_location_on_the_backend_hosts(
+    cookies, context_name, location, absent
+):
+    """serve_file() answers with an X-Accel-Redirect; these are the locations it names."""
+    result = cookies.bake(extra_context=load_context(context_name))
+    assert result.exit_code == 0
+    nginx = (result.project_path / f"{result.context['project_slug']}-server" / "template.nginx.conf").read_text()
+
+    [backend_block] = [block for block in nginx.split("server {") if "proxy_pass http://backend_api;" in block]
+    found = backend_block.split(location, 1)[1].split("}", 1)[0]
+    assert "internal;" in found
+    assert "add_header Content-Security-Policy \"default-src 'none'; sandbox\" always;" in found
+    assert "add_header X-Content-Type-Options nosniff always;" in found
+    assert nginx.count(location) == 1
+    assert absent not in nginx
+
+
+@pytest.mark.parametrize("context_name", ["default", "self-tls", "minimal"])
+def test_nginx_is_on_a_network_docker_publishes_ports_from(cookies, context_name):
+    """Docker publishes nothing for a container whose every network is `internal`."""
+    result = cookies.bake(extra_context=load_context(context_name))
+    assert result.exit_code == 0
+
+    server = _services(result.project_path)["server"]
+    assert set(server["networks"]) == {"internal", "external"}
+    assert server["ports"]
+
+
+@pytest.mark.parametrize(
+    ("context_name", "expected"),
+    [
+        ("default", {"broker", "worker", "scheduler"}),
+        ("self-tls", {"broker", "worker"}),
+        ("minimal", set()),
+    ],
+)
+def test_background_jobs_decide_the_broker_worker_and_scheduler(cookies, context_name, expected):
+    result = cookies.bake(extra_context=load_context(context_name))
+    assert result.exit_code == 0
+
+    services = _services(result.project_path)
+    assert {"broker", "worker", "scheduler"} & set(services) == expected
+    assert ("broker" in services["backend"]["depends_on"]) == bool(expected)
+    assert (result.project_path / "broker").exists() == bool(expected)
+    assert ("BROKER__" in (result.project_path / ".env.example").read_text()) == bool(expected)
 
 
 def test_frontend_suites_run_in_the_dockerfile_tester_stage_only_on_request(cookies):
@@ -165,12 +238,12 @@ def test_only_the_backend_services_receive_the_backends_secrets(cookies, context
     services = json.loads(proc.stdout)["services"]
     prefix = result.context["config_prefix"]
     secrets = {f"{prefix}__SECRET_KEY", f"{prefix}__CREDENTIAL_KEY", f"{prefix}__SETUP__SUPERUSER__PASSWORD"}
-    for name in ("frontend", "server", "database", "broker"):
+    for name in {"frontend", "server", "database", "broker", "storage"} & set(services):
         assert "env_file" not in services[name], name
         assert not secrets & set(services[name].get("environment", {})), name
     assert services["frontend"]["environment"][f"{prefix}__DOMAIN"] == result.context["domain"]
     assert services["server"]["environment"] == {f"{prefix}__DOMAIN": result.context["domain"]}
-    for name in ("backend", "worker", "scheduler"):
+    for name in {"backend", "worker", "scheduler"} & set(services):
         assert f"{prefix}__SECRET_KEY" in services[name]["environment"], name
 
 

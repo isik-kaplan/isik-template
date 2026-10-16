@@ -6,5 +6,7 @@
   "domain": "testproject.test",
   "license": "MIT",
   "include_mobile": true,
-  "languages": "en,tr"
+  "languages": "en,tr",
+  "background_jobs": "celery-with-beat",
+  "storage": "garage"
 }

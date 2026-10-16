@@ -13,10 +13,26 @@
   "python_version": "3.14",
   "node_version": "22",
   "include_mobile": false,
+  "background_jobs": ["celery-with-beat", "celery", "inline"],
+  "storage": ["garage", "s3", "disk"],
   "isik_version": "0.23.0",
   "isikk_core_version": "0.14.0",
   "_copy_without_render": [
     "*/e2e/authentik-blueprints/*"
   ],
-  "_extensions": ["jinja2_time.TimeExtension"]
+  "_extensions": ["jinja2_time.TimeExtension"],
+  "__prompts__": {
+    "background_jobs": {
+      "__prompt__": "Background jobs",
+      "celery-with-beat": "Celery worker and beat scheduler, over RabbitMQ",
+      "celery": "Celery worker over RabbitMQ, no scheduler",
+      "inline": "No broker or worker: a task runs in the request that asked for it, once it commits"
+    },
+    "storage": {
+      "__prompt__": "File storage",
+      "garage": "Garage, bundled: self-hosted S3 in dev, tests and production",
+      "s3": "An S3 provider you configure for production (Garage only in dev and tests)",
+      "disk": "Local disk, on a Docker volume"
+    }
+  }
 }

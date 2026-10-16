@@ -14,6 +14,8 @@ PROJECT_SLUG = {{ cookiecutter.project_slug|tojson }}
 DOMAIN = {{ cookiecutter.domain|tojson }}
 INCLUDE_MOBILE = {{ cookiecutter.include_mobile }}
 TLS_TERMINATION = {{ cookiecutter.tls_termination|tojson }}
+BACKGROUND_JOBS = {{ cookiecutter.background_jobs|tojson }}
+STORAGE = {{ cookiecutter.storage|tojson }}
 AUTHOR_NAME = {{ cookiecutter.author_name|tojson }}
 AUTHOR_EMAIL = {{ cookiecutter.author_email|tojson }}
 # "en" first, always - see hooks/_validate.py's own validate_requested_languages().
@@ -279,6 +281,11 @@ def main() -> None:
         os.remove("e2e/tls-proxy.conf")
     else:
         os.remove(f"{PROJECT_SLUG}-server/certificate.sh")
+    # Services this project was generated without: tasks run inline, files go to disk.
+    if BACKGROUND_JOBS == "inline":
+        shutil.rmtree("broker")
+    if STORAGE == "disk":
+        shutil.rmtree("storage")
 
     translation_files, web_namespaces = scaffold_translation_files()
     if EXTRA_LANGUAGES:

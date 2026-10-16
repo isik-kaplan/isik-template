@@ -41,7 +41,7 @@ bash scripts/setup.sh
 ```
 
 - **Local development** keeps `.env.example`'s values.
-- **A real deployment** generates strong secrets (`SECRET_KEY`, `CREDENTIAL_KEY`, database and broker passwords,
+- **A real deployment** generates strong secrets (`SECRET_KEY`, `CREDENTIAL_KEY`, database{% if cookiecutter.background_jobs != "inline" %} and broker{% endif %} passwords,
   the superuser's password) and asks for the domain, SMTP, object storage, social login credentials and Sentry.
 
 Every variable is documented where it is set, in `.env.example`'s own comments. Keep `.env` out of version control.
@@ -120,8 +120,15 @@ the profile's Tokens tab.
 
 - **Email.** With `DEBUG=true` mail is printed to the backend's log. A deployment needs
   `{{ cookiecutter.config_prefix }}__EMAIL__SMTP__*`, or verification and password reset links go nowhere.
-- **Object storage.** The bundled LocalStack keeps nothing across a restart. Point
-  `{{ cookiecutter.config_prefix }}__STORAGE__*` at a real S3-compatible bucket for a deployment.
+{%- if cookiecutter.storage == "garage" %}
+- **Object storage.** Uploads go to the bundled Garage, on the `storage_data` volume. Back it up;
+  `setup.sh` generated its keys.
+{%- elif cookiecutter.storage == "s3" %}
+- **Object storage.** Point `{{ cookiecutter.config_prefix }}__STORAGE__*` at your S3 provider and create
+  the bucket, and leave `COMPOSE_PROFILES` without `local-storage` so the bundled Garage stays off.
+{%- else %}
+- **Object storage.** Uploads go to disk, on the `media` volume. Back it up.
+{%- endif %}
 - **Error reporting.** `{{ cookiecutter.config_prefix }}__SENTRY__DSN` (backend) and `NEXT_PUBLIC_SENTRY_DSN`
   (browser, read at build time) switch Sentry on. Neither sets a cookie.
 

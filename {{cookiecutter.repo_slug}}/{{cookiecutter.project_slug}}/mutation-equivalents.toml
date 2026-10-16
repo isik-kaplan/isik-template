@@ -149,6 +149,18 @@ which gives the same answer as the cached closure. See the entry above."""
 reason = """Looks for the cache as _PERM_CACHE, which is never set, so the closure is recomputed every
 time from ModelBackend's own cached raw grants - the same answer. See the two entries above."""
 
+["apps.common.files.x_serve_file__mutmut__3bee847eb113"]
+reason = """Spells the header "content-disposition" instead of "Content-Disposition". Django's
+HttpResponse.headers is case-insensitive on write and on read, and so is nginx, which passes it on, so
+every spelling sets the same header and no test can observe which one was written."""
+verified_by = "apps/common/tests/test_library_assumptions.py::test_a_response_header_is_case_insensitive"
+
+["apps.common.files.x_serve_file__mutmut__d53c539c29bd"]
+reason = """Spells the header "CONTENT-DISPOSITION" instead of "Content-Disposition". Django's
+HttpResponse.headers is case-insensitive on write and on read, and so is nginx, which passes it on, so
+every spelling sets the same header and no test can observe which one was written."""
+verified_by = "apps/common/tests/test_library_assumptions.py::test_a_response_header_is_case_insensitive"
+
 ["apps.users.reauthentication.views.manage_totp.xǁManageTOTPViewǁget__mutmut__07b657780af2"]
 reason = """Drops **kwargs from the call to allauth's own ManageTOTPView.get. The TOTP route captures no URL
 parameters (allauth.headless.mfa.urls routes it as a bare "totp", and gated_headless_urlpatterns()

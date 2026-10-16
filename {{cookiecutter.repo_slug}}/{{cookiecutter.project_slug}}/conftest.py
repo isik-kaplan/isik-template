@@ -1,4 +1,6 @@
+{% if cookiecutter.storage != "disk" -%}
 import contextlib
+{% endif -%}
 import logging
 import os
 import uuid
@@ -15,7 +17,9 @@ from apps.common.logging.emit import AUDIT_LOGGER, LOGGER
 from apps.common.logging.events import PAYLOAD
 
 from {{ cookiecutter.project_slug }}.celery import app as celery_app
+{%- if cookiecutter.storage != "disk" %}
 from {{ cookiecutter.project_slug }}.config import CONFIG as config
+{%- endif %}
 
 
 @pytest.fixture(autouse=True)
@@ -99,6 +103,28 @@ def audited():
     yield from _collected_from(AUDIT_LOGGER)
 
 
+{% if cookiecutter.storage == "disk" -%}
+@pytest.fixture(autouse=True, scope="session")
+def _a_storage_directory_of_its_own(tmp_path_factory):
+    """Django hands each worker a `test_` copy of the database, but uploads would otherwise land on
+    the volume the dev stack serves - and a file a test writes outlives the row rolled back beside it.
+
+    `override_settings` resets the storage registry and `default_storage`, but every `FileField`
+    with a callable storage called it once at import and kept the instance, so those are rebuilt.
+    """
+    from django.apps import apps as django_apps
+    from django.db import models
+    from django.test import override_settings
+
+    default = {**django_settings.STORAGES["default"]}
+    default["OPTIONS"] = {**default["OPTIONS"], "location": str(tmp_path_factory.mktemp("media"))}
+    with override_settings(STORAGES={**django_settings.STORAGES, "default": default}):
+        for model in django_apps.get_models():
+            for field in model._meta.get_fields():
+                if isinstance(field, models.FileField) and hasattr(field, "_storage_callable"):
+                    field.storage = field._storage_callable()
+        yield
+{%- else -%}
 @pytest.fixture(autouse=True, scope="session")
 def _a_storage_bucket_of_its_own():
     """Django hands each worker a `test_` copy of the database, but object storage would otherwise
@@ -122,14 +148,15 @@ def _a_storage_bucket_of_its_own():
             for field in model._meta.get_fields():
                 if isinstance(field, models.FileField) and hasattr(field, "_storage_callable"):
                     field.storage = field._storage_callable()
-        # The app never creates a bucket, so a worker's is this fixture's to make. LocalStack keeps one
-        # across runs until it restarts; the region is the one S3 takes no LocationConstraint for.
+        # The app never creates a bucket, so a worker's is this fixture's to make. Garage keeps one
+        # across runs; the region is the one S3 takes no LocationConstraint for.
         client = storages["default"].connection.meta.client
         region = storages["default"].region_name
         options = {} if region == "us-east-1" else {"CreateBucketConfiguration": {"LocationConstraint": region}}
         with contextlib.suppress(client.exceptions.BucketAlreadyOwnedByYou):
             client.create_bucket(Bucket=bucket, **options)
         yield
+{%- endif %}
 
 
 # Captured before any session can rewrite it: pytest-django replaces the live database name with the

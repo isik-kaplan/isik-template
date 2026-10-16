@@ -6,7 +6,7 @@ A cookiecutter template for single-tenant Django + Next.js applications, built o
 established across several prior Django + Next.js projects built the same way.
 
 Stack: Django + django-hosts + django-allauth (headless) + drf-spectacular + django-pghistory/
-pgtrigger + Celery/RabbitMQ, Next.js + shadcn/ui (optionally an Expo/React Native app alongside it),
+pgtrigger + Celery/RabbitMQ and Garage (both optional), Next.js + shadcn/ui (optionally an Expo/React Native app alongside it),
 all wired together in Docker Compose with a Playwright e2e suite (mailpit, plus a disposable
 Authentik instance for social login) covering the full auth surface end to end.
 
@@ -78,6 +78,16 @@ client requested it, so a mobile version of those routes would never actually be
 everything else in this template, `include_mobile` is opt-in: most generated projects don't want a
 companion mobile app, unlike (say) Celery, which nearly all of them eventually do.
 
+`background_jobs` picks how tasks run: `celery-with-beat` (default) brings RabbitMQ, a Celery worker
+and a beat scheduler; `celery` the worker without the scheduler; `inline` no broker and no worker -
+tasks keep the same `@shared_task`/`.delay()` code and run in the request that asked for them, once
+it commits (`CELERY_TASK_ALWAYS_EAGER`). `storage` picks where uploads go: `garage` (default)
+bundles a one-node [Garage](https://garagehq.deuxfleurs.fr/) S3 for development, tests and production;
+`s3` keeps that Garage for development and tests only and points production at a provider; `disk`
+writes to a Docker volume through Django's `FileSystemStorage`, with no storage service at all. In
+all three no stored file is public: a view decides who may have one and answers with
+`apps.common.files.serve_file()`, and nginx sends the file (`X-Accel-Redirect`).
+
 ## Developing this template
 
 ```
@@ -94,6 +104,9 @@ result at increasing cost:
   full compose stack (including a disposable Authentik instance) and runs the Playwright suite
   against it - the login/signup page without provider buttons is otherwise untested. Slow (minutes); skips
   only if `docker` itself isn't available.
+
+The "minimal" context is the smallest stack (`inline` tasks, `disk` storage) and "self-tls" the
+middle ground (`celery`, `s3`), so each answer is baked by some context.
 
 The "default" context (`include_mobile: true` and two languages - the "everything on"
 configuration, with the OIDC test IdP its `e2e/.env` switches on) has its backend build/coverage, backend-mutation, frontend

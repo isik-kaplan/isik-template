@@ -97,7 +97,9 @@ set_var "${PREFIX}__SECRET_KEY" "$(random_hex 32)"
 # A Fernet key is 32 random bytes in url-safe base64, which plain base64 becomes by swapping two characters.
 set_var "${PREFIX}__CREDENTIAL_KEY" "$(openssl rand -base64 32 | tr '+/' '-_')"
 set_var "${PREFIX}__DB__PASSWORD" "$(random_hex 24)"
+{%- if cookiecutter.background_jobs != "inline" %}
 set_var "${PREFIX}__BROKER__PASSWORD" "$(random_hex 24)"
+{%- endif %}
 
 superuser_password="$(random_hex 16)"
 set_var "${PREFIX}__SETUP__SUPERUSER__PASSWORD" "$superuser_password"
@@ -139,11 +141,26 @@ else
   echo "Skipped - fill in ${PREFIX}__EMAIL__SMTP__* in $ENV_FILE yourself before going live, or no email will send."
 fi
 
+{%- if cookiecutter.storage != "disk" %}
+
+# The bundled Garage takes the key it is given: GK and 24 hex digits, with a 64-hex-digit secret.
+use_bundled_storage() {
+  set_var "${PREFIX}__STORAGE__ACCESS_KEY_ID" "GK$(random_hex 12)"
+  set_var "${PREFIX}__STORAGE__SECRET_ACCESS_KEY" "$(random_hex 32)"
+  set_var "${PREFIX}__STORAGE__RPC_SECRET" "$(random_hex 32)"
+  # Only the test suite makes buckets; a deployment's key reads and writes its own.
+  set_var "${PREFIX}__STORAGE__KEY_CAN_CREATE_BUCKETS" "false"
+}
+{%- if cookiecutter.storage == "garage" %}
+use_bundled_storage
+{%- else %}
+
 echo
-echo "Object storage: the bundled LocalStack keeps nothing across a restart, so a real deployment"
-echo "needs a real S3-compatible bucket (AWS S3, Cloudflare R2, MinIO, ...)."
-storage_endpoint="$(ask "S3 endpoint URL (blank keeps the bundled LocalStack)" "")"
+echo "Object storage: the S3-compatible provider uploads go to (AWS S3, Cloudflare R2, Backblaze B2, ...)."
+storage_endpoint="$(ask "S3 endpoint URL (blank keeps the bundled Garage)" "")"
 if [ -n "$storage_endpoint" ]; then
+  # Off the local-storage profile, so the bundled Garage never starts here.
+  set_var "COMPOSE_PROFILES" ""
   set_var "${PREFIX}__STORAGE__ENDPOINT_URL" "$storage_endpoint"
   set_var "${PREFIX}__STORAGE__BUCKET_NAME" "$(ask "Bucket name" "{{ cookiecutter.repo_slug }}")"
   set_var "${PREFIX}__STORAGE__REGION_NAME" "$(ask "Region" "us-east-1")"
@@ -151,8 +168,11 @@ if [ -n "$storage_endpoint" ]; then
   set_var "${PREFIX}__STORAGE__SECRET_ACCESS_KEY" "$(ask_secret "Secret access key")"
   echo "Create that bucket yourself: the app never creates one, so its keys need no s3:CreateBucket."
 else
-  echo "Kept LocalStack - uploads will not survive a restart of the storage container."
+  use_bundled_storage
+  echo "Kept the bundled Garage, on this host's storage_data volume - back that volume up."
 fi
+{%- endif %}
+{%- endif %}
 
 echo
 social_login_providers="$(ask "Social login providers, as comma-separated allauth ids (blank for none)" "")"

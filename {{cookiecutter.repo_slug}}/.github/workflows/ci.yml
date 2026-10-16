@@ -68,9 +68,14 @@ jobs:
       - run: cp .env.example .env
       - name: Build backend image
         run: docker compose build backend
-      # storage too: the suite writes to real LocalStack, and --no-deps below starts nothing itself.
+{%- if cookiecutter.storage == "disk" %}
+      - name: Start database
+        run: docker compose up -d --wait --wait-timeout 90 database
+{%- else %}
+      # storage too: the suite writes to a real Garage, and --no-deps below starts nothing itself.
       - name: Start database and storage
         run: docker compose up -d --wait --wait-timeout 90 database storage
+{%- endif %}
       - name: Migrate
         run: docker compose run --rm --no-deps backend python manage.py migrate
       - name: Check for missing migrations
@@ -139,9 +144,14 @@ jobs:
       - run: cp .env.example .env
       - name: Build backend image
         run: docker compose build backend
-      # storage too: the suite writes to real LocalStack, and --no-deps below starts nothing itself.
+{%- if cookiecutter.storage == "disk" %}
+      - name: Start database
+        run: docker compose up -d --wait --wait-timeout 90 database
+{%- else %}
+      # storage too: the suite writes to a real Garage, and --no-deps below starts nothing itself.
       - name: Start database and storage
         run: docker compose up -d --wait --wait-timeout 90 database storage
+{%- endif %}
       - name: Migrate
         run: docker compose run --rm --no-deps backend python manage.py migrate
 {%- if cookiecutter.languages.split(',') | length > 1 %}
@@ -479,13 +489,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # Needed even though e2e/.env is committed: docker compose still resolves the root
-      # compose file's own ${...} interpolations (DB/broker creds, DOMAIN) against .env in the
+      # compose file's own ${...} interpolations (DB{% if cookiecutter.background_jobs != "inline" %}/broker{% endif %} creds, DOMAIN) against .env in the
       # project directory (see e2e/.env's header comment) - e2e/.env only overrides what the e2e
       # environment specifically needs to differ.
       - run: cp .env.example .env
+{%- if cookiecutter.background_jobs != "inline" %}
       # Split rather than `up -d --build`: worker/scheduler share backend's image tag with no
       # build of their own, and starting them before that build finishes tagging the image can
       # race compose into pulling it instead of using what was just built.
+{%- endif %}
       - name: Build the full stack
         working-directory: e2e
         run: docker compose build

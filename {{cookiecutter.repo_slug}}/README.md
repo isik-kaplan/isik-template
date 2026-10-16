@@ -26,11 +26,19 @@ docker compose build
 docker compose up -d
 ```
 
-Split rather than `up -d --build` in one shot: `worker`/`scheduler` share `backend`'s image tag
+{%- if cookiecutter.background_jobs != "inline" %}
+Split rather than `up -d --build` in one shot: {% if cookiecutter.background_jobs == "celery-with-beat" %}`worker`/`scheduler` share{% else %}`worker` shares{% endif %} `backend`'s image tag
 with no `build:` of their own, and starting them before that build finishes tagging the image can
 race compose into trying to pull it instead of using what was just built.
+{%- endif %}
+{%- set services = ["database"] %}
+{%- if cookiecutter.background_jobs != "inline" %}{% set _ = services.append("broker") %}{% endif %}
+{%- if cookiecutter.storage != "disk" %}{% set _ = services.append("storage") %}{% endif %}
+{%- set _ = services.append("backend") %}
+{%- if cookiecutter.background_jobs != "inline" %}{% set _ = services.append("worker") %}{% endif %}
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}{% set _ = services.append("scheduler") %}{% endif %}
 
-Brings up `database`, `broker`, `storage`, `backend`, `worker`, `scheduler`, `frontend`, and `server` (nginx,
+Brings up `{{ services|join("`, `") }}`, `frontend`, and `server` (nginx,
 {%- if cookiecutter.tls_termination == "self" %}
 plus `certbot`; `server` is the only service publishing a host port, now on both `80` and `443`).
 Visit `https://{{ cookiecutter.domain }}` - see "TLS" below before the very first boot.
@@ -43,25 +51,69 @@ last step) - see `.env.example`'s own header comment before changing anything in
 local development to a real deployment, which generates strong secrets and prompts for real
 domain/SMTP/OAuth/Sentry config instead of leaving `.env.example`'s dev defaults in place.
 
+## Background jobs
+{% if cookiecutter.background_jobs == "inline" %}
+There is no broker and no worker. Tasks are still Celery tasks (`@shared_task(base=OnCommitTask)`,
+called with `.delay()`), but `CELERY_TASK_ALWAYS_EAGER` runs each one in the process that asked for
+it, once that request's transaction commits. A failing task is logged with its traceback and never
+fails the response. What that costs:
+
+- The request waits for the task. `tell_the_people_a_rung_signed_out` mails everyone inline.
+- A `countdown` or `eta` is not waited for, and a retry runs at once rather than later.
+- Nothing runs on a schedule.
+
+To move to a worker, regenerate with `background_jobs` set to `celery` or `celery-with-beat` and
+carry over the `broker` and `worker` services, the `BROKER__*` settings and
+`django-celery-results`; no task changes.
+{% else %}
+Tasks are Celery tasks over RabbitMQ (`broker`), run by `worker`{% if cookiecutter.background_jobs == "celery-with-beat" %}; `scheduler` runs Celery beat
+with `django_celery_beat`'s database schedule, edited in the admin{% endif %}. Every task takes
+`base=OnCommitTask`, so it is dispatched once the transaction that asked for it commits, and its
+history rows name whoever caused it.
+{% endif %}
 ## Object storage
+{% if cookiecutter.storage == "disk" %}
+Uploads (`FileField`/`ImageField`, anything through `default_storage`) go to disk, under `/media` on
+the `media` volume mounted into the backend{% if cookiecutter.background_jobs != "inline" %} and the worker{% endif %}, and read-only into nginx. Back that volume up.
 
+The backend tests write to a directory of their own per pytest worker, never the volume.
+{% else %}
 Uploads (`FileField`/`ImageField`, anything through `default_storage`) go to S3 via django-storages.
-Locally that is the `storage` service, LocalStack running only S3, pinned to `4.14.0`: every
-LocalStack release from `2026.03.0` on refuses to start without an account and auth token. The app
-never creates a bucket - `s3:CreateBucket` is a provisioning permission the web process should not
-hold - so LocalStack creates `{{ cookiecutter.config_prefix }}__STORAGE__BUCKET_NAME` itself when it comes up
-(`localstack/init/ready.d/create-bucket.sh`), and a real deployment provisions its own. LocalStack's
-community edition keeps nothing across a restart, so treat it as dev and demo storage only - point the
-`{{ cookiecutter.config_prefix }}__STORAGE__*` variables at a real S3-compatible bucket for a deployment
-(`bash scripts/setup.sh` asks for them, and you create the bucket). Inspect it by hand on the
-loopback port it publishes:
+{%- if cookiecutter.storage == "garage" %}
+That is the `storage` service, a one-node [Garage](https://garagehq.deuxfleurs.fr/), in development
+and in production alike. Its data lives on the `storage_data` volume - back that volume up.
+{%- else %}
+Locally that is the `storage` service, a one-node [Garage](https://garagehq.deuxfleurs.fr/), which
+only runs under the `local-storage` compose profile `.env.example` turns on. A deployment points the
+`{{ cookiecutter.config_prefix }}__STORAGE__*` variables at its provider (AWS S3, Cloudflare R2,
+Backblaze B2, ...) and leaves the profile off - `bash scripts/setup.sh` does both, and you create the
+bucket.
+{%- endif %}
+The app never creates a bucket - `s3:CreateBucket` is a provisioning permission the web process should
+not hold - so `storage/entrypoint.sh` makes sure of the key and the bucket on every start. Only the test
+suite makes buckets of its own, so `{{ cookiecutter.config_prefix }}__STORAGE__KEY_CAN_CREATE_BUCKETS` is on in
+`.env.example` and off in a deployment. Inspect the bucket by hand on the loopback port Garage publishes:
 
 ```
-aws --endpoint-url=http://localhost:4566 s3 ls s3://{{ cookiecutter.repo_slug }}/
+aws --endpoint-url=http://localhost:3900 s3 ls s3://{{ cookiecutter.repo_slug }}/
 ```
 
-The backend tests write to real LocalStack too, never a mock - each pytest worker gets a bucket of
+The backend tests write to a real Garage too, never a mock - each pytest worker gets a bucket of
 its own (`<bucket>-test-<worker>`), the way it gets a database of its own.
+{% endif %}
+Nothing is public: no URL reaches a stored file without a view deciding who may have it first. The
+view answers with `apps.common.files.serve_file()`, and nginx sends the file itself{% if cookiecutter.storage == "disk" %} off the volume{% else %}, fetched from the
+bucket over a presigned URL that lives a minute and never reaches the client{% endif %}:
+
+```python
+def download(request, pk):
+    report = get_object_or_404(Report, pk=pk, owner=request.user)
+    return serve_file(report.file.name, as_attachment=True)
+```
+
+So a large download never ties up a uwsgi worker, and ranges work. nginx sends every stored file with
+`X-Content-Type-Options: nosniff` and a sandboxing `Content-Security-Policy`, so an uploaded HTML or
+SVG file cannot run as a page on the API's origin.
 
 ## TLS
 {% if cookiecutter.tls_termination == "self" %}
@@ -168,8 +220,12 @@ ends up configured with; a visitor with no preference gets their browser's own l
   `apps.common.transactions.not_atomic(reason)`, and a system check refuses one that used Django's
   `non_atomic_requests` directly. Anything that cannot roll back (mail, Celery dispatch) waits for
   `transaction.on_commit` - `OnCommitTask` and `AccountAdapter.send_mail` already do. Account mail
+{%- if cookiecutter.background_jobs == "inline" %}
+  is rendered and sent by a task, which retries an SMTP outage - inline, once the request commits.
+{%- else %}
   is rendered in the request and sent by the `worker`, which retries an SMTP outage, so under DEBUG
   the console backend prints it in the worker's log rather than the backend's.
+{%- endif %}
 - **Every POST takes an `Idempotency-Key` header** (a UUID per attempt, not per call). `BaseModelViewSet`
   carries isik's `IdempotencyMixin`, so a retried request replays the first answer rather than doing the
   work twice; a system check refuses a routed POST that neither honours a key nor names a
@@ -359,7 +415,7 @@ No consent hook ships with the template: with nothing to gate, it would be code 
 ## Testing
 
 ```
-docker compose up -d --wait database storage
+docker compose up -d --wait database{% if cookiecutter.storage != "disk" %} storage{% endif %}
 docker compose run --rm --no-deps backend python -m pytest   # backend, 100% coverage required
 cd {{ cookiecutter.project_slug }}-frontend && npm install && npm run lint && npm run test
 cd e2e && docker compose build && docker compose up -d && docker compose run --build --rm playwright npx playwright test

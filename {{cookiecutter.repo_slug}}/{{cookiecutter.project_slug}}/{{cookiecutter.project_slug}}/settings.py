@@ -66,8 +66,12 @@ INSTALLED_APPS = [
     "allauth.mfa",
     "allauth.headless",
     "oauth2_provider",
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
     "django_celery_beat",
+{%- endif %}
+{%- if cookiecutter.background_jobs != "inline" %}
     "django_celery_results",
+{%- endif %}
     "apps.common.apps.CommonConfig",
     "apps.idempotency.apps.IdempotencyConfig",
     "apps.core.apps.CoreConfig",
@@ -370,8 +374,15 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 # admin page without a collectstatic step first. This still gets whitenoise's gzip/brotli
 # compression, just not content-hashed cache-busting.
 STORAGES = {
-    # Uploads go to S3 - LocalStack locally (see docker-compose.yml's `storage`). Path-style
-    # addressing, because LocalStack serves buckets as paths rather than as subdomains.
+{%- if cookiecutter.storage == "disk" %}
+    # Uploads go to disk, on the `media` volume docker-compose.yml mounts here.
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "OPTIONS": {"location": "/media"},
+    },
+{%- else %}
+    # Uploads go to S3 - {% if cookiecutter.storage == "garage" %}Garage{% else %}Garage locally{% endif %} (see docker-compose.yml's `storage`). Path-style
+    # addressing, because Garage serves buckets as paths unless it is given a domain for them.
     "default": {
         "BACKEND": "storages.backends.s3.S3Storage",
         "OPTIONS": {
@@ -381,8 +392,11 @@ STORAGES = {
             "secret_key": config.STORAGE.SECRET_ACCESS_KEY,
             "region_name": config.STORAGE.REGION_NAME,
             "addressing_style": "path",
+            # boto3 still presigns with SigV2 in us-east-1, which Garage refuses.
+            "signature_version": "s3v4",
         },
     },
+{%- endif %}
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
     },
@@ -492,10 +506,17 @@ SPECTACULAR_SETTINGS = {
     "ENUM_GENERATE_CHOICE_DESCRIPTION": False,
 }
 
+{%- if cookiecutter.background_jobs == "inline" %}
+# No broker and no worker: a task runs in the process that dispatched it, once the transaction that
+# asked for it commits (celery_task.py). Its failure is logged and stays out of the response. A
+# countdown or eta is not waited for, and a retry runs at once.
+CELERY_TASK_ALWAYS_EAGER = True
+{%- else %}
 # RabbitMQ's default guest/guest user only accepts loopback connections, which worker/scheduler
 # aren't - real credentials are required even locally.
 CELERY_BROKER_URL = f"amqp://{config.BROKER.USER}:{config.BROKER.PASSWORD}@{config.BROKER.HOST}:{config.BROKER.PORT}//"
 CELERY_RESULT_BACKEND = "django-db"
+{%- endif %}
 
 # Console under DEBUG - real SMTP creds aren't set up for local dev. EMAIL__BACKEND overrides this
 # independently of DEBUG - e2e needs smtp (routed to mailpit) while keeping DEBUG=true, since

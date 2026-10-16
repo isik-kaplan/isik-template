@@ -26,9 +26,15 @@ dependencies = [
     "cryptography>=49.0.0",
     "requests>=2.32.0",
     "celery>=5.5.0",
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
     "django-celery-beat>=2.9.0",
+{%- endif %}
+{%- if cookiecutter.background_jobs != "inline" %}
     "django-celery-results>=2.6.0",
+{%- endif %}
+{%- if cookiecutter.storage != "disk" %}
     "django-storages[s3]>=1.14.0",
+{%- endif %}
 ]
 
 [tool.uv]

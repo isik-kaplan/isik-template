@@ -24,12 +24,15 @@ CONFIG = config(
             "HOST": string(),
             "PORT": string(),
         },
+{%- if cookiecutter.background_jobs != "inline" %}
         "BROKER": {
             "USER": string(),
             "PASSWORD": string(),
             "HOST": string(),
             "PORT": string(),
         },
+{%- endif %}
+{%- if cookiecutter.storage != "disk" %}
         "STORAGE": {
             "BUCKET_NAME": string(),
             "ENDPOINT_URL": string(),
@@ -37,6 +40,7 @@ CONFIG = config(
             "SECRET_ACCESS_KEY": string(),
             "REGION_NAME": string(),
         },
+{%- endif %}
         "SETUP": {
             "SUPERUSER": {
                 "USERNAME": string(),

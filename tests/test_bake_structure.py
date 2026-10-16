@@ -165,18 +165,21 @@ def test_extra_languages_keep_translation_keys_typed(cookies):
     assert turkish == {key: "" for key in english}
 
 
-def test_object_storage_is_configured_everywhere_the_backend_runs(cookies):
-    result = cookies.bake(extra_context=load_context("default"))
+@pytest.mark.parametrize(
+    ("context_name", "storage_started"), [("default", True), ("self-tls", True), ("minimal", False)]
+)
+def test_object_storage_is_configured_everywhere_the_backend_runs(cookies, context_name, storage_started):
+    result = cookies.bake(extra_context=load_context(context_name))
     assert result.exit_code == 0
 
     prefix = result.context["config_prefix"]
     env_example = (result.project_path / ".env.example").read_text()
     for key in ("BUCKET_NAME", "ENDPOINT_URL", "ACCESS_KEY_ID", "SECRET_ACCESS_KEY", "REGION_NAME"):
-        assert f"\n{prefix}__STORAGE__{key}=" in env_example
-    assert f"\n{prefix}__STORAGE__ENDPOINT_URL=http://storage:4566\n" in env_example
-    # The suite writes to real LocalStack, so every CI job that runs it has to start one.
+        assert (f"\n{prefix}__STORAGE__{key}=" in env_example) == storage_started
+    # The suite writes to a real Garage, so every CI job that runs it has to start one.
     ci = (result.project_path / ".github" / "workflows" / "ci.yml").read_text()
-    assert ci.count("up -d --wait --wait-timeout 90 database storage") == 2
+    assert ci.count("up -d --wait --wait-timeout 90 database storage") == (2 if storage_started else 0)
+    assert ci.count("up -d --wait --wait-timeout 90 database\n") == (0 if storage_started else 2)
 
 
 def test_tls_termination_self_adds_certbot_and_443(cookies):

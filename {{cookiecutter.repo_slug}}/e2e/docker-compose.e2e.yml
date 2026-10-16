@@ -61,11 +61,16 @@ services:
     # ".env" here would silently re-read the root .env a second time instead of this directory's.
     env_file: [e2e/.env]
 
+{%- if cookiecutter.background_jobs != "inline" %}
+
   worker:
     env_file: [e2e/.env]
+{%- endif %}
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
 
   scheduler:
     env_file: [e2e/.env]
+{%- endif %}
 
   frontend:
     dns:
