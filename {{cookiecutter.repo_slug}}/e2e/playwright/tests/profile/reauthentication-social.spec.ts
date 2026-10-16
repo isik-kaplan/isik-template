@@ -79,12 +79,16 @@ test('somebody with no password proves it at their provider, and can set a passw
   await page.getByRole('button', { name: 'Set new password' }).click()
   await expect(page).not.toHaveURL(/password-reset/)
 
-  // A new password ends the sessions the old credentials opened; typing it to sign in again is a
-  // proof the next act spends, the ordinary way.
+  // A new password ends the sessions the old credentials opened. Signing in with it is no proof, but
+  // the account now has a password to prove with, the ordinary way.
   await login(page, IDENTITY_EMAIL, 'a-password-set-by-email')
   await expect(page.getByText(/Signed in as/)).toBeVisible()
   await page.goto('/profile/emails')
   const afterwards = `oidc-reauth-after-${Date.now()}@example.test`
+  await page.getByPlaceholder('Email').fill(afterwards)
+  await page.getByRole('button', { name: 'Add email' }).click()
+  await proveWithPassword(page, 'a-password-set-by-email')
+  await expect(page).toHaveURL('/profile/emails')
   await page.getByPlaceholder('Email').fill(afterwards)
   await page.getByRole('button', { name: 'Add email' }).click()
   await expect(page.getByRole('listitem').filter({ hasText: afterwards })).toBeVisible()

@@ -20,6 +20,7 @@ from apps.users.models.user import User
 
 AUTH_HOST = f"auth.{settings.PARENT_HOST}"
 PASSWORD = "correct-horse-battery-staple"
+TOTP_PATH = "/v0/browser/v1/account/authenticators/totp"
 
 
 def _current_code(secret):
@@ -35,6 +36,17 @@ def _post(client, path, data):
     return client.post(
         path, data=data, content_type="application/json", HTTP_HOST=AUTH_HOST, HTTP_X_CSRFTOKEN=_primed(client)
     )
+
+
+def _reauthenticate(client):
+    assert _post(client, "/v0/browser/v1/auth/reauthenticate", {"password": PASSWORD}).status_code == 200
+
+
+def _signed_in(client, *, verified=True):
+    user = User.objects.create_user(username="alice", email="alice@example.test", password=PASSWORD)
+    user.emailaddress_set.create(email=user.email, primary=True, verified=verified)
+    _post(client, "/v0/browser/v1/auth/login", {"email": "alice@example.test", "password": PASSWORD})
+    return user
 
 
 def _user_with_totp():
@@ -131,7 +143,8 @@ def test_enabling_totp_mails_the_owner_through_the_projects_own_template(client,
     user = User.objects.create_user(username="alice", email="alice@example.test", password=PASSWORD)
     user.emailaddress_set.create(email=user.email, primary=True, verified=True)
     _post(client, "/v0/browser/v1/auth/login", {"email": "alice@example.test", "password": PASSWORD})
-    secret = client.get("/v0/browser/v1/account/authenticators/totp", HTTP_HOST=AUTH_HOST).json()["meta"]["secret"]
+    _reauthenticate(client)
+    secret = client.get(TOTP_PATH, HTTP_HOST=AUTH_HOST).json()["meta"]["secret"]
 
     # allauth mails from transaction.on_commit, which the test transaction never reaches by itself.
     with django_capture_on_commit_callbacks(execute=True):
@@ -139,6 +152,56 @@ def test_enabling_totp_mails_the_owner_through_the_projects_own_template(client,
 
     assert response.status_code == 200
     assert [message.subject for message in mail.outbox] == ["Two-factor authentication enabled"]
+
+
+@pytest.mark.django_db
+def test_a_secret_to_scan_asks_for_the_proof_before_the_scan_rather_than_after(client, logged):
+    user = _signed_in(client)
+
+    response = client.get(TOTP_PATH, HTTP_HOST=AUTH_HOST)
+
+    assert response.status_code == 401
+    assert response["X-Reauthentication-Required"] == "1"
+    assert "secret" not in response.json()["meta"]
+    assert [(line["user"], line["act"]) for line in logged if line["event"] == "reauthentication.demanded"] == [
+        (str(user.pk), "ManageTOTPView.GET")
+    ]
+
+
+@pytest.mark.django_db
+def test_once_proven_the_secret_is_handed_out_and_the_proof_is_left_for_turning_it_on(client, logged):
+    _signed_in(client)
+    _reauthenticate(client)
+
+    first = client.get(TOTP_PATH, HTTP_HOST=AUTH_HOST)
+    again = client.get(TOTP_PATH, HTTP_HOST=AUTH_HOST)
+
+    assert first.status_code == 404
+    assert first.json()["meta"]["secret"]
+    assert again.status_code == 404
+    assert [line for line in logged if line["event"].startswith("reauthentication.")] == []
+
+
+@pytest.mark.django_db
+def test_an_app_already_on_is_shown_without_a_proof(client):
+    user, _ = _user_with_totp()
+    client.force_login(user)
+
+    response = client.get(TOTP_PATH, HTTP_HOST=AUTH_HOST)
+
+    assert response.status_code == 200
+    assert response.json()["data"]["type"] == "totp"
+
+
+@pytest.mark.django_db
+def test_an_app_that_cannot_be_turned_on_says_why_rather_than_asking_for_a_proof(client):
+    _signed_in(client, verified=False)
+    client.force_login(User.objects.get(username="alice"))
+
+    response = client.get(TOTP_PATH, HTTP_HOST=AUTH_HOST)
+
+    assert response.status_code not in (401, 404)
+    assert "X-Reauthentication-Required" not in response
 
 
 @pytest.mark.django_db

@@ -230,6 +230,27 @@ describe('TotpSetup', () => {
     expect(screen.queryByRole('button', { name: 'Turn on' })).toBeNull()
   })
 
+  it('sends somebody to prove it is them before there is a secret to scan', () => {
+    render(<TotpSetup active={false} proveHref="/auth/prove?next=%2Fprofile%2Ftwo-factor" />)
+
+    const turnOn = screen.getByRole('link', { name: 'Turn on' })
+    expect(turnOn.getAttribute('href')).toBe('/auth/prove?next=%2Fprofile%2Ftwo-factor')
+    expect(screen.getByText(/Turning it on starts with confirming it's you\./)).toBeTruthy()
+    expect(screen.queryByTestId('totp-secret')).toBeNull()
+    expect(screen.queryByLabelText('Digit 1 of 6')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Turn on' })).toBeNull()
+  })
+
+  it('offers no proof to an app that is on already, or one that cannot be turned on', () => {
+    const { unmount } = render(<TotpSetup active proveHref="/auth/prove" />)
+    expect(screen.queryByRole('link', { name: 'Turn on' })).toBeNull()
+    unmount()
+
+    render(<TotpSetup active={false} proveHref="/auth/prove" blockedReason="Verify your email first." />)
+    expect(screen.getByText('Verify your email first.')).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Turn on' })).toBeNull()
+  })
+
   it('shows an active TOTP as on even when enrolling would be refused', () => {
     render(<TotpSetup active blockedReason="Verify your email first." />)
 

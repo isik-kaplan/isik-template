@@ -1,12 +1,13 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 import { useEffect, useState } from 'react'
 import type React from 'react'
 
 import { Badge } from '@/components/base/badge'
-import { Button } from '@/components/base/button'
+import { Button, buttonVariants } from '@/components/base/button'
 import { SegmentedCodeInput } from '@/components/base/segmented-code-input'
 
 import { useClientTranslation } from '@/i18n/client'
@@ -23,11 +24,13 @@ export type TotpSetupProps = {
   /** Read server-side, because allauth rotates the secret on every status call. */
   secret?: string
   totpUrl?: string
+  /** Where to prove it is them first, when no secret is handed out until they have. */
+  proveHref?: string
   /** Why enrolling is refused right now (an unverified email), straight from allauth. */
   blockedReason?: string
 }
 
-export function TotpSetup({ active, secret, totpUrl, blockedReason }: TotpSetupProps) {
+export function TotpSetup({ active, secret, totpUrl, proveHref, blockedReason }: TotpSetupProps) {
   const { t } = useClientTranslation(['auth'])
   const router = useRouter()
   const [isActive, setIsActive] = useState(active)
@@ -96,7 +99,17 @@ export function TotpSetup({ active, secret, totpUrl, blockedReason }: TotpSetupP
         </div>
       )}
       {!isActive && blockedReason && <p className="text-sm text-muted-foreground">{blockedReason}</p>}
-      {!isActive && !blockedReason && (
+      {!isActive && !blockedReason && proveHref && (
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-muted-foreground">{t('auth:totpProveFirstHint')}</p>
+          <div className="self-center">
+            <Link href={proveHref} className={buttonVariants()}>
+              {t('auth:totpActivateAction')}
+            </Link>
+          </div>
+        </div>
+      )}
+      {!isActive && !blockedReason && !proveHref && (
         <form onSubmit={activate} className="flex flex-col gap-4">
           <p className="text-sm text-muted-foreground">{t('auth:totpSetupHint')}</p>
           <div className="flex flex-col items-center gap-3 border border-border p-4">

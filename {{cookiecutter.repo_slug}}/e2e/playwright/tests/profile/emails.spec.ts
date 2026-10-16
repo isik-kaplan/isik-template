@@ -19,6 +19,11 @@ test('adding, verifying, promoting, and removing a secondary email all work end 
   const emailsList = page.getByRole('list')
   await expect(emailsList.getByText(primaryEmail)).toBeVisible()
 
+  // Signing in is not a proof, so adding the address asks for one first and comes back to finish.
+  await page.getByPlaceholder('Email').fill(secondaryEmail)
+  await page.getByRole('button', { name: 'Add email' }).click()
+  await proveWithPassword(page, 'correct-horse-battery-staple')
+  await expect(page).toHaveURL('/profile/emails')
   await page.getByPlaceholder('Email').fill(secondaryEmail)
   await page.getByRole('button', { name: 'Add email' }).click()
   const secondaryRow = page.getByRole('listitem').filter({ hasText: secondaryEmail })
@@ -39,8 +44,8 @@ test('adding, verifying, promoting, and removing a secondary email all work end 
   // is a substring of "Unverified", so a loose match here could pass against either badge state.
   await expect(secondaryRow.getByText('Verified', { exact: true })).toBeVisible()
 
-  // Adding the address spent the proof the login left behind, so this act asks again - and comes back
-  // here to be done once it has the answer.
+  // Adding the address spent its proof, so this act asks again - and comes back here to be done once
+  // it has the answer.
   await secondaryRow.getByRole('button', { name: 'Email actions' }).click()
   await page.getByText('Make primary').click()
   await proveWithPassword(page, 'correct-horse-battery-staple')

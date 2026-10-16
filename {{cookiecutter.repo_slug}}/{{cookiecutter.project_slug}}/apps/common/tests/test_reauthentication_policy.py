@@ -64,7 +64,7 @@ def call(session):
 
 
 def _prove(session):
-    session[AUTHENTICATION_METHODS_SESSION_KEY] = [{"method": "password", "at": time.time()}]
+    session[AUTHENTICATION_METHODS_SESSION_KEY] = [{"method": "password", "at": time.time(), "reauthenticated": True}]
 
 
 def _refused(response):

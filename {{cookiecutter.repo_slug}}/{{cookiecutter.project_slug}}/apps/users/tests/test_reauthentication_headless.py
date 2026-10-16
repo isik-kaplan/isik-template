@@ -104,11 +104,12 @@ def test_an_act_refused_for_another_reason_is_refused_first_and_keeps_the_proof(
 
 
 @pytest.mark.django_db
-def test_signing_in_with_a_password_is_itself_a_proof(headless, alice):
+def test_signing_in_with_a_password_is_not_a_proof(headless, alice):
+    """Whatever was typed for it, a login is not a re-authentication - allauth's view since 65.20."""
     signed_in = headless.call("POST", "account:login", {"username": "alice", "password": PASSWORD})
 
     assert signed_in.status_code == 200
-    assert _add_email(headless).status_code == 200
+    assert _refused(_add_email(headless))
 
 
 @pytest.mark.django_db
@@ -297,17 +298,17 @@ def test_the_app_client_is_gated_and_spends_its_proof_on_its_own_session(client,
         return client.post(url("account:manage_email"), body, content_type="application/json", **token)
 
     first = add("second@example.test")
-    second = add("third@example.test")
     proof = client.post(
         url("account:reauthenticate"), json.dumps({"password": PASSWORD}), content_type="application/json", **token
     )
+    second = add("second@example.test")
     third = add("third@example.test")
 
-    assert first.status_code == 200
-    assert _refused(second)
+    assert _refused(first)
     assert proof.status_code == 200
-    assert third.status_code == 200
-    assert User.objects.get(pk=alice.pk).emailaddress_set.count() == 3
+    assert second.status_code == 200
+    assert _refused(third)
+    assert User.objects.get(pk=alice.pk).emailaddress_set.count() == 2
 
 
 @pytest.mark.django_db

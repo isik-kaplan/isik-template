@@ -148,3 +148,12 @@ which gives the same answer as the cached closure. See the entry above."""
 ["apps.users.backends.permissions.xǁPermissionsBackendǁget_all_permissions__mutmut__eb488772d483"]
 reason = """Looks for the cache as _PERM_CACHE, which is never set, so the closure is recomputed every
 time from ModelBackend's own cached raw grants - the same answer. See the two entries above."""
+
+["apps.users.reauthentication.views.manage_totp.xǁManageTOTPViewǁget__mutmut__07b657780af2"]
+reason = """Drops **kwargs from the call to allauth's own ManageTOTPView.get. The TOTP route captures no URL
+parameters (allauth.headless.mfa.urls routes it as a bare "totp", and gated_headless_urlpatterns()
+keeps allauth's route), so kwargs is always empty and the call is the same with or without it."""
+
+["apps.users.reauthentication.views.manage_totp.xǁManageTOTPViewǁget__mutmut__5e386713e2aa"]
+reason = """Drops *args from the call to allauth's own ManageTOTPView.get. The TOTP route captures no URL
+parameters, so args is always empty and the call is the same with or without it."""

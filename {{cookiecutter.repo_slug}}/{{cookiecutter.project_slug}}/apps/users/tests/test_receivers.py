@@ -153,6 +153,7 @@ def alice_signed_in(client, alice):
 
 
 def _enable_totp(client):
+    _prove(client)
     secret = client.get("/v0/browser/v1/account/authenticators/totp", HTTP_HOST=AUTH_HOST).json()["meta"]["secret"]
     return headless(client, "post", "account/authenticators/totp", {"code": _current_code(secret)})
 

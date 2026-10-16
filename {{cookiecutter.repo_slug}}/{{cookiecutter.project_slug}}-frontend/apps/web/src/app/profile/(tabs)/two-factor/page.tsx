@@ -5,6 +5,7 @@ import { RecoveryCodesSection } from '@/components/app-auth/RecoveryCodesSection
 import { TotpSetup } from '@/components/app-auth/TotpSetup'
 
 import { isLocalDevHost } from '@/lib/isLocalDevHost'
+import { REAUTHENTICATION_REQUIRED_HEADER, provePath } from '@/lib/reauthentication'
 
 import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
@@ -29,6 +30,9 @@ export default async function ProfileTwoFactorPage() {
       name: authenticator.name as string,
       createdAt: authenticator.created_at,
     }))
+  // Asked before a secret is handed out rather than when the code comes back, so a proof never
+  // sends somebody away from a QR code they have already scanned.
+  const needsProof = totp.response?.headers.get(REAUTHENTICATION_REQUIRED_HEADER) === '1'
   const setup = totp.error && 'meta' in totp.error ? totp.error.meta : undefined
 
   return (
@@ -37,7 +41,8 @@ export default async function ProfileTwoFactorPage() {
         active={Boolean(totp.data)}
         secret={setup?.secret}
         totpUrl={setup?.totp_url}
-        blockedReason={detailOf(totp.error)}
+        proveHref={needsProof ? provePath('/profile/two-factor') : undefined}
+        blockedReason={needsProof ? undefined : detailOf(totp.error)}
       />
       {recoveryCodes && (
         <RecoveryCodesSection

@@ -40,12 +40,16 @@ test('revoking a single session and revoking the rest both end those sessions fo
   await expect(rows).toHaveCount(3)
   await expect(page.getByRole('button', { name: 'Sign out 2 other devices' })).toBeVisible()
 
+  // Signing in is not a proof, so the first revocation asks for one and comes back to finish.
   const others = rows.filter({ hasNotText: 'This device' })
+  await others.first().getByRole('button', { name: 'Sign out' }).click()
+  await proveWithPassword(page, password)
+  await expect(page).toHaveURL('/profile/sessions')
   await others.first().getByRole('button', { name: 'Sign out' }).click()
   await expect(page.getByText('Signed out of that device.')).toBeVisible()
   await expect(rows).toHaveCount(2)
 
-  // The first revocation spent the proof the login left behind, so ending the rest asks again.
+  // The first revocation spent its proof, so ending the rest asks again.
   await page.getByRole('button', { name: 'Sign out 1 other device' }).click()
   await proveWithPassword(page, password)
   await expect(page).toHaveURL('/profile/sessions')

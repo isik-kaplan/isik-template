@@ -13,13 +13,9 @@ test('an act asks for the password again, comes back to finish, and the proof bu
   await login(page, username, password)
   await expect(page.getByText(`Signed in as ${username}.`)).toBeVisible()
 
-  // Typing the password to sign in is itself a proof - the first act spends it.
+  // Signing in is not a proof, whatever was typed for it: the very first act asks for one.
   await page.goto('/profile/emails')
   await page.getByPlaceholder('Email').fill(`${username}-first@example.test`)
-  await page.getByRole('button', { name: 'Add email' }).click()
-  await expect(page.getByRole('listitem').filter({ hasText: `${username}-first@example.test` })).toBeVisible()
-
-  await page.getByPlaceholder('Email').fill(`${username}-second@example.test`)
   await page.getByRole('button', { name: 'Add email' }).click()
   await expect(page).toHaveURL('/auth/prove?next=%2Fprofile%2Femails')
   await expect(page.getByText("Confirm it's you", { exact: true })).toBeVisible()
@@ -31,15 +27,15 @@ test('an act asks for the password again, comes back to finish, and the proof bu
 
   await proveWithPassword(page, password)
   await expect(page).toHaveURL('/profile/emails')
-  await page.getByPlaceholder('Email').fill(`${username}-second@example.test`)
+  await page.getByPlaceholder('Email').fill(`${username}-first@example.test`)
   await page.getByRole('button', { name: 'Add email' }).click()
-  await expect(page.getByRole('listitem').filter({ hasText: `${username}-second@example.test` })).toBeVisible()
+  await expect(page.getByRole('listitem').filter({ hasText: `${username}-first@example.test` })).toBeVisible()
 
   // Single-use: the next act asks again, and walking away from the prove page changes nothing.
-  await page.getByPlaceholder('Email').fill(`${username}-third@example.test`)
+  await page.getByPlaceholder('Email').fill(`${username}-second@example.test`)
   await page.getByRole('button', { name: 'Add email' }).click()
   await expect(page).toHaveURL(/\/auth\/prove/)
   await page.getByRole('link', { name: 'Cancel' }).click()
   await expect(page).toHaveURL('/profile/emails')
-  await expect(page.getByRole('listitem').filter({ hasText: `${username}-third@example.test` })).toHaveCount(0)
+  await expect(page.getByRole('listitem').filter({ hasText: `${username}-second@example.test` })).toHaveCount(0)
 })

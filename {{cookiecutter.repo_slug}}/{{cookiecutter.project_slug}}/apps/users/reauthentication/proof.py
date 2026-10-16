@@ -5,9 +5,10 @@ records rather than a proof, and it answers True outright for an account it has 
 with - a social-only account, which is what every social signup here creates. So the answer is
 built here instead, from the same records:
 
-- a proof is a challenge that really happened in this session (a password or a second factor typed,
-  or a fresh sign-in at a provider that says it challenged them), younger than
-  `ACCOUNT_REAUTHENTICATION_TIMEOUT`;
+- a proof is a re-authentication that really happened in this session (a password or a second
+  factor typed again, or a fresh sign-in at a provider that says it challenged them), younger than
+  `ACCOUNT_REAUTHENTICATION_TIMEOUT`. Signing in is not one: allauth stopped counting a recent login
+  in 65.20, and its own checks inside the MFA flows would refuse what this one let through;
 - it is single-use: the act it was asked for spends it, and the next act asks again.
 """
 
@@ -33,10 +34,6 @@ SPENT_AT_SESSION_KEY = "reauthentication_spent_at"
 # session can write it.
 PROVING_KEY = "proving_who_they_are"
 ASKED_AT_KEY = "asked_at"
-
-# Records allauth writes for a login that typed something. A social login is absent on purpose: a
-# provider session can sign somebody in again without asking them anything.
-CHALLENGED_METHODS = frozenset({"password", "mfa"})
 
 # The flows `ways_to_prove()` adds to allauth's own "reauthenticate"/"mfa_reauthenticate".
 PROVIDER_FLOW = "provider_reauthenticate"
@@ -120,7 +117,9 @@ def with_query(url, params):
 
 
 def is_a_challenge(record):
-    return bool(record.get("reauthenticated")) or record["method"] in CHALLENGED_METHODS
+    # allauth marks the records its reauthenticate flows write; `record_a_fresh_assertion` marks a
+    # provider's. A login's record is never marked, whatever was typed for it.
+    return bool(record.get("reauthenticated"))
 
 
 def has_proven_who_they_are(request):

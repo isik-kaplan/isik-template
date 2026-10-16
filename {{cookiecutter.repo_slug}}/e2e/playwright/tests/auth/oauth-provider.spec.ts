@@ -37,6 +37,9 @@ test('an application is approved, signs somebody in, acts for them, and is shut 
   page,
   browser,
 }) => {
+  // Three people prove it is them along the way - registering, approving, granting - each a round trip
+  // through the prove page.
+  test.setTimeout(90_000)
   const username = `oauth-${Date.now()}`
   const email = `${username}@example.test`
   const name = `Acme Notes ${Date.now()}`

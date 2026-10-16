@@ -156,20 +156,23 @@ def test_with_query_keeps_what_the_url_had_and_adds_the_rest(path, existing, add
 @pytest.mark.parametrize(
     ("record", "challenge"),
     [
-        ({"method": "password"}, True),
-        ({"method": "mfa"}, True),
+        ({"method": "password", "reauthenticated": True}, True),
+        ({"method": "mfa", "reauthenticated": True}, True),
         ({"method": "socialaccount", "reauthenticated": True}, True),
+        ({"method": "password"}, False),
+        ({"method": "mfa"}, False),
         ({"method": "socialaccount"}, False),
         ({"method": "code"}, False),
         ({"method": "password_reset"}, False),
+        ({"method": "password", "reauthenticated": False}, False),
     ],
 )
-def test_only_something_typed_or_a_provider_proof_is_a_challenge(record, challenge):
+def test_only_a_re_authentication_is_a_challenge_never_a_login(record, challenge):
     assert proof.is_a_challenge(record) is challenge
 
 
-def _record(age, method="password"):
-    return {"method": method, "at": NOW - age}
+def _record(age, method="password", *, reauthenticated=True):
+    return {"method": method, "at": NOW - age, "reauthenticated": reauthenticated}
 
 
 @pytest.mark.django_db
@@ -179,17 +182,17 @@ def _record(age, method="password"):
         ([_record(0)], {}, True),
         ([_record(account_settings.REAUTHENTICATION_TIMEOUT - 1)], {}, True),
         ([_record(account_settings.REAUTHENTICATION_TIMEOUT)], {}, False),
-        ([_record(0, "socialaccount")], {}, False),
+        ([_record(0, reauthenticated=False)], {}, False),
         ([], {}, False),
         ([_record(10)], {proof.SPENT_AT_SESSION_KEY: NOW - 10}, False),
         ([_record(10)], {proof.SPENT_AT_SESSION_KEY: NOW - 11}, True),
-        ([_record(0, "socialaccount"), _record(5)], {}, True),
+        ([_record(0, reauthenticated=False), _record(5)], {}, True),
     ],
     ids=[
         "just-now",
         "inside-the-timeout",
         "at-the-timeout",
-        "a-social-login",
+        "a-login",
         "nothing",
         "spent",
         "after-the-last-spend",

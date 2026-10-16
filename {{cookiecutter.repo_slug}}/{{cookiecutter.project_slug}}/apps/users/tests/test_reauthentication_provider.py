@@ -58,7 +58,8 @@ def test_proving_sends_them_to_their_provider_to_be_challenged_again(client, soc
     assert f"{location.scheme}://{location.netloc}{location.path}" == AUTHORIZATION_ENDPOINT
     assert query["prompt"] == ["login"]
     assert query["max_age"] == ["0"]
-    state, _ = client.session[STATES_SESSION_KEY][query["state"][0]]
+    state, _, provider = client.session[STATES_SESSION_KEY][query["state"][0]]
+    assert provider == OIDC_PROVIDER_ID
     assert state["data"] == {proof.PROVING_KEY: True, proof.ASKED_AT_KEY: 1_800_000_000}
     assert state["next"] == PROVE_PAGE
     assert state["process"] == AuthProcess.LOGIN

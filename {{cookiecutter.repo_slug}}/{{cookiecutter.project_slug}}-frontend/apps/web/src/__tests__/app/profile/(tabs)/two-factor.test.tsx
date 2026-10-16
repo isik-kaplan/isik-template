@@ -91,6 +91,35 @@ describe('ProfileTwoFactorPage', () => {
     expect(screen.getByText('Verify your email first.')).toBeTruthy()
   })
 
+  it('asks for a proof before handing out a secret when the backend wants one first', async () => {
+    totpStatus.mockResolvedValue({
+      data: undefined,
+      // A reason alongside the demand is not shown: the proof comes first, and the page asks again after.
+      error: { status: 401, errors: [{ code: 'x', message: 'Not this.' }], meta: { is_authenticated: true } },
+      response: new Response(null, { status: 401, headers: { 'X-Reauthentication-Required': '1' } }),
+    })
+
+    render(await ProfileTwoFactorPage())
+
+    expect(screen.getByRole('link', { name: 'Turn on' }).getAttribute('href')).toBe(
+      '/auth/prove?next=%2Fprofile%2Ftwo-factor'
+    )
+    expect(screen.queryByText('Not this.')).toBeNull()
+    expect(screen.queryByTestId('totp-secret')).toBeNull()
+  })
+
+  it('reads only the gate saying so as a demand for a proof', async () => {
+    totpStatus.mockResolvedValue({
+      ...NOT_SET_UP,
+      response: new Response(null, { status: 404, headers: { 'X-Reauthentication-Required': '0' } }),
+    })
+
+    render(await ProfileTwoFactorPage())
+
+    expect(screen.queryByRole('link', { name: 'Turn on' })).toBeNull()
+    expect(screen.getByTestId('totp-secret').textContent).toBe('JBSWY3DP')
+  })
+
   it('treats a failed authenticator listing as having none', async () => {
     totpStatus.mockResolvedValue(NOT_SET_UP)
     authenticators.mockResolvedValue({ data: undefined })

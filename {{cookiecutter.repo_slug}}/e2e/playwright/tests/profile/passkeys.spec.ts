@@ -1,7 +1,7 @@
 import type { CDPSession, Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 
-import { signUpAndVerify } from '../helpers'
+import { act, signUpAndVerify } from '../helpers'
 import { readRecoveryCodes } from '../mfa'
 
 // WebAuthn exists only in a secure context, so this spec alone runs over the stack's self-signed
@@ -52,8 +52,13 @@ test('a passkey enrolled as a second factor answers the login challenge, and rem
   await expect(page.getByText(`Signed in as ${username}.`)).toBeVisible()
 
   await page.goto(`${HTTPS}/profile/two-factor`)
-  await page.getByRole('button', { name: 'Add a passkey' }).click()
-  await expect(page.getByText('Passkey added.')).toBeVisible()
+  // Signing in is not a proof, so adding one asks for the password first and then goes ahead.
+  await act(
+    page,
+    PASSWORD,
+    () => page.getByRole('button', { name: 'Add a passkey' }).click(),
+    page.getByText('Passkey added.')
+  )
   // A first factor brings recovery codes with it, shown this once.
   expect(await readRecoveryCodes(page)).toHaveLength(10)
   const remove = page.getByRole('button', { name: /^Remove / })
@@ -69,8 +74,7 @@ test('a passkey enrolled as a second factor answers the login challenge, and rem
   await expect(page.getByText(`Signed in as ${username}.`)).toBeVisible()
 
   await page.goto(`${HTTPS}/profile/two-factor`)
-  await remove.click()
-  await expect(page.getByText('Passkey removed.')).toBeVisible()
+  await act(page, PASSWORD, () => remove.click(), page.getByText('Passkey removed.'))
   await expect(remove).toHaveCount(0)
 
   await page.context().clearCookies()

@@ -33,6 +33,10 @@ test('connecting the OIDC test IdP either links it and can be undone, or is sile
   // exact: true throughout this row - getByText/getByRole name matching is a case-insensitive
   // substring by default, and "Connected" is a substring of "Not connected" (as is "Connect" of
   // "Disconnect"), so a loose match here could silently pass against the opposite state.
+  // Signing in is not a proof, so connecting asks for one first and comes back to finish.
+  await oidcRow.getByRole('button', { name: 'Connect', exact: true }).click()
+  await proveWithPassword(page, 'correct-horse-battery-staple')
+  await expect(page).toHaveURL('/profile/connections')
   await oidcRow.getByRole('button', { name: 'Connect', exact: true }).click()
 
   await expect(page).toHaveURL(/authentik\./)
@@ -57,7 +61,7 @@ test('connecting the OIDC test IdP either links it and can be undone, or is sile
     return
   }
 
-  // Connecting spent the proof the login left behind, so disconnecting asks again.
+  // Connecting spent its proof, so disconnecting asks again.
   await oidcRow.getByRole('button', { name: 'Disconnect' }).click()
   await proveWithPassword(page, 'correct-horse-battery-staple')
   await oidcRow.getByRole('button', { name: 'Disconnect' }).click()

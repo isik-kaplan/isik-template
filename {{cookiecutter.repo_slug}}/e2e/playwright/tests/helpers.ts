@@ -57,7 +57,7 @@ export async function signInAtAuthentik(page: Page, username: string) {
 export const SUPERUSER = process.env.{{ cookiecutter.config_prefix }}__SETUP__SUPERUSER__USERNAME ?? ''
 export const SUPERUSER_PASSWORD = process.env.{{ cookiecutter.config_prefix }}__SETUP__SUPERUSER__PASSWORD ?? ''
 
-/** Does an act, proving it is them first if the gate asks - a sign-in moments ago can count as the proof. */
+/** Does an act, proving it is them first if the gate asks - a proof from moments ago may still be unspent. */
 export async function act(page: Page, password: string, perform: () => Promise<void>, done: Locator) {
   await perform()
   await expect
