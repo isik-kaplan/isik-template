@@ -78,7 +78,7 @@ describe('DevicePage', () => {
     expect(screen.getByText('Let Acme CLI in?')).toBeTruthy()
     expect(
       screen.getByText(
-        'A device running Acme CLI wants to use your Test Project account. Only allow it if you started this yourself. It will be able to:'
+        'A device running Acme CLI wants to use your {{ cookiecutter.project_name }} account. Only allow it if you started this yourself. It will be able to:'
       )
     ).toBeTruthy()
     expect(screen.getByText('Your people, in a terminal.').tagName).toBe('P')

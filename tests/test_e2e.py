@@ -100,7 +100,9 @@ def test_generated_project_passes_its_own_e2e_suite(cookies):
                 f"--- docker compose logs (tail) ---\n{logs[-8000:]}"
             )
 
-        run = _compose(e2e_path, "run", "--rm", "playwright", "npx", "playwright", "test", "--reporter=list")
+        # --build, as the generated CI has it: `build` above skips this service, so a rerun would otherwise
+        # run the specs baked into the image an earlier run left behind.
+        run = _compose(e2e_path, "run", "--build", "--rm", "playwright", "npx", "playwright", "test", "--reporter=list")
         assert run.returncode == 0, run.stdout + run.stderr
     finally:
         _compose(e2e_path, "down", "-v")
