@@ -1,0 +1,11 @@
+{
+  "project_name": "Inline Garage Project",
+  "description": "Pairs inline tasks with the bundled Garage, and both with self TLS termination.",
+  "author_name": "Test Author",
+  "author_email": "test@example.test",
+  "domain": "inlinegarage.test",
+  "tls_termination": "self",
+  "license": "Unlicense",
+  "background_jobs": "inline",
+  "storage": "garage"
+}

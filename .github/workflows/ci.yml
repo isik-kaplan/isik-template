@@ -92,6 +92,23 @@ jobs:
       - run: uv sync
       - run: uv run pytest tests/test_e2e.py
 
+  # The backend suite on every context bake-real-ci doesn't bake: with "default" they meet every
+  # background_jobs answer with every storage backend and both tls_termination answers (see
+  # tests/test_backend.py). One context per job, side by side.
+  backend:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        context: [minimal, self-tls, beat-disk-self-tls, celery-disk, inline-garage-self-tls]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv sync
+      - run: uv run pytest "tests/test_backend.py::test_the_backend_suite_passes[${{ matrix.context }}]"
+
   # tls_termination: self against Pebble: certbot really issues through the generated nginx, and nginx really serves
   # the result. Only the server image is built, so it stays out of the slow e2e jobs.
   self-tls-certificate:

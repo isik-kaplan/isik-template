@@ -1,0 +1,11 @@
+{
+  "project_name": "Beat Disk Project",
+  "description": "Pairs a scheduler with files on disk, and both with self TLS termination.",
+  "author_name": "Test Author",
+  "author_email": "test@example.test",
+  "domain": "beatdisk.test",
+  "tls_termination": "self",
+  "license": "BSD-3-Clause",
+  "background_jobs": "celery-with-beat",
+  "storage": "disk"
+}

@@ -104,9 +104,16 @@ result at increasing cost:
   full compose stack (including a disposable Authentik instance) and runs the Playwright suite
   against it - the login/signup page without provider buttons is otherwise untested. Slow (minutes); skips
   only if `docker` itself isn't available.
+- `test_backend.py` - bakes each context but "default", builds its backend image and runs the backend
+  suite (100% coverage) against a real database and, unless files go to disk, Garage. One CI job per
+  context, side by side.
 
-The "minimal" context is the smallest stack (`inline` tasks, `disk` storage) and "self-tls" the
-middle ground (`celery`, `s3`), so each answer is baked by some context.
+The answers that change what the backend runs (`background_jobs`, `storage`, `tls_termination`) are
+covered pairwise rather than in every combination: every answer meets every answer of the other two
+somewhere. "default" plus the five contexts in `test_backend.py` do that for the backend suite, with
+`garage` and `s3` counted as one there, since they render the same code; `PAIRWISE` in
+`tests/conftest.py` does it with all three storage answers for the cheaper bake-and-validate checks in
+`test_docker_compose.py`. The smallest stack is "minimal" (`inline` tasks, `disk` storage).
 
 The "default" context (`include_mobile: true` and two languages - the "everything on"
 configuration, with the OIDC test IdP its `e2e/.env` switches on) has its backend build/coverage, backend-mutation, frontend

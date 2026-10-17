@@ -6,6 +6,22 @@ import pytest
 
 CONTEXTS_DIR = Path(__file__).parent / "contexts"
 
+# Every background_jobs answer meets every storage answer, and each of those meets both
+# tls_termination answers, in 9 bakes rather than all 18. A bug two answers make between them shows up
+# here; one only three make together may not. The rows that run the backend suite are the contexts
+# with the same three answers (test_backend.py).
+PAIRWISE = [
+    ("celery-with-beat", "garage", "external"),
+    ("celery-with-beat", "s3", "self"),
+    ("celery-with-beat", "disk", "self"),
+    ("celery", "garage", "external"),
+    ("celery", "s3", "self"),
+    ("celery", "disk", "external"),
+    ("inline", "garage", "self"),
+    ("inline", "s3", "external"),
+    ("inline", "disk", "external"),
+]
+
 
 def load_context(name: str) -> dict:
     return json.loads((CONTEXTS_DIR / f"{name}.json").read_text())

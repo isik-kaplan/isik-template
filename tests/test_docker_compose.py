@@ -1,10 +1,11 @@
+import itertools
 import json
 import os
 import shutil
 import subprocess
 
 import pytest
-from conftest import load_context
+from conftest import PAIRWISE, load_context
 
 
 pytestmark = [
@@ -15,7 +16,7 @@ pytestmark = [
 ]
 
 
-@pytest.mark.parametrize("context_name", ["default", "self-tls"])
+@pytest.mark.parametrize("context_name", ["default", "self-tls", "minimal"])
 def test_docker_compose_config_validates(cookies, context_name):
     result = cookies.bake(extra_context=load_context(context_name))
     assert result.exit_code == 0
@@ -159,6 +160,38 @@ def test_background_jobs_decide_the_broker_worker_and_scheduler(cookies, context
     assert ("broker" in services["backend"]["depends_on"]) == bool(expected)
     assert (result.project_path / "broker").exists() == bool(expected)
     assert ("BROKER__" in (result.project_path / ".env.example").read_text()) == bool(expected)
+
+
+JOBS = {"celery-with-beat": {"broker", "worker", "scheduler"}, "celery": {"broker", "worker"}, "inline": set()}
+
+
+def test_pairwise_meets_every_answer_with_every_other():
+    answers = list(zip(*PAIRWISE, strict=True))
+    for first, second in itertools.combinations(range(3), 2):
+        wanted = set(itertools.product(set(answers[first]), set(answers[second])))
+        assert {(row[first], row[second]) for row in PAIRWISE} == wanted
+    assert [set(column) for column in answers] == [set(JOBS), {"garage", "s3", "disk"}, {"external", "self"}]
+
+
+@pytest.mark.parametrize(("background_jobs", "storage", "tls_termination"), PAIRWISE)
+def test_every_pair_of_answers_bakes_a_stack_that_holds_together(cookies, background_jobs, storage, tls_termination):
+    """Config only: the answers that run code are tested for real by test_backend.py's contexts."""
+    answers = {"background_jobs": background_jobs, "storage": storage, "tls_termination": tls_termination}
+    result = cookies.bake(extra_context={**load_context("default"), **answers})
+    assert result.exit_code == 0
+    project_path = result.project_path
+
+    services = _services(project_path)
+    e2e = subprocess.run(
+        ["docker", "compose", "config", "--quiet"], cwd=project_path / "e2e", capture_output=True, text=True
+    )
+    assert e2e.returncode == 0, e2e.stderr
+    assert {"broker", "worker", "scheduler"} & set(services) == JOBS[background_jobs]
+    assert ("storage" in services) == (storage != "disk")
+    assert ("certbot" in services) == (tls_termination == "self")
+    nginx = (project_path / f"{result.context['project_slug']}-server" / "template.nginx.conf").read_text()
+    assert ("/internal/media/" in nginx) == (storage == "disk")
+    assert ("/internal/storage/" in nginx) == (storage != "disk")
 
 
 def test_frontend_suites_run_in_the_dockerfile_tester_stage_only_on_request(cookies):

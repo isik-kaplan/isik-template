@@ -15,7 +15,10 @@ from conftest import load_context
 pytestmark = pytest.mark.usefixtures("skip_lockfile_generation")
 
 
-@pytest.mark.parametrize("context_name", ["default", "minimal", "self-tls"])
+CONTEXTS = sorted(path.stem for path in (Path(__file__).parent / "contexts").glob("*.json"))
+
+
+@pytest.mark.parametrize("context_name", CONTEXTS)
 def test_bake_succeeds(cookies, context_name):
     result = cookies.bake(extra_context=load_context(context_name))
     assert result.exit_code == 0
@@ -44,7 +47,7 @@ def test_repo_slug_derived_from_project_name(cookies):
     assert result.project_path.name == "my-cool-app"
 
 
-@pytest.mark.parametrize("context_name", ["default", "self-tls"])
+@pytest.mark.parametrize("context_name", CONTEXTS)
 def test_no_unrendered_jinja_in_output(cookies, context_name):
     # "self-tls" exercises tls_termination's own self-termination branch (certbot/nginx :443
     # blocks, entrypoint.sh's dummy-cert bootstrap) - every one of those lives inside a
@@ -81,10 +84,21 @@ def test_no_unrendered_jinja_in_output(cookies, context_name):
         assert "{%" not in text, f"unrendered Jinja tag in {path}"
 
 
-def test_license_file_matches_choice(cookies):
-    result = cookies.bake(extra_context={**load_context("default"), "license": "MIT"})
+@pytest.mark.parametrize(
+    ("license_name", "opening"),
+    [
+        ("MIT", "MIT License"),
+        ("Apache-2.0", "This project is licensed under the Apache-2.0 license."),
+        ("BSD-3-Clause", "BSD 3-Clause License"),
+        ("GPL-3.0", "This project is licensed under the GPL-3.0 license."),
+        ("Unlicense", "This is free and unencumbered software released into the public domain."),
+        ("Proprietary", "All rights reserved."),
+    ],
+)
+def test_license_file_matches_choice(cookies, license_name, opening):
+    result = cookies.bake(extra_context={**load_context("default"), "license": license_name})
     assert result.exit_code == 0
-    assert "MIT License" in (result.project_path / "LICENSE").read_text()
+    assert opening in (result.project_path / "LICENSE").read_text()
 
 
 @pytest.mark.parametrize(

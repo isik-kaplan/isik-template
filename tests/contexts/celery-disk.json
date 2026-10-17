@@ -1,0 +1,10 @@
+{
+  "project_name": "Celery Disk Project",
+  "description": "Pairs a worker with no scheduler with files on disk, behind external TLS.",
+  "author_name": "Test Author",
+  "author_email": "test@example.test",
+  "domain": "celerydisk.test",
+  "license": "GPL-3.0",
+  "background_jobs": "celery",
+  "storage": "disk"
+}
