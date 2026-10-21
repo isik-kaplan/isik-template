@@ -8,6 +8,7 @@ import { sUseTranslation } from '@/i18n'
 import { requireSession } from '@/lib/getSession'
 import { isLocalDevHost } from '@/lib/isLocalDevHost'
 import { provePath, safeNext } from '@/lib/reauthentication'
+import { visitorFetch } from '@/lib/visitor'
 
 import { Api } from '@{{ cookiecutter.repo_slug }}/api'
 import { PROVIDER_REAUTHENTICATE_PATH } from '@{{ cookiecutter.repo_slug }}/auth-api'
@@ -28,7 +29,10 @@ export default async function ProvePage({
 
   const requestHeaders = await headers()
   const origin = getRequestOrigin(requestHeaders, { isLocalDevHost })
-  const api = new Api(origin.replace('://', '://api.'), { cookieHeader: requestHeaders.get('cookie') ?? undefined })
+  const api = new Api(origin.replace('://', '://api.'), {
+    cookieHeader: requestHeaders.get('cookie') ?? undefined,
+    baseFetch: visitorFetch(requestHeaders),
+  })
   const { data: flows } = await api.reauthenticationFlows()
   const { t } = await sUseTranslation(['auth'])
 

@@ -261,6 +261,24 @@
       ]
     }
   ],
+  "src/app/too-many-requests/page.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "b62afb8aa32a",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'common:key', so this array only matters for",
+        "an unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "b62afb8aa32a",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'common:key', so this array only matters for",
+        "an unprefixed lookup - none of them are."
+      ]
+    }
+  ],
   "src/app/legal/[doc]/page.tsx": [
     {
       "mutator": "ArrayDeclaration",

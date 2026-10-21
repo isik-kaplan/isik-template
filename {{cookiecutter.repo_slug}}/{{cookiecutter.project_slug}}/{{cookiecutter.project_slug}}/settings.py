@@ -222,13 +222,10 @@ SOCIALACCOUNT_AUTO_SIGNUP = False
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_EMAIL_NOTIFICATIONS = True
 # Literal False, not an empty dict - allauth builds its defaults and then .update()s this over
-# them, so {} would disable nothing at all. Only False short-circuits the whole thing.
-if not config.ACCOUNTS.RATE_LIMITS_ENABLED:  # see pyproject.toml's coverage exclude_lines for why
+# them, so {} would disable nothing at all. Only False short-circuits the whole thing. allauth
+# counts against the address nginx worked out, through AccountAdapter.get_client_ip.
+if not config.RATE_LIMITS.ENABLED:  # see pyproject.toml's coverage exclude_lines for why
     ACCOUNT_RATE_LIMITS = False
-
-# Without it allauth keys every rate limit on REMOTE_ADDR, which behind nginx is nginx itself - one
-# bucket for every visitor. Counted from the right, so a client-prepended X-Forwarded-For is skipped.
-ALLAUTH_TRUSTED_PROXY_COUNT = config.TRUSTED_PROXY_COUNT
 
 # Costs a write per authenticated request and needs UserSessionsMiddleware. Off means last_seen_at
 # never moves; listing and revoking work regardless.
@@ -446,7 +443,43 @@ CORS_EXPOSE_HEADERS = ["X-Reauthentication-Required", "X-Session-Cleared"]
 # POST carries an Idempotency-Key (apps/idempotency), so the frontend's writes need it allowed.
 CORS_ALLOW_HEADERS = (*default_headers, "idempotency-key")
 
+# Where every rate limit keeps its counts (allauth's and the API's), so all of them have to be one
+# store every process and container shares: a cache of each process's own would let a caller make
+# the limit's worth of requests to every uwsgi process in turn.
+{%- if cookiecutter.cache == "redis" %}
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": f"redis://{config.CACHE.HOST}:{config.CACHE.PORT}/0",
+        "OPTIONS": {"password": config.CACHE.PASSWORD},
+    },
+}
+{%- else %}
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        # Made by `createcachetable` (entrypoint.sh), not by a migration: it is no model's table.
+        "LOCATION": "cache",
+    },
+}
+{%- endif %}
+
+# Per address signed out, per account signed in, and a view's own `throttle_scope` for what has to be
+# stricter. Every one counts against the client nginx worked out - see apps/common/api/throttling.py.
+THROTTLE_CLASSES = [
+    "apps.common.api.throttling.AnonymousRateThrottle",
+    "apps.common.api.throttling.UserRateThrottle",
+    "apps.common.api.throttling.ScopedRateThrottle",
+]
+
 REST_FRAMEWORK = {
+    "DEFAULT_THROTTLE_CLASSES": THROTTLE_CLASSES if config.RATE_LIMITS.ENABLED else [],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": config.RATE_LIMITS.ANONYMOUS,
+        "user": config.RATE_LIMITS.USER,
+        # A device's user code is short enough to guess at: whoever enters one gets few tries.
+        "device_codes": "10/minute",
+    },
     "PAGE_SIZE": 100,
     "DEFAULT_PAGINATION_CLASS": "isik.django.drf.pagination.PageNumberPagination",
     "DEFAULT_FILTER_BACKENDS": [

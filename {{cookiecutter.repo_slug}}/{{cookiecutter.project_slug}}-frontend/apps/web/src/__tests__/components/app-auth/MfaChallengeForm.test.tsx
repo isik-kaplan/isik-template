@@ -279,6 +279,17 @@ describe('MfaChallengeForm', () => {
     expect(get).not.toHaveBeenCalled()
   })
 
+  it('says to wait, and opens no prompt, when the challenge was refused for coming too often', async () => {
+    serve(on('GET', WEBAUTHN, 429, { status: 429 }))
+    const user = userEvent.setup()
+    render(<MfaChallengeForm types={['webauthn', 'recovery_codes']} redirectTo="/" />)
+
+    await user.click(screen.getByRole('button', { name: 'Use a passkey' }))
+
+    expect(await screen.findByText('Too many requests. Wait a moment, then try again.')).toBeTruthy()
+    expect(get).not.toHaveBeenCalled()
+  })
+
   it('clears an old error as a passkey attempt starts', async () => {
     serve(on('POST', AUTHENTICATE, 400, INCORRECT))
     const user = userEvent.setup()

@@ -40,7 +40,10 @@ describe('ProfileEmailsPage', () => {
 
     render(await ProfileEmailsPage())
 
-    expect(AuthApi).toHaveBeenCalledWith('http://auth.test-project.test', { cookieHeader: 'sessionid=abc123' })
+    expect(AuthApi).toHaveBeenCalledWith('http://auth.test-project.test', {
+      cookieHeader: 'sessionid=abc123',
+      baseFetch: expect.any(Function),
+    })
   })
 
   it('defaults cookieHeader to undefined when the request carries no cookie', async () => {
@@ -49,7 +52,10 @@ describe('ProfileEmailsPage', () => {
 
     render(await ProfileEmailsPage())
 
-    expect(AuthApi).toHaveBeenCalledWith('http://auth.test-project.test', { cookieHeader: undefined })
+    expect(AuthApi).toHaveBeenCalledWith('http://auth.test-project.test', {
+      cookieHeader: undefined,
+      baseFetch: expect.any(Function),
+    })
     cookieHeader = 'sessionid=abc123'
   })
 })

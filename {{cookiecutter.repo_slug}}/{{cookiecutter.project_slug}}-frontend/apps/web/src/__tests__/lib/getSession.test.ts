@@ -74,7 +74,10 @@ describe('getSession', () => {
 
     await getSession()
 
-    expect(AuthApi).toHaveBeenCalledWith('http://auth.api.example.test', { cookieHeader: undefined })
+    expect(AuthApi).toHaveBeenCalledWith('http://auth.api.example.test', {
+      cookieHeader: undefined,
+      baseFetch: expect.any(Function),
+    })
   })
 
   it('forwards the real cookie header when the incoming request has one', async () => {
@@ -85,7 +88,10 @@ describe('getSession', () => {
 
     await getSession()
 
-    expect(AuthApi).toHaveBeenCalledWith('http://auth.api.example.test', { cookieHeader: 'sessionid=real-cookie' })
+    expect(AuthApi).toHaveBeenCalledWith('http://auth.api.example.test', {
+      cookieHeader: 'sessionid=real-cookie',
+      baseFetch: expect.any(Function),
+    })
   })
 
   it('returns null when the backend refuses with no pending provider signup', async () => {

@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import { ConnectionsList } from '@/components/app-auth/ConnectionsList'
 
 import { isLocalDevHost } from '@/lib/isLocalDevHost'
+import { visitorFetch } from '@/lib/visitor'
 
 import { AuthApi, PROVIDER_REDIRECT_PATH } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
@@ -19,6 +20,7 @@ export default async function ProfileConnectionsPage({
   const authOrigin = origin.replace('://', '://auth.')
   const authApi = new AuthApi(authOrigin, {
     cookieHeader: requestHeaders.get('cookie') ?? undefined,
+    baseFetch: visitorFetch(requestHeaders),
   })
   const { data: providers } = await authApi.providers()
   // The connect flow's own callback_url below points straight back at this page, not at

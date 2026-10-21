@@ -1,7 +1,9 @@
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.core import context as allauth_context
+from django.core.exceptions import PermissionDenied
 from django.utils import timezone, translation
 
+from apps.common.client_ip import client_ip
 from apps.common.email import mjml_template, text_template
 from apps.common.language import saved_language
 from apps.users.login_policy import admits
@@ -20,6 +22,15 @@ class AccountAdapter(DefaultAccountAdapter):
     # not a pathlib.Path: Django's template loader does its own string-keyed cache lookup and
     # silently misses (TemplateDoesNotExist) on an equivalent Path, even though str(path) matches.
     email_folder = ""
+
+    def get_client_ip(self, request):
+        """nginx's answer rather than allauth's own reading of X-Forwarded-For: that would see the
+        frontend's address on every page it renders. See apps/common/client_ip.py. Refused without one,
+        as allauth's own is: a rate limit cannot count against nobody."""
+        ip = client_ip(request)
+        if not ip:
+            raise PermissionDenied("Unable to determine client IP address")
+        return ip
 
     def authenticate(self, request, **credentials):
         # allauth hands back a user its backend refused, so it can explain an inactive account - which

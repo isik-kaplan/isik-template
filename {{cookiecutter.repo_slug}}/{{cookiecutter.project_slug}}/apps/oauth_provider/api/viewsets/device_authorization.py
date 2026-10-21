@@ -30,6 +30,7 @@ class DeviceAuthorizationViewSet(ProvesWhoTheyAre, IdempotencyMixin, viewsets.Vi
     Whoever answers decides for their own account: allowed, the device's next poll gets a token for it."""
 
     permission_classes = [MayAnswerDevices]
+    throttle_scope = "device_codes"
     lookup_field = "user_code"
     lookup_value_regex = "[^/]+"
     reauthentication_exempt_actions = {

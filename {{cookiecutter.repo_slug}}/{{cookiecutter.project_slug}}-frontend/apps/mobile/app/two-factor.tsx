@@ -4,6 +4,7 @@ import { Button, ErrorText, Heading, Screen, TextField } from '@/components'
 
 import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
+import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 
 import { extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
@@ -23,7 +24,12 @@ export default function TwoFactor() {
     setSubmitting(true)
     setError(undefined)
     try {
-      const { data, error: response } = await getAuthApi().completeMfaChallenge(code.trim())
+      const { data, error: response, response: http } = await getAuthApi().completeMfaChallenge(code.trim())
+      const throttled = tooManyRequestsMessage(t, http)
+      if (throttled) {
+        setError(throttled)
+        return
+      }
       if (data?.meta.is_authenticated) {
         router.replace('/(authenticated)/home')
         return

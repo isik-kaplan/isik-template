@@ -2,7 +2,10 @@ import { ForgotPasswordForm } from '@/components/app-auth/ForgotPasswordForm'
 
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 const push = vi.fn()
 
@@ -51,5 +54,17 @@ describe('ForgotPasswordForm', () => {
     expect(push).toHaveBeenCalledWith('/auth/password-reset-email-sent')
     expect(consoleError).not.toHaveBeenCalled()
     consoleError.mockRestore()
+  })
+
+  it('says to wait rather than that an email was sent, when the reset was refused for coming too often', async () => {
+    globalThis.fetch = vi.fn(async () => new Response(null, { status: 429, headers: { 'Retry-After': '30' } }))
+    const user = userEvent.setup()
+    render(<ForgotPasswordForm />)
+
+    await user.type(screen.getByLabelText('Email'), 'someone@example.com')
+    await user.click(screen.getByRole('button', { name: 'Send reset link' }))
+
+    expect(toast.error).toHaveBeenCalledWith('Too many requests. Try again in 30 seconds.')
+    expect(push).not.toHaveBeenCalled()
   })
 })

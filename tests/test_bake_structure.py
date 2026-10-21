@@ -192,8 +192,13 @@ def test_object_storage_is_configured_everywhere_the_backend_runs(cookies, conte
         assert (f"\n{prefix}__STORAGE__{key}=" in env_example) == storage_started
     # The suite writes to a real Garage, so every CI job that runs it has to start one.
     ci = (result.project_path / ".github" / "workflows" / "ci.yml").read_text()
-    assert ci.count("up -d --wait --wait-timeout 90 database storage") == (2 if storage_started else 0)
-    assert ci.count("up -d --wait --wait-timeout 90 database\n") == (0 if storage_started else 2)
+    expected = ["database", *(["storage"] if storage_started else [])]
+    if result.context["cache"] == "redis":
+        expected.append("cache")
+    started = [
+        line.split("--wait-timeout 90 ", 1)[1].split() for line in ci.splitlines() if "--wait-timeout 90 " in line
+    ]
+    assert started == [expected, expected]
 
 
 def test_tls_termination_self_adds_certbot_and_443(cookies):
@@ -216,7 +221,8 @@ def test_tls_termination_self_adds_certbot_and_443(cookies):
     # Every interface already: there is no load balancer to pick an address for.
     assert "__HTTP_BIND" not in env_example
     # nginx is the edge here, so its own scheme is the truth and a client-sent header is not.
-    assert nginx_conf.count("proxy_set_header X-Forwarded-Proto $scheme;") == 2
+    # The frontend's pages, its static files and the backend.
+    assert nginx_conf.count("proxy_set_header X-Forwarded-Proto $scheme;") == 3
     assert "$http_x_forwarded_proto" not in nginx_conf
     # The placeholder lives outside certbot's live directory, which certbot refuses to issue into otherwise.
     certificate_sh = (result.project_path / server_dir / "certificate.sh").read_text()
@@ -246,7 +252,8 @@ def test_tls_termination_external_has_no_certbot_or_443(cookies):
     assert not (result.project_path / server_dir / "certificate.sh").exists()
     # The load balancer terminated TLS, so nginx's own $scheme is always http: its header is forwarded instead.
     assert "map $http_x_forwarded_proto $forwarded_proto {" in nginx_conf
-    assert nginx_conf.count("proxy_set_header X-Forwarded-Proto $forwarded_proto;") == 2
+    # The frontend's pages, its static files and the backend.
+    assert nginx_conf.count("proxy_set_header X-Forwarded-Proto $forwarded_proto;") == 3
     assert "X-Forwarded-Proto $scheme" not in nginx_conf
 
 
@@ -314,12 +321,15 @@ def test_trusted_proxy_count_follows_tls_termination(
     prefix = result.context["config_prefix"]
     backend = result.project_path / result.context["project_slug"]
     config_py = (backend / result.context["project_slug"] / "config.py").read_text()
-    settings_py = (backend / result.context["project_slug"] / "settings.py").read_text()
+    compose = (result.project_path / "docker-compose.yml").read_text()
+    entrypoint = (result.project_path / f"{result.context['project_slug']}-server" / "entrypoint.sh").read_text()
     env_example = (result.project_path / ".env.example").read_text().splitlines()
     setup_sh = (result.project_path / "scripts" / "setup.sh").read_text()
 
-    assert f'"TRUSTED_PROXY_COUNT": integer(missing_default={default_count})' in config_py
-    assert "ALLAUTH_TRUSTED_PROXY_COUNT = config.TRUSTED_PROXY_COUNT" in settings_py
+    # nginx works the client out, once, and tells the backend (apps/common/client_ip.py).
+    assert "TRUSTED_PROXY_COUNT" not in config_py
+    assert f"{prefix}__TRUSTED_PROXY_COUNT: ${{{prefix}__TRUSTED_PROXY_COUNT:-{default_count}}}" in compose
+    assert f'__TRUSTED_PROXY_COUNT" || echo {default_count})' in entrypoint
     assert env_example_line.format(prefix=prefix) in env_example
     assert ('set_var "${PREFIX}__TRUSTED_PROXY_COUNT"' in setup_sh) is setup_writes_count
 

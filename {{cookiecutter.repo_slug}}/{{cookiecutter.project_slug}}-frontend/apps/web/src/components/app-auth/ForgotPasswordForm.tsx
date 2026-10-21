@@ -12,9 +12,12 @@ import { Label } from '@/components/base/label'
 import { useClientTranslation } from '@/i18n/client'
 import { authOrigin } from '@/lib/authOrigin'
 import { useAuthValidatedFormState } from '@/lib/submit'
+import { tooManyRequestsMessage } from '@/lib/tooManyRequestsMessage'
 
 import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
+import { retryAfterOf } from '@isikk/core'
+import { toast } from 'sonner'
 import { z } from 'zod'
 
 export function ForgotPasswordForm() {
@@ -26,8 +29,13 @@ export function ForgotPasswordForm() {
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     if (!validate()) return
-    // allauth intentionally never reveals whether the address is registered - always proceed.
-    await new AuthApi(authOrigin()).requestPasswordReset(formState.email)
+    // allauth intentionally never reveals whether the address is registered - always proceed, unless
+    // it refused to send anything for now, which "email sent" would misreport.
+    const { response } = await new AuthApi(authOrigin()).requestPasswordReset(formState.email)
+    if (response.status === 429) {
+      toast.error(tooManyRequestsMessage(retryAfterOf(response)))
+      return
+    }
     router.push('/auth/password-reset-email-sent')
   }
 

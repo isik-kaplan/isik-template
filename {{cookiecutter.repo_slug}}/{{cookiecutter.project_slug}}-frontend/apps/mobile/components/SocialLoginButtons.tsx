@@ -2,6 +2,7 @@ import { useTranslation } from '@/lib/i18n'
 import { type ProviderToken, signInWithApple, signInWithGoogle } from '@/lib/nativeSignIn'
 import { getAuthApi } from '@/lib/session'
 import { appleSignInEnabled, googleSignInEnabled } from '@/lib/socialProviders'
+import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 
 import { extractAuthErrors, pendingMfaTypes } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
@@ -32,7 +33,12 @@ export function SocialLoginButtons({
       const result = await signIn()
       if (!result) return // the user cancelled the native picker - not a failure to report.
 
-      const { data, error } = await getAuthApi().loginWithProviderToken(result.provider, result.token)
+      const { data, error, response: http } = await getAuthApi().loginWithProviderToken(result.provider, result.token)
+      const throttled = tooManyRequestsMessage(t, http)
+      if (throttled) {
+        onError(throttled)
+        return
+      }
       if (data?.meta.is_authenticated) {
         router.replace('/(authenticated)/home')
         return

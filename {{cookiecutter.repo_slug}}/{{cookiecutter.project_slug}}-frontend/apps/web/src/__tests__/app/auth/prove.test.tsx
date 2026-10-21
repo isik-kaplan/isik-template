@@ -31,7 +31,10 @@ describe('ProvePage', () => {
     expect(screen.getByText("For your security, confirm it's you before you continue.")).toBeTruthy()
     expect(screen.getByLabelText('Password')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Cancel' }).getAttribute('href')).toBe('/profile/emails')
-    expect(Api).toHaveBeenCalledWith(`http://api.${HOST}`, { cookieHeader: 'sessionid=abc123' })
+    expect(Api).toHaveBeenCalledWith(`http://api.${HOST}`, {
+      cookieHeader: 'sessionid=abc123',
+      baseFetch: expect.any(Function),
+    })
     expect(redirect).not.toHaveBeenCalled()
   })
 
@@ -40,7 +43,10 @@ describe('ProvePage', () => {
 
     render(await ProvePage({ searchParams: Promise.resolve({}) }))
 
-    expect(Api).toHaveBeenCalledWith(`http://api.${HOST}`, { cookieHeader: undefined })
+    expect(Api).toHaveBeenCalledWith(`http://api.${HOST}`, {
+      cookieHeader: undefined,
+      baseFetch: expect.any(Function),
+    })
     cookieHeader = 'sessionid=abc123'
   })
 

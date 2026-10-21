@@ -4,6 +4,7 @@ import { Button, ErrorText, Heading, Screen, SocialLoginButtons, TextField } fro
 
 import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
+import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 
 import { extractAuthErrors, hasPendingVerifyEmail, pendingMfaTypes } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
@@ -21,7 +22,12 @@ export default function Login() {
     setSubmitting(true)
     setError(undefined)
     try {
-      const { data, error: response } = await getAuthApi().login({ email, password })
+      const { data, error: response, response: http } = await getAuthApi().login({ email, password })
+      const throttled = tooManyRequestsMessage(t, http)
+      if (throttled) {
+        setError(throttled)
+        return
+      }
       if (data?.meta.is_authenticated) {
         router.replace('/(authenticated)/home')
         return

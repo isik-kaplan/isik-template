@@ -248,4 +248,21 @@ describe('ProfileEmails', () => {
     })
     expect(screen.getByTestId('profile-emails-heading').props.style).toEqual({ fontSize: 24, fontWeight: 'bold' })
   })
+
+  it('says to wait when adding an email was refused for coming too often', async () => {
+    mockEmails.mockResolvedValue({ data: { data: [] } })
+    mockAddEmail.mockResolvedValue({
+      data: undefined,
+      error: { status: 429 },
+      response: new Response(null, { status: 429 }),
+    })
+    await render(<ProfileEmails />)
+    await fireEvent.changeText(screen.getByTestId('new-email-input'), 'new@test.test')
+    await fireEvent.press(screen.getByTestId('add-email-submit'))
+    await waitFor(() =>
+      expect(screen.getByTestId('profile-emails-error').props.children).toBe(
+        'Too many requests. Wait a moment, then try again.'
+      )
+    )
+  })
 })

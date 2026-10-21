@@ -170,4 +170,20 @@ describe('Prove', () => {
     sent.resolve({})
     await waitFor(() => expect(screen.getByTestId('prove-set-password-sent')).toBeTruthy())
   })
+
+  it('says to wait when refused for coming too often', async () => {
+    signedIn({ has_usable_password: true })
+    mockReauthenticate.mockResolvedValue({
+      data: undefined,
+      error: { status: 429 },
+      response: new Response(null, { status: 429 }),
+    })
+    await render(<Prove />)
+    await waitFor(() => expect(screen.getByTestId('prove-form')).toBeTruthy())
+    await fireEvent.press(screen.getByTestId('prove-submit'))
+    await waitFor(() =>
+      expect(screen.getByTestId('prove-error').props.children).toBe('Too many requests. Wait a moment, then try again.')
+    )
+    expect(mockBack).not.toHaveBeenCalled()
+  })
 })

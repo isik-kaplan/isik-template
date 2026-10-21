@@ -26,9 +26,10 @@ describe('VerifyEmailButton', () => {
   })
 
   it('shows no error message before the button is ever clicked', () => {
-    render(<VerifyEmailButton verificationKey="abc:def" />)
+    const { container } = render(<VerifyEmailButton verificationKey="abc:def" />)
 
     expect(screen.queryByText('That verification link is no longer valid.')).toBeNull()
+    expect(container.querySelector('p')).toBeNull()
   })
 
   it('redirects home on a 200 (confirmation also completed a pending login)', async () => {
@@ -65,6 +66,18 @@ describe('VerifyEmailButton', () => {
     await user.click(screen.getByRole('button', { name: 'Confirm email address' }))
 
     expect(await screen.findByText('That verification link is no longer valid.')).toBeTruthy()
+    expect(push).not.toHaveBeenCalled()
+  })
+
+  it('says to wait rather than going on as if confirmed, when refused for coming too often', async () => {
+    // allauth's refusal carries neither a Retry-After nor an `errors` list.
+    globalThis.fetch = vi.fn(async () => jsonResponse(429, { status: 429 }))
+    const user = userEvent.setup()
+    render(<VerifyEmailButton verificationKey="abc:def" />)
+
+    await user.click(screen.getByRole('button'))
+
+    expect(await screen.findByText('Too many requests. Wait a moment, then try again.')).toBeTruthy()
     expect(push).not.toHaveBeenCalled()
   })
 })

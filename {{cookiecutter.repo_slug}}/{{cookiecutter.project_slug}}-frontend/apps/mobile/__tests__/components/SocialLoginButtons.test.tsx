@@ -138,4 +138,18 @@ describe('SocialLoginButtons', () => {
     expect(mockPush).toHaveBeenCalledTimes(1)
     expect(onError).not.toHaveBeenCalled()
   })
+
+  it('says to wait when refused for coming too often, rather than going on to finish a signup', async () => {
+    mockSignInWithGoogle.mockResolvedValue({ provider: 'google', token: { id_token: 't' } })
+    mockLoginWithProviderToken.mockResolvedValue({
+      data: undefined,
+      error: { status: 429 },
+      response: new Response(null, { status: 429 }),
+    })
+    const onError = jest.fn()
+    await render(<SocialLoginButtons onError={onError} googleEnabled appleEnabled={false} />)
+    await fireEvent.press(screen.getByTestId('google-signin'))
+    await waitFor(() => expect(onError).toHaveBeenCalledWith('Too many requests. Wait a moment, then try again.'))
+    expect(mockPush).not.toHaveBeenCalled()
+  })
 })

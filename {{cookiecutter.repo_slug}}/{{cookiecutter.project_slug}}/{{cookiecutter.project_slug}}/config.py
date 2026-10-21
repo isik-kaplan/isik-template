@@ -10,13 +10,6 @@ CONFIG = config(
         "SECRET_KEY": string(),
         "CREDENTIAL_KEY": string(missing_default=""),
         "DOMAIN": string(),
-{%- if cookiecutter.tls_termination == "self" %}
-        # nginx is the edge: the only proxy appending to X-Forwarded-For.
-        "TRUSTED_PROXY_COUNT": integer(missing_default=1),
-{%- else %}
-        # The load balancer this deployment needs in front of nginx, plus nginx itself.
-        "TRUSTED_PROXY_COUNT": integer(missing_default=2),
-{%- endif %}
         "DB": {
             "NAME": string(),
             "USER": string(),
@@ -30,6 +23,13 @@ CONFIG = config(
             "PASSWORD": string(),
             "HOST": string(),
             "PORT": string(),
+        },
+{%- endif %}
+{%- if cookiecutter.cache == "redis" %}
+        "CACHE": {
+            "HOST": string(),
+            "PORT": string(),
+            "PASSWORD": string(),
         },
 {%- endif %}
 {%- if cookiecutter.storage != "disk" %}
@@ -48,11 +48,15 @@ CONFIG = config(
                 "PASSWORD": string(),
             },
         },
-        "ACCOUNTS": {
-            # True everywhere except e2e (see e2e/e2e.env) - allauth's counters are keyed by ip
-            # and by user, shared across a whole test run rather than scoped to one test, and the
-            # suite signs up/logs in/changes passwords far faster than any human. See settings.py.
-            "RATE_LIMITS_ENABLED": boolean(missing_default=True),
+        "RATE_LIMITS": {
+            # Every limit the backend keeps: allauth's on signing in and the like, and the API's.
+            # True everywhere except e2e (see e2e/.env): the counts are kept per address and per
+            # account across a whole run, and the suite acts far faster than any person.
+            "ENABLED": boolean(missing_default=True),
+            # Requests an API caller may make, as DRF writes a rate: <count>/<second|minute|hour|day>.
+            # Signed out per address, signed in per account.
+            "ANONYMOUS": string(missing_default="120/minute"),
+            "USER": string(missing_default="600/minute"),
         },
         "OAUTH_PROVIDER": {
             # Whether other apps can offer "Sign in with" this project: off, approval (a superuser

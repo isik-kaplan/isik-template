@@ -8,5 +8,6 @@
   "include_mobile": true,
   "languages": "en,tr",
   "background_jobs": "celery-with-beat",
-  "storage": "garage"
+  "storage": "garage",
+  "cache": "redis"
 }

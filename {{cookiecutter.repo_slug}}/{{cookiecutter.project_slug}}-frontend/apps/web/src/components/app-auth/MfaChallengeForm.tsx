@@ -13,9 +13,11 @@ import { SegmentedCodeInput } from '@/components/base/segmented-code-input'
 import { useClientTranslation } from '@/i18n/client'
 import { authOrigin } from '@/lib/authOrigin'
 import { useAuthAPISubmit } from '@/lib/submit'
+import { tooManyRequestsMessage } from '@/lib/tooManyRequestsMessage'
 
 import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
+import { retryAfterOf } from '@isikk/core'
 import { useBrowserSupportsPasskeys } from '@isikk/core/hooks'
 import { getCredential } from '@isikk/core/webauthn'
 
@@ -86,7 +88,11 @@ export function MfaChallengeForm({ types, redirectTo, purpose = 'login' }: MfaCh
   async function answerWithPasskey() {
     setError(null)
     const authApi = new AuthApi(authOrigin())
-    const { data } = await calls.passkeyOptions(authApi)
+    const { data, response } = await calls.passkeyOptions(authApi)
+    if (response.status === 429) {
+      setError(tooManyRequestsMessage(retryAfterOf(response)))
+      return
+    }
     const credential = data && (await askForAssertion(data.data.request_options.publicKey))
     if (!credential) return
     await submit(() => calls.passkey(authApi, credential), {

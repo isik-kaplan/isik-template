@@ -35,6 +35,9 @@ dependencies = [
 {%- if cookiecutter.storage != "disk" %}
     "django-storages[s3]>=1.14.0",
 {%- endif %}
+{%- if cookiecutter.cache == "redis" %}
+    "redis>=8.1.0",
+{%- endif %}
 ]
 
 [tool.uv]
@@ -119,7 +122,7 @@ exclude_lines = [
     "if TYPE_CHECKING:",
     # Only false in the e2e environment (a separate docker-compose stack this suite's coverage
     # run never touches) - see settings.py's own ACCOUNT_RATE_LIMITS comment just above this line.
-    "if not config\\.ACCOUNTS\\.RATE_LIMITS_ENABLED:",
+    "if not config\\.RATE_LIMITS\\.ENABLED:",
     # Only true when SENTRY__DSN is actually configured, which no test environment does -
     # see settings.py's own comment just above this line.
     "if config\\.SENTRY\\.DSN:",

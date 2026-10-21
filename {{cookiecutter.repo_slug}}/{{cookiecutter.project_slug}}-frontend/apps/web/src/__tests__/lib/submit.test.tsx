@@ -32,4 +32,45 @@ describe('the submit hooks', () => {
 
     expect(toast.error).toHaveBeenCalledWith('No.')
   })
+
+  it('say how long to wait when the API refused for coming too often, whatever its body', async () => {
+    const { result } = renderHook(() => useAPISubmit())
+
+    await act(async () => {
+      await result.current.submit(
+        async () => ({
+          error: { detail: 'Request was throttled. Expected available in 7 seconds.' },
+          response: new Response(null, { status: 429, headers: { 'Retry-After': '7' } }),
+        }),
+        { failure: 'failed' }
+      )
+    })
+
+    expect(toast.error).toHaveBeenLastCalledWith('Too many requests. Try again in 7 seconds.')
+  })
+
+  it("say to wait a moment on allauth's refusal, which never says how long", async () => {
+    const { result } = renderHook(() => useAuthAPISubmit())
+
+    await act(async () => {
+      await result.current.submit(
+        async () => ({ error: { status: 429 }, response: new Response(null, { status: 429 }) }),
+        { failure: 'failed' }
+      )
+    })
+
+    expect(toast.error).toHaveBeenLastCalledWith('Too many requests. Wait a moment, then try again.')
+  })
+
+  it("say to wait a moment, in the app's own words, when the API's refusal does not say how long", async () => {
+    const { result } = renderHook(() => useAPISubmit())
+
+    await act(async () => {
+      await result.current.submit(async () => ({ error: {}, response: new Response(null, { status: 429 }) }), {
+        failure: 'failed',
+      })
+    })
+
+    expect(toast.error).toHaveBeenLastCalledWith('Too many requests. Wait a moment, then try again.')
+  })
 })

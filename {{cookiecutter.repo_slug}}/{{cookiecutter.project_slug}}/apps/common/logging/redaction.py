@@ -15,8 +15,8 @@ would miss all three.
 import json
 
 from django.conf import settings
-from django.core.exceptions import ImproperlyConfigured, PermissionDenied
 
+from apps.common.client_ip import client_ip
 from {{ cookiecutter.project_slug }}.config import CONFIG
 
 
@@ -79,18 +79,8 @@ def headers_of(request) -> dict:
 
 
 def client_ip_of(request) -> str:
-    """The caller's address the way allauth reads it, so this line and its rate limits agree.
-
-    allauth honours `TRUSTED_PROXY_COUNT` over `X-Forwarded-For`; a request whose address it cannot
-    work out is still worth its line, so that refusal is an empty address here.
-    """
-    # Imported here: settings.py imports this module, and allauth's adapter needs the apps loaded.
-    from allauth.account.adapter import get_adapter
-
-    try:
-        return get_adapter().get_client_ip(request)
-    except (PermissionDenied, ImproperlyConfigured):
-        return ""
+    """The caller's address, the one its rate limits count against."""
+    return client_ip(request)
 
 
 def worth_logging(status: int, elapsed_ms: int) -> bool:

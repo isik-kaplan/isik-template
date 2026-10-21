@@ -38,6 +38,36 @@ services:
       retries: 10
 
 {%- endif %}
+{%- if cookiecutter.cache == "redis" %}
+
+  # Where every rate limit keeps its counts (settings.py's CACHES), and whatever else is cached. Nothing
+  # in it outlives a restart that matters: counts start again, and cached values are made again.
+  cache:
+    image: redis:8.8-alpine
+    command:
+      - redis-server
+      - --requirepass
+      - {{ '${' + cookiecutter.config_prefix + '__CACHE__PASSWORD}' }}
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+      - --maxmemory
+      - 256mb
+      - --maxmemory-policy
+      - allkeys-lru
+    environment:
+      # redis-cli's, for the healthcheck - the server itself takes it from --requirepass.
+      REDISCLI_AUTH: {{ '${' + cookiecutter.config_prefix + '__CACHE__PASSWORD}' }}
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+{%- endif %}
 {%- if cookiecutter.storage != "disk" %}
 {% if cookiecutter.storage == "garage" %}
   # S3-compatible object storage: Garage, one node, in dev, tests and production alike.
@@ -105,6 +135,10 @@ services:
         condition: service_healthy
 {%- if cookiecutter.background_jobs != "inline" %}
       broker:
+        condition: service_healthy
+{%- endif %}
+{%- if cookiecutter.cache == "redis" %}
+      cache:
         condition: service_healthy
 {%- endif %}
 {%- if cookiecutter.storage != "disk" %}
@@ -208,6 +242,10 @@ services:
       {{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS: {{ '${' + cookiecutter.config_prefix + '__SOCIAL_LOGIN__PROVIDERS:-}' }}
       {{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__ICONS: {{ '${' + cookiecutter.config_prefix + '__SOCIAL_LOGIN__ICONS:-}' }}
       {{ server_sentry_dsn }}: {{ '${' + server_sentry_dsn + ':-}' }}
+      # Proves to nginx that a fetch made while rendering a page is the frontend's, so it counts
+      # against the visitor it names rather than against the frontend - see template.nginx.conf. Under
+      # the server-only prefix (config/server.ts), as it is a secret.
+      {{ cookiecutter.config_prefix }}_SERVER__FRONTEND_KEY: {{ '${' + cookiecutter.config_prefix + '__FRONTEND_KEY:-}' }}
 {%- if cookiecutter.tls_termination == "external" %}
       # Set in .env by scripts/dev-tls.sh, local dev only.
       NODE_EXTRA_CA_CERTS: {{ '${NODE_EXTRA_CA_CERTS:-}' }}
@@ -241,10 +279,14 @@ services:
     build:
       context: ./{{ cookiecutter.project_slug }}-server
     image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-server:latest
-    # The one value the nginx template is rendered with (entrypoint.sh substitutes every variable it
-    # holds), and no secret.
+    # The values the nginx template is rendered with (entrypoint.sh substitutes every variable it
+    # holds). The one secret is the frontend's key, which nginx checks.
     environment:
       {{ cookiecutter.config_prefix }}__DOMAIN: {{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
+      {{ cookiecutter.config_prefix }}__FRONTEND_KEY: {{ '${' + cookiecutter.config_prefix + '__FRONTEND_KEY:-}' }}
+      {{ cookiecutter.config_prefix }}__TRUSTED_PROXY_COUNT: {{ '${' + cookiecutter.config_prefix + '__TRUSTED_PROXY_COUNT:-' }}{% if cookiecutter.tls_termination == "self" %}1{% else %}2{% endif %}}
+      {{ cookiecutter.config_prefix }}__RATE_LIMITS__ENABLED: {{ '${' + cookiecutter.config_prefix + '__RATE_LIMITS__ENABLED:-true}' }}
+      {{ cookiecutter.config_prefix }}__RATE_LIMITS__REQUESTS_PER_SECOND: {{ '${' + cookiecutter.config_prefix + '__RATE_LIMITS__REQUESTS_PER_SECOND:-20}' }}
 {%- if cookiecutter.tls_termination == "self" or cookiecutter.storage == "disk" %}
     volumes:
 {%- if cookiecutter.tls_termination == "self" %}

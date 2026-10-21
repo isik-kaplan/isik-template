@@ -115,6 +115,44 @@ So a large download never ties up a uwsgi worker, and ranges work. nginx sends e
 `X-Content-Type-Options: nosniff` and a sandboxing `Content-Security-Policy`, so an uploaded HTML or
 SVG file cannot run as a page on the API's origin.
 
+## Rate limits
+
+Three layers, all counting against the same client, and all switched off together by
+`{{ cookiecutter.config_prefix }}__RATE_LIMITS__ENABLED=false` (the e2e stack does):
+
+- **nginx** refuses a flood before it reaches anything: `{{ cookiecutter.config_prefix }}__RATE_LIMITS__REQUESTS_PER_SECOND` per
+  client (20 unless set), ten seconds' worth at once. The API's refusal is JSON in the throttles' own
+  shape, with the CORS headers that let the page read it; a page's is a page. Static files are never
+  counted.
+- **allauth** limits signing in, signing up, password resets and the like, with its own defaults
+  (`ACCOUNT_RATE_LIMITS`).
+- **The API** (DRF) limits everyone signed out per address (`{{ cookiecutter.config_prefix }}__RATE_LIMITS__ANONYMOUS`,
+  `120/minute`) and everyone signed in per account (`{{ cookiecutter.config_prefix }}__RATE_LIMITS__USER`, `600/minute`). A view
+  that has to be stricter names a rate in `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]` and says
+  `throttle_scope = "<that name>"`, as entering a device's code does (`device_codes`). A refusal is a
+  429 with `Retry-After` and `"code": "throttled"`.
+
+**Who the client is** is worked out once, by nginx, and passed to the backend as `X-Client-Ip`
+(`apps/common/client_ip.py`), which every limit and the request log read: the address
+`{{ cookiecutter.config_prefix }}__TRUSTED_PROXY_COUNT` entries from the right of `X-Forwarded-For`. A page the frontend renders
+fetches from the API as well, from the frontend's own address - so the frontend names the visitor it
+renders for (`lib/visitor.ts`), and nginx believes it only alongside `{{ cookiecutter.config_prefix }}__FRONTEND_KEY`, a secret
+the two share. nginx refuses to start without one. The frontend's own fetches are not counted by
+nginx again, since the page load that made them already was. IPv6 addresses are counted per `/64`,
+which one subscriber is handed whole.
+
+**The counts** live in the default cache, which every process and container shares -
+{% if cookiecutter.cache == "redis" %}Redis, the `cache` service. Nothing in it outlives a restart that matters: counts start
+again.{% else %}a table in Postgres (`createcachetable`, run by `entrypoint.sh`). It costs a query per counted request; for a
+busy site, regenerate with `cache: redis` and carry over the `cache` service and the `CACHE__*`
+settings.{% endif %} A cache of each process's own would let a caller make the limit's worth of requests to every
+uwsgi process in turn. The backend tests run on a cache of each process's own instead, which they clear
+between tests; `apps/common/tests/test_cache.py` checks the configured one is shared.
+
+**In the frontend**, a refused form says how long to wait. A page whose render the API refused goes to
+`/too-many-requests`, which offers it again (`lib/tooManyRequests.ts`), rather than rendering what it
+was refused as empty.
+
 ## TLS
 {% if cookiecutter.tls_termination == "self" %}
 This project terminates its own TLS: nginx serves `:443` off a certificate the `certbot` service
@@ -132,8 +170,9 @@ in the first place.
 
 A real deployment of this project must be reachable on both `80` and `443` directly - nothing else
 is meant to sit in front of it. That is also what `{{ cookiecutter.config_prefix }}__TRUSTED_PROXY_COUNT` defaults
-to (`1`, nginx alone): allauth rate-limits by the address that many `X-Forwarded-For` entries from
-the right, so a proxy added in front later has to append to that header and raise the count by one.
+to (`1`, nginx alone): nginx takes the client to be the address that many `X-Forwarded-For` entries
+from the right (see "Rate limits"), so a proxy added in front later has to append to that header and
+raise the count by one.
 {%- else %}
 This project serves plain HTTP (`:80`) only - it expects a TLS-terminating load balancer or
 reverse proxy in front of it in any real deployment (a platform's own (Fly.io/Render/Railway/an
@@ -148,8 +187,8 @@ which lets anyone choose the scheme of an emailed password-reset link. It must p
 with no separate proxy to run.
 
 That load balancer has to append to `X-Forwarded-For` rather than replace it, and
-`{{ cookiecutter.config_prefix }}__TRUSTED_PROXY_COUNT` has to count it: allauth rate-limits by the address that many
-entries from the right. Unset, it is `2` (the load balancer plus nginx), which `scripts/setup.sh`'s
+`{{ cookiecutter.config_prefix }}__TRUSTED_PROXY_COUNT` has to count it: nginx takes the client to be the address that
+many entries from the right (see "Rate limits"). Unset, it is `2` (the load balancer plus nginx), which `scripts/setup.sh`'s
 deployment mode writes for you, adding one per further proxy. `.env.example` sets `1` for local
 development, where the browser reaches nginx directly - left at `1` behind a load balancer, every
 visitor shares its address and one rate-limit bucket.

@@ -114,4 +114,19 @@ describe('TwoFactor', () => {
       expect(screen.getByTestId('two-factor-error').props.children).toBe("That code didn't work. Try again.")
     )
   })
+
+  it('says how long to wait when refused for coming too often', async () => {
+    mockCompleteMfaChallenge.mockResolvedValue({
+      data: undefined,
+      error: {},
+      response: new Response(null, { status: 429, headers: { 'Retry-After': '12' } }),
+    })
+    await render(<TwoFactor />)
+    await fireEvent.changeText(screen.getByTestId('two-factor-code-input'), '123456')
+    await fireEvent.press(screen.getByTestId('two-factor-submit'))
+    await waitFor(() =>
+      expect(screen.getByTestId('two-factor-error').props.children).toBe('Too many requests. Try again in 12 seconds.')
+    )
+    expect(mockReplace).not.toHaveBeenCalled()
+  })
 })

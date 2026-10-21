@@ -208,31 +208,19 @@ class TestWhatItMaySay:
 
 
 class TestWhoseAddress:
-    def test_it_is_the_client_behind_the_trusted_proxies_and_the_one_allauth_sees(self, settings):
-        """Behind a load balancer and nginx, the address nginx saw is the balancer's on every line."""
-        settings.ALLAUTH_TRUSTED_PROXY_COUNT = 2
-        request = RequestFactory().get("/x/", headers={"x-forwarded-for": "203.0.113.44, 10.0.0.2"})
+    def test_it_is_the_client_nginx_worked_out_and_the_one_allauth_counts_against(self):
+        """Behind a load balancer and nginx, the address the backend sees is nginx's on every request."""
+        request = RequestFactory().get(
+            "/x/", headers={"x-client-ip": "203.0.113.44", "x-forwarded-for": "198.51.100.9, 10.0.0.2"}
+        )
         request.META["REMOTE_ADDR"] = "172.20.0.5"
 
         assert client_ip_of(request) == "203.0.113.44"
         assert client_ip_of(request) == get_adapter().get_client_ip(request)
 
-    def test_with_no_proxy_trusted_the_header_is_the_callers_word_and_ignored(self, settings):
-        settings.ALLAUTH_TRUSTED_PROXY_COUNT = 0
-        request = RequestFactory().get("/x/", headers={"x-forwarded-for": "1.2.3.4"})
-        request.META["REMOTE_ADDR"] = "172.20.0.1"
-
-        assert client_ip_of(request) == "172.20.0.1"
-
     def test_an_address_nobody_recorded_is_empty_rather_than_a_refused_request(self):
         request = RequestFactory().get("/x/")
         del request.META["REMOTE_ADDR"]
-
-        assert client_ip_of(request) == ""
-
-    def test_a_header_shorter_than_the_proxies_trusted_is_empty_rather_than_a_crash(self, settings):
-        settings.ALLAUTH_TRUSTED_PROXY_COUNT = 2
-        request = RequestFactory().get("/x/", headers={"x-forwarded-for": "203.0.113.44"})
 
         assert client_ip_of(request) == ""
 

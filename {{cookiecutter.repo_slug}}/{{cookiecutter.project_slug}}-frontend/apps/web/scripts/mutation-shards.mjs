@@ -56,6 +56,9 @@ export const SHARDS = {
     'src/lib/sessionChannel.ts',
     'src/lib/socialProviders.ts',
     'src/lib/submit.ts',
+    'src/lib/tooManyRequests.ts',
+    'src/lib/tooManyRequestsMessage.ts',
+    'src/lib/visitor.ts',
     'src/proxy.ts',
   ],
   // Signing in and up, and every screen of that flow.
@@ -185,6 +188,7 @@ export const SHARDS = {
     'src/app/manifest.ts',
     'src/app/monkeypatches.tsx',
     'src/app/not-found.tsx',
+    'src/app/too-many-requests/page.tsx',
     'src/app/page.tsx',
     'src/components/app-auth/LanguageSwitcher.tsx',
     'src/components/app/EditMode.tsx',

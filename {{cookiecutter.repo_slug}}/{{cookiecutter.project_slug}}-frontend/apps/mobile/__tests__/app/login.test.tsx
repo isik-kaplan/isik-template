@@ -189,4 +189,18 @@ describe('Login', () => {
     expect(screen.queryByTestId('login-error')).toBeNull()
     expect(mockReplace).not.toHaveBeenCalled()
   })
+
+  it('says to wait when refused for coming too often, rather than that the password was wrong', async () => {
+    mockLogin.mockResolvedValue({
+      data: undefined,
+      error: { status: 429 },
+      response: new Response(null, { status: 429 }),
+    })
+    await render(<Login />)
+    await fireEvent.press(screen.getByTestId('login-submit'))
+    await waitFor(() =>
+      expect(screen.getByTestId('login-error').props.children).toBe('Too many requests. Wait a moment, then try again.')
+    )
+    expect(mockReplace).not.toHaveBeenCalled()
+  })
 })

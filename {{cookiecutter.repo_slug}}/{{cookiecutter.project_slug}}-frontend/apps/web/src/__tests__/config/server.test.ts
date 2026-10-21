@@ -24,4 +24,28 @@ describe('SERVER_CONFIG', () => {
     vi.unstubAllEnvs()
     vi.resetModules()
   })
+
+  it("reads the key nginx checks the frontend's fetches with from its own env var", async () => {
+    vi.stubEnv('{{ cookiecutter.config_prefix }}_SERVER__FRONTEND_KEY', 'the-key')
+    vi.resetModules()
+
+    const { SERVER_CONFIG } = await import('@/config/server')
+
+    expect(SERVER_CONFIG.FRONTEND_KEY).toBe('the-key')
+
+    vi.unstubAllEnvs()
+    vi.resetModules()
+  })
+
+  it('has no key when it is unset, so the fetches name nobody', async () => {
+    vi.stubEnv('{{ cookiecutter.config_prefix }}_SERVER__FRONTEND_KEY', undefined)
+    vi.resetModules()
+
+    const { SERVER_CONFIG } = await import('@/config/server')
+
+    expect(SERVER_CONFIG.FRONTEND_KEY).toBe('')
+
+    vi.unstubAllEnvs()
+    vi.resetModules()
+  })
 })

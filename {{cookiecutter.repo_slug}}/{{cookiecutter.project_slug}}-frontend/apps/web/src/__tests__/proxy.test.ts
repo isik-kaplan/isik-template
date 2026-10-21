@@ -75,4 +75,22 @@ describe('proxy', () => {
   it('matches every path except Next.js internals, the favicon, and the manifest', () => {
     expect(config.matcher).toEqual(['/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest).*)'])
   })
+
+  it('lets an anonymous visitor through to the page that says to wait', async () => {
+    const response = await proxy(requestFor('/too-many-requests'))
+
+    expect(response.headers.get('location')).toBeNull()
+  })
+
+  it('still guards a page whose path merely starts like it', async () => {
+    const response = await proxy(requestFor('/too-many-requests-and-more'))
+
+    expect(response.headers.get('location')).toContain('/auth/login')
+  })
+
+  it('tells the page it renders which page that is, query and all', async () => {
+    const response = await proxy(requestFor('/profile/emails?tab=1', { cookie: 'sessionid=abc' }))
+
+    expect(response.headers.get('x-middleware-request-x-page-path')).toBe('/profile/emails?tab=1')
+  })
 })

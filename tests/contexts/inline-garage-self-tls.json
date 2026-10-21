@@ -7,5 +7,6 @@
   "tls_termination": "self",
   "license": "Unlicense",
   "background_jobs": "inline",
-  "storage": "garage"
+  "storage": "garage",
+  "cache": "redis"
 }

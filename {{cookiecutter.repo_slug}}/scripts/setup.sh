@@ -100,6 +100,10 @@ set_var "${PREFIX}__DB__PASSWORD" "$(random_hex 24)"
 {%- if cookiecutter.background_jobs != "inline" %}
 set_var "${PREFIX}__BROKER__PASSWORD" "$(random_hex 24)"
 {%- endif %}
+{%- if cookiecutter.cache == "redis" %}
+set_var "${PREFIX}__CACHE__PASSWORD" "$(random_hex 24)"
+{%- endif %}
+set_var "${PREFIX}__FRONTEND_KEY" "$(random_hex 32)"
 
 superuser_password="$(random_hex 16)"
 set_var "${PREFIX}__SETUP__SUPERUSER__PASSWORD" "$superuser_password"

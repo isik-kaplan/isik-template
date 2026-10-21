@@ -4,6 +4,7 @@ import { Button, ErrorText, Heading, ListRow, Screen, TextField } from '@/compon
 
 import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
+import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 import { spacing } from '@/theme'
 
 import { extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
@@ -33,7 +34,12 @@ export default function ProfileEmails() {
     setSubmitting(true)
     setError(undefined)
     try {
-      const { data, error: response } = await getAuthApi().addEmail(newEmail)
+      const { data, error: response, response: http } = await getAuthApi().addEmail(newEmail)
+      const throttled = tooManyRequestsMessage(t, http)
+      if (throttled) {
+        setError(throttled)
+        return
+      }
       if (data) {
         setEmails(data.data)
         setNewEmail('')

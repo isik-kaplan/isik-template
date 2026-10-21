@@ -6,5 +6,6 @@
   "domain": "celerydisk.test",
   "license": "GPL-3.0",
   "background_jobs": "celery",
-  "storage": "disk"
+  "storage": "disk",
+  "cache": "redis"
 }

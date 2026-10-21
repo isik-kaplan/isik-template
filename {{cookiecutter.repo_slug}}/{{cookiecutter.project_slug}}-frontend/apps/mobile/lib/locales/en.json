@@ -99,6 +99,9 @@
   "proveError": "That password is not right.",
   "proveSetPasswordHint": "Your account has no password yet. We can email you a link to set one, and you can confirm with it afterwards.",
   "proveSetPasswordAction": "Email me a link to set a password",
-  "proveSetPasswordSent": "We sent a link to {{email}}. Set a password there, then come back to confirm with it."
+  "proveSetPasswordSent": "We sent a link to {{email}}. Set a password there, then come back to confirm with it.",
+  "tooManyRequests": "Too many requests. Wait a moment, then try again.",
+  "tooManyRequestsFor_one": "Too many requests. Try again in {{count}} second.",
+  "tooManyRequestsFor_other": "Too many requests. Try again in {{count}} seconds."
 }
 {%- endraw %}

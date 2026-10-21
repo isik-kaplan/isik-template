@@ -8,18 +8,25 @@ import { Button } from '@/components/base/button'
 
 import { useClientTranslation } from '@/i18n/client'
 import { authOrigin } from '@/lib/authOrigin'
+import { tooManyRequestsMessage } from '@/lib/tooManyRequestsMessage'
 
 import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
+import { retryAfterOf } from '@isikk/core'
 import { detailOf } from '@isikk/core/allauth'
 
 export function VerifyEmailButton({ verificationKey }: { verificationKey: string }) {
   const { t } = useClientTranslation(['auth'])
   const router = useRouter()
-  const [error, setError] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function handleClick() {
     const { data, error: apiError, response } = await new AuthApi(authOrigin()).verifyEmail(verificationKey)
+    // Before the check below: a refusal for coming too often carries no `errors` either.
+    if (response.status === 429) {
+      setError(tooManyRequestsMessage(retryAfterOf(response)))
+      return
+    }
     // A confirmed-but-not-yet-authenticated key still comes back as a 401 (see schema.ts) - only
     // an actually invalid/expired key carries a non-empty `errors` array, so that's what a real
     // failure looks like here, not the response's HTTP status.
@@ -27,7 +34,7 @@ export function VerifyEmailButton({ verificationKey }: { verificationKey: string
       router.push(response.status === 200 ? '/' : '/auth/login')
       return
     }
-    setError(true)
+    setError(t('auth:verifyEmailError'))
   }
 
   return (
@@ -35,7 +42,7 @@ export function VerifyEmailButton({ verificationKey }: { verificationKey: string
       <Button onClick={handleClick} className="w-full">
         {t('auth:verifyEmailSubmit')}
       </Button>
-      {error && <p className="text-destructive text-sm">{t('auth:verifyEmailError')}</p>}
+      {error && <p className="text-destructive text-sm">{error}</p>}
     </div>
   )
 }

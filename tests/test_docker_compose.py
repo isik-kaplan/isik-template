@@ -167,16 +167,28 @@ JOBS = {"celery-with-beat": {"broker", "worker", "scheduler"}, "celery": {"broke
 
 def test_pairwise_meets_every_answer_with_every_other():
     answers = list(zip(*PAIRWISE, strict=True))
-    for first, second in itertools.combinations(range(3), 2):
+    for first, second in itertools.combinations(range(len(answers)), 2):
         wanted = set(itertools.product(set(answers[first]), set(answers[second])))
         assert {(row[first], row[second]) for row in PAIRWISE} == wanted
-    assert [set(column) for column in answers] == [set(JOBS), {"garage", "s3", "disk"}, {"external", "self"}]
+    assert [set(column) for column in answers] == [
+        set(JOBS),
+        {"garage", "s3", "disk"},
+        {"external", "self"},
+        {"redis", "database"},
+    ]
 
 
-@pytest.mark.parametrize(("background_jobs", "storage", "tls_termination"), PAIRWISE)
-def test_every_pair_of_answers_bakes_a_stack_that_holds_together(cookies, background_jobs, storage, tls_termination):
+@pytest.mark.parametrize(("background_jobs", "storage", "tls_termination", "cache"), PAIRWISE)
+def test_every_pair_of_answers_bakes_a_stack_that_holds_together(
+    cookies, background_jobs, storage, tls_termination, cache
+):
     """Config only: the answers that run code are tested for real by test_backend.py's contexts."""
-    answers = {"background_jobs": background_jobs, "storage": storage, "tls_termination": tls_termination}
+    answers = {
+        "background_jobs": background_jobs,
+        "storage": storage,
+        "tls_termination": tls_termination,
+        "cache": cache,
+    }
     result = cookies.bake(extra_context={**load_context("default"), **answers})
     assert result.exit_code == 0
     project_path = result.project_path
@@ -189,6 +201,10 @@ def test_every_pair_of_answers_bakes_a_stack_that_holds_together(cookies, backgr
     assert {"broker", "worker", "scheduler"} & set(services) == JOBS[background_jobs]
     assert ("storage" in services) == (storage != "disk")
     assert ("certbot" in services) == (tls_termination == "self")
+    assert ("cache" in services) == (cache == "redis")
+    assert ("cache" in services["backend"]["depends_on"]) == (cache == "redis")
+    entrypoint = (project_path / result.context["project_slug"] / "entrypoint.sh").read_text()
+    assert ("createcachetable" in entrypoint) == (cache == "database")
     nginx = (project_path / f"{result.context['project_slug']}-server" / "template.nginx.conf").read_text()
     assert ("/internal/media/" in nginx) == (storage == "disk")
     assert ("/internal/storage/" in nginx) == (storage != "disk")
@@ -271,11 +287,23 @@ def test_only_the_backend_services_receive_the_backends_secrets(cookies, context
     services = json.loads(proc.stdout)["services"]
     prefix = result.context["config_prefix"]
     secrets = {f"{prefix}__SECRET_KEY", f"{prefix}__CREDENTIAL_KEY", f"{prefix}__SETUP__SUPERUSER__PASSWORD"}
-    for name in {"frontend", "server", "database", "broker", "storage"} & set(services):
+    for name in {"frontend", "server", "database", "broker", "storage", "cache"} & set(services):
         assert "env_file" not in services[name], name
         assert not secrets & set(services[name].get("environment", {})), name
     assert services["frontend"]["environment"][f"{prefix}__DOMAIN"] == result.context["domain"]
-    assert services["server"]["environment"] == {f"{prefix}__DOMAIN": result.context["domain"]}
+    assert services["server"]["environment"] == {
+        f"{prefix}__DOMAIN": result.context["domain"],
+        # The one secret nginx holds: it checks the frontend's fetches with it.
+        f"{prefix}__FRONTEND_KEY": "local-insecure-frontend-key-change-in-real-deployments",
+        # nginx alone in front: self mode's default, and what .env.example sets for local development.
+        f"{prefix}__TRUSTED_PROXY_COUNT": "1",
+        f"{prefix}__RATE_LIMITS__ENABLED": "true",
+        f"{prefix}__RATE_LIMITS__REQUESTS_PER_SECOND": "20",
+    }
+    assert (
+        services["frontend"]["environment"][f"{prefix}_SERVER__FRONTEND_KEY"]
+        == (services["server"]["environment"][f"{prefix}__FRONTEND_KEY"])
+    )
     for name in {"backend", "worker", "scheduler"} & set(services):
         assert f"{prefix}__SECRET_KEY" in services[name]["environment"], name
 

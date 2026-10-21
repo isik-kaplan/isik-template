@@ -145,4 +145,19 @@ describe('ProfilePassword', () => {
     })
     expect(screen.getByTestId('profile-password-submit-label').props.style).toEqual({ color: 'white' })
   })
+
+  it('says to wait when refused for coming too often', async () => {
+    mockChangePassword.mockResolvedValue({
+      data: undefined,
+      error: { status: 429 },
+      response: new Response(null, { status: 429 }),
+    })
+    await render(<ProfilePassword />)
+    await fireEvent.press(screen.getByTestId('profile-password-submit'))
+    await waitFor(() =>
+      expect(screen.getByTestId('profile-password-error').props.children).toBe(
+        'Too many requests. Wait a moment, then try again.'
+      )
+    )
+  })
 })

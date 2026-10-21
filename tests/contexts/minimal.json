@@ -6,5 +6,6 @@
   "domain": "minimal.test",
   "license": "Apache-2.0",
   "background_jobs": "inline",
-  "storage": "disk"
+  "storage": "disk",
+  "cache": "database"
 }

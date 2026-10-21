@@ -7,6 +7,7 @@ import { LegalConsentNotice } from '@/components/app-legal/LegalConsentNotice'
 
 import { sUseTranslation } from '@/i18n'
 import { isLocalDevHost } from '@/lib/isLocalDevHost'
+import { visitorFetch } from '@/lib/visitor'
 
 import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
@@ -20,7 +21,10 @@ import { getRequestOrigin } from '@isikk/core/next/request'
 export default async function CompleteSignupPage() {
   const requestHeaders = await headers()
   const authOrigin = getRequestOrigin(requestHeaders, { isLocalDevHost }).replace('://', '://auth.')
-  const authApi = new AuthApi(authOrigin, { cookieHeader: requestHeaders.get('cookie') ?? undefined })
+  const authApi = new AuthApi(authOrigin, {
+    cookieHeader: requestHeaders.get('cookie') ?? undefined,
+    baseFetch: visitorFetch(requestHeaders),
+  })
 
   // No pending signup (this page reached directly, or the flow already completed/expired) - there
   // is nothing to finish here.

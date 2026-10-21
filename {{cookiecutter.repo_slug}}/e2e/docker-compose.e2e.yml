@@ -119,3 +119,6 @@ networks:
     ipam:
       config:
         - subnet: ${E2E_SUBNET_PREFIX:-172.30.0}.0/24
+          # Every container without a fixed address draws from the top half, so none of them can take
+          # one of the fixed addresses (.10, .11, .22) before the container it belongs to starts.
+          ip_range: ${E2E_SUBNET_PREFIX:-172.30.0}.128/25

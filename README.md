@@ -86,7 +86,10 @@ bundles a one-node [Garage](https://garagehq.deuxfleurs.fr/) S3 for development,
 `s3` keeps that Garage for development and tests only and points production at a provider; `disk`
 writes to a Docker volume through Django's `FileSystemStorage`, with no storage service at all. In
 all three no stored file is public: a view decides who may have one and answers with
-`apps.common.files.serve_file()`, and nginx sends the file (`X-Accel-Redirect`).
+`apps.common.files.serve_file()`, and nginx sends the file (`X-Accel-Redirect`). `cache` picks where
+rate limits keep their counts: `redis` (default) bundles a Redis; `database` keeps them in a Postgres
+table, with no service of its own. Either is one store every process shares, which per-process memory
+would not be.
 
 ## Developing this template
 
@@ -104,12 +107,15 @@ result at increasing cost:
   full compose stack (including a disposable Authentik instance) and runs the Playwright suite
   against it - the login/signup page without provider buttons is otherwise untested. Slow (minutes); skips
   only if `docker` itself isn't available.
+- `test_rate_limits.py` - boots a bake's real nginx between two stand-ins that echo every request
+  back, and checks who it names as the client, what it counts and how it refuses, in both
+  `tls_termination` modes. Only the server image is built.
 - `test_backend.py` - bakes each context but "default", builds its backend image and runs the backend
   suite (100% coverage) against a real database and, unless files go to disk, Garage. One CI job per
   context, side by side.
 
-The answers that change what the backend runs (`background_jobs`, `storage`, `tls_termination`) are
-covered pairwise rather than in every combination: every answer meets every answer of the other two
+The answers that change what the backend runs (`background_jobs`, `storage`, `tls_termination`,
+`cache`) are covered pairwise rather than in every combination: every answer meets every answer of the other two
 somewhere. "default" plus the five contexts in `test_backend.py` do that for the backend suite, with
 `garage` and `s3` counted as one there, since they render the same code; `PAIRWISE` in
 `tests/conftest.py` does it with all three storage answers for the cheaper bake-and-validate checks in

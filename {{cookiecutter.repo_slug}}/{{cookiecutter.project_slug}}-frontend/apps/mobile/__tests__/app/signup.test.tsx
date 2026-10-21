@@ -169,4 +169,20 @@ describe('Signup', () => {
     expect(screen.getByTestId('login-link')).toBeTruthy()
     expect(screen.getByText('Already have an account? Log in')).toBeTruthy()
   })
+
+  it('says to wait when refused for coming too often', async () => {
+    mockSignup.mockResolvedValue({
+      data: undefined,
+      error: { status: 429 },
+      response: new Response(null, { status: 429 }),
+    })
+    await render(<Signup />)
+    await fireEvent.press(screen.getByTestId('signup-submit'))
+    await waitFor(() =>
+      expect(screen.getByTestId('signup-error').props.children).toBe(
+        'Too many requests. Wait a moment, then try again.'
+      )
+    )
+    expect(mockReplace).not.toHaveBeenCalled()
+  })
 })

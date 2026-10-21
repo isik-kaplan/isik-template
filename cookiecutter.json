@@ -15,8 +15,9 @@
   "include_mobile": false,
   "background_jobs": ["celery-with-beat", "celery", "inline"],
   "storage": ["garage", "s3", "disk"],
+  "cache": ["redis", "database"],
   "isik_version": "0.23.0",
-  "isikk_core_version": "0.14.0",
+  "isikk_core_version": "0.15.0",
   "_copy_without_render": [
     "*/e2e/authentik-blueprints/*"
   ],
@@ -33,6 +34,11 @@
       "garage": "Garage, bundled: self-hosted S3 in dev, tests and production",
       "s3": "An S3 provider you configure for production (Garage only in dev and tests)",
       "disk": "Local disk, on a Docker volume"
+    },
+    "cache": {
+      "__prompt__": "Cache, where rate limits keep their counts",
+      "redis": "Redis, bundled",
+      "database": "A table in Postgres: no service of its own, slower under load"
     }
   }
 }

@@ -172,4 +172,22 @@ describe('CompleteSignup', () => {
     })
     expect(screen.getByTestId('complete-signup-heading').props.style).toEqual({ fontSize: 24, fontWeight: 'bold' })
   })
+
+  it('says to wait when refused for coming too often, rather than taking the refusal for an account made', async () => {
+    mockPendingProviderSignup.mockResolvedValue(pending)
+    mockCompleteProviderSignup.mockResolvedValue({
+      data: undefined,
+      error: { status: 429 },
+      response: new Response(null, { status: 429 }),
+    })
+    await render(<CompleteSignup />)
+    await waitFor(() => expect(screen.getByTestId('complete-signup-submit')).toBeTruthy())
+    await fireEvent.press(screen.getByTestId('complete-signup-submit'))
+    await waitFor(() =>
+      expect(screen.getByTestId('complete-signup-error').props.children).toBe(
+        'Too many requests. Wait a moment, then try again.'
+      )
+    )
+    expect(mockReplace).not.toHaveBeenCalled()
+  })
 })

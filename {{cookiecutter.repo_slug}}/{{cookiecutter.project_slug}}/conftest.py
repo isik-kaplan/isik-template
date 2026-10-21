@@ -22,12 +22,28 @@ from {{ cookiecutter.project_slug }}.config import CONFIG as config
 {%- endif %}
 
 
+# The cache the project runs with, which every process shares (settings.py's CACHES).
+CONFIGURED_CACHES = django_settings.CACHES
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _a_cache_of_its_own():
+    """A cache in this process alone rather than the shared one the project runs with: every xdist
+    worker, and every session a mutation run starts, clears it between tests, and clearing a shared
+    one would wipe another worker's counts mid-test. apps/common/tests/test_cache.py checks the
+    configured one."""
+    from django.test import override_settings
+
+    with override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}):
+        yield
+
+
 @pytest.fixture(autouse=True)
 def _clear_cache():
-    """allauth's rate limiter lives in the default cache, which nothing else here resets between
-    tests. Invisible under the default -n auto (each worker gets its own process-local cache), but
-    real: enough requests to a rate-limited view earlier in the same process silently starves a
-    later test's own request of the same kind, however unrelated the two tests look."""
+    """Every rate limit (allauth's and the API's) counts in the default cache, which nothing else
+    here resets between tests: enough requests to a rate-limited view earlier in the same process
+    would silently starve a later test's own request of the same kind, however unrelated the two
+    tests look."""
     cache.clear()
 
 

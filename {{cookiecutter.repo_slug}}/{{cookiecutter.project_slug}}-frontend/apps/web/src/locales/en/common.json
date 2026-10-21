@@ -7,6 +7,12 @@
 
   "previousPage": "Previous page",
   "nextPage": "Next page",
-  "pageOfTotal": "Page {{page}} of {{total}}"
+  "pageOfTotal": "Page {{page}} of {{total}}",
+
+  "tooManyRequestsTitle": "Too many requests",
+  "tooManyRequests": "Too many requests. Wait a moment, then try again.",
+  "tooManyRequestsFor_one": "Too many requests. Try again in {{count}} second.",
+  "tooManyRequestsFor_other": "Too many requests. Try again in {{count}} seconds.",
+  "tryAgain": "Try again"
 }
 {%- endraw %}

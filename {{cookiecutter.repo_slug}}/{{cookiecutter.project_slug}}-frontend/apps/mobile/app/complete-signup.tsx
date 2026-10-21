@@ -4,6 +4,7 @@ import { Button, ErrorText, Heading, LegalConsentNotice, Screen, TextField } fro
 
 import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
+import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 
 import { extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
@@ -43,7 +44,16 @@ export default function CompleteSignup() {
     setSubmitting(true)
     setError(undefined)
     try {
-      const { data, error: apiError } = await getAuthApi().completeProviderSignup({ username, email, password })
+      const {
+        data,
+        error: apiError,
+        response: http,
+      } = await getAuthApi().completeProviderSignup({ username, email, password })
+      const throttled = tooManyRequestsMessage(t, http)
+      if (throttled) {
+        setError(throttled)
+        return
+      }
       const authErrors = extractAuthErrors(apiError)
       // A 401 here can still mean the account was created - mandatory email verification just
       // means it isn't logged in yet (same shape as signup itself: only a real, non-empty errors

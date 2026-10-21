@@ -6,20 +6,20 @@ import pytest
 
 CONTEXTS_DIR = Path(__file__).parent / "contexts"
 
-# Every background_jobs answer meets every storage answer, and each of those meets both
-# tls_termination answers, in 9 bakes rather than all 18. A bug two answers make between them shows up
-# here; one only three make together may not. The rows that run the backend suite are the contexts
-# with the same three answers (test_backend.py).
+# Every background_jobs answer meets every storage answer, and each of those and the cache answers meet
+# every other, in 9 bakes rather than all 36. A bug two answers make between them shows up here; one
+# only three make together may not. The rows that run the backend suite are the contexts with the same
+# answers (test_backend.py).
 PAIRWISE = [
-    ("celery-with-beat", "garage", "external"),
-    ("celery-with-beat", "s3", "self"),
-    ("celery-with-beat", "disk", "self"),
-    ("celery", "garage", "external"),
-    ("celery", "s3", "self"),
-    ("celery", "disk", "external"),
-    ("inline", "garage", "self"),
-    ("inline", "s3", "external"),
-    ("inline", "disk", "external"),
+    ("celery-with-beat", "garage", "external", "redis"),
+    ("celery-with-beat", "s3", "self", "database"),
+    ("celery-with-beat", "disk", "self", "redis"),
+    ("celery", "garage", "external", "database"),
+    ("celery", "s3", "self", "redis"),
+    ("celery", "disk", "external", "database"),
+    ("inline", "garage", "self", "database"),
+    ("inline", "s3", "external", "redis"),
+    ("inline", "disk", "external", "redis"),
 ]
 
 

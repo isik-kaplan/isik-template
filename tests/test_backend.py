@@ -7,10 +7,10 @@ from conftest import load_context
 
 
 # The backend suite, 100% coverage included, on every context the sandbox run doesn't bake. Between
-# them and "default" they meet every background_jobs answer with every storage backend (S3 or disk) and
-# both tls_termination answers, each running the code its answers render: tasks inline or through
-# Celery, files on disk or in Garage, a proxy in front of nginx or none. Each context is its own CI
-# job, so they run side by side.
+# them and "default" they meet every background_jobs, cache and tls_termination answer with every
+# other and with every storage backend (S3 or disk), each running the code its answers render: tasks
+# inline or through Celery, files on disk or in Garage, counts in Redis or in Postgres, a proxy in
+# front of nginx or none. Each context is its own CI job, so they run side by side.
 pytestmark = [
     pytest.mark.skipif(shutil.which("docker") is None, reason="docker not available"),
     # Only the backend image is built, which needs uv.lock and not the frontend's npm install.
@@ -44,7 +44,11 @@ def test_the_backend_suite_passes(cookies, context_name):
         proc = subprocess.run(["docker", "compose", *args], cwd=project_path, env=env, capture_output=True, text=True)
         assert proc.returncode == 0, f"docker compose {' '.join(args)}\n{proc.stdout[-8000:]}\n{proc.stderr[-8000:]}"
 
-    services = ["database"] if result.context["storage"] == "disk" else ["database", "storage"]
+    services = ["database"]
+    if result.context["storage"] != "disk":
+        services.append("storage")
+    if result.context["cache"] == "redis":
+        services.append("cache")
     try:
         compose("build", "backend")
         compose("up", "-d", "--wait", "--wait-timeout", "90", *services)

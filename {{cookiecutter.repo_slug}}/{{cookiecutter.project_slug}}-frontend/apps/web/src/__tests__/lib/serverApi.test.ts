@@ -16,7 +16,10 @@ describe('serverApi', () => {
   it("builds the client against the request's api origin, forwarding its cookies", async () => {
     await serverApi()
 
-    expect(createApi).toHaveBeenLastCalledWith('http://api.test.test', { cookieHeader: 'sessionid=abc' })
+    expect(createApi).toHaveBeenLastCalledWith('http://api.test.test', {
+      cookieHeader: 'sessionid=abc',
+      baseFetch: expect.any(Function),
+    })
   })
 
   it('forwards no cookie header when the request carries none', async () => {
@@ -24,6 +27,9 @@ describe('serverApi', () => {
 
     await serverApi()
 
-    expect(createApi).toHaveBeenLastCalledWith('http://api.test.test', { cookieHeader: undefined })
+    expect(createApi).toHaveBeenLastCalledWith('http://api.test.test', {
+      cookieHeader: undefined,
+      baseFetch: expect.any(Function),
+    })
   })
 })

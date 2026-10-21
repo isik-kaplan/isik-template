@@ -68,14 +68,11 @@ jobs:
       - run: cp .env.example .env
       - name: Build backend image
         run: docker compose build backend
-{%- if cookiecutter.storage == "disk" %}
-      - name: Start database
-        run: docker compose up -d --wait --wait-timeout 90 database
-{%- else %}
-      # storage too: the suite writes to a real Garage, and --no-deps below starts nothing itself.
-      - name: Start database and storage
-        run: docker compose up -d --wait --wait-timeout 90 database storage
-{%- endif %}
+      # Everything the suite talks to for real, since --no-deps below starts nothing itself:{% if cookiecutter.storage != "disk" %} Garage,
+      # which it writes files to,{% endif %}{% if cookiecutter.cache == "redis" %} Redis, which apps/common/tests/test_cache.py checks is shared,{% endif %}
+      # and the database.
+      - name: Start the services the suite uses
+        run: docker compose up -d --wait --wait-timeout 90 database{% if cookiecutter.storage != "disk" %} storage{% endif %}{% if cookiecutter.cache == "redis" %} cache{% endif %}
       - name: Migrate
         run: docker compose run --rm --no-deps backend python manage.py migrate
       - name: Check for missing migrations
@@ -144,14 +141,11 @@ jobs:
       - run: cp .env.example .env
       - name: Build backend image
         run: docker compose build backend
-{%- if cookiecutter.storage == "disk" %}
-      - name: Start database
-        run: docker compose up -d --wait --wait-timeout 90 database
-{%- else %}
-      # storage too: the suite writes to a real Garage, and --no-deps below starts nothing itself.
-      - name: Start database and storage
-        run: docker compose up -d --wait --wait-timeout 90 database storage
-{%- endif %}
+      # Everything the suite talks to for real, since --no-deps below starts nothing itself:{% if cookiecutter.storage != "disk" %} Garage,
+      # which it writes files to,{% endif %}{% if cookiecutter.cache == "redis" %} Redis, which apps/common/tests/test_cache.py checks is shared,{% endif %}
+      # and the database.
+      - name: Start the services the suite uses
+        run: docker compose up -d --wait --wait-timeout 90 database{% if cookiecutter.storage != "disk" %} storage{% endif %}{% if cookiecutter.cache == "redis" %} cache{% endif %}
       - name: Migrate
         run: docker compose run --rm --no-deps backend python manage.py migrate
 {%- if cookiecutter.languages.split(',') | length > 1 %}

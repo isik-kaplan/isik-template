@@ -4,6 +4,7 @@ import { Button, ErrorText, Heading, Screen, TextField } from '@/components'
 
 import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
+import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 
 import { extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
@@ -22,10 +23,19 @@ export default function ProfilePassword() {
     setError(undefined)
     setSuccess(false)
     try {
-      const { data, error: response } = await getAuthApi().changePassword({
+      const {
+        data,
+        error: response,
+        response: http,
+      } = await getAuthApi().changePassword({
         current_password: currentPassword,
         new_password: newPassword,
       })
+      const throttled = tooManyRequestsMessage(t, http)
+      if (throttled) {
+        setError(throttled)
+        return
+      }
       if (data) {
         setCurrentPassword('')
         setNewPassword('')

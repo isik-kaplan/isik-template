@@ -7,5 +7,6 @@
   "tls_termination": "self",
   "license": "BSD-3-Clause",
   "background_jobs": "celery-with-beat",
-  "storage": "disk"
+  "storage": "disk",
+  "cache": "database"
 }

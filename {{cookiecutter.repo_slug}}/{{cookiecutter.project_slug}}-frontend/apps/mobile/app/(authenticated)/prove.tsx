@@ -4,6 +4,7 @@ import { Button, ErrorText, Heading, Screen, TextField } from '@/components'
 
 import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
+import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 
 import { extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
@@ -37,8 +38,13 @@ export default function Prove() {
   async function prove() {
     setSubmitting(true)
     setError(undefined)
-    const { data, error: response } = await getAuthApi().reauthenticate(password)
+    const { data, error: response, response: http } = await getAuthApi().reauthenticate(password)
     setSubmitting(false)
+    const throttled = tooManyRequestsMessage(t, http)
+    if (throttled) {
+      setError(throttled)
+      return
+    }
     if (data) {
       router.back()
       return

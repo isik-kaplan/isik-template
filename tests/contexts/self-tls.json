@@ -7,5 +7,6 @@
   "tls_termination": "self",
   "license": "MIT",
   "background_jobs": "celery",
-  "storage": "s3"
+  "storage": "s3",
+  "cache": "database"
 }

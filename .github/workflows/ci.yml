@@ -48,7 +48,8 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync
-      - run: uv run pytest tests/test_docker_compose.py
+      # test_rate_limits.py boots the real nginx between stand-ins, building only the server image.
+      - run: uv run pytest tests/test_docker_compose.py tests/test_rate_limits.py
 
   # Bakes the default context, force-pushes it to a dedicated sandbox repo, and waits for that
   # repo's own GitHub Actions to run the *real* generated ci.yml - lint, backend, backend-mutation,

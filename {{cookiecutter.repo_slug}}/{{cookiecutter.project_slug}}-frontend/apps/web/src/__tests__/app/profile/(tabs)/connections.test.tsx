@@ -106,7 +106,10 @@ describe('ProfileConnectionsPage', () => {
 
     render(await ProfileConnectionsPage({ searchParams: Promise.resolve({}) }))
 
-    expect(AuthApi).toHaveBeenCalledWith(AUTH_ORIGIN, { cookieHeader: 'sessionid=abc123' })
+    expect(AuthApi).toHaveBeenCalledWith(AUTH_ORIGIN, {
+      cookieHeader: 'sessionid=abc123',
+      baseFetch: expect.any(Function),
+    })
   })
 
   it('defaults cookieHeader to undefined when the request carries no cookie', async () => {
@@ -115,7 +118,10 @@ describe('ProfileConnectionsPage', () => {
 
     render(await ProfileConnectionsPage({ searchParams: Promise.resolve({}) }))
 
-    expect(AuthApi).toHaveBeenCalledWith(AUTH_ORIGIN, { cookieHeader: undefined })
+    expect(AuthApi).toHaveBeenCalledWith(AUTH_ORIGIN, {
+      cookieHeader: undefined,
+      baseFetch: expect.any(Function),
+    })
     cookieHeader = 'sessionid=abc123'
   })
 

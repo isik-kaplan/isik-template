@@ -10,6 +10,7 @@ import { AuthApi, pendingMfaTypes } from '@{{ cookiecutter.repo_slug }}/auth-api
 import type { Session } from './SessionContext'
 import { requestOrigin } from './requestOrigin'
 import { resolveLanguage } from './resolveLanguage'
+import { visitorFetch } from './visitor'
 
 type SessionState = {
   session: Session
@@ -28,7 +29,10 @@ type SessionState = {
 const fetchSessionState = cache(async (): Promise<SessionState> => {
   const requestHeaders = await headers()
   const authOrigin = requestOrigin(requestHeaders).replace('://', '://auth.')
-  const authApi = new AuthApi(authOrigin, { cookieHeader: requestHeaders.get('cookie') ?? undefined })
+  const authApi = new AuthApi(authOrigin, {
+    cookieHeader: requestHeaders.get('cookie') ?? undefined,
+    baseFetch: visitorFetch(requestHeaders),
+  })
   const acceptLanguageHeader = requestHeaders.get('accept-language')
   try {
     const { data, error } = await authApi.session()

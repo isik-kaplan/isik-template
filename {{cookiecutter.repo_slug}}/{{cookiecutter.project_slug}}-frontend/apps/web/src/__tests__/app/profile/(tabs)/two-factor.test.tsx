@@ -36,7 +36,10 @@ describe('ProfileTwoFactorPage', () => {
 
     render(await ProfileTwoFactorPage())
 
-    expect(AuthApi).toHaveBeenCalledWith('http://auth.test-project.test', { cookieHeader: 'sessionid=abc123' })
+    expect(AuthApi).toHaveBeenCalledWith('http://auth.test-project.test', {
+      cookieHeader: 'sessionid=abc123',
+      baseFetch: expect.any(Function),
+    })
   })
 
   it('forwards no cookie header when the request carries none', async () => {
@@ -45,7 +48,10 @@ describe('ProfileTwoFactorPage', () => {
 
     render(await ProfileTwoFactorPage())
 
-    expect(AuthApi).toHaveBeenCalledWith('http://auth.test-project.test', { cookieHeader: undefined })
+    expect(AuthApi).toHaveBeenCalledWith('http://auth.test-project.test', {
+      cookieHeader: undefined,
+      baseFetch: expect.any(Function),
+    })
     cookieHeader = 'sessionid=abc123'
   })
 

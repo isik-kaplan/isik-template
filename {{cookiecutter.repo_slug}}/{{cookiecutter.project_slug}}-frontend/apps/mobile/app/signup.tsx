@@ -4,6 +4,7 @@ import { Button, ErrorText, Heading, LegalConsentNotice, Screen, SocialLoginButt
 
 import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
+import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 
 import { extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
@@ -22,7 +23,12 @@ export default function Signup() {
     setSubmitting(true)
     setError(undefined)
     try {
-      const { data, error: response } = await getAuthApi().signup({ username, email, password })
+      const { data, error: response, response: http } = await getAuthApi().signup({ username, email, password })
+      const throttled = tooManyRequestsMessage(t, http)
+      if (throttled) {
+        setError(throttled)
+        return
+      }
       if (data?.meta.is_authenticated) {
         router.replace('/(authenticated)/home')
         return
