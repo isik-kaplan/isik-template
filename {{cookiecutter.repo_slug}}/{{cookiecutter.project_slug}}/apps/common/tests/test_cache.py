@@ -7,7 +7,9 @@ these build the configured one themselves.
 
 import uuid
 
+{% if cookiecutter.cache == "database" -%}
 import pytest
+{% endif -%}
 from django.utils.module_loading import import_string
 
 from conftest import CONFIGURED_CACHES

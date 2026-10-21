@@ -17,6 +17,7 @@ import json
 from django.conf import settings
 
 from apps.common.client_ip import client_ip
+
 from {{ cookiecutter.project_slug }}.config import CONFIG
 
 
