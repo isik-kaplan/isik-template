@@ -2,8 +2,8 @@ import pytest
 from django.conf import settings
 from django.test import RequestFactory
 from isik.django.apps.common.db import open_history_context
-
 from isik.django.apps.common.middleware import HistoryContextMiddleware
+
 from apps.users.models.user import User
 
 from {{ cookiecutter.project_slug }} import __version__

@@ -36,26 +36,9 @@ The same settings-module tooling limitation as x__social_app_config above: its o
 during Django's settings import, and mutmut reports "no tests" for every mutant and phase two sees none
 of them killed, however directly a test calls it."""
 
-["{{ cookiecutter.project_slug }}.celery_task.xǁOnCommitTaskǁapply_async"]
-reason = """Genuinely covered, not equivalent. Manually breaking apply_async (dropping the
-transaction.on_commit wrapping; replacing the headers dict with just
-{history_context_header: self.history_cause()}, dropping the caller's own headers) makes
-{{ cookiecutter.project_slug }}/tests/test_celery_task.py fail, confirmed by hand for both - the same
-file's other tests (dispatch waits for the transaction, a task nobody asked for is the system's, the worker
-writes inside the cause it was given) exercise the rest of this method and OnCommitTask's inherited
-__call__.
-
-mutmut's own trampoline still reports "no tests" for every mutant here, a tooling limitation like
-x__social_app_config above rather than a real coverage gap. The likely reason differs though:
-`ping` (apps/users/tasks/health_check.py) is a `celery.local.Proxy` - @shared_task defers binding
-to a real Task instance until the current Celery app is resolved, rather than naming one directly -
-so every call through it (ping.delay(), ping.apply_async(), ping() itself) reaches apply_async by a
-level of indirection mutmut's call-attribution apparently doesn't see through, unlike a plain
-viewset method called directly off an instance. Revisit if a mutmut upgrade changes this, or if a
-task stops being dispatched through a bare Proxy."""
-
 ["{{ cookiecutter.project_slug }}.celery_task.xǁOnCommitTaskǁworker_history_context"]
 reason = """Genuinely covered, not equivalent: the two mutants rename the "version" key ("XXversionXX",
 "VERSION"), and test_celery_task.py's test_the_worker_writes_inside_the_context_it_was_given asserts
-the whole context dict, so a renamed key fails it - confirmed by hand. mutmut reports "no tests" for
-the same reason as apply_async above: the worker half runs through ping's celery.local.Proxy."""
+the whole context dict, so a renamed key fails it - confirmed by hand. mutmut reports "no tests"
+because the worker half runs through `ping`'s celery.local.Proxy (apps/users/tasks/health_check.py),
+an indirection mutmut's call attribution doesn't see through. Revisit if a mutmut upgrade changes this."""

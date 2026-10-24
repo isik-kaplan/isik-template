@@ -4,8 +4,8 @@ from pathlib import Path
 
 import sentry_sdk
 from corsheaders.defaults import default_headers
-from isik.django.apps.common.checks import Check, CheckOption
 from django.conf.locale import LANG_INFO
+from isik.django.apps.common.checks import Check, CheckOption
 
 from apps.common.logging.scrub import scrub_event
 from apps.oauth_provider import device_codes
