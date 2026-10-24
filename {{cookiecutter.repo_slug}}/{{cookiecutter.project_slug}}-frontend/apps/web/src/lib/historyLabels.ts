@@ -1,7 +1,6 @@
 import type { Translate } from '@/i18n/config'
 
-// Written out rather than looked up by building a key from the field's name: an assembled key is a
-// plain string to the type checker, so a renamed one would only show up rendered as itself.
+// Written out: an assembled key is a plain string to the type checker.
 export function historyFieldLabels(t: Translate): Record<string, string> {
   return {
     username: t('auth:profileDetailsUsernameLabel'),
@@ -28,8 +27,7 @@ export function historyActionLabels(t: Translate) {
 // Bookkeeping every save touches, which says nothing about what the person changed.
 const UNTOLD = new Set(['updated_at'])
 
-/** The fields one event changed, named for a reader. A field nobody wrote a label for keeps its own
- *  name rather than disappearing, so a newly tracked one still shows up. */
+/** The fields one event changed; an unlabelled field keeps its own name rather than disappearing. */
 export function changedFields(changes: Record<string, unknown> | null, labels: Record<string, string>): string[] {
   return (
     Object.keys(changes ?? {})

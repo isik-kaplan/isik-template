@@ -12,8 +12,7 @@ from apps.users.permissions import VOCABULARY
 
 
 class ManagedUserSerializer(BaseModelSerializer):
-    """Somebody's account, as whoever manages accounts sees it: who they are is read-only here, and what
-    they may do is the point. Raising anything is a grant - see apps/users/granting.py."""
+    """Somebody's account as an account manager sees it: identity read-only, access editable."""
 
     exempt_from_registry = SerializerRegistryExemption(
         reason="A second serializer over User, for whoever manages accounts rather than the person themselves."
@@ -63,7 +62,7 @@ class ManagedUserSerializer(BaseModelSerializer):
             raise serializers.ValidationError(_("Only a superuser changes a superuser's account."))
         granted = {permission.codename for permission in user.user_permissions.all()}
         added = set(attrs.get("permissions", granted)) - granted
-        # Only a raise is a grant: lowering takes something away, and is users:manage:user's business.
+        # Only a raise is a grant; lowering is users:manage:user's business.
         refuse_a_grant_beyond_the_giver(
             actor,
             raising_is_staff=attrs.get("is_staff") is True and not user.is_staff,

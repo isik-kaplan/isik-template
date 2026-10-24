@@ -15,15 +15,26 @@ import { useAPISubmit } from '@/lib/submit'
 
 import type { ApiType } from '@{{ cookiecutter.repo_slug }}/api'
 
+import { useIdempotencyKey } from '@isikk/core/hooks'
+
 type ManagedUser = ApiType<'ManagedUser'>
 type Flag = 'is_active' | 'is_staff' | 'is_superuser'
 
-/** Whether somebody may sign in, their rank, and what they were granted. The backend decides what the
- *  person changing it may do - see apps/users/granting.py - and says so when they may not. */
-export function ManageUserForm({ user, permissions }: { user: ManagedUser; permissions: Scope[] }) {
+/** Whether somebody may sign in, their rank and grants; the backend decides what the editor may change. */
+export function ManageUserForm({
+  user,
+  etag,
+  permissions,
+}: {
+  user: ManagedUser
+  // The read's ETag header: the version this form was opened on.
+  etag: string | null
+  permissions: Scope[]
+}) {
   const { t } = useClientTranslation(['auth'])
   const router = useRouter()
   const { isSubmitting, submit } = useAPISubmit()
+  const saving = useIdempotencyKey()
   const [flags, setFlags] = useState<Record<Flag, boolean>>({
     is_active: user.is_active ?? true,
     is_staff: user.is_staff ?? false,
@@ -40,13 +51,20 @@ export function ManageUserForm({ user, permissions }: { user: ManagedUser; permi
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
+    const changes = { ...flags, permissions: granted as NonNullable<ManagedUser['permissions']> }
     await submit(
-      () =>
-        createApi(apiOrigin()).updateUser(user.id, {
-          ...flags,
-          permissions: granted as NonNullable<ManagedUser['permissions']>,
-        }),
-      { success: t('auth:peopleSaved'), failure: t('auth:peopleSaveError'), onSuccess: () => router.refresh() }
+      (headers) => createApi(apiOrigin()).updateUser(user.id, changes, { ...headers, ...saving.headerFor(changes) }),
+      {
+        success: t('auth:peopleSaved'),
+        failure: t('auth:peopleSaveError'),
+        etag,
+        // Somebody else changed them since this page loaded: shown as they are now, to decide again.
+        onStale: () => router.refresh(),
+        onSuccess: () => {
+          saving.used()
+          router.refresh()
+        },
+      }
     )
   }
 

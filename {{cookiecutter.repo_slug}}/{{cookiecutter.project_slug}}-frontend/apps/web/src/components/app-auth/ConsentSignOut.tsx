@@ -10,8 +10,7 @@ import { broadcastSessionCleared } from '@/lib/sessionChannel'
 
 import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
-/** "Not you?" on the consent page: signs this account out and asks again, for whoever signs in next - the
- *  question the application asked is not lost on the way. */
+/** "Not you?": signs out and asks the same question again of whoever signs in next. */
 export function ConsentSignOut({ username, authorizeUrl }: { username: string; authorizeUrl: string }) {
   const { t } = useClientTranslation(['auth'])
   const router = useRouter()

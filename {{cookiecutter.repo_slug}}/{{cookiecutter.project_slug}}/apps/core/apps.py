@@ -7,8 +7,9 @@ class CoreConfig(AppConfig):
     name = "apps.core"
 
     def ready(self):
+        from isik.django.drf.spectacular import enum_name_overrides as with_generated_models
+
         from apps.common.enum_names import enum_name_overrides
 
-        # Not in settings, which is imported before the app registry exists. Any later than this and
-        # drf-spectacular has already cached the overrides it loaded.
-        settings.SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"] = enum_name_overrides()
+        # Settings import before the app registry; any later, drf-spectacular has cached them.
+        settings.SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"] = with_generated_models(enum_name_overrides())

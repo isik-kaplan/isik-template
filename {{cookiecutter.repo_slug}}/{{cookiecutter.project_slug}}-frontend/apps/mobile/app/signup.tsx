@@ -6,7 +6,7 @@ import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
 import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 
-import { extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
+import { errorsOf } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
 import { Link, router } from 'expo-router'
 import { Text } from 'react-native'
@@ -33,7 +33,7 @@ export default function Signup() {
         router.replace('/(authenticated)/home')
         return
       }
-      const authErrors = extractAuthErrors(response)
+      const authErrors = errorsOf(response)
       setError(authErrors?.[0]?.message ?? t('signupError'))
     } finally {
       setSubmitting(false)

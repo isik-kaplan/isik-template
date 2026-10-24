@@ -36,8 +36,7 @@ describe('LogoutButton', () => {
     render(<LogoutButton />)
 
     const button = screen.getByRole('button', { name: 'Log out' })
-    // Both default to the same key, so a role+name query alone can't tell "aria-label" and
-    // "visible text" apart - one could silently break while the other keeps the query passing.
+    // Both use the same key, so a role+name query alone can't tell aria-label from visible text.
     expect(button.getAttribute('aria-label')).toBe('Log out')
     expect(button.textContent).toBe('Log out')
   })

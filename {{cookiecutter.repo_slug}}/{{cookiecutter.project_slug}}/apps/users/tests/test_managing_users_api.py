@@ -1,5 +1,3 @@
-"""Changing somebody else's account: whether they may sign in, their rank, and what they may do."""
-
 import pytest
 from django.contrib.auth.models import Permission as PermissionRow
 from django.contrib.contenttypes.models import ContentType
@@ -7,6 +5,7 @@ from django.urls import reverse
 
 from apps.users.models.user import User
 from apps.users.permissions import Permission
+from conftest import versioned
 
 
 MANAGE = str(Permission.USERS_MANAGE_USER)
@@ -44,7 +43,7 @@ def granter(signed_in, headless):
 
 
 def _patch(client, user, data):
-    return client.patch(_detail(user), data, content_type="application/json")
+    return client.patch(_detail(user), data, content_type="application/json", headers=versioned(user))
 
 
 @pytest.mark.django_db
@@ -196,7 +195,9 @@ def test_who_somebody_is_stays_theirs_to_change(client, granter, bob):
 def test_a_person_sees_their_own_rank_and_permissions_and_cannot_change_them(client, signed_in):
     _grant(signed_in, GRANT)
 
-    body = client.patch(reverse("users-me"), {"is_superuser": True}, content_type="application/json").json()
+    body = client.patch(
+        reverse("users-me"), {"is_superuser": True}, content_type="application/json", headers=versioned(signed_in)
+    ).json()
 
     assert body["is_superuser"] is False
     assert body["permissions"] == [GRANT, MANAGE]
@@ -268,7 +269,7 @@ def test_somebody_already_staff_may_be_given_the_grant_permission_on_its_own(cli
 
 @pytest.mark.django_db
 def test_a_grant_names_the_declared_permission_and_no_namesake(client, granter, bob):
-    """A row of the same codename under another content type - a third-party app's, say - is not it."""
+    """A row of the same codename under another content type is not it."""
     PermissionRow.objects.create(
         content_type=ContentType.objects.get_for_model(User), codename=MANAGE, name="A namesake"
     )

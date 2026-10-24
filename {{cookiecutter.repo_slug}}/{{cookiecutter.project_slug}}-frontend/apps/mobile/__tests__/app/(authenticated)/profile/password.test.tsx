@@ -88,8 +88,7 @@ describe('ProfilePassword', () => {
     let resolveChange: (value: unknown) => void = () => undefined
     mockChangePassword.mockReturnValue(new Promise((resolve) => (resolveChange = resolve)))
     await render(<ProfilePassword />)
-    // Not awaited: the promise above deliberately never resolves, and fireEvent's own act()
-    // wrapper waits for pending work to settle - awaiting it here would hang forever.
+    // Not awaited: fireEvent's act() would wait on the never-resolving promise.
     fireEvent.press(screen.getByTestId('profile-password-submit'))
     await waitFor(() => expect(screen.getByText('Saving…')).toBeTruthy())
     resolveChange({ data: {}, error: undefined })

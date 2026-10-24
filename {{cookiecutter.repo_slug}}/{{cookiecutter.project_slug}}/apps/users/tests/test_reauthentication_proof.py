@@ -135,7 +135,7 @@ def test_a_proving_round_trip_lands_back_where_it_started_saying_how_it_went(pro
     assert dict(parse_qsl(url.query)) == {"next": "/profile", **query}
 
 
-# Anything a URL can carry once encoded - surrogates are the one thing UTF-8 cannot.
+# Surrogates are the one thing UTF-8 cannot encode.
 _TEXT = st.text(st.characters(exclude_categories=("Cs",)))
 
 
@@ -231,7 +231,6 @@ def test_somebody_with_no_password_proves_at_their_provider_or_sets_one_by_email
     alice.set_unusable_password()
     alice.save()
     SocialAccount.objects.create(user=alice, provider=OIDC_PROVIDER_ID, uid="sub-1")
-    # A provider that cannot be held to a fresh challenge is never offered.
     SocialAccount.objects.create(user=alice, provider=GitHubProvider.id, uid="2")
 
     assert proof.ways_to_prove(_request(alice)) == [

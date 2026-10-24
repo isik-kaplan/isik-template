@@ -10,8 +10,7 @@ test('logging in with the wrong password shows an error and does not sign in', a
   await login(page, username, 'definitely-the-wrong-password')
 
   await expect(page).toHaveURL('/auth/login')
-  // allauth's own message, surfaced verbatim by LoginForm rather than a generic fallback - it
-  // comes back with param: "password", so it renders under the password field, not as a banner.
+  // allauth's own message, under the password field.
   await expect(page.getByText(/username and\/or password you specified are not correct/i)).toBeVisible()
 })
 
@@ -45,7 +44,7 @@ test('the right password for an unconfirmed address asks for the confirmation, n
   await expect(page).toHaveURL('/auth/verify-email-required')
   await expect(page.getByText('Confirm your email address first')).toBeVisible()
   await expect(page.getByText('Could not log you in.')).toHaveCount(0)
-  // allauth mails a fresh link as it refuses the login, which is what the page promises.
+  // allauth mails a fresh link as it refuses the login.
   await waitForEmailCount(email, 2)
   await page.goto(await extractLinkFromEmail(email, '/auth/verify-email/'))
   await page.getByRole('button', { name: 'Confirm email address' }).click()

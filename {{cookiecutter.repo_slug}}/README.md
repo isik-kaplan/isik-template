@@ -255,21 +255,40 @@ ends up configured with; a visitor with no preference gets their browser's own l
 {% endif %}
 ## Backend conventions
 
-- **Every request is a transaction** (`ATOMIC_REQUESTS`). A view opts out only through
-  `apps.common.transactions.not_atomic(reason)`, and a system check refuses one that used Django's
-  `non_atomic_requests` directly. Anything that cannot roll back (mail, Celery dispatch) waits for
-  `transaction.on_commit` - `OnCommitTask` and `AccountAdapter.send_mail` already do. Account mail
+- **Every request is a transaction** (`ATOMIC_REQUESTS`). A view opts out only through isik's
+  `not_atomic(reason)`; isik's check `isik.E011` refuses one that used Django's `non_atomic_requests`
+  directly. Anything that cannot roll back waits for the commit: Celery tasks are dispatched on commit
+  (`HISTORY_TASK_DISPATCH_ON_COMMIT`), and `AccountAdapter.send_mail` uses `transaction.on_commit`. Account mail
 {%- if cookiecutter.background_jobs == "inline" %}
   is rendered and sent by a task, which retries an SMTP outage - inline, once the request commits.
 {%- else %}
   is rendered in the request and sent by the `worker`, which retries an SMTP outage, so under DEBUG
   the console backend prints it in the worker's log rather than the backend's.
 {%- endif %}
-- **Every POST takes an `Idempotency-Key` header** (a UUID per attempt, not per call). `BaseModelViewSet`
-  carries isik's `IdempotencyMixin`, so a retried request replays the first answer rather than doing the
-  work twice; a system check refuses a routed POST that neither honours a key nor names a
-  `NoIdempotencyKey(reason=...)` from `apps/idempotency/exemptions.py`. Clients mint the key with `@isikk/core`'s `useIdempotencyKey()` (or
-  `useValidatedFormState`, which passes one to its `submit` call).
+- **Every write (POST, PUT, PATCH, DELETE) takes an `Idempotency-Key` header** (a UUID per attempt, not
+  per call). isik's `BaseModelViewSet` carries `IdempotencyMixin`, so a retried request replays the first
+  answer rather than doing the work twice; isik's check `isik.E005` refuses a routed write that neither
+  honours a key nor names a `NoIdempotencyKey(reason=...)`. Clients mint the key with `@isikk/core`'s
+  `useIdempotencyKey()` (or the form hooks, which pass one to their `submit` call). `packages/api` takes
+  only a typed key, so a write sent without one is a type error rather than a missing header.
+- **Every write to one object names the version it was made against** (`If-Match`), so a page loaded
+  before somebody else saved is refused (412, with the object as it is now) rather than quietly
+  overwriting what they saved. isik's `BaseModelViewSet` carries `PreconditionMixin`: reading one object
+  sends its version as `ETag`, and only there - never in a body, so a list carries none, and a page
+  writing to a row it listed reads that row first. Pages read it with `etagOf(response)`. The version
+  is `updated_at`, which the database moves strictly forward on every write; a model without one (DOT's
+  `Application`) is a `VersionedModel`. A model whose many-to-many rows a stale page could take back names
+  them in `concurrency_relations` (`User`: its groups and grants), so they count toward its version
+  without moving `updated_at`; `makemigrations` then adds the triggers that lock it while they change.
+  A write without `If-Match` is a 428, and isik's check `isik.E007` refuses a routed write to one object
+  that neither asks for it nor names a `NoPrecondition(reason=...)` - deleting a token, say, which only
+  takes access away. `isik.E004` refuses one whose version no read hands out - a GET on its route, or its object's `retrieve`, that sends `ETag` - and isik raises at runtime on
+  a read declared to send it that doesn't. The web forms send it through `@isikk/core`'s
+  `useVersionedFormState` (with the conflict to offer: their version, or this one over it) or
+  `useAPISubmit`'s `etag`; `packages/api`'s versioned writes take only `VersionedHeaders`, which a hook
+  given an `etag` (or a deliberate `null`), `ifMatch()` or `anyVersion()` makes - forgetting the version,
+  or passing one that may be undefined, does not compile. The `PRECONDITION_*` settings change the defaults - see isik's
+  `docs/django/drf/viewsets/preconditions.md`.
 - **Raw SQL never spells a table or column name.** Resolve them with `apps.common.db.model_db_name` /
   `model_db_column`, building trigger bodies in a `BuiltTrigger(build=...)`; `test_raw_sql_names.py`
   sweeps the tree for literals.
@@ -525,9 +544,9 @@ Each of these fails a commit (pre-commit) and CI rather than relying on review:
 - **Every field says what it is.** Each model field this project declares carries a `help_text` (the
   published API description) and a `db_comment` (what someone in psql sees), or
   `NoHelpText(reason=...)` / `NoComment(reason=...)` from `apps/common/schema_docs.py` saying why it needs none.
-  A Django system check (`schema_docs.E001`) refuses to start otherwise.
-- **Every opt-out names the rule it skips.** The sentinels above, `NotAtomicReason`, `NoIdempotencyKey`,
-  `NoReplay` and isik's own registry opt-outs are isik `Exemption` types that refuse a reason too short
+  isik's check `isik.E010` refuses to start otherwise (configured in `ISIK_CHECKS`).
+- **Every opt-out names the rule it skips.** The sentinels above, `NotAtomic`, `NoIdempotencyKey`,
+  `NoReplay`, `NoPrecondition` and isik's own registry opt-outs are isik `Exemption` types that refuse a reason too short
   to be one; `python manage.py exemptions` lists them by rule.
 - **Serializers over a `BaseModel` list `created_at` and `updated_at`.** By hand - a sweep test in
   `apps/common/tests/test_serializer_conventions.py` checks every `apps/*/api/serializers/` module.

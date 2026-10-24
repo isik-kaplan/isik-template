@@ -61,8 +61,7 @@ describe('ProfileTabsList', () => {
   })
 
   it('does not match a path that only shares a prefix with a tab segment', () => {
-    // "details" is the default fallback, so a path this doesn't match at all would show it
-    // selected too - password isn't the default, so only a wrongful match would select it.
+    // "details" is the fallback, so only password proves a match.
     pathname = '/profile/password-extra'
     render(<ProfileTabsList />)
 
@@ -80,9 +79,7 @@ describe('ProfileTabsList', () => {
   })
 
   it('replaces only the trailing segment when the current path has one', async () => {
-    // A pathname with something after the segment (not a route this app has today, but the
-    // replace regex is anchored to the end for exactly this case) proves the anchor matters:
-    // an unanchored regex would instead rewrite the first /profile/<segment> it finds.
+    // A trailing segment proves the replace regex's end anchor matters.
     pathname = '/profile/details/nested'
     const user = userEvent.setup()
     render(<ProfileTabsList />)

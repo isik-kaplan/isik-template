@@ -222,8 +222,7 @@ describe('ProfileEmails', () => {
     let resolveAdd: (value: unknown) => void = () => undefined
     mockAddEmail.mockReturnValue(new Promise((resolve) => (resolveAdd = resolve)))
     await render(<ProfileEmails />)
-    // Not awaited: the promise above deliberately never resolves, and fireEvent's own act()
-    // wrapper waits for pending work to settle - awaiting it here would hang forever.
+    // Not awaited: fireEvent's act() would wait on the never-resolving promise.
     fireEvent.press(screen.getByTestId('add-email-submit'))
     await waitFor(() => expect(screen.getByText('Adding…')).toBeTruthy())
     resolveAdd({ data: { data: [] } })

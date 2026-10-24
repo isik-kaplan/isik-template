@@ -53,9 +53,7 @@ describe('SessionWatcher', () => {
   })
 
   it('re-subscribes the visibility listener on every render, since router is not assumed stable', () => {
-    // Real Next.js memoizes the router, but nothing here should assume that - this mock rebuilds
-    // a new object on every call, the way a router genuinely could, so [router] as a dep actually
-    // matters: dropping it to [] would leave a rerender's closure holding the stale router.
+    // A new router per call, so dropping [router] from the deps would leave a stale one.
     const addEventListenerSpy = vi.spyOn(document, 'addEventListener')
     const { rerender } = render(<SessionWatcher />)
     const callsAfterMount = addEventListenerSpy.mock.calls.filter(([type]) => type === 'visibilitychange').length

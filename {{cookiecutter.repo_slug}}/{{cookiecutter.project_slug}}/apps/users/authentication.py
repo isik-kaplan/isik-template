@@ -1,4 +1,4 @@
-"""A personal access token calling the API - see apps/users/personal_access_tokens.py."""
+"""A personal access token calling the API."""
 
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -15,7 +15,7 @@ from apps.users.personal_access_tokens import PREFIX, checksum
 class PersonalAccessTokenAuthentication(BaseAuthentication):
     def authenticate(self, request):
         parts = get_authorization_header(request).split()
-        # Anything else bearing a token is an application's, for the authenticator after this one.
+        # Any other bearer token is an application's, for the next authenticator.
         if len(parts) != 2 or parts[0].lower() != b"bearer" or not parts[1].startswith(PREFIX.encode()):
             return None
         token = (
@@ -24,7 +24,7 @@ class PersonalAccessTokenAuthentication(BaseAuthentication):
             .filter(token_checksum=checksum(parts[1].decode(errors="replace")))
             .first()
         )
-        # The same refusal for every reason: which one it was is nothing a stolen or guessed token should learn.
+        # One refusal for every reason, so a guessed token learns nothing.
         if token is None or not token.user.is_active or not admits_session(token.user):
             raise AuthenticationFailed(_("That token is unknown, expired or no longer allowed to sign in."))
 

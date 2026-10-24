@@ -8,5 +8,5 @@ class OAuthProviderConfig(AppConfig):
     name = "apps.oauth_provider"
 
     def ready(self):
-        # drf-spectacular finds an extension by its class having been defined, and nothing else imports it.
+        # Registers the drf-spectacular extension, which nothing else imports.
         import_module("apps.oauth_provider.schema")

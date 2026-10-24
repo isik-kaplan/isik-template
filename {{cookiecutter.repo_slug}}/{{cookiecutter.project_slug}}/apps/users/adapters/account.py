@@ -13,28 +13,21 @@ from apps.users.terms import TERMS_VERSION
 
 
 class AccountAdapter(DefaultAccountAdapter):
-    """Extension point for signup policy - e.g. invite-only signup - plus MJML-rendered account
-    emails in place of allauth's own plain-Django-template default."""
+    """Signup policy plus MJML-rendered account emails."""
 
-    # Every call site (send_confirmation_mail, send_notification_mail, password_reset_by_code,
-    # ...) already passes the full "account/email/<flow>" prefix - "" is not a no-op left in by
-    # mistake, it's what keeps this adapter from doubling that prefix onto itself. A plain string,
-    # not a pathlib.Path: Django's template loader does its own string-keyed cache lookup and
-    # silently misses (TemplateDoesNotExist) on an equivalent Path, even though str(path) matches.
+    # Callers already pass the full "account/email/<flow>" prefix. A str, not a Path: the template
+    # loader's cache misses on a Path.
     email_folder = ""
 
     def get_client_ip(self, request):
-        """nginx's answer rather than allauth's own reading of X-Forwarded-For: that would see the
-        frontend's address on every page it renders. See apps/common/client_ip.py. Refused without one,
-        as allauth's own is: a rate limit cannot count against nobody."""
+        """nginx's answer, not allauth's X-Forwarded-For reading, which would see the frontend's address."""
         ip = client_ip(request)
         if not ip:
             raise PermissionDenied("Unable to determine client IP address")
         return ip
 
     def authenticate(self, request, **credentials):
-        # allauth hands back a user its backend refused, so it can explain an inactive account - which
-        # would wave somebody the login policy shuts out straight through. The backend logged it.
+        # allauth returns a user its backend refused (to explain inactivity), which would bypass the policy.
         user = super().authenticate(request, **credentials)
         return user if user is None or admits(user, SiteSettings.current().login_policy) else None
 
@@ -43,25 +36,20 @@ class AccountAdapter(DefaultAccountAdapter):
         return super().save_user(request, user, form, commit=commit)
 
     def accept_terms(self, user):
-        """Records the documents the signup page told this person they agree to. The social adapter calls it too, so
-        every way an account starts records the same thing. Nothing is recorded while no documents exist."""
+        """Shared with the social adapter so every signup records the same terms."""
         if TERMS_VERSION:
             user.terms_version = TERMS_VERSION
             user.terms_accepted_at = timezone.now()
 
-    # allauth_context.request, not a `request` param - send_mail() isn't given one; the
-    # request-scoped ContextVar allauth's own view layer sets is the only way to reach it here,
-    # and every email template needs it for site_url and any context processors it depends on.
+    # send_mail() gets no request; allauth's request ContextVar is the only way to reach it.
     def send_mail(self, template_prefix, email, context):
         request = allauth_context.request
         context = {**context, "email": email}
         prefix = f"{self.email_folder}{template_prefix}"
-        # The recipient's own choice first - the active language is whoever triggered the send,
-        # which is only the recipient when they did it themselves.
+        # The active language is whoever triggered the send, not necessarily the recipient.
         with translation.override(saved_language(context.get("user")) or translation.get_language()):
             html_content = mjml_template(f"{prefix}/message.html", context, request)
             text_content = text_template(f"{prefix}/message.txt", context, request)
             subject = text_template(f"{prefix}/subject.txt", context, request).strip()
-        # Rendered here, where the request is, and sent by the worker: an SMTP host that hangs or refuses
-        # holds up a task rather than this request. The task waits for the transaction that asked for it.
+        # Rendered here, where the request is; sent by the worker so a hung SMTP host can't block the request.
         send_account_mail.delay(subject, text_content, html_content, email)

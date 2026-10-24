@@ -68,9 +68,26 @@ describe('AuthorizedApplicationsList', () => {
     const [request] = fetchMock.mock.calls[0] as unknown as [Request]
     expect(request.method).toBe('DELETE')
     expect(new URL(request.url).pathname).toBe('/v0/authorized-applications/7/')
+    expect(request.headers.get('Idempotency-Key')).toBeTruthy()
     expect(screen.queryByText('Acme Notes')).toBeNull()
     expect(screen.getByText('Beta Sync')).toBeTruthy()
     expect(toast.success).toHaveBeenCalledWith('Access removed.')
+  })
+
+  it('tries a failed revoke again under the same key, so a lost answer is not acted on twice', async () => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 500 }))
+    globalThis.fetch = fetchMock
+    render(<AuthorizedApplicationsList initialApplications={[ACME, BETA]} />)
+
+    await userEvent.click(within(rowOf('Acme Notes')).getByRole('button', { name: 'Remove access' }))
+    await userEvent.click(within(rowOf('Acme Notes')).getByRole('button', { name: 'Remove access' }))
+    await userEvent.click(within(rowOf('Beta Sync')).getByRole('button', { name: 'Remove access' }))
+
+    const [first, again, other] = fetchMock.mock.calls.map((call) =>
+      (call as unknown as [Request])[0].headers.get('Idempotency-Key')
+    )
+    expect(again).toBe(first)
+    expect(other).not.toBe(first)
   })
 
   it('says why the application could not be shut out, keeping it listed', async () => {

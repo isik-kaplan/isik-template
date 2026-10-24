@@ -48,7 +48,7 @@ export async function AccountHistory({ userId, asked }: { userId: string; asked:
       ) : (
         <ul className="divide-y divide-border text-sm">
           {events.map((event) => {
-            // The document types a history row's JSON `changes` and its `action` as plain JSON and string.
+            // The API document types `changes` and `action` as plain JSON and string.
             const changed = changedFields(event.changes as Record<string, unknown> | null, fields)
             return (
               <li key={event.event_id} className="flex flex-col gap-0.5 py-3 first:pt-0 last:pb-0">

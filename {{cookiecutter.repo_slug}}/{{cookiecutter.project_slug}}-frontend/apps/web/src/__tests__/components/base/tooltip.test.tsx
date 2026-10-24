@@ -4,8 +4,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 describe('Tooltip', () => {
-  // defaultOpen renders open at mount, with nothing awaited afterward - the known Base UI +
-  // jsdom hang (see EmailsList.test.tsx) is specifically about awaiting something after a click.
+  // Open at mount, nothing awaited: Base UI hangs jsdom when something is awaited after a click.
   it('renders its content when open, with its base styling', () => {
     render(
       <TooltipProvider>

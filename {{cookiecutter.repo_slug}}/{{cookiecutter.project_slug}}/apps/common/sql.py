@@ -4,17 +4,9 @@ from apps.common.db import model_db_column
 
 
 def refuse_plaintext(field_name, prefix):
-    """A trigger body refusing any value of `field_name` that does not carry its field's cipher prefix.
+    """Refuses a value without the cipher prefix: migrations, fixtures and `.update()` bypass the field.
 
-    The application enciphers on the way in - see `EncryptedField`. This is the half that makes that
-    true rather than merely usual: a data migration, a fixture and `.update()` all reach the column
-    without passing through the field's `get_prep_value`, and any of them could leave a secret in the
-    clear.
-
-    It holds no key and does no crypto, deliberately: pgcrypto takes its key as a query argument, which
-    puts it in `pg_stat_activity` and every statement log. What the database is the right place for is
-    the invariant. A prefix check guards against a mistake, not an attacker - anything able to run
-    arbitrary SQL can write a plausible prefix.
+    No crypto here, since pgcrypto would put the key in `pg_stat_activity`. Guards against mistakes, not attackers.
     """
 
     def build(model):

@@ -3,25 +3,15 @@ from django.contrib.auth.models import Permission
 
 
 class ProtectedPermission(Permission):
-    """`auth_permission` with its catalog protected in the database, since permissions here are
-    hand-authored and nothing regenerates a deleted one. A proxy, so the triggers' migration lands in
-    this app rather than inside `django.contrib.auth`.
-
-    Retiring a permission on purpose goes through the documented escape hatch:
-
-        with pgtrigger.ignore("users.ProtectedPermission:protect_permission_delete"):
-            ...
-
-    `TRUNCATE` fires no row-level trigger, so `flush` and a `transaction=True` test are unaffected.
-    """
+    """Nothing regenerates a deleted hand-authored permission. A proxy so the migration lands in this app;
+    retiring one goes through `pgtrigger.ignore(...)`."""
 
     class Meta:
         proxy = True
         triggers = [
-            # Both grant tables cascade off this one, so a deleted row takes every grant of it along.
+            # Both grant tables cascade off this one.
             pgtrigger.Protect(name="protect_permission_delete", operation=pgtrigger.Delete),
-            # Re-pointing either silently re-aims every check naming this permission. `name` stays
-            # editable: it is only ever displayed.
+            # Re-pointing either silently re-aims every check; `name` is display-only.
             pgtrigger.Protect(
                 name="protect_permission_identity",
                 operation=pgtrigger.Update,

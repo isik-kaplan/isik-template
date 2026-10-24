@@ -4,10 +4,8 @@ import { expect, test } from '@playwright/test'
 import { act, signUpAndVerify } from '../helpers'
 import { readRecoveryCodes } from '../mfa'
 
-// WebAuthn exists only in a secure context, so this spec alone runs over the stack's self-signed
-// https listener (see e2e/nginx.tls.conf). Chromium treats the origin as secure without the
-// certificate verifying, which is all a passkey needs. Signup stays on http: the verification email
-// links there, and the session cookie covers both schemes.
+// WebAuthn needs a secure context, so this spec runs over the self-signed https listener.
+// Signup stays on http, where the verification email links; the session cookie covers both.
 test.use({ ignoreHTTPSErrors: true })
 
 const HTTPS = 'https://{{ cookiecutter.domain }}'
@@ -21,11 +19,7 @@ async function login(page: Page, username: string, password: string) {
   await page.getByRole('button', { name: 'Log in' }).click()
 }
 
-/**
- * Chromium's virtual authenticator: a real WebAuthn device as far as the page knows, driven over CDP,
- * so the browser half of the ceremony is exercised rather than stubbed. Presence and verification
- * are simulated because nothing in a headless run can tap a key.
- */
+/** Chromium's virtual authenticator, so the browser half of the ceremony is real rather than stubbed. */
 async function attachAuthenticator(page: Page): Promise<CDPSession> {
   const session = await page.context().newCDPSession(page)
   await session.send('WebAuthn.enable')
@@ -59,7 +53,7 @@ test('a passkey enrolled as a second factor answers the login challenge, and rem
     () => page.getByRole('button', { name: 'Add a passkey' }).click(),
     page.getByText('Passkey added.')
   )
-  // A first factor brings recovery codes with it, shown this once.
+  // A first factor brings recovery codes, shown once.
   expect(await readRecoveryCodes(page)).toHaveLength(10)
   const remove = page.getByRole('button', { name: /^Remove / })
   await expect(remove).toHaveCount(1)

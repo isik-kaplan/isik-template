@@ -18,17 +18,14 @@ BACKGROUND_JOBS = {{ cookiecutter.background_jobs|tojson }}
 STORAGE = {{ cookiecutter.storage|tojson }}
 AUTHOR_NAME = {{ cookiecutter.author_name|tojson }}
 AUTHOR_EMAIL = {{ cookiecutter.author_email|tojson }}
-# "en" first, always - see hooks/_validate.py's own validate_requested_languages().
+# "en" first, always (validated in _validate.py).
 LANGUAGES = [code.strip() for code in {{ cookiecutter.languages|tojson }}.split(",") if code.strip()]
 EXTRA_LANGUAGES = LANGUAGES[1:]
 
 WEB_SRC = Path(f"{PROJECT_SLUG}-frontend/apps/web/src")
 LEGAL = WEB_SRC / "legal"
 MOBILE_LIB = Path(f"{PROJECT_SLUG}-frontend/apps/mobile/lib")
-# This whole file is itself a Jinja template (cookiecutter renders it, then runs it - see
-# pre_gen_project.py's own comment on the same thing) - an f-string's own doubled "{{"/"}}" brace
-# escape reads as Jinja's own delimiter and never reaches Python at all. Single braces via a plain
-# variable substitution (not doubled literal braces) side-step that entirely.
+# This file is a Jinja template, so an f-string's doubled-brace escape would be eaten by Jinja.
 OPEN_BRACE, CLOSE_BRACE = "{", "}"
 
 GENERATED_FILE_NOTICE = (
@@ -77,8 +74,7 @@ def _const_array(name: str, items: list[str]) -> str:
 
 
 def scaffold_translation_files() -> list[Path]:
-    """One real, empty catalog per extra requested language - `en` is the only language with
-    actual content; everything else here is deliberately blank for a human to fill in."""
+    """One empty catalog per extra language, for a human to translate."""
     written = []
     web_namespaces = sorted(path.stem for path in (WEB_SRC / "locales" / "en").glob("*.json"))
 
@@ -105,8 +101,7 @@ def scaffold_translation_files() -> list[Path]:
 
 
 def regenerate_web_i18n_config(web_namespaces: list[str]) -> None:
-    """Rewrites i18n/config.ts to import and register every requested language's own locale
-    files - the checked-in version only knows about English."""
+    """The checked-in i18n/config.ts only knows English."""
     import_lines = [
         f"import {_identifier(namespace, language)} from '../locales/{language}/{namespace}.json'"
         for language in sorted(LANGUAGES)
@@ -149,8 +144,7 @@ def regenerate_web_i18n_config(web_namespaces: list[str]) -> None:
 
 
 def regenerate_mobile_i18n() -> None:
-    """Rewrites lib/i18n.ts to register every requested language and pick the initial one from
-    the device's own locale (see expo-localization) rather than always defaulting to English."""
+    """The checked-in lib/i18n.ts only knows English."""
     import_lines = [
         f"import {_identifier('translation', language)} from './locales/{language}.json'"
         for language in sorted(LANGUAGES)
@@ -199,8 +193,7 @@ def regenerate_mobile_i18n() -> None:
 
 
 def legal_checklist() -> str:
-    """The documents a signup agrees to that the owner still has to write, at their exact paths - read from the
-    same definition the pages, the footer and the signup line render from, so it names every document they do."""
+    """Legal documents still to write, read from the same definition the pages and signup render from."""
     slugs = [document["slug"] for document in json.loads((LEGAL / "documents.json").read_text())["documents"]]
     required = "\n".join(f"  [ ] {LEGAL / 'en' / f'{slug}.md'}" for slug in slugs)
     lines = [
@@ -221,23 +214,10 @@ def legal_checklist() -> str:
 
 
 def generate_lock_files() -> list[str]:
-    """Resolves and writes `uv.lock`/`package-lock.json` for the real, rendered project - safe
-    only now, after cookiecutter has already resolved every placeholder, since a lock file's root
-    package entry is self-referential (name = the project's own slug) and one baked into the
-    template itself would mismatch every project generated under a different name (see both
-    Dockerfiles' own history). Once committed, `uv sync --frozen`/`npm ci` (both Dockerfiles,
-    every frontend CI job) stop re-resolving every dependency - runtime and dev tooling alike -
-    on every single build, so two builds of the same commit can no longer resolve differently.
+    """Locks only after rendering: a lock file names the project's own slug, so a templated one would mismatch.
 
-    Skipped under ISIK_TEMPLATE_SKIP_LOCKFILES - the template's own fast structural tests bake
-    a dozen throwaway projects purely to check file layout and never run a single install; paying
-    full dependency resolution twelve times over for that would be pure waste. tests/test_e2e.py
-    and the real bake-real-ci sandbox run never set that flag, so the actual --frozen/npm ci
-    Docker-build path this unlocks stays covered by a real install, not just a structural check.
-
-    Returns what it skipped, in prose, for main() to tell the person if either tool was missing -
-    not raised, since a missing uv/npm shouldn't fail generation outright, only this one step of
-    it that's trivial to redo by hand.
+    Skipped under ISIK_TEMPLATE_SKIP_LOCKFILES for structural tests. Returns warnings rather than raising, so a
+    missing uv/npm doesn't fail generation.
     """
     if os.environ.get("ISIK_TEMPLATE_SKIP_LOCKFILES"):
         return []
@@ -264,12 +244,7 @@ def generate_lock_files() -> list[str]:
 
 
 def main() -> None:
-    # A Jinja-conditional directory *name* (cookiecutter's usual trick for an optional app - and
-    # what this started as) turned out not to work here: when the name renders empty, cookiecutter
-    # resolves the target path to its own parent ("apps"), which already exists as a sibling
-    # directory's parent, and it refuses to overwrite that - the bake fails outright rather than
-    # skipping the directory. Generating it unconditionally and deleting it here is what actually
-    # works.
+    # Not a Jinja-conditional directory name: rendered empty, cookiecutter targets the existing "apps" and fails.
     if not INCLUDE_MOBILE:
         shutil.rmtree(f"{PROJECT_SLUG}-frontend/apps/mobile")
     # Same trick for local https: self mode already serves :443 off its own certificate.
@@ -319,13 +294,10 @@ def main() -> None:
     for warning in lock_warnings:
         print(f"\n{warning}\n")
 
-    # The last step that prompts, deliberately - writes .env, prompting for a real deployment's secrets/config if
-    # this is a real terminal, or just copying .env.example's already-working dev values if not
-    # (a CI bake, or this script fed from a pipe - see its own isatty check). Everything above
-    # should already be on screen before scripts/setup.sh's own prompts show up.
+    # Last, so everything above is on screen before setup.sh prompts for .env (it copies defaults without a tty).
     subprocess.run(["bash", "scripts/setup.sh"], check=True)
 
-    # After setup.sh's own prompts, so it is the last thing on screen.
+    # After setup.sh's prompts, so it is the last thing on screen.
     print(f"\n{legal_checklist()}\n")
 
 

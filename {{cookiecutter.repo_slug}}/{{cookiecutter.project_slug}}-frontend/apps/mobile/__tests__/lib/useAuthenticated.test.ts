@@ -34,9 +34,7 @@ describe('useAuthenticated', () => {
   })
 
   it('resolves to false when the refusal itself carries no meta', async () => {
-    // Distinct from the "no meta at all" case above: error is present here, just without its own
-    // meta - dropping error?.meta's own "?." would reach for .is_authenticated on undefined instead
-    // of short-circuiting, throwing rather than falling back to false.
+    // Kills dropping the "?." in error?.meta, which would throw instead of falling back to false.
     mockSession.mockResolvedValue({ error: {} })
     const { result } = await renderHook(() => useAuthenticated())
     await waitFor(() => expect(result.current).toBe(false))
@@ -60,10 +58,7 @@ describe('useAuthenticated', () => {
   })
 
   it('does not update state after unmount', async () => {
-    // A spy, not just checking result.current stayed null: an unguarded setState after unmount
-    // would still leave result.current looking unchanged (nothing re-reads it), but React itself
-    // would warn loudly about updating an unmounted component - that warning is what the
-    // `cancelled` guard actually prevents, so it's what proves the guard ran.
+    // An unguarded setState after unmount changes nothing visible; only React's warning shows it.
     const consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined)
     let resolveCheck: (value: { data?: { meta: { is_authenticated: boolean } } }) => void = () => undefined
     mockSession.mockReturnValue(new Promise((resolve) => (resolveCheck = resolve)))

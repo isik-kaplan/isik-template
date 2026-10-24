@@ -477,8 +477,7 @@ describe('RemoteCombobox', () => {
     })
   })
 
-  // Answers can arrive in any order; whichever order, the list shows the answer to what was last
-  // typed, never to a term the reader has moved past.
+  // Whatever order answers arrive in, the list shows the one for the last term typed.
   test.prop([fc.uniqueArray(fc.stringMatching(/^[a-z]{1,4}$/), { minLength: 2, maxLength: 4 }), fc.nat()], {
     numRuns: 25,
   })('shows the answer to the last term typed, whatever order the answers land in', async (terms, seed) => {

@@ -1,10 +1,13 @@
 from drf_spectacular.utils import OpenApiParameter, extend_schema
+from isik.django.apps.idempotency.drf import IdempotencyMixin
+from isik.django.drf.viewsets import NoPrecondition, PreconditionMixin
 from oauth2_provider.models import get_access_token_model, get_application_model, get_refresh_token_model
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.common.api.reauthentication import ProvesWhoTheyAre
+from apps.common.api.request_policies import NoReauthentication
 from apps.oauth_provider.api.serializers.authorized_application import AuthorizedApplicationSerializer
 from apps.oauth_provider.services import revoke_tokens
 
@@ -16,17 +19,23 @@ RefreshToken = get_refresh_token_model()
 APPLICATION_ID = OpenApiParameter("id", type=int, location=OpenApiParameter.PATH, description="The application.")
 
 
-class AuthorizedApplicationViewSet(ProvesWhoTheyAre, viewsets.ViewSet):
+class AuthorizedApplicationViewSet(ProvesWhoTheyAre, IdempotencyMixin, PreconditionMixin, viewsets.ViewSet):
     """The applications the signed-in person let into their account, and how to shut one out again."""
 
     permission_classes = [IsAuthenticated]
     serializer_class = AuthorizedApplicationSerializer
-    reauthentication_exempt_actions = {"list": "reading what holds access to your own account takes nothing"}
+    reauthentication_exempt_actions = {
+        "list": NoReauthentication(reason="reading what holds access to your own account takes nothing")
+    }
+    precondition_exempt_actions = {
+        "destroy": NoPrecondition(
+            reason="shutting an application out only takes access away, whatever it was granted since the page loaded"
+        ),
+    }
 
     @extend_schema(responses=AuthorizedApplicationSerializer(many=True))
     def list(self, request):
-        """Every application holding a token for this account - a refresh token too, which outlives the
-        access token it came with and can mint another."""
+        """Every application holding a token for this account, refresh tokens included."""
         grants = {}
         tokens = [
             *AccessToken.objects.filter(user=request.user).select_related("application"),
@@ -49,8 +58,7 @@ class AuthorizedApplicationViewSet(ProvesWhoTheyAre, viewsets.ViewSet):
 
     @extend_schema(parameters=[APPLICATION_ID], responses={204: None})
     def destroy(self, request, pk=None):
-        """Every token the application holds for this person, refresh tokens first and through `revoke()`:
-        deleting an access token leaves its refresh token alive, and that mints a new one."""
+        """Revokes every token the application holds for this person."""
         refresh_tokens = RefreshToken.objects.filter(user=request.user, application_id=pk, revoked__isnull=True)
         access_tokens = AccessToken.objects.filter(user=request.user, application_id=pk)
         if not refresh_tokens.exists() and not access_tokens.exists():

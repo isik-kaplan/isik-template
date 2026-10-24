@@ -9,9 +9,7 @@ const SCRIPT = join(ROOT, 'scripts/mutation-shards.mjs')
 
 const config = JSON.parse(readFileSync(join(ROOT, 'stryker.config.json'), 'utf8')) as { mutate: string[] }
 
-// The config's globs, applied without a glob library: a policy test should not be the first thing
-// to break when a dependency moves. Only the shapes the config uses are understood, and an
-// unfamiliar one throws rather than quietly matching nothing.
+// The config's globs without a glob library; an unfamiliar shape throws rather than matching nothing.
 function matches(pattern: string, file: string): boolean {
   const body = pattern.startsWith('!') ? pattern.slice(1) : pattern
   const suffixed = /^(.*?)\/\*\*\/\*(\.[\w.]+)$/.exec(body)
@@ -43,9 +41,7 @@ function mutatedFiles(): string[] {
   )
 }
 
-// Everything under src/ that the config does not mutate, and why. A source file measured by nothing
-// is invisible from every side anyone looks at: the shards agree with the config, the config agrees
-// with itself, and the score is quietly computed over less than the tree.
+// Everything under src/ the config does not mutate, and why: unmeasured code is otherwise invisible.
 const NOT_MUTATED: Record<string, string> = {
   'src/global.d.ts': 'A type declaration; it emits nothing to run and so has no mutants.',
   'src/i18n/index.ts': 'A barrel re-exporting what the shards measure where it is defined.',
@@ -72,8 +68,7 @@ describe('mutation shards', () => {
     expect([...owners].filter(([, shards]) => shards.length > 1).map(([file]) => file)).toEqual([])
   })
 
-  // A stale entry is how a shard silently shrinks after a rename: the name matches nothing, the
-  // shard measures less, and the score still reads 100.
+  // After a rename a stale entry matches nothing, and the score still reads 100.
   it('names no file that is gone, or that the config excludes', () => {
     const expected = new Set(mutatedFiles())
 
@@ -88,8 +83,7 @@ describe('mutation shards', () => {
     expect(Object.keys(NOT_MUTATED).filter((file) => !sources.includes(file) || mutated.has(file))).toEqual([])
   })
 
-  // An unescaped `[key]` segment is a character class, so the path matches no file and the shard
-  // still reports a full score.
+  // An unescaped `[key]` is a character class, matching no file.
   it('escapes the route segments that would otherwise match no file', () => {
     const bracketed = Object.entries(SHARDS).flatMap(([shard, files]) =>
       files.filter((file) => /[[\]]/.test(file)).map((file) => [shard, file])

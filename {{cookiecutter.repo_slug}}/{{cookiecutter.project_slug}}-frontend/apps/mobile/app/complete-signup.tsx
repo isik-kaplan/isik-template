@@ -6,16 +6,12 @@ import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
 import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 
-import { extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
+import { errorsOf } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
 import { router } from 'expo-router'
 import { Text } from 'react-native'
 
-// Landed on right after a first-ever social sign-in - SOCIALACCOUNT_AUTO_SIGNUP is off, so the
-// provider's suggested username is always confirmable here first, not committed silently. Always
-// re-fetches its own pending state on mount (rather than taking it as a route param) so a direct
-// visit with no pending signup - reached this screen, then closed and reopened the app, say -
-// redirects back to login instead of rendering a broken form.
+// Re-fetches the pending signup rather than taking a route param, so a stale visit redirects to login.
 export default function CompleteSignup() {
   const { t } = useTranslation()
   const [email, setEmail] = useState<string | undefined>()
@@ -37,9 +33,7 @@ export default function CompleteSignup() {
       })
   }, [])
 
-  // Takes email as a plain parameter rather than closing over the possibly-undefined state
-  // directly, so the only caller (the button below, built after the render guard has already
-  // narrowed it) can pass a definitely-defined value - no redundant, untestable runtime guard.
+  // A parameter, not closed-over state, so the caller passes the value the render guard narrowed.
   async function submit(email: string) {
     setSubmitting(true)
     setError(undefined)
@@ -54,10 +48,8 @@ export default function CompleteSignup() {
         setError(throttled)
         return
       }
-      const authErrors = extractAuthErrors(apiError)
-      // A 401 here can still mean the account was created - mandatory email verification just
-      // means it isn't logged in yet (same shape as signup itself: only a real, non-empty errors
-      // array means the submission actually failed).
+      const authErrors = errorsOf(apiError)
+      // A 401 can still mean created but awaiting email verification; only non-empty errors is a failure.
       if (data?.meta.is_authenticated || !authErrors?.length) {
         router.replace(data?.meta.is_authenticated ? '/(authenticated)/home' : '/login')
         return

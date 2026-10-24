@@ -24,6 +24,7 @@ vi.mock('next/headers', () => ({
     return new Headers(init)
   },
 }))
+vi.mock('@/config/public', () => ({ CONFIG: { DOMAIN: '{{ cookiecutter.repo_slug }}.test' } }))
 const replace = vi.hoisted(() => vi.fn())
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace }),

@@ -9,9 +9,6 @@ type ScreenProps = {
   children: ReactNode
 }
 
-/** The full-screen container shape every screen shares: centered content, generous padding,
- * consistent vertical rhythm between fields. One definition so a spacing change moves every
- * screen at once instead of N separate StyleSheet.create() copies. */
 export function Screen({ testID, children }: ScreenProps) {
   return (
     <View testID={testID} style={styles.screen}>

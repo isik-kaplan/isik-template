@@ -4,6 +4,5 @@
     python -m scripts.toolbox.triage <unsettled.txt | mutmut-confirmed.json> [--diffs]
     python -m scripts.toolbox.check_exemption_keys                  # every registry key still generated
 
-Every name they print is generated the way the tree generates it - decorated functions mutated, and
-named by change - so it can be pasted into a registry or `MUTANT_UNDER_TEST` as it stands.
+Names are generated as the tree does, so they paste straight into a registry or `MUTANT_UNDER_TEST`.
 """

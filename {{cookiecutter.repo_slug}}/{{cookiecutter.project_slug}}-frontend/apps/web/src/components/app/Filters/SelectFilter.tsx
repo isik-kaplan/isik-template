@@ -18,8 +18,7 @@ export type SelectFilterProps = {
   className?: string
 }
 
-// A native select, styled like LanguageSwitcher's: one of a fixed set needs nothing a custom listbox
-// adds, and the browser's own picker is the one a phone user already knows.
+// A native select: the browser's picker is the one a phone user knows.
 export function SelectFilter({ name, label, anyLabel, options, className }: SelectFilterProps) {
   const { held, show } = useFilterParams()
 

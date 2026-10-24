@@ -67,8 +67,7 @@ describe('ChangePasswordForm', () => {
   })
 
   it('shows a server error message when the current password is wrong, and no new-password error', async () => {
-    // param: 'current_password' - matches allauth's own field name (and this form's state key); a
-    // mock without it would silently mask a future regression back to a mismatched key.
+    // allauth's field name, which the form's state key must match.
     globalThis.fetch = vi.fn(async () =>
       jsonResponse(400, {
         status: 400,

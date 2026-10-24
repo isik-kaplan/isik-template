@@ -1,7 +1,6 @@
 import { createHmac } from 'node:crypto'
 
-// RFC 6238 in a dozen lines rather than a dependency in the runner image: the suite only needs the
-// code an authenticator app would show.
+// RFC 6238 by hand rather than another dependency in the runner image.
 const BASE32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
 const PERIOD = 30
 
@@ -28,11 +27,7 @@ function sleep(milliseconds: number) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds))
 }
 
-/**
- * A code with enough of its window left to survive the round trip, and never one already spent:
- * allauth accepts only the current step and refuses a code it has seen, so a second login in the
- * same 30 seconds has to wait for the next one.
- */
+/** allauth accepts only the current step and refuses a reused code, so this may wait for the next one. */
 export async function freshTotpCode(secret: string, spent: string[] = []): Promise<string> {
   for (;;) {
     const now = Date.now() / 1000

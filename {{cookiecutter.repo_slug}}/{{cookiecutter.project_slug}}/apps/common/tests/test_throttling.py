@@ -1,7 +1,6 @@
 """The API's rate limits: who they count against, and how a refusal reads.
 
-Rates are lowered through the dict every throttle reads them from, since DRF copies the setting onto
-the throttle classes once, at import.
+Rates are lowered on `THROTTLE_RATES`, which DRF copies from settings once, at import.
 """
 
 import pytest

@@ -6,8 +6,7 @@ import * as SecureStore from 'expo-secure-store'
 
 const TOKEN_KEY = 'session_token'
 
-// Set by the backend's re-authentication gate on the one refusal that means "prove it is you, then
-// retry" - the prove screen goes back to whatever asked once it has the proof.
+// The backend's "prove it is you, then retry" refusal.
 export const REAUTHENTICATION_REQUIRED_HEADER = 'X-Reauthentication-Required'
 export const PROVE_ROUTE = '/prove'
 
@@ -17,9 +16,7 @@ async function reauthenticatingFetch(input: RequestInfo | URL, init?: RequestIni
   return response
 }
 
-/** Wires AppAuthApi to expo-secure-store (encrypted, unlike AsyncStorage). Exported as a factory,
- * not just a ready-made instance, so tests can construct one against a fake baseUrl without
- * needing EXPO_PUBLIC_AUTH_ORIGIN set. */
+/** expo-secure-store, not AsyncStorage, because it is encrypted. */
 export function createAuthApi(baseUrl: string): AppAuthApi {
   return new AppAuthApi(baseUrl, {
     getToken: () => SecureStore.getItemAsync(TOKEN_KEY),
@@ -28,9 +25,7 @@ export function createAuthApi(baseUrl: string): AppAuthApi {
   })
 }
 
-// Lazy: authOrigin() throws when EXPO_PUBLIC_AUTH_ORIGIN isn't set, which should surface on first
-// real use, not at import time - importing this module with no env configured (e.g. in a test that
-// only needs createAuthApi) would otherwise crash before anything runs.
+// Lazy, so a missing EXPO_PUBLIC_AUTH_ORIGIN throws on first use rather than at import.
 let instance: AppAuthApi | undefined
 export function getAuthApi(): AppAuthApi {
   if (!instance) instance = createAuthApi(authOrigin())

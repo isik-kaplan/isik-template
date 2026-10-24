@@ -21,19 +21,25 @@ describe('AuthApi', () => {
     }
   )
 
-  it('primes the csrftoken cookie with one GET when the browser has none yet', async () => {
+  it('primes the csrftoken cookie with one GET before an unsafe request when the browser has none yet', async () => {
     document.cookie = 'csrftoken=; expires=Thu, 01 Jan 1970 00:00:00 GMT'
-    let primed = false
     const baseFetch = vi.fn(async (input: RequestInfo | URL) => {
-      if (!primed && String(input).endsWith('/auth/session')) {
-        primed = true
-        document.cookie = 'csrftoken=primed-token'
-      }
+      if (input === 'https://auth.example.test/v0/browser/v1/auth/session') document.cookie = 'csrftoken=primed-token'
       return new Response('{}', { status: 200 })
     })
     const api = new AuthApi('https://auth.example.test', { baseFetch })
-    await api.session()
+    await api.login({ email: 'a@example.test', password: 'pw' })
     expect(baseFetch).toHaveBeenCalledTimes(2)
+    const [, init] = baseFetch.mock.calls[1] as unknown as [Request, RequestInit]
+    expect(new Headers(init.headers).get('X-CSRFToken')).toBe('primed-token')
+    expect(init.credentials).toBe('include')
+  })
+
+  it('sends a GET without priming, since Django checks no CSRF token on one', async () => {
+    document.cookie = 'csrftoken=; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+    const baseFetch = vi.fn<typeof fetch>(async () => new Response('{}', { status: 200 }))
+    await new AuthApi('https://auth.example.test', { baseFetch }).session()
+    expect(baseFetch).toHaveBeenCalledTimes(1)
   })
 
   it.each([

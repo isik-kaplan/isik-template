@@ -44,13 +44,8 @@ export function AuthCardFooterLink({
   className?: string
   children: React.ReactNode
 }) {
-  // Underlined unconditionally, not just on hover - text-primary is a near-black neutral in this
-  // theme (see globals.css, --primary has 0 chroma), close enough to plain --foreground that a
-  // standalone link (no lighter-colored sibling text to contrast against, e.g. the forgot-password
-  // and provider-error "back to login" links below) otherwise reads as plain body text, not
-  // something clickable. className lets standalone call sites also center it (block text-center) -
-  // this can't default to block itself, since the signup/login links above nest this inline inside
-  // a sentence (e.g. "Don't have an account? Sign up").
+  // Always underlined: --primary has no chroma, so a standalone link would read as body text.
+  // Inline by default, since some sit inside a sentence.
   return (
     <Link href={href} className={cn('text-primary text-sm underline underline-offset-4', className)}>
       {children}

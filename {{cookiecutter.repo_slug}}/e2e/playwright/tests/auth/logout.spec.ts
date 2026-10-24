@@ -13,7 +13,7 @@ test('logging out clears the session and returns to the anonymous home page', as
   await expect(page).toHaveURL('/')
   await expect(page.getByRole('link', { name: 'Log in' })).toBeVisible()
 
-  // The session really is gone server-side, not just hidden client-side.
+  // Gone server-side, not just hidden.
   await page.goto('/profile/details')
   await expect(page).toHaveURL(/\/auth\/login/)
 })

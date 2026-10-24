@@ -10,6 +10,7 @@ vi.mock('@/lib/getSession', () => ({
   getLanguage: async () => 'en',
 }))
 vi.mock('next/headers', () => ({ headers: async () => new Headers({ host: 'test-project.test' }) }))
+vi.mock('@/config/public', () => ({ CONFIG: { DOMAIN: 'test-project.test' } }))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }))
 vi.mock('@/lib/socialProviders', () => ({ socialProviders: () => [{ id: 'google', name: 'Google', icon: '' }] }))
 

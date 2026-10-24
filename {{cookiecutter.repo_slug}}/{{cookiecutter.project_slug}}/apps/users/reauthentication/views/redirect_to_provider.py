@@ -7,13 +7,12 @@ from apps.users.reauthentication.gate import ProvesWhoTheyAre
 from apps.users.reauthentication.proof import with_query
 
 
-# allauth's own code for this refusal, which a connect flow already hands back to its callback_url.
+# allauth's own code for this refusal.
 REAUTHENTICATION_REQUIRED_ERROR = "reauthentication_required"
 
 
 class RedirectToProviderView(ProvesWhoTheyAre, _RedirectToProviderView):
-    """A browser navigation rather than a fetch, so a refusal is a redirect back to the page that
-    started it - the same shape every other failed connect already arrives in."""
+    """A browser navigation, so a refusal redirects back like any failed connect."""
 
     reauthentication_methods = frozenset({"POST"})
 
@@ -23,7 +22,7 @@ class RedirectToProviderView(ProvesWhoTheyAre, _RedirectToProviderView):
         return refusal if refusal is not None else super().handle(request, *args, **kwargs)
 
     def is_an_act(self):
-        # Connecting hands this account another way in; an invalid form is allauth's to refuse.
+        # Only a connect adds a way in; an invalid form is allauth's to refuse.
         return super().is_an_act() and self.form.is_valid() and self.form.cleaned_data["process"] == AuthProcess.CONNECT
 
     def refusal(self):

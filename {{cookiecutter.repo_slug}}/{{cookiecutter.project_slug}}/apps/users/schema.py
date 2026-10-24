@@ -1,4 +1,4 @@
-"""How the API document describes a personal access token: on the operations that take one, and nowhere else."""
+"""Personal access token auth, shown only on the operations that take one."""
 
 from drf_spectacular.extensions import OpenApiAuthenticationExtension
 

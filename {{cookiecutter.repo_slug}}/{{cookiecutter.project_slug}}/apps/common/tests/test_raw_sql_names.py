@@ -1,9 +1,7 @@
-"""No raw SQL spells a table name - names come from `_meta` through `apps.common.db`.
+"""No raw SQL spells a table name; names come from `_meta` through `apps.common.db`.
 
-Source literals rather than rendered SQL, which misses everything outside a trigger. Tables only: a
-model move silently changes one, while a wrong column fails loudly, and the short common column names
-cannot be told from prose. Migrations keep whatever literal was compiled at the time, and a test may
-spell a name where pinning the physical name is the point - listed in EXEMPT with why.
+Source literals, since rendered SQL misses everything outside a trigger. Tables only: a model move changes
+one silently, while a wrong column fails loudly.
 """
 
 import ast
@@ -12,12 +10,12 @@ from pathlib import Path
 
 import pytest
 from django.apps import apps as django_apps
+from isik.common.utils.exemptions import exemption_class
 
 from apps.common.db import model_db_name
 
 
-# Optional qualifier: a `%I` placeholder for a run-time schema, or a literal one. Only the table is
-# captured - the schema is not the name this rule is about.
+# Optional schema qualifier (`%I` or literal); only the table is captured.
 TABLE_REFERENCE = re.compile(
     r"\b(?:FROM|JOIN|UPDATE|INSERT\s+INTO|DELETE\s+FROM)\s+(?:(?:%I|[a-z][a-z0-9_]*)\.)?([a-z][a-z0-9_]+)",
     re.IGNORECASE,
@@ -26,10 +24,21 @@ TABLE_REFERENCE = re.compile(
 ROOT = Path(__file__).resolve().parents[3]
 SEARCHED = ("apps", "{{ cookiecutter.project_slug }}", "scripts")
 
+LiteralTableName = exemption_class(
+    "LiteralTableName",
+    rule="raw-sql.literal-table-name",
+    why="Raw SQL resolves a table's name from its model, so renaming the table cannot leave the SQL behind.",
+)
+
 # Where spelling the physical name is the assertion rather than a way of reaching the table.
 EXEMPT = {
     ("apps/common/tests/test_raw_sql_names.py", "users_user"): (
-        "This file's own detector tests: the literal is the input to the detector, not a way of reaching the table."
+        LiteralTableName(
+            reason=(
+                "This file's own detector tests: the literal is the input to the detector, not a way of reaching "
+                "the table."
+            )
+        )
     ),
 }
 
@@ -46,16 +55,14 @@ def project_tables():
 def source_files():
     for directory in SEARCHED:
         for path in sorted((ROOT / directory).rglob("*.py")):
-            # Migrations are immutable history: replaying one must not depend on what a model is
-            # called today.
+            # Migrations are immutable history.
             if "migrations" in path.parts:
                 continue
             yield path
 
 
 def tables_named_in(source, tables):
-    """Literals only - a comment naming a table is prose. The SQL keyword in front is what tells a
-    docstring mentioning a table from one containing a query."""
+    """Literals only; the SQL keyword in front tells a query from prose."""
     found = set()
     for node in ast.walk(ast.parse(source)):
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
@@ -117,7 +124,8 @@ def test_every_exemption_still_names_a_literal_that_is_there():
 
 
 def test_every_exemption_gives_a_reason():
-    assert [key for key, reason in EXEMPT.items() if len(reason) < 40] == []
+    """Typed, so the reason is held to its floor where it is written."""
+    assert [key for key, reason in EXEMPT.items() if not isinstance(reason, LiteralTableName)] == []
 
 
 def test_the_tables_include_the_join_tables_a_many_to_many_creates():

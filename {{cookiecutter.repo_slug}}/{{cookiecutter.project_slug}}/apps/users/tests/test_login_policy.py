@@ -48,7 +48,6 @@ def test_raising_the_ladder_never_lets_anybody_new_in(lower, higher, is_staff):
 
     if LoginPolicy.admits(higher, is_staff=is_staff, is_superuser=False):
         assert LoginPolicy.admits(lower, is_staff=is_staff, is_superuser=False)
-    # Whoever can set the top rung is never shut out by any rung.
     assert LoginPolicy.admits(higher, is_staff=is_staff, is_superuser=True)
 
 
@@ -132,7 +131,7 @@ def test_the_uncached_settings_never_lag():
 
 @pytest.mark.django_db
 def test_a_stale_cache_still_admits_whoever_it_admitted(alice, logged):
-    """Raising the ladder has already ended the sessions it excludes, so this costs a few seconds at most."""
+    """The sweep already ended excluded sessions, so this costs seconds at most."""
     SiteSettings.objects.create(login_policy=LoginPolicy.EVERYONE)
     SiteSettings.cached()
     SiteSettings.objects.update(login_policy=LoginPolicy.STAFF)
@@ -143,7 +142,6 @@ def test_a_stale_cache_still_admits_whoever_it_admitted(alice, logged):
 
 @pytest.mark.django_db
 def test_a_stale_cache_never_refuses_on_its_own(alice):
-    """Lowering the ladder lets people straight back in, whatever any process cached."""
     SiteSettings.objects.create(login_policy=LoginPolicy.STAFF)
     SiteSettings.cached()
     SiteSettings.objects.update(login_policy=LoginPolicy.EVERYONE)
@@ -169,7 +167,6 @@ def test_saving_passes_its_options_on():
 
 @pytest.mark.django_db
 def test_saving_clears_the_cache_again_at_commit(django_capture_on_commit_callbacks):
-    """Another thread may cache the old row between the write and the commit that publishes it."""
     row = SiteSettings.objects.create(login_policy=LoginPolicy.EVERYONE)
     stale = SiteSettings.cached()
 
@@ -238,8 +235,7 @@ def _queries_of_a_sweep_over(people):
 
 @pytest.mark.django_db
 def test_the_sweep_costs_the_same_queries_however_many_it_signs_out():
-    """One admin request and one transaction: a sweep that grew with the users would hold both for as
-    long as the user table is long."""
+    """It runs in one admin request and transaction."""
     assert _queries_of_a_sweep_over(1) == _queries_of_a_sweep_over(5)
 
 
@@ -289,8 +285,7 @@ def test_a_session_the_sweep_missed_stops_working_on_its_next_request(client, si
 
 
 def test_the_backend_is_listed_under_the_path_a_login_records():
-    """allauth stores a social login's backend as module + class name; listed any other way, the
-    session it opens is anonymous on the very next request."""
+    """allauth records module + class name; listed otherwise, the session is anonymous next request."""
     backend = AuthenticationBackend
     assert f"{backend.__module__}.{backend.__name__}" in settings.AUTHENTICATION_BACKENDS
 

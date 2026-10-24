@@ -5,9 +5,7 @@ from apps.users.permissions import Permission
 
 
 class MayManageUsers(SignedInPermission):
-    """Who changes somebody else's account, as a permission rather than a rank: `users:manage:user` can be
-    given to somebody who is not staff, while widening what people may do stays its own right, checked
-    where the write happens - see apps/users/granting.py."""
+    """A permission rather than a rank, so it can go to non-staff; widening access is checked separately."""
 
     message = _("You cannot manage other people's accounts.")
 

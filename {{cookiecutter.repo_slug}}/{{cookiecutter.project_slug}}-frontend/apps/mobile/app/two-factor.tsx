@@ -6,14 +6,12 @@ import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
 import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 
-import { extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
+import { errorsOf } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
 import { Link, router } from 'expo-router'
 import { Text } from 'react-native'
 
-/** The second step of a login whose password (or provider) checked out. One field takes either an
- * authenticator code or a recovery code - allauth tells them apart, and both are digits. Passkeys
- * are left to the web app: a native WebAuthn bridge is a separate dependency per platform. */
+/** One field takes a TOTP or a recovery code; allauth tells them apart. Passkeys are web-only. */
 export default function TwoFactor() {
   const { t } = useTranslation()
   const [code, setCode] = useState('')
@@ -34,7 +32,7 @@ export default function TwoFactor() {
         router.replace('/(authenticated)/home')
         return
       }
-      setError(extractAuthErrors(response)?.[0]?.message ?? t('twoFactorError'))
+      setError(errorsOf(response)?.[0]?.message ?? t('twoFactorError'))
     } finally {
       setSubmitting(false)
     }

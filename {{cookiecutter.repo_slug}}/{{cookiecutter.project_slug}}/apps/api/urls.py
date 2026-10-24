@@ -11,12 +11,10 @@ from apps.users.api.viewsets.user import UserViewSet
 
 
 router = DefaultRouter()
-# basename is required explicitly: BaseModelViewSet has no class-level `.queryset` attribute
-# (only a get_queryset() method), which is what DRF's router needs to auto-derive one.
+# Explicit basename: BaseModelViewSet has no class-level `.queryset` to derive one from.
 router.register("users", UserViewSet, basename=UserViewSet.endpoint)
 router.register("personal-access-tokens", PersonalAccessTokenViewSet, basename=PersonalAccessTokenViewSet.endpoint)
-# Registered whatever the provider's mode, so the API document - and the client generated from it - does
-# not change with an environment variable. The mode decides who may use them.
+# Registered whatever the mode, so the API document does not change with an environment variable.
 router.register("oauth-applications", ApplicationViewSet, basename=ApplicationViewSet.endpoint)
 router.register("oauth-application-reviews", ReviewedApplicationViewSet, basename=ReviewedApplicationViewSet.endpoint)
 router.register("authorized-applications", AuthorizedApplicationViewSet, basename="authorized-applications")

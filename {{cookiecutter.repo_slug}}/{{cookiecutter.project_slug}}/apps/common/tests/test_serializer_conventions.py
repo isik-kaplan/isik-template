@@ -1,4 +1,5 @@
-"""Every serializer over a `BaseModel` lists both timestamps, by hand - there is no mixin adding them.
+"""Every serializer over a `BaseModel` lists both timestamps by hand, and none carries a version: that
+travels in the `ETag` header alone.
 
 `Meta.fields` rather than what a request renders: narrowing per request is its own decision.
 """
@@ -7,20 +8,26 @@ import importlib
 import pkgutil
 
 from django.apps import apps as django_apps
+from isik.common.utils.exemptions import exemption_class
 from isik.django.apps.common.db import BaseModel
 from isik.django.drf.serializers import BaseModelSerializer
+from rest_framework import serializers
 
 
 TIMESTAMPS = ("created_at", "updated_at")
 
-# Qualified name -> why. Keyed by name, so a rename fails below rather than keeping the hole open.
+MissingTimestamps = exemption_class(
+    "MissingTimestamps",
+    rule="serializers.timestamps",
+    why="A serializer over a BaseModel lists created_at and updated_at, so every client sees when a row changed.",
+)
+
+# Qualified name -> MissingTimestamps(reason=...); keyed by name, so a rename fails below.
 EXEMPT = {}
 
 
 def _declared_serializers():
-    """Every serializer each app declares under `<app>/api/serializers`, one module per serializer,
-    named by the path a caller imports it from. A test module's inline subclass is nobody's API and
-    is never reached, because nothing here imports it."""
+    """Each app's `<app>/api/serializers`, by import path; a test module's inline subclass is never reached."""
     for app_config in django_apps.get_app_configs():
         try:
             package = importlib.import_module(f"{app_config.name}.api.serializers")
@@ -71,12 +78,12 @@ def test_an_exemption_names_a_serializer_that_still_exists():
 
 
 def test_an_exemption_says_why():
-    assert all(len(reason) >= 40 for reason in EXEMPT.values())
+    """Typed, so the reason is held to its floor where it is written."""
+    assert all(isinstance(reason, MissingTimestamps) for reason in EXEMPT.values())
 
 
 def test_the_sweep_reaches_the_serializers_it_is_meant_to_check():
-    """Discovery walks a layout convention, so a changed layout would leave the checks above
-    asserting nothing at all."""
+    """Discovery walks a layout convention; a changed layout would leave the checks above asserting nothing."""
     checked = {name for name, serializer in _declared_serializers() if _over_a_base_model(serializer)}
 
     assert "apps.users.api.serializers.user.UserSerializer" in checked
@@ -104,3 +111,24 @@ def test_a_serializer_over_something_else_is_not_judged():
 
     assert not _over_a_base_model(type("Other", (), {"Meta": Meta}))
     assert not _over_a_base_model(type("NoMeta", (), {}))
+
+
+def _carries_a_version(serializer):
+    listed = getattr(getattr(serializer, "Meta", None), "fields", ())
+    return "etag" in serializer._declared_fields or "etag" in listed
+
+
+def test_no_serializer_carries_a_version_in_the_body():
+    """One place for it: a body copy is one more thing a client can send back out of step with the header."""
+    carrying = {name for name, serializer in _declared_serializers() if _carries_a_version(serializer)}
+
+    assert carrying == set()
+
+
+def test_a_serializer_carrying_a_version_is_caught():
+    declared = type("Declared", (BaseModelSerializer,), {"etag": serializers.CharField()})
+    listed = type("Listed", (BaseModelSerializer,), {"Meta": type("Meta", (), {"fields": ["id", "etag"]})})
+
+    assert _carries_a_version(declared)
+    assert _carries_a_version(listed)
+    assert not _carries_a_version(BaseModelSerializer)

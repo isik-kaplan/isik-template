@@ -16,6 +16,13 @@ let cookieHeader: string | undefined = 'sessionid=abc123'
 vi.mock('next/headers', () => ({
   headers: async () => new Headers({ host: HOST, ...(cookieHeader ? { cookie: cookieHeader } : {}) }),
 }))
+vi.mock('@/config/public', () => ({
+  CONFIG: {
+    get DOMAIN() {
+      return HOST
+    },
+  },
+}))
 Api.mockImplementation(() => ({ reauthenticationFlows }))
 
 describe('ProvePage', () => {

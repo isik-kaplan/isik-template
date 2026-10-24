@@ -1,6 +1,1 @@
-"""The mutation tooling, as a package rather than loose files.
-
-`confirm_survivors.py` imports `mutation_queue` as `scripts.mutation_queue`, and CI invokes
-`mutation_queue.py`/`check_mutants.py`/`confirm_survivors.py` as `python -m scripts.<name>` - a package
-makes both resolve to the one module rather than to two copies loaded under different names.
-"""
+"""A package so `python -m scripts.<name>` and `scripts.<name>` imports load one module, not two copies."""

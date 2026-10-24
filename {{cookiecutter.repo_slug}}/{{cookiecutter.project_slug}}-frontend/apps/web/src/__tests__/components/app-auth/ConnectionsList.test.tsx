@@ -36,8 +36,7 @@ describe('ConnectionsList', () => {
 
   afterEach(() => {
     globalThis.fetch = originalFetch
-    // The connect flow appends a real hidden form to document.body outside React's tree (see
-    // AutoFormButton) - render()'s own cleanup never touches it.
+    // The connect flow appends a form to document.body, which render()'s cleanup never touches.
     document.querySelectorAll('form').forEach((form) => form.remove())
   })
 
@@ -54,8 +53,7 @@ describe('ConnectionsList', () => {
     expect(within(googleRow).getByText('Connected')).toBeTruthy()
     expect(within(googleRow).getByRole('button', { name: 'Disconnect' })).toBeTruthy()
     expect(googleRow.querySelector('svg')).toBeTruthy()
-    // The two badge variants map to disjoint class sets (see badge.tsx) - checking the actual
-    // class distinguishes a real "outline" from a "default" mutated to match, not just the text.
+    // The class, not just the text, tells the two badge variants apart.
     expect(within(googleRow).getByText('Connected').className).toContain('bg-primary')
     expect(within(githubRow).getByText('Not connected')).toBeTruthy()
     expect(within(githubRow).getByText('Not connected').className).toContain('border-border')
@@ -230,8 +228,7 @@ describe('ConnectionsList connect-flow errors', () => {
       />
     )
 
-    // Not just "the default message is absent" - no error paragraph renders at all, ruling out
-    // both a wrong fallback case and the LogicalOperator flip that always renders an empty one.
+    // No error paragraph at all, not even an empty one.
     expect(container.querySelector('.text-destructive')).toBeNull()
     expect(replace).not.toHaveBeenCalled()
   })

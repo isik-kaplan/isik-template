@@ -1,8 +1,6 @@
 import type { SVGProps } from 'react'
 
-// Real, simplified brand marks for the providers social login most commonly configures - every
-// other allauth provider (there are ~100) has no bundled icon here and falls back to
-// the deployment's SOCIAL_LOGIN__ICONS URL, or no icon at all. See ProviderIcon.
+// Brand marks for the common providers; the rest use SOCIAL_LOGIN__ICONS (see ProviderIcon).
 
 function GoogleIcon(props: SVGProps<SVGSVGElement>) {
   return (
@@ -138,8 +136,7 @@ function LinkedinIcon(props: SVGProps<SVGSVGElement>) {
   )
 }
 
-// Keyed by allauth provider id, matching socialProviders()'s ids exactly (e.g. the provider is
-// "twitter_oauth2", not "twitter" or "x").
+// Keyed by allauth provider id, e.g. "twitter_oauth2", not "twitter" or "x".
 export const BRAND_ICONS: Record<string, (props: SVGProps<SVGSVGElement>) => React.JSX.Element> = {
   google: GoogleIcon,
   apple: AppleIcon,

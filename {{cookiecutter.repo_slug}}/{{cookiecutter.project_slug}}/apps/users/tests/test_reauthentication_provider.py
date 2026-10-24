@@ -1,5 +1,3 @@
-"""Proving it is you at your provider: the redirect out, and what the adapter makes of the way back."""
-
 import time
 from urllib.parse import parse_qs, urlsplit
 
@@ -172,7 +170,7 @@ def test_the_form_says_why_it_refuses(social_only, data, errors):
 
     form = ProveWithProviderForm(data, request=request)
 
-    # allauth reads the request it is handling from its own context, which its middleware sets.
+    # allauth reads the request from a context its middleware sets.
     with request_context(request):
         assert not form.is_valid()
     assert form.errors == errors

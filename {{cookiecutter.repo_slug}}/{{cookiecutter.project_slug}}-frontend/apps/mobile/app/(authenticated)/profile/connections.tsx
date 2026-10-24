@@ -32,9 +32,7 @@ export default function ProfileConnections() {
     <Screen testID="profile-connections">
       <Heading testID="profile-connections-heading">{t('profileConnectionsHeading')}</Heading>
       {accounts.length === 0 ? (
-        // Connecting a new provider needs a native sign-in SDK (Sign in with Apple / Google) this
-        // template doesn't wire up yet - this screen only manages accounts already connected
-        // elsewhere (e.g. on the web app) until that lands.
+        // Connecting a provider isn't wired up here; only already-connected accounts are managed.
         <Text testID="profile-connections-empty">{t('profileConnectionsEmpty')}</Text>
       ) : (
         accounts.map((account) => (

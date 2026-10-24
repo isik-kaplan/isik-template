@@ -1,8 +1,6 @@
-"""The cache the project runs with is one every process shares: a rate limit counted in it holds
-however many uwsgi processes and containers a caller's requests land on.
+"""The configured cache is shared by every process, so a rate limit holds wherever requests land.
 
-The rest of the suite runs on a cache of each process's own (conftest.py's _a_cache_of_its_own), so
-these build the configured one themselves.
+The rest of the suite runs on a per-process cache, so these build the configured one themselves.
 """
 
 import uuid

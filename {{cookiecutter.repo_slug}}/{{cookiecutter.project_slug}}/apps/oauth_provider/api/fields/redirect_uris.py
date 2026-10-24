@@ -13,7 +13,7 @@ class RedirectURIsField(serializers.ListField):
 
     def to_internal_value(self, data):
         uris = super().to_internal_value(data)
-        # DOT's own model validates them the same way; nothing here calls its clean().
+        # As DOT's model does; nothing here calls its clean().
         validate = AllowedURIValidator(
             oauth2_settings.ALLOWED_REDIRECT_URI_SCHEMES, name="redirect uri", allow_path=True, allow_query=True
         )
@@ -22,5 +22,5 @@ class RedirectURIsField(serializers.ListField):
         return uris
 
     def run_validation(self, data=serializers.empty):
-        # Joined only once the list has passed its own length limits, which would otherwise count characters.
+        # Joined after the list's length limits, which would otherwise count characters.
         return " ".join(super().run_validation(data))

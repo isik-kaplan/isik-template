@@ -13,6 +13,7 @@ import { describedScopes, scopeLabel } from '@/lib/oauthScopes'
 import { type ApiType, detailOf } from '@{{ cookiecutter.repo_slug }}/api'
 
 import { PersonalAccessTokenForm } from './PersonalAccessTokenForm'
+import { useIdempotencyKey } from '@isikk/core/hooks'
 import { toast } from 'sonner'
 
 type Token = ApiType<'PersonalAccessToken'>
@@ -26,14 +27,15 @@ function day(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-/** This person's own tokens, for their scripts: each one's reach and life, a way to delete it, and a way
- *  to make another - whose token is shown here once, and never again. */
+/** This person's tokens; a new one's token is shown here once, and never again. */
 export function PersonalAccessTokensList({ initialTokens, scopes }: { initialTokens: Token[]; scopes: Scope[] }) {
   const { t } = useClientTranslation(['auth'])
   const [tokens, setTokens] = useState(initialTokens)
   const [making, setMaking] = useState(false)
   const [issued, setIssued] = useState<string | null>(null)
   const [pending, setPending] = useState<string | null>(null)
+  // Keyed by which one, so a retry after a lost answer is the same delete rather than a second.
+  const deleting = useIdempotencyKey()
   const described = describedScopes(scopes)
 
   function made(token: Token) {
@@ -44,10 +46,11 @@ export function PersonalAccessTokensList({ initialTokens, scopes }: { initialTok
 
   async function remove(id: string) {
     setPending(id)
-    const { error, response } = await createApi(apiOrigin()).deletePersonalAccessToken(id)
+    const { error, response } = await createApi(apiOrigin()).deletePersonalAccessToken(id, deleting.keyFor(id))
     setPending(null)
 
     if (response.ok) {
+      deleting.used()
       setTokens((current) => current.filter((token) => token.id !== id))
       toast.success(t('auth:profileTokensDeleted'))
       return

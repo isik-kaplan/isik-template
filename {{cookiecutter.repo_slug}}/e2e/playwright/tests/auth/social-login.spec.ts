@@ -4,34 +4,20 @@ import { OIDC_CONFIGURED } from '../helpers'
 
 test.skip(!OIDC_CONFIGURED, 'SOCIAL_LOGIN__PROVIDERS does not name openid_connect, so there is no button to press')
 
-// Authentik's authorization endpoint, which the provider redirect lands on with allauth's redirect_uri.
 const AUTHORIZE_PATH = '/application/o/authorize/'
 
-// Drives a real OAuth redirect through the disposable Authentik instance seeded by
-// e2e/authentik-blueprints/oidc-test-idp.yaml (docker-compose.authentik-for-e2e.yml) - the one
-// e2e spec that proves social login actually works end to end, not just that the settings-based
-// SOCIALACCOUNT_PROVIDERS config is well-formed (that part is covered by the backend test suite).
-//
-// A first-ever login via this IdP always ends up needing email verification before it's a real
-// session (ACCOUNT_EMAIL_VERIFICATION is mandatory, and the IdP's test user's email comes back
-// unverified) - but which of two allauth-internal paths gets there is not deterministic run to
-// run: sometimes the pipeline auto-provisions the account directly (despite
-// SOCIALACCOUNT_AUTO_SIGNUP being off) and lands straight on /auth/login; other times it takes
-// the explicit pending-signup path this template builds a form for (/auth/complete-signup, see
-// CompleteSignupForm.tsx) and only reaches /auth/login after that form is submitted. Both are
-// verified-real outcomes of the same code, not a bug in this template - so this spec follows
-// whichever one actually happens rather than asserting a single fixed path.
+// allauth nondeterministically either provisions the account directly or goes through
+// /auth/complete-signup first; both end on /auth/login, so the spec follows whichever happens.
 test('logging in with the OIDC test IdP provisions an account pending email verification', async ({ page }) => {
   await page.goto('/auth/login')
   const scheme = new URL(page.url()).protocol
   const authorize = page.waitForRequest((request) => new URL(request.url()).pathname === AUTHORIZE_PATH)
   await page.getByRole('button', { name: 'Continue with Openid Connect' }).click()
 
-  // allauth builds redirect_uri from the scheme the proxies forward; behind a TLS-terminating one it must stay https.
+  // allauth builds redirect_uri from the forwarded scheme; behind a TLS proxy it must stay https.
   const redirectUri = new URL((await authorize).url()).searchParams.get('redirect_uri') ?? ''
   expect(new URL(redirectUri).protocol).toBe(scheme)
 
-  // Now on authentik.{{ cookiecutter.domain }}'s own login form.
   await expect(page).toHaveURL(/authentik\./)
   await page.getByLabel(/email or username/i).fill('oidc-e2e-user')
   await page.getByRole('button', { name: /log in/i }).click()

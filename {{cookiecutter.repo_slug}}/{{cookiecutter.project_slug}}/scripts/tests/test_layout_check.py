@@ -1,8 +1,4 @@
-"""The layout check: what it refuses, and what it deliberately does not.
-
-Driven against written files rather than the live tree, so a case this is meant to catch is tested
-by being present rather than by the repo happening to contain one.
-"""
+"""The layout check, driven against written files rather than the live tree."""
 
 import pytest
 
@@ -50,7 +46,6 @@ def test_a_module_named_for_no_kind_is_not_judged(tree):
 
 
 def test_a_model_with_its_queryset_and_manager_is_one_concept(tree):
-    """The reason the check reads names rather than counting classes."""
     source = "class ThingQuerySet: pass\nclass ThingManager: pass\nclass Thing: pass\n"
 
     assert tree("shop/models/thing.py", source) == []
@@ -74,7 +69,6 @@ def test_tests_and_migrations_are_not_this_check_to_judge(tree):
 
 
 def test_a_helper_in_a_serializers_file_is_refused(tree):
-    """A helper does not become a serializer by sitting in a file full of them."""
     source = "class OrderSerializer: pass\n\n\ndef _resolve_users(memberships): return []\n"
 
     found = tree("shop/api/serializers/order.py", source)
@@ -105,8 +99,6 @@ def test_a_factory_named_for_its_file_is_what_that_file_declares(tree):
 
 
 def test_a_class_named_for_its_file_is_too(tree):
-    """`history.py` holding `HistoryMixin`: a viewset mixin is not a `*ViewSet`, and the file is
-    named for it, which is the same rule read the other way round."""
     assert tree("shop/api/viewsets/history.py", "class HistoryMixin: pass\n") == []
 
 
@@ -115,8 +107,6 @@ def test_a_multi_word_file_name_is_read_as_the_class_would_spell_it(tree):
 
 
 def test_a_permission_is_one_by_what_it_inherits_rather_than_what_it_reads_as(tree):
-    """DRF permissions read as assertions - `IsOwner` - so the name alone would make every one of
-    them a stranger in its own folder."""
     assert tree("shop/api/permissions/owner_only.py", "class IsOwner(BasePermission): pass\n") == []
 
 
@@ -125,7 +115,7 @@ def test_a_base_is_read_through_the_module_it_is_reached_by(tree):
 
 
 def test_a_base_that_names_nothing_readable_is_passed_over(tree):
-    """A subscripted base names nothing this can read, so the class is judged on its own name."""
+    """A subscripted base is unreadable, so the class is judged on its own name."""
     assert tree("shop/api/serializers/order.py", "class OrderSerializer(Generic[T]): pass\n") == []
     found = tree("shop/api/serializers/line.py", "class Stray(Generic[T]): pass\n")
     assert found == [("apps/shop/api/serializers/line.py", "stranger", ["Stray"])]
@@ -150,7 +140,6 @@ def test_an_exception_excuses_its_file(tree, monkeypatch):
 
 
 def test_an_exception_that_excuses_nothing_is_stale(tree, monkeypatch):
-    """An escape hatch nothing re-checks outlives what it was written for."""
     monkeypatch.setattr(layout_check, "EXCEPTIONS", {"apps/shop/api/serializers.py": "a reason"})
 
     assert tree("shop/api/serializers.py", "class ASerializer: pass\n") == [
@@ -224,7 +213,7 @@ def test_two_offending_files_get_their_own_advice_and_one_way_out(tree, capsys):
 
 
 def test_a_mutated_tree_reads_the_same_as_the_real_one(tree):
-    """mutmut rewrites a function into variants beside a dispatcher, and this suite runs in that tree."""
+    """This suite also runs inside the mutmut tree."""
     source = (
         "def x_order__mutmut_orig(): pass\n"
         "def x_order__mutmut_1(): pass\n"
@@ -249,5 +238,4 @@ def test_a_clean_tree_says_nothing_and_passes(tree, capsys):
 
 
 def test_the_real_tree_passes():
-    """The check against the project itself, so this suite fails when somebody adds a second one."""
     assert list(layout_check.complaints()) == []

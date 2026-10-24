@@ -16,8 +16,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, document, **options):
         built = DOCUMENTS[document]()
-        # Any warning, not only errors: a warning is often a component the generator dropped or renamed
-        # to settle a collision, which the document cannot show - it just looks complete.
+        # Any warning: often a component silently dropped or renamed to settle a collision.
         if GENERATOR_STATS:
             raise CommandError(f"Generating the {document} document emitted warnings; see above.")
         self.stdout.write(OpenApiJsonRenderer().render(built).decode())

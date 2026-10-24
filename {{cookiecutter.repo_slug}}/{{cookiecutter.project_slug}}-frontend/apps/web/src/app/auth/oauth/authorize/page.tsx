@@ -11,8 +11,7 @@ import { getSession } from '@/lib/getSession'
 import { scopeLabel } from '@/lib/oauthScopes'
 import { requestOrigin } from '@/lib/requestOrigin'
 
-// What the backend's consent form takes back, each echoed unchanged - see its AuthorizationView, which
-// is what sends the browser here with them.
+// What the backend's consent form takes back, each echoed unchanged.
 const CONSENT_FIELDS = [
   'client_id',
   'redirect_uri',
@@ -37,8 +36,7 @@ function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value
 }
 
-/** The backend's wording of each requested scope, in request order, keyed by the scope. Anything that is not
- *  that list words nothing, so the page falls back to the scope itself. */
+/** The backend's wording of each requested scope; anything else falls back to the scope itself. */
 function descriptionsOf(scopes: string[], raw: string | undefined): Record<string, string> {
   let descriptions: unknown = null
   try {
@@ -50,9 +48,7 @@ function descriptionsOf(scopes: string[], raw: string | undefined): Record<strin
   return Object.fromEntries(scopes.map((scope, index) => [scope, String(descriptions[index] ?? scope)]))
 }
 
-/** An application asking to sign somebody in with this project, and perhaps to act for them. The answer is
- *  a real form post back to the authorize endpoint, which decides everything - this page only words the
- *  question. */
+/** The consent question. The answer is a real form post to the authorize endpoint, which decides. */
 export default async function OAuthAuthorizePage({ searchParams }: { searchParams: Promise<ConsentParams> }) {
   const params = await searchParams
   const session = await getSession()

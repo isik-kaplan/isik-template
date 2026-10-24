@@ -10,8 +10,6 @@ import yaml
 from conftest import load_context
 
 
-# Every test here bakes purely to check file layout, never to install anything - see
-# conftest.py's skip_lockfile_generation.
 pytestmark = pytest.mark.usefixtures("skip_lockfile_generation")
 
 
@@ -27,8 +25,7 @@ def test_bake_succeeds(cookies, context_name):
 
 
 def test_include_mobile_controls_whether_apps_mobile_exists(cookies):
-    # default.json has include_mobile: true; minimal.json omits it, so it takes
-    # cookiecutter.json's own default (false) - one bake exercises each side for free.
+    # minimal.json omits include_mobile, so it also covers cookiecutter.json's default.
     with_mobile = cookies.bake(extra_context=load_context("default"))
     assert with_mobile.exit_code == 0
     mobile_dir = with_mobile.project_path / f"{with_mobile.context['project_slug']}-frontend/apps/mobile"
@@ -49,19 +46,10 @@ def test_repo_slug_derived_from_project_name(cookies):
 
 @pytest.mark.parametrize("context_name", CONTEXTS)
 def test_no_unrendered_jinja_in_output(cookies, context_name):
-    # "self-tls" exercises tls_termination's own self-termination branch (certbot/nginx :443
-    # blocks, entrypoint.sh's dummy-cert bootstrap) - every one of those lives inside a
-    # {% if cookiecutter.tls_termination == "self" %} block that "default" (tls_termination:
-    # "external") never renders at all.
     result = cookies.bake(extra_context=load_context(context_name))
     assert result.exit_code == 0
 
-    # Any source file wrapped in {% raw %} is expected to still contain literal "{{"/"{%" in its
-    # output - that's what raw means (Django template vars in email templates, i18next
-    # interpolation in auth.json) - so check the source, not the rendered copy, for that marker.
-    # Directory names under the template root are themselves Jinja ("{{cookiecutter.project_slug}}"
-    # etc.), so the rendered relative path has to be translated back to the source one before we
-    # can look the source file up.
+    # Files using a raw block legitimately keep Jinja-looking text, so find them by their source path.
     template_root = Path(__file__).parent.parent / "{{cookiecutter.repo_slug}}"
     raw_escaped_relative_paths = set()
     for source_path in template_root.rglob("*"):
@@ -77,9 +65,7 @@ def test_no_unrendered_jinja_in_output(cookies, context_name):
         if not path.is_file() or relative in raw_escaped_relative_paths:
             continue
         text = path.read_text(errors="ignore")
-        # ci.yml needs a literal "${{ hashFiles(...) }}" (GitHub Actions' own expression syntax) in
-        # its output, produced via the "{{ '${{' }}" Jinja string-literal escape rather than a raw
-        # block - a real unrendered cookiecutter expression is never preceded by "$".
+        # GitHub Actions expressions start with "$"; an unrendered cookiecutter one never does.
         assert "{{" not in text.replace("${{", ""), f"unrendered Jinja expression in {path}"
         assert "{%" not in text, f"unrendered Jinja tag in {path}"
 
@@ -220,8 +206,7 @@ def test_tls_termination_self_adds_certbot_and_443(cookies):
     assert f"{result.context['config_prefix']}__TLS__ACME_EMAIL" in env_example
     # Every interface already: there is no load balancer to pick an address for.
     assert "__HTTP_BIND" not in env_example
-    # nginx is the edge here, so its own scheme is the truth and a client-sent header is not.
-    # The frontend's pages, its static files and the backend.
+    # nginx is the edge, so its own scheme is the truth. Pages, static files and the backend.
     assert nginx_conf.count("proxy_set_header X-Forwarded-Proto $scheme;") == 3
     assert "$http_x_forwarded_proto" not in nginx_conf
     # The placeholder lives outside certbot's live directory, which certbot refuses to issue into otherwise.
@@ -335,8 +320,7 @@ def test_trusted_proxy_count_follows_tls_termination(
 
 
 def test_credential_key_is_documented_and_generated_for_a_deployment(cookies):
-    # Optional for local development (an EncryptedField just refuses to store a secret), so it is a
-    # commented-out Missing Default there - but a deployment needs one, which setup.sh mints.
+    # Optional locally (an EncryptedField just refuses to store), but setup.sh mints one for a deployment.
     result = cookies.bake(extra_context=load_context("default"))
     assert result.exit_code == 0
 
@@ -351,8 +335,7 @@ def test_credential_key_is_documented_and_generated_for_a_deployment(cookies):
 
 
 def test_log_sinks_are_named_after_the_project(cookies):
-    # The audit logger's "cannot be turned down" is its own LOGGING entry, matched by name - a
-    # settings key spelled differently from the logger emit.py takes would leave it propagating.
+    # The audit logger's LOGGING entry is matched by name; a mismatch would leave it propagating.
     result = cookies.bake(extra_context={**load_context("default"), "project_name": "Audit Me"})
     assert result.exit_code == 0
 
@@ -373,9 +356,7 @@ def test_log_sinks_are_named_after_the_project(cookies):
 
 @pytest.mark.parametrize(("context_name", "union"), [("default", '"en" | "tr"'), ("minimal", '"en"')])
 def test_the_generated_api_client_carries_the_languages_answer(cookies, context_name, union):
-    # packages/api's schema.ts is openapi-typescript's output for the baked project's own document,
-    # and the language enum is the one place that document depends on an answer. The baked project's
-    # openapi-check is what fails if the two ever disagree.
+    # The language enum is the one place the generated schema.ts depends on an answer.
     result = cookies.bake(extra_context=load_context(context_name))
     assert result.exit_code == 0
 
@@ -407,8 +388,7 @@ def test_the_contract_checks_are_wired_into_pre_commit_and_ci(cookies):
 
 @pytest.mark.parametrize("context_name", ["default", "minimal"])
 def test_every_verified_by_names_a_test_file_the_bake_ships(cookies, context_name):
-    # A `verified_by` buys its mutant out of the re-run, so one pointing at a test file that a given
-    # bake leaves out would leave that mutant re-checked by nothing at all.
+    # A `verified_by` exempts its mutant from the re-run, so a missing test file would check nothing.
     result = cookies.bake(extra_context=load_context(context_name))
     assert result.exit_code == 0
     backend = result.project_path / result.context["project_slug"]
@@ -458,8 +438,7 @@ def test_tls_termination_self_has_no_local_https_override(cookies):
     assert "dev-tls" not in nginx_conf
     assert "dev-tls" not in (result.project_path / "docker-compose.yml").read_text()
     assert "__HTTPS_PORT" not in (result.project_path / ".env.example").read_text()
-    # Present, so following the README of an external-mode project never hits "no such file" - but it
-    # refuses, since this mode already serves https off its own certificate.
+    # Present so the README's step never hits "no such file", but it refuses.
     proc = subprocess.run(["bash", "scripts/dev-tls.sh"], cwd=result.project_path, capture_output=True, text=True)
     assert proc.returncode == 1
     assert "already serves https" in proc.stderr
@@ -480,8 +459,7 @@ def test_uwsgi_stops_on_sigterm_and_names_its_worker_count_once(cookies):
 
 
 def test_the_backend_venv_lives_outside_the_bind_mounted_source(cookies):
-    """Compose re-attaches a recreated container's anonymous volumes, so a venv kept in one hides the
-    rebuilt image's dependencies until somebody remembers `up -V`."""
+    """Compose re-attaches anonymous volumes, so a venv in one hides the rebuilt image's dependencies."""
     result = cookies.bake(extra_context=load_context("default"))
     assert result.exit_code == 0
 

@@ -1,20 +1,11 @@
-"""Build the template database mutation runs clone, and prove a clone is faithful to it.
+"""Build the template database mutation runs clone, and prove a clone matches fresh migrations.
 
-Almost all of a mutant's cost is building a test database - migrating one from scratch every time a
-clone of an already-migrated one would do. A clone is fresh *and* cheap, and has to stay fresh: the
-shared fixtures commit on purpose, so reusing one database across sessions accumulates state nothing
-heals, which cloning avoids by handing each session its own copy.
-
-The template is built by running one database-touching test rather than `migrate` directly, so it is
-built the same way pytest-django builds any other test database - through `django_db_modify_db_settings`
-in conftest.py, which is also what points a mutation run's own sessions at a clone of it.
+Cloning beats migrating per mutant, and beats reusing one database (the fixtures commit). Built by
+running a seed test, not `migrate`, so it goes through conftest.py's `django_db_modify_db_settings`.
 
     python scripts/mutation_template.py build
     python scripts/mutation_template.py check     # a clone against a freshly migrated database
     python scripts/mutation_template.py drop
-
-`check` is not ceremony: a drifted template measures every mutant against the wrong schema, and the
-failure mode of this whole subsystem is a confident green.
 """
 
 import argparse
@@ -28,17 +19,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# Deliberately outside the `test_%` namespace. Sweeping leftover test databases is routine here, and a
-# template caught by that sweep would be rebuilt from scratch without anything reporting why.
+# Outside `test_%`, so sweeps of leftover test databases don't take it.
 TEMPLATE = "mutation_template_{{ cookiecutter.project_slug }}"
 
-# Any test that requests a database triggers pytest-django's migration step - there is no fixture data
-# here worth seeding beyond that, so the cheapest one that does is the whole seed. Revisit if a future
-# app adds fixtures expensive enough to be worth baking into the template too.
+# Any database test triggers the migrations; this is a cheap one.
 SEED_TESTS = ["apps/users/tests/test_permissions.py::test_the_migrated_database_has_only_the_declared_permissions"]
 
-# The parts of a schema a mutation verdict could plausibly depend on. Compared as sorted rows, so the
-# comparison is order-independent without having to trust either database's row order.
 SCHEMA_QUERIES = {
     "schemas": """
         SELECT schema_name FROM information_schema.schemata
@@ -77,7 +63,7 @@ SCHEMA_QUERIES = {
 
 @cache
 def _database_settings():
-    """Read from Django rather than the environment, so this cannot disagree with what the tests use."""
+    """From Django, not the environment, so it matches what the tests use."""
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "{{ cookiecutter.project_slug }}.settings")
     sys.path.insert(0, str(ROOT))
     import django
@@ -89,10 +75,7 @@ def _database_settings():
 
 
 def psql(sql, database=None, quiet=True):
-    """One statement against the maintenance database, outside any transaction.
-
-    `CREATE DATABASE` cannot run inside one, which rules out doing this through Django's connection.
-    """
+    """Via psql, not Django's connection: `CREATE DATABASE` can't run in a transaction."""
     database_settings = _database_settings()
     command = [
         "psql",
@@ -119,8 +102,7 @@ def psql(sql, database=None, quiet=True):
 
 
 def disconnect(database):
-    """Nothing may hold a connection to a template: Postgres refuses to copy a database that is in
-    use, and the error arrives at the clone rather than at whatever left the connection open."""
+    """Postgres refuses to copy a database that has open connections."""
     psql(
         "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
         f"WHERE datname = '{database}' AND pid <> pg_backend_pid()"
@@ -134,13 +116,10 @@ def clone(template, into):
 
 
 def _run_seed_tests(suffix):
-    """Run `SEED_TESTS` under the same env vars conftest.py's `django_db_modify_db_settings` reads,
-    so the database it builds is named and migrated exactly the way a mutation run's own would be."""
     return subprocess.run(
         [sys.executable, "-m", "pytest", *SEED_TESTS, "-q", "--no-cov", "-n", "0", "--reuse-db"],
         cwd=ROOT,
-        # MUTMUT_TEMPLATE_BUILD because conftest.py refuses --reuse-db without a template, and this
-        # is the run that creates one - the only session for which none can exist yet.
+        # conftest.py refuses --reuse-db without a template, and this run creates it.
         env={**os.environ, "MUTMUT_DB_SUFFIX": suffix, "MUTMUT_TEMPLATE_BUILD": "1"},
         capture_output=True,
         text=True,
@@ -148,7 +127,6 @@ def _run_seed_tests(suffix):
 
 
 def build(arguments):
-    """One migrated database, kept under a name the test sweeps will not take."""
     del arguments
     database_settings = _database_settings()
     seed = f"test_{database_settings['NAME']}_templateseed"
@@ -176,11 +154,7 @@ def _schema_of(database):
 
 
 def check(arguments):
-    """A clone of the template against a database built from the migrations, compared schema to schema.
-
-    The guard the whole optimisation rests on. A stale template is not a slow build or a red test - it
-    is a mutation report measured against a schema the code no longer has.
-    """
+    """Compare a clone's schema with a freshly migrated one: a stale template gives silently wrong verdicts."""
     del arguments
     database_settings = _database_settings()
     fresh_suffix = "templatecheck"
@@ -233,12 +207,7 @@ def drop(arguments):
 
 
 def name(arguments):
-    """The template's name, for a caller that must not repeat it.
-
-    The CI job needs it to pass `MUTMUT_DB_TEMPLATE`, and a second copy there could disagree with this
-    one silently: the clone would fail, every mutant would migrate its own database, and the only
-    symptom is that the run got slow.
-    """
+    """For CI, so the name isn't duplicated: a mismatch only shows up as a slow run."""
     del arguments
     print(TEMPLATE)
     return 0

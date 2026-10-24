@@ -1,11 +1,9 @@
 import { CONFIG } from '@/config/public'
 
-// icon: a static URL or local path (from SOCIAL_LOGIN__ICONS), used only when ProviderIcon has no
-// bundled brand icon for this id - see components/app-auth/icons/brands.tsx. "" means no icon at all.
+// icon: from SOCIAL_LOGIN__ICONS, used when there is no bundled one; "" means none.
 export type SocialProvider = { id: string; name: string; icon: string }
 
-// "openid_connect" reads "Openid Connect": the id is all there is to name a provider by, since the
-// backend's provider list is configuration rather than something this app asks it for.
+// "openid_connect" reads "Openid Connect": the id is all there is to name it by.
 function nameOf(id: string): string {
   return id
     .split('_')
@@ -28,8 +26,7 @@ function iconsOf(entries: string[]): Map<string, string> {
   return icons
 }
 
-// The same SOCIAL_LOGIN__PROVIDERS the backend installs its providers from, read per request
-// through the public config - so a provider is added by setting the variable, never by a rebuild.
+// The backend's SOCIAL_LOGIN__PROVIDERS, read per request, so adding one needs no rebuild.
 export function socialProviders(): SocialProvider[] {
   const icons = iconsOf(CONFIG.SOCIAL_LOGIN.ICONS)
   return CONFIG.SOCIAL_LOGIN.PROVIDERS.map((id) => id.trim())

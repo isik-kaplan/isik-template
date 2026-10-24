@@ -6,8 +6,7 @@ import path from 'node:path'
 
 export type LoadedLegalDocument = { content: string; language: Language }
 
-// Every file a request can reach, built up front from the definition and the configured languages: a request only
-// picks an entry, it never contributes to a path.
+// Built up front, so a request only picks an entry and never contributes to a path.
 const FILES = Object.fromEntries(
   LEGAL_DOCUMENTS.map(({ slug }) => [
     slug,

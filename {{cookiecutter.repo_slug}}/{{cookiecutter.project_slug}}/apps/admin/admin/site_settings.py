@@ -30,8 +30,7 @@ class SiteSettingsAdmin(BaseAdmin):
         return False
 
     def formfield_for_choice_field(self, db_field, request, **kwargs):
-        # The top rung shuts out everybody but superusers, so only a superuser may choose it - nobody
-        # below can pick the setting that locks them out of the setting.
+        # Nobody below superuser may pick the rung that locks them out of this setting.
         if db_field.name == "login_policy" and not request.user.is_superuser:
             top = SiteSettings.LoginPolicy.SUPERUSERS
             kwargs["choices"] = [choice for choice in db_field.choices if choice[0] != top]

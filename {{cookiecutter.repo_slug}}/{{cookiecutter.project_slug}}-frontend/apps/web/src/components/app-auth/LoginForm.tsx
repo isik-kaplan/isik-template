@@ -43,8 +43,7 @@ export function LoginForm({ redirectTo = '/' }: { redirectTo?: string }) {
       ({ login, password }) =>
         authApi.login({ ...(login.includes('@') ? { email: login } : { username: login }), password }),
       {
-        // None of these is a wrong password: a 409 means the visitor was already logged in, a pending
-        // verify_email flow means the address is still unconfirmed, and a pending second factor is owed.
+        // Not a wrong password: a 409 is already logged in, or a verify_email or second-factor flow is pending.
         isSuccess: ({ data, error, response }) =>
           Boolean(data) || response.status === 409 || hasPendingVerifyEmail(error) || pendingMfaTypes(error) !== null,
         failure: t('auth:loginError'),

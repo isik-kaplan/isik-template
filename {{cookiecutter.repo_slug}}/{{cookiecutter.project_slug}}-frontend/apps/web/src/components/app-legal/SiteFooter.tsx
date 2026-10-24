@@ -6,8 +6,7 @@ import { useClientTranslation } from '@/i18n/client'
 import { LEGAL_DOCUMENTS, legalHref, legalTitles } from '@/lib/legalDocuments'
 import { STORAGE_DISCLOSURE_ANCHOR } from '@/lib/storageDisclosure'
 
-/** The legal links and the cookie disclosure line every page ends with. A disclosure rather than a consent banner:
- * everything the site stores is strictly necessary or asked for, which needs telling but not consent. */
+/** A disclosure, not a consent banner: everything stored is strictly necessary or asked for. */
 export function SiteFooter() {
   const { t } = useClientTranslation(['legal'])
   const titles = legalTitles(t)

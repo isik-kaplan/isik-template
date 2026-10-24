@@ -1,20 +1,6 @@
-"""The fingerprint the mutation cache is keyed on.
+"""The fingerprint the mutation cache is keyed on: what mutmut's own change detection is blind to.
 
-A cache that should have been discarded reports mutants as settled when nothing re-verified them, so
-what goes in is deliberate:
-
-  * the parsed `[tool.mutmut]` table rather than pyproject.toml, which also carries ruff, coverage and
-    pytest settings that cannot change a verdict
-  * the dependencies and the lockfile, which mutmut's git-based change detection is blind to
-  * `confirm_survivors.py` and `conftest.py`, which decide and record verdicts without being source
-    files mutmut watches - a bug fixed in either otherwise leaves its false kills cached and terminal
-  * `mutation_naming.py`, which names every mutant a verdict is stored under
-  * `mutation_cache.py` and `mutation_test_order.py`, which decide which stored verdicts outlive a
-    restore and record the test each kill is pinned to
-
-Deliberately not the commit. A restore from an earlier commit is what makes the cache worth keeping,
-and `mutation_cache.py` is what makes it safe: it clears every verdict a changed test or helper could
-now decide differently before the queue reads them.
+Not the commit: restoring an earlier commit's cache is the point, and `mutation_cache.py` makes it safe.
 
     python scripts/mutation_cache_key.py
 """
@@ -31,22 +17,17 @@ ROOT = Path(__file__).resolve().parent.parent
 PYPROJECT = ROOT / "pyproject.toml"
 LOCKFILE = ROOT / "uv.lock"
 
-# What a stored verdict means, rather than what was mutated.
+# Code that decides, names or keeps verdicts without being mutated: a fix here must drop the cache.
 VERDICT_TOOLING = [
     ROOT / "scripts" / "confirm_survivors.py",
     ROOT / "conftest.py",
-    # Every verdict is stored under a mutant's name, and this is what decides the names.
     ROOT / "scripts" / "mutation_naming.py",
-    # Decides which stored verdicts survive a restore at all. A bug here keeps exactly the false
-    # kills it exists to clear, and nothing downstream can tell.
     ROOT / "scripts" / "mutation_cache.py",
-    # Records the test each kill is pinned to, which is what the cache asks about a changed test.
     ROOT / "scripts" / "mutation_test_order.py",
 ]
 
 
 def fingerprint():
-    """A stable hash of everything that must invalidate the cached verdicts."""
     config = tomllib.loads(PYPROJECT.read_text())
     mutmut = config.get("tool", {}).get("mutmut", {})
 

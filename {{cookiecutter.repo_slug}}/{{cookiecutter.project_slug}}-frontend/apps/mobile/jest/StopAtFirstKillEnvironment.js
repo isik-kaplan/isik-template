@@ -1,12 +1,10 @@
 const PresetEnvironment = require(require('jest-expo/jest-preset').testEnvironment)
 
-// Stryker names the mutant under test here for the whole of that mutant's run, and nowhere else.
 const ACTIVE_MUTANT = '__STRYKER_ACTIVE_MUTANT__'
-// Module state, so it outlives each test file: Stryker runs a mutant's files in band, one process.
+// Module state outlives each test file: Stryker runs a mutant's files in band.
 let killedMutant
 
-// Stryker turns jest's bail off, so a mutant blanking a shared component ran every screen test after
-// the first kill, each waiting out a findBy timeout, until Stryker's own timeout counted it alive.
+// Stryker turns jest's bail off, so a mutant could otherwise outlast its timeout after the first kill.
 class StopAtFirstKillEnvironment extends PresetEnvironment {
   async handleTestEvent(event, state) {
     await super.handleTestEvent?.(event, state)

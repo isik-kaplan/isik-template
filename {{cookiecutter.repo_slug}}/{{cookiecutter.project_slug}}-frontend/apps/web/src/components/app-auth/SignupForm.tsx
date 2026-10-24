@@ -41,8 +41,7 @@ export function SignupForm() {
 
     const authApi = new AuthApi(authOrigin())
     await submit((value) => authApi.signup(value), {
-      // Mandatory email verification: a successful signup is still a 401, with a pending
-      // verify_email flow, not a 2xx - it means "go check your inbox", not "you're in".
+      // With mandatory verification, success is a 401 with a pending verify_email flow.
       isSuccess: ({ data, error, response }) =>
         Boolean(data) || (response.status === 401 && hasPendingVerifyEmail(error)),
       failure: t('auth:signupError'),

@@ -4,14 +4,10 @@ export const VERIFY_EMAIL_REQUIRED_PATH = '/auth/verify-email-required'
 const CHANNEL_NAME = '{{ cookiecutter.project_slug }}-session'
 const SESSION_CLEARED = 'session-cleared'
 
-// One shared instance on purpose: a BroadcastChannel never delivers a message back to the object
-// that posted it, so posting and listening through the same object is exactly "tell the other
-// tabs". A second instance in this tab would receive its own tab's message and hard-navigate the
-// tab that is already handling the logout itself.
+// One shared instance: a BroadcastChannel never delivers to its own poster, so this reaches only other tabs.
 let channel: BroadcastChannel | null = null
 
-// Node 18+ has a global BroadcastChannel, so this guards on window rather than the class - a
-// per-process channel shared across every Server Component render is not what this is for.
+// Guards on window, not the class: Node has BroadcastChannel too, shared across renders.
 function getChannel(): BroadcastChannel | null {
   if (typeof window === 'undefined') {
     return null

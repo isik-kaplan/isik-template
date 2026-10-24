@@ -1,9 +1,4 @@
-"""How a permission is read: the bare name and the closure.
-
-Two backends are configured and only one answers these questions. That split is the subject as much as the
-answers are - Django unions `get_all_permissions` across backends, so a second contributor would hand every
-user `auth.<name>` beside the bare name and nothing would notice.
-"""
+"""Only one backend answers permissions: a second would silently add `auth.<name>` beside each bare name."""
 
 import pytest
 from django.contrib.auth.models import AnonymousUser, Group
@@ -32,7 +27,7 @@ def user(db):
 
 
 def _fresh(user):
-    """The permission caches live on the object, so a question after a grant asks a new one."""
+    """Permission caches live on the object."""
     return User.objects.get(pk=user.pk)
 
 
@@ -77,8 +72,7 @@ def test_has_module_perms_answers_about_the_first_segment(user):
 
 @pytest.mark.django_db
 def test_a_grant_is_recorded_unexpanded_and_expanded_when_checked(user, monkeypatch):
-    """`get_user_permissions` answers "what was granted"; only `get_all_permissions` answers "what can they
-    do". Keeping them apart is what lets the graph change with no data migration."""
+    """Keeping them apart lets the graph change with no data migration."""
     _where_write_requires_read(monkeypatch)
     user.user_permissions.add(_row("people:write:all"))
     backend = PermissionsBackend()
@@ -89,8 +83,7 @@ def test_a_grant_is_recorded_unexpanded_and_expanded_when_checked(user, monkeypa
 
 @pytest.mark.django_db
 def test_a_superuser_holds_every_permission():
-    """`has_perm` never reaches a backend for a superuser in a session, so this pins what
-    `get_all_permissions` reports rather than what a gate decides."""
+    """`has_perm` never reaches a backend for a superuser, so this pins the report, not a gate."""
     superuser = User.objects.create_superuser(username="boss", email="boss@example.test", password="x")
 
     assert MANAGE in PermissionsBackend().get_all_permissions(superuser)
@@ -115,7 +108,6 @@ def test_an_inactive_user_holds_nothing_and_the_refusal_is_not_remembered(user):
 
 @pytest.mark.django_db
 def test_what_was_granted_is_read_once_per_user_object(user):
-    """One request asks repeatedly - a gate per view - so it is answered from the cache."""
     backend = PermissionsBackend()
     assert backend.get_user_permissions(user) == set()
     assert backend.get_all_permissions(user) == set()
@@ -137,8 +129,6 @@ def test_a_token_narrows_what_its_person_holds_and_cannot_widen_it(user):
 
 @pytest.mark.django_db
 def test_a_token_may_ask_for_a_permission_the_grant_only_implies(user, monkeypatch):
-    """Both sides are expanded before they meet: an application asking only for the read the granted write
-    implies would otherwise hold nothing at all."""
     _where_write_requires_read(monkeypatch)
     user.user_permissions.add(_row("people:write:all"))
     user.token_scopes = {"people:read:all"}
@@ -157,8 +147,6 @@ def test_a_token_asking_for_what_nothing_granted_still_holds_nothing(user, monke
 
 @pytest.mark.django_db
 def test_an_anonymous_visitor_and_an_object_level_question_hold_nothing(user):
-    """Object-level permissions are out of scope, and "yes, generally" about one row would be worse than no
-    answer."""
     user.user_permissions.add(_row(MANAGE))
     backend = PermissionsBackend()
 
@@ -196,7 +184,6 @@ def test_the_permissions_backend_authenticates_nobody(user):
     ],
 )
 def test_who_sees_every_account(user, staff, granted, token, sees):
-    """Staff by rank in a session; through an application, only by the permission it was let have."""
     user.is_staff = staff
     user.save()
     if granted:
@@ -241,7 +228,6 @@ def test_a_token_holding_a_permission_counts_toward_its_app(user):
 @pytest.mark.django_db
 @pytest.mark.parametrize("token", [None, {MANAGE}])
 def test_nothing_is_held_about_one_object_in_particular(user, token):
-    """Permissions here are global; asked about an object, the answer is no - in a session or a token."""
     user.user_permissions.add(_row(MANAGE))
     user = _fresh(user)
     if token is not None:

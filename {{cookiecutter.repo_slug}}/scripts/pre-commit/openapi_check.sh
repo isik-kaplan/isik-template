@@ -1,18 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Two questions, not one: does each document generate without a single warning, and is each committed
-# client still what its document says. The second is what regenerating before committing was always
-# a rule about, and a rule is not a gate. `--write` regenerates packages/api's client instead of
-# comparing it.
+# Checks each document generates without a warning and each committed client matches it.
+# `--write` regenerates packages/api's client instead.
 
 FRONTEND={{ cookiecutter.project_slug }}-frontend
 GENERATE=$FRONTEND/node_modules/.bin/openapi-typescript
 GENERATED=$FRONTEND/packages/api/src/schema.ts
 
 backend() {
-  # Same exec-or-run split as migration_check.sh, for the same reason. Building a document reads no
-  # table, so the stack-down case needs no database either.
+  # Same exec-or-run split as migration_check.sh; a document reads no table, so no database is needed.
   if [ -n "$(docker compose ps --status running --quiet backend 2>/dev/null)" ]; then
     docker compose exec -T backend "$@"
   else
@@ -25,7 +22,6 @@ if [ ! -x "$GENERATE" ]; then
   exit 1
 fi
 
-# Cleared however this exits, including through a failed diff below.
 SCRATCH=$(mktemp -d)
 trap 'rm -rf "$SCRATCH"' EXIT
 
@@ -41,15 +37,13 @@ fi
 failed=0
 if ! diff -q "$GENERATED" "$SCRATCH/api.ts" > /dev/null; then
   echo "openapi-check: $GENERATED is not what this API produces." >&2
-  # `|| true`: a diff that found something exits non-zero, and pipefail would end the run here,
-  # before the auth client is checked at all.
+  # `|| true`: otherwise pipefail ends the run before the auth client is checked.
   { diff "$GENERATED" "$SCRATCH/api.ts" || true; } | head -20 >&2
   echo "               Regenerate it with scripts/pre-commit/openapi_check.sh --write and commit the result." >&2
   failed=1
 fi
 
-# packages/auth-api is written by hand, so it has no output to compare - every operation it declares
-# is checked against what allauth serves instead.
+# packages/auth-api is hand-written: its operations are checked against what allauth serves.
 node "$FRONTEND/packages/auth-api/check-schema-paths.mjs" "$SCRATCH/auth.json" || failed=1
 
 exit "$failed"

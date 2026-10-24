@@ -4,5 +4,5 @@ from apps.users.reauthentication.gate import ProvesWhoTheyAre
 
 
 class ManageWebAuthnView(ProvesWhoTheyAre, _ManageWebAuthnView):
-    # Adding or removing a passkey changes what it takes to sign in. PUT only renames one.
+    # PUT only renames a passkey.
     reauthentication_methods = frozenset({"POST", "DELETE"})

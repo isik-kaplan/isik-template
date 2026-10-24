@@ -1,7 +1,5 @@
 import { headers } from 'next/headers'
-import { redirect, unstable_rethrow } from 'next/navigation'
-
-import { cache } from 'react'
+import { unstable_rethrow } from 'next/navigation'
 
 import type { Language } from '@/i18n/config'
 
@@ -11,6 +9,7 @@ import type { Session } from './SessionContext'
 import { requestOrigin } from './requestOrigin'
 import { resolveLanguage } from './resolveLanguage'
 import { visitorFetch } from './visitor'
+import { createSessionGuards } from '@isikk/core/next/session'
 
 type SessionState = {
   session: Session
@@ -20,13 +19,7 @@ type SessionState = {
   language: Language
 }
 
-// Called independently from the root layout and everything under it, so without cache() one page
-// load makes several round trips to auth.<domain>. Argument-free (reads headers() itself) so
-// cache() dedupes by render pass, not by argument identity. Scoped to one request only - a real
-// hit to the backend on every fresh page load, which is what the X-Session-Cleared auto-logout
-// check (apiClients.ts) depends on; a longer-lived cache here would delay noticing a cleared
-// session.
-const fetchSessionState = cache(async (): Promise<SessionState> => {
+async function fetchSessionState(): Promise<SessionState> {
   const requestHeaders = await headers()
   const authOrigin = requestOrigin(requestHeaders).replace('://', '://auth.')
   const authApi = new AuthApi(authOrigin, {
@@ -44,8 +37,7 @@ const fetchSessionState = cache(async (): Promise<SessionState> => {
         language: resolveLanguage(data.data.user.language, acceptLanguageHeader),
       }
     }
-    // "provider_signup" - a first-ever login via a social provider, with SOCIALACCOUNT_AUTO_SIGNUP
-    // off, lands here rather than being signed in immediately.
+    // A first-ever social login, with SOCIALACCOUNT_AUTO_SIGNUP off.
     const pendingProviderSignup = error?.data?.flows?.some((flow) => flow.id === 'provider_signup') ?? false
     return {
       session: null,
@@ -55,8 +47,7 @@ const fetchSessionState = cache(async (): Promise<SessionState> => {
     }
   } catch (thrown) {
     unstable_rethrow(thrown)
-    // An unreachable backend is not "not logged in", but this runs in the root layout, so
-    // failing the render would take down every page.
+    // Not "not logged in", but failing the root layout would take down every page.
     return {
       session: null,
       pendingProviderSignup: false,
@@ -64,31 +55,23 @@ const fetchSessionState = cache(async (): Promise<SessionState> => {
       language: resolveLanguage(null, acceptLanguageHeader),
     }
   }
+}
+
+// The guards' cache() dedupes within one request and no longer: the X-Session-Cleared logout needs a
+// backend hit on every page load.
+const guards = createSessionGuards<NonNullable<Session>, SessionState>(fetchSessionState, {
+  loginPath: '/auth/login',
+  sessionOf: (state) => state.session,
+  redirectFor: (state) => (state.pendingProviderSignup ? '/auth/complete-signup' : null),
 })
 
+export const { requireSession, getState: getSessionState } = guards
+export const redirectIfAuthenticated = guards.redirectIfPresent
+
 export async function getSession(): Promise<Session> {
-  return (await fetchSessionState()).session
+  return (await getSessionState()).session
 }
 
 export async function getLanguage(): Promise<Language> {
-  return (await fetchSessionState()).language
-}
-
-// Exposed separately from getSession() for callback-complete/page.tsx, the one place that needs
-// to distinguish "not logged in" from "not logged in, but a provider signup is pending" rather
-// than just redirect on either.
-export async function getSessionState(): Promise<SessionState> {
-  return fetchSessionState()
-}
-
-export async function redirectIfAuthenticated(redirectTo = '/'): Promise<void> {
-  const { session, pendingProviderSignup } = await fetchSessionState()
-  if (pendingProviderSignup) redirect('/auth/complete-signup')
-  if (session) redirect(redirectTo)
-}
-
-export async function requireSession(redirectTo = '/auth/login'): Promise<NonNullable<Session>> {
-  const session = await getSession()
-  if (!session) redirect(redirectTo)
-  return session
+  return (await getSessionState()).language
 }

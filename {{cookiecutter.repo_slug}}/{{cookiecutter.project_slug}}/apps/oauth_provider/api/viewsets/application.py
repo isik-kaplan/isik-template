@@ -1,13 +1,15 @@
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import extend_schema
+from isik.django.apps.idempotency.drf import NoReplay
+from isik.django.drf.viewsets import NoPrecondition
 from oauth2_provider.models import get_application_model
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from apps.common.api.reauthentication import ProvesWhoTheyAre
+from apps.common.api.request_policies import NoReauthentication
 from apps.common.api.viewsets import BaseModelViewSet
-from apps.idempotency.exemptions import NoReplay
 from apps.oauth_provider.api.permissions.may_register_applications import MayRegisterApplications
 from apps.oauth_provider.api.serializers.application import ApplicationSerializer
 from apps.oauth_provider.api.serializers.rotate_secret import RotateSecretSerializer
@@ -24,8 +26,8 @@ NOT_DISABLED = _("Only an application its owner switched off can be switched bac
 
 
 class ApplicationViewSet(ProvesWhoTheyAre, BaseModelViewSet):
-    """The applications the signed-in person registered. Whether a new one works at once or waits for a
-    superuser is the provider's mode - see apps/oauth_provider/mode.py."""
+    """The applications the signed-in person registered. Whether a new one waits for a superuser depends on
+    the provider's mode."""
 
     model = Application
     endpoint = "oauth-applications"
@@ -33,14 +35,21 @@ class ApplicationViewSet(ProvesWhoTheyAre, BaseModelViewSet):
     permission_classes = [MayRegisterApplications]
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
     reauthentication_exempt_actions = {
-        "list": "reading your own applications takes nothing from anybody",
-        "retrieve": "reading your own application takes nothing from anybody",
-        "delegatable_scopes": "reading what an application may ask for takes nothing from anybody",
-        "disable": "switching your own application off only takes access away",
-        "restore": "switching it back on gives it no more than the approval it already had",
+        "list": NoReauthentication(reason="reading your own applications takes nothing from anybody"),
+        "retrieve": NoReauthentication(reason="reading your own application takes nothing from anybody"),
+        "delegatable_scopes": NoReauthentication(
+            reason="reading what an application may ask for takes nothing from anybody"
+        ),
+        "disable": NoReauthentication(reason="switching your own application off only takes access away"),
+        "restore": NoReauthentication(reason="switching it back on gives it no more than the approval it already had"),
     }
-    # Renaming one is not an act; pointing its sign-ins somewhere else, or asking for more, is.
     reauthentication_fields = {"partial_update": {"redirect_uris", "requested_scopes"}}
+    # Each is refused from any state but the one it starts from, so a stale page overwrites nothing.
+    precondition_exempt_actions = {
+        "rotate_secret": NoPrecondition(reason="every rotation makes a new secret, so a stale page loses nothing"),
+        "disable": NoPrecondition(reason="switching your own application off only takes access away"),
+        "restore": NoPrecondition(reason="switching it back on gives it no more than the approval it already had"),
+    }
     idempotency_no_replay_actions = {
         "create": NoReplay(
             reason="the answer carries the client secret, which is stored hashed and must not be handed out twice"
@@ -51,7 +60,7 @@ class ApplicationViewSet(ProvesWhoTheyAre, BaseModelViewSet):
     }
 
     def get_queryset(self):
-        # By id, which a signed-out request (the API document's own) has as None rather than an error.
+        # By id, which a signed-out request (the API document's) has as None rather than an error.
         return (
             Application.objects.filter(user_id=self.request.user.pk)
             .prefetch_related("requested_scopes", "approved_scopes")
@@ -59,7 +68,7 @@ class ApplicationViewSet(ProvesWhoTheyAre, BaseModelViewSet):
         )
 
     def refuse_before_proving(self, request):
-        """Said before anybody proves themselves for a delete that would be refused anyway."""
+        """Before anybody proves themselves for a delete that would be refused anyway."""
         if (
             self.action == "destroy"
             and self.get_queryset()
@@ -90,8 +99,7 @@ class ApplicationViewSet(ProvesWhoTheyAre, BaseModelViewSet):
     @extend_schema(request=None, responses=ApplicationSerializer)
     @action(detail=True, methods=["post"])
     def disable(self, request, *args, **kwargs):
-        """Its owner's own off switch: every token it holds goes now, and nobody signs in with it until it
-        is switched back on. The only state it may be deleted from."""
+        """Its owner's off switch: every token it holds goes now. The only state it may be deleted from."""
         application = self.get_object()
         if application.approval != Application.Approval.APPROVED:
             raise ValidationError({"detail": _("Only an approved application can be switched off.")})
@@ -105,7 +113,7 @@ class ApplicationViewSet(ProvesWhoTheyAre, BaseModelViewSet):
             raise ValidationError({"detail": NOT_DISABLED})
         return Response(self.get_serializer(restore_application(application)).data)
 
-    # Not paginated: the vocabulary is a handful of names, answered as the plain list the document says.
+    # Not paginated: the vocabulary is a handful of names.
     @extend_schema(responses=DelegatableScopeSerializer(many=True))
     @action(detail=False, methods=["get"], url_path="delegatable-scopes", pagination_class=None)
     def delegatable_scopes(self, request):

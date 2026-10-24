@@ -1,6 +1,5 @@
-// What escaped the code under test: a throw inside an event or observer callback, which jsdom reports on
-// window instead of throwing, and a rejection nothing handled. Uncollected, either one surfaces only after
-// the test has passed, as an error outside any test - which a mutation run cannot count as a kill.
+// Callback throws jsdom reports on window, and unhandled rejections: otherwise they surface after the
+// test passed, where a mutation run cannot count them as a kill.
 export function collectUncaught() {
   const caught: unknown[] = []
   const onError = (event: ErrorEvent) => {

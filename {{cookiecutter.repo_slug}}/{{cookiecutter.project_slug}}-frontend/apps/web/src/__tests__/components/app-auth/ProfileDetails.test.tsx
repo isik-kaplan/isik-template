@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 vi.mock('@/lib/apiOrigin', () => ({ apiOrigin: () => 'http://api.test-project.test' }))
 
-const USER = { username: 'jane', email: 'jane@test.test', first_name: 'Jane', last_name: '' }
+const USER = { username: 'jane', email: 'jane@test.test', first_name: 'Jane', last_name: '', etag: '"1"' }
 
 const valueOf = (label: string) => screen.getByText(label).nextElementSibling?.textContent
 

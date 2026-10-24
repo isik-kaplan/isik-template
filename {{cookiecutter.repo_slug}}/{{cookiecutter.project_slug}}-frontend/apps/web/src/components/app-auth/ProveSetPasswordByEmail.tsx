@@ -8,8 +8,7 @@ import { useClientTranslation } from '@/i18n/client'
 import { createAuthApi } from '@/lib/apiClients'
 import { authOrigin } from '@/lib/authOrigin'
 
-/** The way back for an account with no password whose provider cannot prove anything: a password
- * set from a link in its own inbox, which every later act can then be proved with. */
+/** For an account with no password and no provider that can prove it: a password set by email link. */
 export function ProveSetPasswordByEmail({ email }: { email: string }) {
   const { t } = useClientTranslation(['auth'])
   const [sent, setSent] = useState(false)

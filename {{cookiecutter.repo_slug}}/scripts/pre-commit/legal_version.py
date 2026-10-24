@@ -1,8 +1,6 @@
-"""Keeps apps/users/terms.py's TERMS_VERSION a hash of the legal documents the web app serves.
+"""Keeps apps/users/terms.py's TERMS_VERSION a hash of the legal documents, translations included.
 
-Rewrites it and exits 1 when it was stale, like the ruff hook beside it: stage the change and commit again. Standard
-library only, so it runs straight off a checkout. The documents a signup agrees to are the ones documents.json names;
-a translation counts as much as the English text, since either can change what somebody agreed to.
+Standard library only, so it runs straight off a checkout.
 """
 
 import hashlib
@@ -19,7 +17,6 @@ ASSIGNMENT = re.compile(r'^TERMS_VERSION = ".*"$', re.MULTILINE)
 
 
 def documents(legal: Path) -> list[Path]:
-    """Every published file for every document the definition names, in a stable order."""
     definition = json.loads((legal / "documents.json").read_text())
     slugs = [document["slug"] for document in definition["documents"]]
     languages = sorted(path for path in legal.iterdir() if path.is_dir())

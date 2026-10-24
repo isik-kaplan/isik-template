@@ -1,6 +1,3 @@
-"""Account events, asserted through the real flows that send them wherever a test client can drive
-one, and through the signal itself where the flow needs a mailbox."""
-
 import pytest
 from allauth.account.models import EmailAddress
 from allauth.account.signals import email_changed, email_confirmed, password_reset
@@ -49,7 +46,6 @@ def test_signing_in_names_who_signed_in(client, alice, logged):
 
 @pytest.mark.django_db
 def test_a_failed_sign_in_names_nobody(client, alice, logged):
-    """The identifier somebody typed is theirs, whoever they are - so it is not on the line."""
     response = headless(client, "post", "auth/login", {"username": "alice", "password": "wrong"})
 
     assert response.status_code == 400
@@ -113,8 +109,6 @@ def test_changing_a_password_is_audited(client, alice, logged, audited):
 
 @pytest.mark.django_db
 def test_setting_a_first_password_is_the_same_audited_event(client, alice, audited, monkeypatch):
-    """An account made through a provider has no password until it sets one - a second way in."""
-    # Setting one is an act that asks for a proof first; what is asserted here is the line it writes.
     monkeypatch.setattr("apps.users.reauthentication.gate.has_proven_who_they_are", lambda request: True)
     alice.set_unusable_password()
     alice.save()
@@ -159,7 +153,7 @@ def _enable_totp(client):
 
 
 def _prove(client):
-    """Each change to a factor spends a proof that it is really her, so each asks for a fresh one."""
+    """Each factor change spends a proof."""
     assert headless(client, "post", "auth/reauthenticate", {"password": "the-password"}).status_code == 200
 
 
@@ -204,7 +198,7 @@ def test_regenerating_recovery_codes_is_audited(client, alice_signed_in, audited
     ("signal", "event"), [(authenticator_added, "passkey.added"), (authenticator_removed, "passkey.removed")]
 )
 def test_a_passkey_coming_or_going_is_audited(alice, audited, signal, event):
-    """Through the signal: a passkey ceremony needs an authenticator device to sign the challenge."""
+    """Through the signal: a real ceremony needs an authenticator device."""
     passkey = Authenticator(user=alice, type=Authenticator.Type.WEBAUTHN, data={})
 
     signal.send(sender=Authenticator, request=None, user=alice, authenticator=passkey)

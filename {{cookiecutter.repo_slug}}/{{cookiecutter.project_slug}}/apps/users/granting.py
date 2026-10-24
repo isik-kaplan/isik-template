@@ -1,11 +1,6 @@
-"""Who may widen what somebody else may do.
+"""Who may widen what somebody else may do: only what you hold yourself.
 
-One rule underneath all of it: **you may grant something only if you hold it yourself**. A superuser holds
-every permission already, so "a superuser may grant anything" needs no special case, and nothing can be
-created from nothing by somebody who never had it.
-
-Granting is its own right rather than something `is_staff` implies, because staff promoting staff is a
-quiet way for the set of people who can change settings to grow with nobody deciding to.
+Granting is its own right, not implied by `is_staff`, so staff can't quietly promote staff.
 """
 
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -14,8 +9,7 @@ from apps.users.permissions import Permission
 
 
 def may_grant(actor):
-    """A superuser may, by holding everything. Anybody else needs the permission *and* staff: the string
-    alone does nothing for somebody who may not change administrative settings at all."""
+    """A superuser, or staff holding `users:grant:rights`."""
     if not (actor and actor.is_authenticated):
         return False
     if actor.is_superuser:
@@ -24,7 +18,7 @@ def may_grant(actor):
 
 
 def refuse_a_grant_beyond_the_giver(actor, *, raising_is_staff=False, raising_is_superuser=False, permissions=()):
-    """Refused before the write, naming what was asked for rather than what it collided with."""
+    """Names what was asked for rather than what it collided with."""
     if not (raising_is_staff or raising_is_superuser or permissions):
         return
     if not may_grant(actor):
@@ -37,7 +31,6 @@ def refuse_a_grant_beyond_the_giver(actor, *, raising_is_staff=False, raising_is
 
 
 def refuse_a_grant_that_can_never_apply(recipient_is_staff, permissions):
-    """`users:grant:rights` does nothing for somebody who is not staff, so granting it to them is refused
-    rather than stored dormant - a permission list should not overstate what somebody can do."""
+    """`users:grant:rights` does nothing for non-staff, so it is refused rather than stored dormant."""
     if str(Permission.USERS_GRANT_RIGHTS) in {str(name) for name in permissions} and not recipient_is_staff:
         raise ValidationError({"permissions": "Changing what people may do takes effect for staff only."})

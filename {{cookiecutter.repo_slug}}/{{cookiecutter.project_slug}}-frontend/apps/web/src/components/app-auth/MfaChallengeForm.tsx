@@ -21,8 +21,7 @@ import { retryAfterOf } from '@isikk/core'
 import { useBrowserSupportsPasskeys } from '@isikk/core/hooks'
 import { getCredential } from '@isikk/core/webauthn'
 
-// The same factors answer two questions: the second step of a login, and proving it is you again
-// before an act (the mfa_reauthenticate flow the prove page offers). Only the endpoints differ.
+// Also the mfa_reauthenticate flow the prove page offers; only the endpoints differ.
 const CALLS = {
   login: {
     code: (api: AuthApi, code: string) => api.completeMfaChallenge(code),

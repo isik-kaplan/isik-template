@@ -29,8 +29,7 @@ export function expiresAt(expiry: Expiry, now: number = Date.now()): string | nu
   return expiry === 'never' ? null : new Date(now + Number(expiry) * DAY).toISOString()
 }
 
-/** Making a token: what it is called, what it may do of what this person holds, and for how long. Making
- *  one asks them to prove who they are first - the backend sends them off to do it. */
+/** Making a token; the backend first sends them off to prove it is them. */
 export function PersonalAccessTokenForm({
   scopes,
   onMade,
@@ -68,7 +67,7 @@ export function PersonalAccessTokenForm({
     event.preventDefault()
     await submit((token, idempotencyKey) => createApi(apiOrigin()).makePersonalAccessToken(token, idempotencyKey), {
       failure: t('auth:profileTokensMakeError'),
-      onSuccess: ({ data }) => onMade(data!),
+      onSuccess: ({ data }) => onMade(data),
     })
   }
 

@@ -18,8 +18,7 @@ describe('RootLayout', () => {
     render(await RootLayout({ children: <p>content</p> }))
 
     expect(screen.getByText('content')).toBeTruthy()
-    // React 19 hoists <head> content (this component's own MonkeyPatches child) straight to the
-    // real document.head, rather than rendering it where the tree places it.
+    // React 19 hoists <head> content to the real document.head.
     expect(document.head.querySelector('[data-testid="monkeypatches"]')).toBeTruthy()
     expect(screen.getByTestId('public-config-script')).toBeTruthy()
   })

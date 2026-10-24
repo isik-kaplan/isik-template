@@ -1,8 +1,4 @@
-"""The log call, what it refuses, and the two renderings of what it writes.
-
-The point of the mechanism is that a call site carries no context and cannot forget any: everything
-about who and where is read from the context pghistory already opened.
-"""
+"""The log call, what it refuses, and the two renderings of what it writes."""
 
 import json
 import logging
@@ -24,8 +20,7 @@ from apps.common.logging.formatters import ConsoleFormatter, JSONFormatter
 
 @pytest.fixture
 def an_event():
-    """Declared for one test and taken back out: the registry is module state, and a name left
-    behind would collide with the next test to want it."""
+    """Taken back out: the registry is module state, and a name left behind would collide."""
     event = declare("test.happened", logging.INFO, ("what",))
     yield event
     del DECLARED[event.name]
@@ -47,8 +42,7 @@ def a_record(**payload):
 
 class TestTheVocabulary:
     def test_an_event_declared_twice_is_refused(self):
-        """The name is how a line is searched for, so two events answering to one name is two
-        different things in one query and no way to tell them apart."""
+        """The name is what a line is searched by, so it must mean one thing."""
         with pytest.raises(ValueError, match="declared twice"):
             declare(REQUEST.name, logging.INFO)
 
@@ -89,8 +83,7 @@ class TestTheVocabulary:
 
 class TestTheCall:
     def test_an_event_nobody_declared_cannot_be_logged(self):
-        """What closes the vocabulary. An `Event` is an ordinary object, so refusing one the
-        registry does not hold is the difference between a reviewed list and a suggestion."""
+        """An `Event` is an ordinary object, so only this check closes the vocabulary."""
         with pytest.raises(ValueError, match="not a declared event"):
             log(Event("invented.elsewhere", logging.INFO))
 
@@ -99,8 +92,7 @@ class TestTheCall:
             log(Event("test.happened", logging.INFO, ("what",)), what="a thing")
 
     def test_a_field_the_event_declared_is_required(self, an_event):
-        """The whole of the mechanism: the twentieth call site is written by somebody who has read
-        none of the previous nineteen, and a line missing the one field that identifies it is noise."""
+        """A line missing the field that identifies it is noise."""
         with pytest.raises(TypeError, match=r"^'test.happened' needs what\.$"):
             log(an_event)
 
@@ -115,8 +107,7 @@ class TestTheCall:
             del DECLARED[two_required.name]
 
     def test_the_record_is_named_for_the_event_at_its_declared_severity(self, caplog):
-        """A handler nobody configured here renders `record.msg`, so an event that stopped naming
-        itself is a line that reads as `None` wherever this is not our own formatter."""
+        """Any other handler renders `record.msg`, so the event must name itself there."""
         event = declare("test.warned", logging.WARNING)
         try:
             with caplog.at_level(logging.INFO, logger=LOGGER.name):
@@ -128,8 +119,7 @@ class TestTheCall:
         assert (record.name, record.levelno, record.getMessage()) == (LOGGER.name, logging.WARNING, "test.warned")
 
     def test_what_a_line_carries_without_anybody_passing_it(self, an_event, logged):
-        """A call site names the event and its own fields. Who and which request come from the
-        context pghistory opened, so they cannot be forgotten and cannot be wrong."""
+        """Who and which request come from pghistory's context, not the call site."""
         with pghistory.context(user="01a0e9", request_id="01JB4F") as opened:
             log(an_event, what="a thing")
 
@@ -160,8 +150,7 @@ class TestTheCall:
         ]
 
     def test_a_line_outside_any_context_still_gets_written(self, an_event, logged):
-        """A management command, a check, a shell. Having no request is a fact about the line
-        rather than a reason to refuse it."""
+        """A command, a check, a shell: no request is no reason to refuse a line."""
         log(an_event, what="a thing")
 
         assert logged == [{"event": "test.happened", "code": __name__, "what": "a thing"}]
@@ -172,8 +161,7 @@ class TestTheCaller:
         assert emit._caller() == __name__
 
     def test_a_wrapper_around_the_call_is_not_the_caller(self, an_event, logged):
-        """Mutation testing wraps every function in the tree, so the frame above `log` is a
-        trampoline and every line in the suite would say the code lives in mutmut."""
+        """mutmut wraps every function, so the frame above `log` is a trampoline."""
         wrapper = "def wrapped(log, event):\n    log(event, what='a thing')\n"
         through_a_wrapper = {"__name__": "mutmut.mutation.trampoline"}
         exec(compile(wrapper, "<trampoline>", "exec"), through_a_wrapper)
@@ -192,8 +180,7 @@ class TestTheCaller:
         assert logged[0]["code"] == "mutmutish"
 
     def test_the_walk_up_the_stack_ends(self, monkeypatch):
-        """Every frame being a wrapper cannot happen under a test runner, which is itself a caller.
-        A walk with no end would be a crash where the worst honest answer is an empty field."""
+        """Cannot happen under a test runner, but an endless walk would crash where "" is honest."""
 
         class Frame:
             f_globals = {"__name__": "mutmut.mutation.trampoline"}
@@ -204,8 +191,7 @@ class TestTheCaller:
         assert emit._caller() == ""
 
     def test_a_frame_belonging_to_no_module_is_named_nothing(self, monkeypatch):
-        """`exec` of a bare string has globals with no `__name__` at all, and a line attributed to
-        whatever stood in for one is worse than a line attributed to nothing."""
+        """`exec` of a bare string has globals with no `__name__` at all."""
 
         class Frame:
             f_globals = {}
@@ -226,11 +212,7 @@ class TestTheCaller:
 
 
 def test_ambient_reads_the_context_a_worker_opens():
-    """Pinned deliberately. A worker opens its own pghistory context rather than going through the
-    middleware, so reading the middleware's published copy would empty every task line - this is
-    the reader that covers both, and a release that moves it should fail here rather than quietly
-    logging tasks with no cause.
-    """
+    """A worker opens its pghistory context directly; the middleware's copy would empty every task line."""
     assert ambient() == {}
     with pghistory.context(user="01a0e9", caused_by="request") as opened:
         read = ambient()
@@ -240,8 +222,7 @@ def test_ambient_reads_the_context_a_worker_opens():
 
 class TestTheAuditSink:
     def test_an_audited_event_cannot_be_written_with_log(self, an_audited_event):
-        """Which sink an event goes to is the event's own property, so neither call can be made
-        the wrong way round - the separation is not a habit at the call site."""
+        """The sink is the event's own property, not a habit at the call site."""
         with pytest.raises(ValueError, match=r"^'test.moved' is audited - write it with audit\(\)"):
             log(an_audited_event, to_user="somebody")
 
@@ -271,8 +252,7 @@ class TestTheAuditSink:
         assert [line["event"] for line in audited] == ["test.moved"]
 
     def test_the_audit_logger_is_configured_not_to_pass_its_records_up(self):
-        """Asserted against the configuration: what stops an audit record being quietened is that
-        it never reaches the main logger's level at all."""
+        """Asserted against the configuration: an audit record never reaches the main logger's level."""
         configured = settings.LOGGING["loggers"][AUDIT_LOGGER.name]
         assert configured == {"level": "INFO", "handlers": ["stdout"], "propagate": False}
         assert AUDIT_LOGGER.propagate is False
@@ -286,8 +266,7 @@ def _drawn_at(record, fmt):
 
 class TestJSON:
     def test_it_writes_one_object_a_collector_can_read(self):
-        """The whole object, because a field that stopped being written empties a column in
-        somebody's query rather than failing anything."""
+        """The whole object: a field that stops being written fails nothing else."""
         record = a_record(event="test.happened", user="01a0e9")
 
         written = json.loads(JSONFormatter().format(record))
@@ -306,8 +285,7 @@ class TestJSON:
         assert written["user"] == "00000000-0000-0000-0000-000000000001"
 
     def test_a_librarys_line_keeps_the_only_thing_it_carries(self):
-        """Django, celery and allauth log prose through their own loggers. Rendering the fields we
-        put on a record and dropping the message would lose all of it."""
+        """Libraries log prose through their own loggers; dropping the message would lose all of it."""
         record = logging.LogRecord("django.security", logging.WARNING, __file__, 1, "Invalid %s", ("Host",), None)
         record.msecs = 25
 
@@ -337,8 +315,7 @@ class TestJSON:
 
 class TestConsole:
     def test_it_leads_with_what_a_reader_reads_first(self):
-        """The whole line, spacing included: the order is the claim, and asserting one field at a
-        time says nothing about what sits between them."""
+        """The whole line, spacing included: the order is the claim."""
         record = a_record(what="a thing", request_id="01JB4F", user="jane", event="test.happened", why="a reason")
 
         drawn = ConsoleFormatter().format(record)
@@ -348,7 +325,7 @@ class TestConsole:
         )
 
     def test_a_line_with_nothing_of_its_own_ends_where_its_fields_do(self):
-        """No trailing separator with nothing behind it - the padding is what a reader scans down."""
+        """No trailing separator with nothing behind it."""
         record = a_record(event="test.happened", user="jane")
 
         drawn = ConsoleFormatter().format(record)
@@ -370,8 +347,7 @@ class TestConsole:
         assert drawn == f"{_drawn_at(record, '%H:%M:%S')}  INFO   test.happened  0  count=0"
 
     def test_drawing_a_line_leaves_the_record_as_it_was(self):
-        """Both formatters may be attached to one record - a second handler must not find it
-        emptied by the first."""
+        """Both formatters may see one record, so the first must not empty it."""
         record = a_record(event="test.happened", user="jane")
 
         ConsoleFormatter().format(record)
@@ -406,6 +382,5 @@ class TestConsole:
 
 @pytest.mark.parametrize("fmt", ["console", "json"])
 def test_settings_name_both_renderings(fmt):
-    """The env var picks one of these by name, so a name missing here is a deployment that will
-    not start."""
+    """The env var picks one by name; a missing one is a deployment that will not start."""
     assert fmt in settings.LOGGING["formatters"]

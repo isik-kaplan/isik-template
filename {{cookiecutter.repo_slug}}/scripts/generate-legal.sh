@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
-# Drafts the privacy policy and terms of service with app-privacy-policy-generator, filled from this project's
-# answers, into the files the legal pages read. Optional, and only when run: its code is AGPL-3.0, so it is fetched
-# into a temporary directory and run there, never copied into this repository. What it writes is a starting point
-# for a lawyer, not a finished document.
+# Drafts the privacy policy and terms of service with app-privacy-policy-generator. Its code is AGPL-3.0, so it
+# is fetched into a temporary directory, never copied into this repository.
 #
 #   bash scripts/generate-legal.sh [--force]
 #
@@ -17,7 +15,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-# Pinned, so the page this drives is the one it was written against. Moving it is a reviewed change.
+# Pinned: generate-legal.mjs drives this exact page.
 GENERATOR_REPOSITORY=https://github.com/nisrulz/app-privacy-policy-generator
 GENERATOR_COMMIT=2848bb8493efddd44a62aa8d80a387e8dfc8df6d
 HOSTED=https://app-privacy-policy-generator.nisrulz.com/
@@ -60,7 +58,7 @@ image="${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-legal-generator"
 echo "Building the browser image (the e2e suite's own)..."
 docker build -q -t "$image" e2e/playwright >/dev/null || manual
 
-# Built by python3 rather than spliced into a string, so a quote in a name cannot break the JSON.
+# python3, not string splicing, so a quote in a name cannot break the JSON.
 answers=$(
   LEGAL_OWNER="${LEGAL_OWNER:-{{ cookiecutter.author_name }}}" \
   LEGAL_OWNER_TYPE="${LEGAL_OWNER_TYPE:-Individual}" \

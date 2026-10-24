@@ -1,23 +1,19 @@
 #!/bin/sh
 set -e
 {% if cookiecutter.tls_termination == "self" %}
-# nginx's :443 blocks need *some* certificate to start on a brand new volume. certbot (see docker-compose.yml's
-# certbot service) gets the real one via the webroot challenge, which only needs :80 answering.
+# nginx's :443 blocks need some certificate to start before certbot has issued the real one.
 /server/certificate.sh
 {% endif %}
 PREFIX={{ cookiecutter.config_prefix }}
 
-# The key the frontend proves its fetches with (template.nginx.conf's $client_ip). Empty, it would
-# match every request that sent none, and let any of them name its own address.
+# Empty, it would match every request that sent none, letting any of them name its own address.
 frontend_key="$(printenv "${PREFIX}__FRONTEND_KEY" || true)"
 if [ -z "$frontend_key" ]; then
     echo "${PREFIX}__FRONTEND_KEY is not set: nginx will not start without it (see .env.example)." >&2
     exit 1
 fi
 
-# The client is the entry this many from the right of X-Forwarded-For as it reaches nginx: every
-# trusted proxy appends, nginx included, and nginx has not appended yet. None at all means nobody in
-# front of nginx is trusted, so the pattern never matches and the answer is the peer's own address.
+# The client is proxy_count - 1 entries from the right: nginx counts itself but has not appended yet.
 proxy_count="$(printenv "${PREFIX}__TRUSTED_PROXY_COUNT" || echo {% if cookiecutter.tls_termination == "self" %}1{% else %}2{% endif %})"
 hops=$((proxy_count - 1))
 if [ "$hops" -le 0 ]; then
@@ -34,7 +30,7 @@ else
 fi
 export NGINX_FORWARDED_CLIENT_PATTERN
 
-# A burst of ten seconds' worth, answered at once: a page asks for a lot together, then nothing for a while.
+# A burst of ten seconds' worth: a page load asks for a lot at once.
 NGINX_REQUESTS_PER_SECOND="$(printenv "${PREFIX}__RATE_LIMITS__REQUESTS_PER_SECOND" || echo 20)"
 if [ "$(printenv "${PREFIX}__RATE_LIMITS__ENABLED" || echo true)" = "false" ]; then
     NGINX_LIMIT_REQ=""
@@ -43,13 +39,10 @@ else
 fi
 export NGINX_REQUESTS_PER_SECOND NGINX_LIMIT_REQ
 
-# Explicit var list, not a bare envsubst < template - nginx's own runtime variables ($host,
-# $remote_addr, $http_upgrade, ...) would otherwise be silently replaced with empty strings too,
-# since they look identical to shell variable references but aren't in this process's env.
+# Explicit var list, or envsubst would blank nginx's own variables ($host, $remote_addr, ...).
 envsubst "$(env | sed -e 's/=.*//' -e 's/^/\$/g')" < /server/template.nginx.conf > /server/nginx.conf
 {% if cookiecutter.tls_termination == "self" %}
-# Nothing tells nginx when certbot has issued or renewed the certificate on the shared volume, so this polls:
-# within a minute of the first issuance, and every 12 hours for renewals, which land behind the same path.
+# Nothing signals certbot's issuance or renewals, so poll: a minute for the first, 12 hours for renewals.
 (
     elapsed=0
     while true; do

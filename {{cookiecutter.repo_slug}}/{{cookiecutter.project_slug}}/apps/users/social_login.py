@@ -5,11 +5,9 @@ from django.core.exceptions import ImproperlyConfigured
 
 
 def social_login_provider_ids(requested: list[str]) -> list[str]:
-    """The allauth provider ids SOCIAL_LOGIN__PROVIDERS names, read once by settings.py at startup. A name
-    allauth does not ship, or one named twice, stops startup: either would otherwise surface only as a
-    login button that leads nowhere."""
+    """Fails startup on an unknown or repeated provider, which would otherwise be a dead login button."""
     ids = [provider_id.strip() for provider_id in requested if provider_id.strip()]
-    # Every provider is a package of its own; base, oauth and oauth2 are what they are built on.
+    # base, oauth and oauth2 are shared bases, not providers.
     shipped = {name for _, name, _ in pkgutil.iter_modules(providers_package.__path__)} - {"base", "oauth", "oauth2"}
     unknown = sorted(set(ids) - shipped)
     if unknown:

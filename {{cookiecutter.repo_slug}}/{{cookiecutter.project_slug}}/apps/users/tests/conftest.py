@@ -22,8 +22,7 @@ CALLBACK_URL = "https://auth.example.test/callback"
 
 
 class Headless:
-    """allauth's headless browser API through the test client, the way the frontend calls it: on the
-    auth host, JSON in, with the CSRF token the session endpoint primes."""
+    """allauth's headless browser API as the frontend calls it: auth host, JSON, primed CSRF token."""
 
     def __init__(self, client):
         self.client = client
@@ -52,8 +51,7 @@ class Headless:
 
 @pytest.fixture
 def a_second_language(settings, db):
-    """The project as if it also shipped Turkish, whatever it was generated with. LANGUAGES says so,
-    and the CHECK built from the languages it does ship is lifted for the test."""
+    """The project as if it also shipped Turkish, with the language CHECK lifted."""
     settings.LANGUAGES = [("en", "English"), ("tr", "Turkish")]
     with lifted_constraint(User, "users_user_language_choices"):
         yield
@@ -80,9 +78,7 @@ def signed_in(client, alice):
 
 @pytest.fixture
 def providers(settings, monkeypatch):
-    """An OpenID Connect provider and a plain OAuth2 one, whatever this project was generated with -
-    registered by hand, because allauth only registers the providers in INSTALLED_APPS, and given an
-    issuer that answers without a network."""
+    """An OIDC and a plain OAuth2 provider, registered by hand since allauth only registers installed ones."""
     registry.load()
     for provider_class in (OpenIDConnectProvider, GitHubProvider):
         monkeypatch.setitem(registry.provider_map, provider_class.id, provider_class)

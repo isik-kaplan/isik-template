@@ -1,5 +1,4 @@
-/** The auth.<domain> origin, computed from wherever the browser currently is - client components
- * call this directly instead of going through getRequestOrigin() (a server-only helper). */
+/** The auth.<domain> origin from the browser's location; getRequestOrigin() is server-only. */
 export function authOrigin(): string {
   return window.location.origin.replace('://', '://auth.')
 }

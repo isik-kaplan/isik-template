@@ -1,6 +1,5 @@
-// What a select offers for "no filter". A real word rather than '', because '' is how a select says
-// nothing is chosen. Never reaches a query. Here rather than in the client hook, so a server
-// component reading it gets the string and not a client reference.
+// "No filter": not '', which is a select's nothing-chosen. Not in the client hook, so a server
+// component gets the string rather than a client reference.
 export const ANY = 'any'
 
 export type FilterOption = { value: string; label: string }
@@ -8,10 +7,7 @@ export type FilterOption = { value: string; label: string }
 /** The search params a page is handed - a repeated key arrives as a list. */
 export type Asked = Record<string, string | string[] | undefined>
 
-/**
- * The words a parameter's control may offer, taken from the generated client. A boolean parameter is
- * `true`/`false` in a URL and a real boolean in the query, the one place the two differ.
- */
+/** The values a parameter's control may offer, from the generated client. */
 type ValueWord<T> =
   NonNullable<T> extends boolean ? 'true' | 'false' : NonNullable<T> extends string ? NonNullable<T> : string
 
@@ -24,11 +20,8 @@ export type FilterSpec<Query> = {
 }
 
 /**
- * Controls over one endpoint's query, named and valued against what that endpoint takes, so a filter
- * the API does not accept is a compile error instead of a word it quietly ignores.
- *
- * Curried because TypeScript infers no type argument once one is written out, and the parameter's
- * name has to be inferred for its values to be checked against that parameter alone.
+ * Controls typed against one endpoint's query, so an unaccepted filter is a compile error. Curried:
+ * TypeScript infers no type argument once one is written out.
  */
 export function filtersFor<Query>() {
   return {
@@ -63,11 +56,7 @@ export function filtersFor<Query>() {
   }
 }
 
-/**
- * What the address bar holds, as the query the client sends. Anything that is not one of the words
- * its control offers is dropped rather than forwarded, so a hand-edited URL shows the unfiltered list
- * instead of an error.
- */
+/** The address bar as the client's query; unknown values are dropped, so a hand-edited URL shows no error. */
 export function queryFrom<Query>(specs: FilterSpec<Query>[], asked: Asked = {}): Query {
   return specs.reduce((query, spec) => {
     const held = asked[spec.name]

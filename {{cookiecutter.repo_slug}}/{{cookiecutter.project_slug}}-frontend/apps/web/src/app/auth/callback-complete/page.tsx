@@ -3,11 +3,7 @@ import { redirect } from 'next/navigation'
 import { afterSignIn } from '@/lib/afterSignIn'
 import { getSessionState } from '@/lib/getSession'
 
-// The provider redirect's own final landing spot after allauth's classic (non-headless) callback
-// view finishes - allauth redirects here (the callback_url the redirect started with, see
-// SocialLoginButtons.tsx) regardless of whether the login succeeded, is pending a first-time
-// signup, or failed, so it's this page's job to look at the actual session state and route
-// accordingly, not allauth's.
+// allauth's callback lands here whatever the outcome, so this page routes on the session state.
 export default async function CallbackCompletePage({
   searchParams,
 }: {
@@ -23,11 +19,7 @@ export default async function CallbackCompletePage({
   if (session) redirect(afterSignIn(params.next))
   // The provider vouched for the first factor; an account with a second one still owes it.
   if (pendingMfaTypes) redirect(`/auth/two-factor?next=${encodeURIComponent(afterSignIn(params.next))}`)
-  // A real failure (e.g. the provider declined, or - see the blueprint's own comment on this
-  // exact failure mode - the provider sent back no usable identity data) carries an `error` param
-  // here rather than throwing - allauth always redirects back to this page's own URL regardless
-  // of outcome, error included, so this is the only place that can surface it instead of it being
-  // silently dropped. Forwarded on to provider-error, which reads the code to pick its copy.
+  // A failure arrives as an `error` param, not a throw; provider-error picks its copy from the code.
   if (!params.error) redirect('/auth/login')
   const error = Array.isArray(params.error) ? params.error[0] : params.error
   const errorProcess = Array.isArray(params.error_process) ? params.error_process[0] : params.error_process

@@ -1,16 +1,11 @@
 #!/usr/bin/env node
-/**
- * Warns, without failing, when a production build ships without its English legal documents. The pages still
- * render without them, saying the document has not been added yet, so nothing else would notice.
- *
- *     node scripts/check-legal-documents.mjs
- */
+/** Warns, without failing, when a build ships without its English legal documents: nothing else would notice. */
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const APP = join(import.meta.dirname, '..')
 
-/** The English documents the definition names that are missing or empty, as paths from the app's root. */
+/** Missing or empty English documents, as paths from the app's root. */
 export function missingLegalDocuments(app = APP) {
   const { documents } = JSON.parse(readFileSync(join(app, 'src/legal/documents.json'), 'utf8'))
   return documents
@@ -28,7 +23,7 @@ export function warning(missing) {
   )
 }
 
-// Only when run as a command: the test imports these, and a bare import must not print.
+// Only when run as a command, so the test's import prints nothing.
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop())) {
   const message = warning(missingLegalDocuments())
   if (message) console.warn(message)

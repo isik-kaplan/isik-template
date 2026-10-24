@@ -17,7 +17,7 @@ def test_session_endpoint_reports_anonymous(client):
 @pytest.mark.django_db
 def test_signup_via_headless_api_leaves_email_verification_pending(client):
     host = f"auth.{settings.PARENT_HOST}"
-    # Primes the csrftoken cookie, same as the frontend's own client does on a first visit.
+    # Primes the csrftoken cookie.
     client.get("/v0/browser/v1/auth/session", HTTP_HOST=host)
     response = client.post(
         "/v0/browser/v1/auth/signup",
@@ -26,8 +26,7 @@ def test_signup_via_headless_api_leaves_email_verification_pending(client):
         HTTP_HOST=host,
         HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
     )
-    # Mandatory email verification means signup succeeds but the session isn't authenticated yet -
-    # allauth reports this as a 401 with a pending verify_email flow, not a 2xx.
+    # Mandatory verification: a 401 with a pending verify_email flow.
     assert response.status_code == 401
     flows = {flow["id"]: flow for flow in response.json()["data"]["flows"]}
     assert flows["verify_email"]["is_pending"] is True
@@ -35,9 +34,7 @@ def test_signup_via_headless_api_leaves_email_verification_pending(client):
 
 @pytest.mark.django_db
 def test_a_password_change_names_the_session_that_made_it(client):
-    """The end-to-end proof for HistoryContextMiddleware: a real authenticated write through
-    allauth's own endpoint, not a synthetic one, names its actor - and never leaks what the
-    password changed to."""
+    """HistoryContextMiddleware end to end, through allauth's own endpoint."""
     host = f"auth.{settings.PARENT_HOST}"
     user = User.objects.create_user(username="alice", email="alice@example.test", password="old-password")
     client.force_login(user)
@@ -61,8 +58,6 @@ def test_a_password_change_names_the_session_that_made_it(client):
 
 @pytest.mark.django_db
 def test_the_session_carries_the_users_saved_language(client, settings, a_second_language):
-    # apps/users/headless.py's own reason for existing: the frontend resolves its language from
-    # this same session payload it already fetches, with no extra request.
     user = User.objects.create_user(username="alice", email="alice@example.test", password="x", language="tr")
     client.force_login(user)
 
@@ -78,8 +73,7 @@ def test_the_session_omits_language_when_the_user_has_no_preference(client):
 
     response = client.get("/v0/browser/v1/auth/session", HTTP_HOST=f"auth.{settings.PARENT_HOST}")
 
-    # Matches how allauth's own DefaultHeadlessAdapter drops every other empty/None field
-    # (email, username, ...) from this same payload rather than serving it as "".
+    # allauth drops every empty field from this payload.
     assert "language" not in response.json()["data"]["user"]
 
 
@@ -96,7 +90,7 @@ def test_the_served_specification_is_the_same_document_every_time(client):
 
 @pytest.mark.django_db
 def test_the_specification_still_describes_the_user_id_it_really_issues(client):
-    """Pinned, but not to a lie: the id stays a string shaped like the uuid7s User.id holds."""
+    """Pinned, but still shaped like the uuid7s User.id holds."""
     response = client.get("/v0/openapi.json", HTTP_HOST=f"auth.{settings.PARENT_HOST}")
 
     identifier = response.json()["components"]["schemas"]["User"]["properties"]["id"]

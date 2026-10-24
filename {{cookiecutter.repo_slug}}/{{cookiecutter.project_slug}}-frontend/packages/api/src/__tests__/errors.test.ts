@@ -1,8 +1,7 @@
 import { detailOf, messagesOf, toFormErrors } from '../index'
 import { describe, expect, it } from 'vitest'
 
-// The actual reading logic is @isikk/core/drf's own, and tested there - this only confirms the
-// re-export is wired to it, against the two shapes a real DRF backend sends.
+// Only checks the re-export is wired; the logic is tested in @isikk/core/drf.
 describe('DRF error helpers re-exported from @isikk/core/drf', () => {
   it('reads a 400 validation failure', () => {
     expect(toFormErrors({ name: ['This field may not be blank.'] })).toEqual({

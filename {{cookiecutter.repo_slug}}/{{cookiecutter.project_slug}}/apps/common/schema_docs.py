@@ -1,9 +1,6 @@
-"""What a field says when the honest answer is nothing.
+"""Sentinels for a field with nothing honest to say: empty to Django, the reason kept for the check.
 
-Empty to Django, so no sentinel reaches a column comment or a published description, with the reason
-kept where only the `every_field_says_what_it_is` check looks. `shows_as=""` is what makes it empty
-while `deconstruct()` still writes it out as itself - flat, the migration state would rebuild
-`help_text`'s own default and `makemigrations` would ask for the change forever.
+`shows_as=""` lets `deconstruct()` still write it out as itself, or `makemigrations` would never settle.
 """
 
 from isik.common.utils.exemptions import exemption_class

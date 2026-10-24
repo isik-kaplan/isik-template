@@ -7,9 +7,7 @@ import { requestOrigin } from './requestOrigin'
 import { tooManyRequestsPage } from './tooManyRequests'
 import { visitorFetch } from './visitor'
 
-/** The main API as the visitor making this request, for a Server Component - the request's own
- *  cookies forwarded, since a server render has no browser cookie jar, and counted against them. A
- *  refusal to answer for now leaves the page - see tooManyRequestsPage. */
+/** The main API as this request's visitor, with their cookies forwarded; a 429 leaves the page. */
 export async function serverApi(): Promise<Api> {
   const requestHeaders = await headers()
   const origin = requestOrigin(requestHeaders).replace('://', '://api.')

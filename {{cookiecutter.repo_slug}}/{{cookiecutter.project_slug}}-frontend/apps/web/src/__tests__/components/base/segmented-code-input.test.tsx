@@ -66,8 +66,7 @@ describe('SegmentedCodeInput', () => {
     expect(held()).toBe('482913')
   })
 
-  // A code pasted with something after it, or into the middle, has nowhere to put the overflow -
-  // it is dropped rather than wrapping round to the first box.
+  // Overflow from a paste is dropped rather than wrapping to the first box.
   it('keeps only what fits when more is pasted than there are boxes', async () => {
     render(<Harness />)
 
@@ -93,8 +92,7 @@ describe('SegmentedCodeInput', () => {
     expect(held()).toBe('')
   })
 
-  // Backspace in an empty box walks back and clears, which is what makes a typo fixable without
-  // reaching for the mouse.
+  // A typo is fixable without the mouse.
   it('steps back and clears on backspace in an empty box', async () => {
     render(<Harness initial="12" />)
 
@@ -180,8 +178,7 @@ describe('SegmentedCodeInput', () => {
   })
 
   it('keeps the code to the shape it was given, even starting from a longer one', async () => {
-    // A value longer than the boxes is cut to fit rather than carried along invisibly and handed
-    // back on the next keystroke.
+    // Cut to fit rather than carried along invisibly.
     render(<Harness initial="123456789" />)
 
     await userEvent.type(boxes()[0], '7')
@@ -240,8 +237,7 @@ describe('SegmentedCodeInput', () => {
   })
 
   it('replaces the digit in a full box rather than refusing the keystroke', () => {
-    // maxLength makes the browser drop the key, so the digit is written from the key itself. Driven
-    // with keyDown because the typing helper never reaches a box that is already full.
+    // keyDown, since the typing helper never reaches a full box.
     render(<Harness initial="123456" />)
 
     fireEvent.keyDown(boxes()[1], { key: '9' })
@@ -266,8 +262,7 @@ describe('SegmentedCodeInput', () => {
   })
 
   it('backspace in a filled box is left to the browser', () => {
-    // Only an *empty* box steps back and clears its neighbour; a filled one is the browser's to
-    // handle, which is what the change event then picks up.
+    // Only an empty box steps back; a filled one is the browser's to clear.
     render(<Harness initial="123456" />)
 
     fireEvent.keyDown(boxes()[3], { key: 'Backspace' })
@@ -312,8 +307,7 @@ describe('SegmentedCodeInput', () => {
   })
 
   it('keeps the last character when a box is handed more than one', () => {
-    // A box holding 1 that receives "19" keeps the 9: the browser appends, and the box shows what
-    // was just typed rather than what was there.
+    // The browser appends, so a box holding 1 receives "19" and keeps the 9.
     render(<Harness initial="123456" />)
 
     fireEvent.change(boxes()[0], { target: { value: '19' } })

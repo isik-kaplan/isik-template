@@ -21,8 +21,7 @@ def credential_key(settings):
 
 
 def test_the_refusal_to_store_a_credential_names_the_setting_that_is_missing(settings):
-    """Asserted whole: the message is the only thing saying what to configure, and the field refuses
-    rather than falling back to plaintext."""
+    """Asserted whole: the message is the only thing saying what to configure."""
     settings.CREDENTIAL_KEY = ""
 
     with pytest.raises(ImproperlyConfigured) as raised:
@@ -59,8 +58,7 @@ def test_an_enciphered_column_keeps_the_options_it_was_declared_with():
 
 
 def test_a_secret_that_merely_looks_enciphered_is_enciphered_all_the_same(credential_key):
-    """The prefix is a marker this field writes, not a claim a caller gets to make: skipping a value
-    carrying it would store `fernet:hunter2` in the clear, past the trigger, and every read would raise."""
+    """Skipping a prefixed value would store `fernet:hunter2` in the clear, past the trigger."""
     field = EncryptedField()
 
     stored = field.get_prep_value(f"{EncryptedField.PREFIX}hunter2")
@@ -75,8 +73,7 @@ def test_nothing_at_all_is_stored_as_nothing_rather_than_as_a_ciphertext():
 
 
 def test_the_plaintext_refusal_names_the_column_and_the_marker_it_looks_for():
-    """A guard that looked for the wrong prefix would install and pass everything. A foreign key, so
-    the column is not the attribute name and only `_meta` gets it right."""
+    """A wrong prefix would pass everything; a foreign key's column is not its attribute name."""
     body = refuse_plaintext("user", EncryptedField.PREFIX)(Permission.user_set.through)
 
     assert "NEW.\"user_id\" <> ''" in body
@@ -96,8 +93,7 @@ def test_a_built_trigger_asks_its_builder_for_the_body_it_was_given():
 
 @pytest.fixture
 def credential_table(credential_key):
-    """A throwaway model carrying the field and its trigger, created and installed inside the test's
-    own transaction - no project model holds a secret yet, and this is the pairing one would declare."""
+    """A throwaway model pairing the field with its trigger; no project model holds a secret yet."""
     with isolate_apps("apps.common"):
 
         class Credential(models.Model):

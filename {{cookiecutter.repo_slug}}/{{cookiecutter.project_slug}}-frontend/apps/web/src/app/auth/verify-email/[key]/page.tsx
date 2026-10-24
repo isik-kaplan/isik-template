@@ -9,10 +9,7 @@ export default async function VerifyEmailPage({ params }: { params: Promise<{ ke
 
   return (
     <AuthCard title={t('auth:verifyEmailTitle')}>
-      {/* allauth's confirmation key contains ":" (see HEADLESS_FRONTEND_URLS in settings.py), which
-          the link in the email carries percent-encoded - Next.js hands dynamic segments back
-          exactly as they appeared in the URL rather than decoding them, so an un-decoded key here
-          reaches the API as a literal "%3A" and allauth rejects it as invalid. */}
+      {/* allauth's key contains ":", which Next hands back still percent-encoded. */}
       <VerifyEmailButton verificationKey={decodeURIComponent(key)} />
     </AuthCard>
   )

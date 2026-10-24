@@ -30,6 +30,8 @@ const ACME: ApiType<'Application'> = {
   created: '',
   updated: '',
 }
+// The read's ETag header, which the page hands the form beside the application.
+const ETAG = '"1"'
 
 // Never said what it does or asked for anything.
 const UNSAID: ApiType<'Application'> = { ...ACME, description: undefined, requested_scopes: undefined }
@@ -53,7 +55,7 @@ describe('EditApplicationForm', () => {
   })
 
   it('starts from what the application says now', () => {
-    render(<EditApplicationForm application={ACME} scopes={SCOPES} />)
+    render(<EditApplicationForm application={ACME} etag={ETAG} scopes={SCOPES} />)
 
     expect(name().value).toBe('Acme')
     expect((screen.getByLabelText('What it does') as HTMLTextAreaElement).value).toBe('Notes')
@@ -66,7 +68,7 @@ describe('EditApplicationForm', () => {
   it('reads an application that never said what it does or asked for anything', async () => {
     const fetchMock = vi.fn(async () => jsonResponse(200, ACME))
     globalThis.fetch = fetchMock
-    render(<EditApplicationForm application={UNSAID} scopes={SCOPES} />)
+    render(<EditApplicationForm application={UNSAID} etag={ETAG} scopes={SCOPES} />)
 
     expect((screen.getByLabelText('What it does') as HTMLTextAreaElement).value).toBe('')
     expect(screen.getAllByRole('checkbox').every((box) => !(box as HTMLInputElement).checked)).toBe(true)
@@ -78,7 +80,7 @@ describe('EditApplicationForm', () => {
   it('saves the whole form and reads the page again', async () => {
     const fetchMock = vi.fn(async () => jsonResponse(200, ACME))
     globalThis.fetch = fetchMock
-    render(<EditApplicationForm application={ACME} scopes={SCOPES} />)
+    render(<EditApplicationForm application={ACME} etag={ETAG} scopes={SCOPES} />)
 
     await userEvent.clear(name())
     await userEvent.type(name(), ' Acme 2 ')
@@ -89,8 +91,8 @@ describe('EditApplicationForm', () => {
     const [request] = fetchMock.mock.calls[0] as unknown as [Request]
     expect(request.method).toBe('PATCH')
     expect(new URL(request.url).pathname).toBe('/v0/oauth-applications/7/')
-    // A PATCH, which the backend never asks an idempotency key of.
-    expect(request.headers.get('Idempotency-Key')).toBeNull()
+    expect(request.headers.get('Idempotency-Key')).toBeTruthy()
+    expect(request.headers.get('If-Match')).toBe('"1"')
     expect(await request.json()).toEqual({
       name: 'Acme 2',
       description: 'Notes and more',
@@ -99,6 +101,22 @@ describe('EditApplicationForm', () => {
     })
     expect(toast.success).toHaveBeenCalledWith('Saved.')
     expect(refresh).toHaveBeenCalled()
+  })
+
+  it('takes the version somebody else saved since it opened, redirect URIs one to a line', async () => {
+    const theirs = { ...ACME, name: 'Acme Notes', redirect_uris: ['https://b.test/cb', 'https://b.test/two'] }
+    globalThis.fetch = vi.fn(async () =>
+      jsonResponse(412, { detail: 'Changed.', code: 'precondition_failed', current: theirs })
+    )
+    render(<EditApplicationForm application={ACME} etag={ETAG} scopes={SCOPES} />)
+
+    await userEvent.type(name(), ' 2')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Use their version' }))
+
+    expect(name().value).toBe('Acme Notes')
+    expect(uris().value).toBe('https://b.test/cb\nhttps://b.test/two')
+    expect(refresh).not.toHaveBeenCalled()
   })
 
   it('offers a device no redirect URIs, and sends none for it', async () => {
@@ -110,7 +128,7 @@ describe('EditApplicationForm', () => {
     }
     const fetchMock = vi.fn(async () => jsonResponse(200, device))
     globalThis.fetch = fetchMock
-    render(<EditApplicationForm application={device} scopes={SCOPES} />)
+    render(<EditApplicationForm application={device} etag={ETAG} scopes={SCOPES} />)
 
     expect(screen.queryByLabelText('Redirect URIs, one per line')).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
@@ -125,7 +143,7 @@ describe('EditApplicationForm', () => {
 
   it('reads an application whose redirect URIs were not answered as none', () => {
     const unanswered = { ...ACME, redirect_uris: undefined }
-    render(<EditApplicationForm application={unanswered} scopes={SCOPES} />)
+    render(<EditApplicationForm application={unanswered} etag={ETAG} scopes={SCOPES} />)
 
     expect(uris().value).toBe('')
   })
@@ -133,7 +151,7 @@ describe('EditApplicationForm', () => {
   it('asks for a name and a redirect URI before sending anything', async () => {
     const fetchMock = vi.fn()
     globalThis.fetch = fetchMock
-    render(<EditApplicationForm application={ACME} scopes={SCOPES} />)
+    render(<EditApplicationForm application={ACME} etag={ETAG} scopes={SCOPES} />)
 
     await userEvent.clear(name())
     await userEvent.clear(uris())
@@ -149,7 +167,7 @@ describe('EditApplicationForm', () => {
     globalThis.fetch = vi.fn(async () =>
       jsonResponse(400, { redirect_uris: ['Enter a valid URL.'], non_field_errors: ['Not like that.'] })
     )
-    render(<EditApplicationForm application={ACME} scopes={SCOPES} />)
+    render(<EditApplicationForm application={ACME} etag={ETAG} scopes={SCOPES} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
 
@@ -160,7 +178,7 @@ describe('EditApplicationForm', () => {
 
   it('says so in its own words when saving fails with nothing to show', async () => {
     globalThis.fetch = vi.fn(async () => new Response(null, { status: 500 }))
-    render(<EditApplicationForm application={ACME} scopes={SCOPES} />)
+    render(<EditApplicationForm application={ACME} etag={ETAG} scopes={SCOPES} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
 
@@ -169,7 +187,7 @@ describe('EditApplicationForm', () => {
 
   it('holds the button while saving', async () => {
     globalThis.fetch = vi.fn(() => new Promise<Response>(() => {}))
-    render(<EditApplicationForm application={ACME} scopes={SCOPES} />)
+    render(<EditApplicationForm application={ACME} etag={ETAG} scopes={SCOPES} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
 

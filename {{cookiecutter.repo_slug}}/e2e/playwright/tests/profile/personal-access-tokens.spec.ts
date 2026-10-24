@@ -4,8 +4,6 @@ import { act, login, signUpAndVerify } from '../helpers'
 
 const PASSWORD = 'correct-horse-battery-staple'
 
-// A token made on the profile calls the API as its owner from anywhere - no browser, no cookies - only on
-// what says a token may, and deleting it ends it.
 test('a personal access token calls the API as its owner until it is deleted', async ({ page, browser }) => {
   const username = `pat-${Date.now()}`
   await signUpAndVerify(page, username, `${username}@example.test`, PASSWORD)
@@ -38,9 +36,9 @@ test('a personal access token calls the API as its owner until it is deleted', a
   const bearer = { headers: { Authorization: `Bearer ${token}` } }
   const people = () => script.get(`${apiOrigin}/v0/users/`, bearer)
   const listed = (await (await people()).json()).results.map((person: { username: string }) => person.username)
-  // Only themselves: it was given nothing beyond what needs no permission.
+  // Only themselves: it was given no permissions.
   expect(listed).toEqual([username])
-  // Only what says a token may: making another is not among them.
+  // A token may not make another.
   expect((await script.get(`${apiOrigin}/v0/personal-access-tokens/`, bearer)).status()).toBe(403)
 
   await page.reload()

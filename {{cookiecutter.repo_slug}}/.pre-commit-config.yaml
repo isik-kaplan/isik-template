@@ -5,8 +5,7 @@ repos:
       - id: end-of-file-fixer
       - id: trailing-whitespace
       - id: check-yaml
-        # Authentik blueprints use its own !Find/!KeyOf tags, which no plain YAML loader can
-        # construct. Excluded rather than passing --unsafe, which would weaken every other file.
+        # Authentik's !Find/!KeyOf tags; excluded rather than --unsafe, which would weaken every other file.
         exclude: ^e2e/authentik-blueprints/
       - id: check-added-large-files
 
@@ -17,9 +16,7 @@ repos:
         args: [--fix]
       - id: ruff-format
 
-  # The scripts rather than inline entries: migration-check and openapi-check pick between `exec`
-  # and `run` depending on whether the stack is up, lint-frontend has to change directory first. None
-  # takes paths, so `files` only decides whether they run at all.
+  # None takes paths: `files` only decides whether a hook runs.
   - repo: local
     hooks:
       - id: migration-check
@@ -29,7 +26,6 @@ repos:
         pass_filenames: false
         files: ^{{ cookiecutter.project_slug }}/.*\.py$
 
-      # Needs the backend image for the documents and the frontend's node_modules for the client.
       - id: openapi-check
         name: openapi-check
         entry: scripts/pre-commit/openapi_check.sh
@@ -37,8 +33,6 @@ repos:
         pass_filenames: false
         files: ^{{ cookiecutter.project_slug }}(/.*\.py|-frontend/packages/(api|auth-api)/.*)$
 
-      # Standard library only, so it runs straight off the checkout - no container, and no reason to
-      # skip it in the fast CI job.
       - id: layout-check
         name: layout-check
         entry: python {{ cookiecutter.project_slug }}/scripts/layout_check.py
@@ -46,7 +40,7 @@ repos:
         pass_filenames: false
         files: ^{{ cookiecutter.project_slug }}/.*\.py$
 
-      # TERMS_VERSION is what a signup records, so it may never lag the documents it names.
+      # TERMS_VERSION is what a signup records, so it must not lag the documents.
       - id: legal-version
         name: legal-version
         entry: python scripts/pre-commit/legal_version.py

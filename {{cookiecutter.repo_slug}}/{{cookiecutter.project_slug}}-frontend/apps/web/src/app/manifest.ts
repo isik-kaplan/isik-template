@@ -1,7 +1,6 @@
 import type { MetadataRoute } from 'next'
 
-// A plain route handler, not a rendered page - unaffected by getSession()/the backend being
-// reachable, which is why the frontend's Docker healthcheck hits this instead of "/".
+// Independent of the backend, which is why the Docker healthcheck hits this instead of "/".
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: '{{ cookiecutter.project_name }}',

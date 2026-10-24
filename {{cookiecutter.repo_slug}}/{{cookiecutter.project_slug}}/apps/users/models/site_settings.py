@@ -9,22 +9,14 @@ from apps.common.schema_docs import NoHelpText
 
 @track_events()
 class SiteSettings(BaseModel):
-    """The site-wide settings an operator changes at runtime, as one row edited in the admin.
-
-    There may be no row at all - `current()` then answers with the defaults, so nothing has to be
-    seeded for a fresh install to behave.
-
-    `cached()` is `current()` for every authenticated request, where the login ladder checks the
-    session's user. Saving clears it, but a process with a cache of its own sees the change only within
-    `CACHE_SECONDS`, so whoever reads it decides what that lag may cost.
-    """
+    """Runtime site-wide settings, one row (or none: `current()` returns defaults). `cached()` may lag a
+    save by up to `CACHE_SECONDS` in a process with its own cache."""
 
     CACHE_KEY = "site_settings"
     CACHE_SECONDS = 5
 
     class LoginPolicy(models.TextChoices):
-        """Who may still sign in: an ordered ladder for incidents, named for who gets in rather than
-        who is kept out. Raising it signs out everybody it no longer admits."""
+        """Who may still sign in: an ordered ladder for incidents, in declaration order."""
 
         EVERYONE = "everyone", _("Everyone")
         STAFF = "staff", _("Staff and superusers")
@@ -32,8 +24,6 @@ class SiteSettings(BaseModel):
 
         @classmethod
         def admits(cls, policy, *, is_staff, is_superuser):
-            """Whether somebody holding these may still sign in. The ladder is the declaration order
-            above, read off the enum rather than repeated."""
             ladder = [rung.value for rung in cls]
             held = cls.SUPERUSERS if is_superuser else cls.STAFF if is_staff else cls.EVERYONE
             return ladder.index(held.value) >= ladder.index(policy)
@@ -46,7 +36,6 @@ class SiteSettings(BaseModel):
         help_text=_("Raising it signs out everybody it no longer admits, straight away."),
         db_comment="Who may still sign in: everyone, staff (and superusers) or superusers only.",
     )
-    # The whole of what makes this a singleton: one value, unique, so a second row cannot be written.
     singleton = models.BooleanField(
         default=True,
         editable=False,
@@ -79,7 +68,6 @@ class SiteSettings(BaseModel):
 
     def save(self, **kwargs):
         super().save(**kwargs)
-        # Again at commit: another thread may have cached the old row in between, its transaction
-        # unable to see this one's write yet.
+        # Again at commit: another thread may re-cache the old row before this write is visible.
         cache.delete(self.CACHE_KEY)
         transaction.on_commit(lambda: cache.delete(self.CACHE_KEY))

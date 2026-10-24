@@ -1,10 +1,5 @@
-"""The functions phase one cannot kill, named before a run rather than discovered hours into one.
-
-A function that runs once per process - at import, while Django builds a model class, behind an
-`lru_cache` - has already run in the parent mutmut forks from, so its mutation never executes and
-phase one reports a survivor only phase two can settle. The stats map shows it: such a function is
-traced to whichever test first demanded it, so one test ends up the sole tracer across unrelated
-modules. The fix is a test that declares the thing in its own body; this only says where to write one.
+"""List functions phase one can't kill: run-once code (import, model build, `lru_cache`) already ran
+in mutmut's parent process, so it shows up traced only to whichever test first triggered it.
 
     python scripts/mutation_tracing.py [path/to/stats.json]
 """
@@ -17,16 +12,11 @@ from pathlib import Path
 
 CANDIDATES = ("mutants/mutmut-stats.json", "mutmut-stats.json")
 
-# A function traced by one or two tests is thin enough to be an accident. Above that, whichever test
-# ran first stops being the only one that can kill it.
-THIN = 2
-# A test that is the sole tracer for thin functions in this many separate modules is not their
-# caller, it is whatever happened to run first. Two is already a coincidence worth reading.
-SPREAD = 2
+THIN = 2  # at most this many tracing tests
+SPREAD = 2  # unrelated modules a sole tracer must span to be a first caller
 
 
 def traced(stats_path=None):
-    """Function -> the tests mutmut associated with it, or {} when no map has been built."""
     paths = [Path(stats_path)] if stats_path else [Path(name) for name in CANDIDATES]
     for path in paths:
         if path.exists():
@@ -35,12 +25,10 @@ def traced(stats_path=None):
 
 
 def _module(function):
-    """The module a mangled name belongs to - everything before mutmut's `x` prefix."""
     return function.rpartition(".x")[0]
 
 
 def first_callers(associations, thin=THIN, spread=SPREAD):
-    """The tests that trace thin functions across unrelated modules."""
     reach = defaultdict(set)
     for function, tests in associations.items():
         if len(tests) <= thin:
@@ -50,11 +38,7 @@ def first_callers(associations, thin=THIN, spread=SPREAD):
 
 
 def at_risk(associations, thin=THIN, spread=SPREAD):
-    """Function -> its traced tests, for functions nothing but a first caller reaches.
-
-    Every test in the set has to be a first caller. One genuine caller is enough to kill a mutant,
-    and the whole point of the report is that these have none.
-    """
+    """Function -> its traced tests, for functions reached only by first callers."""
     callers = first_callers(associations, thin, spread)
     return {
         function: sorted(tests)

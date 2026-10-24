@@ -11,8 +11,7 @@ import { useAPISubmit } from '@/lib/submit'
 
 import { useIdempotencyKey } from '@isikk/core/hooks'
 
-/** The answer to a device waiting on a code: allowed, its next poll gets a token for this account. Either
- *  way the page then only says what happened - the code is spent, so there is nothing more to do here. */
+/** Allowing or denying a device; either way the code is spent. */
 export function DeviceConsent({ userCode }: { userCode: string }) {
   const { t } = useClientTranslation(['auth'])
   const { isSubmitting, submit } = useAPISubmit()

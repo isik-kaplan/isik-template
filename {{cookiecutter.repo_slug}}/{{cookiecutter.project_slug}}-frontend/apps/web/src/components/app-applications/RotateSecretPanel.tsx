@@ -12,14 +12,13 @@ import { useAPISubmit } from '@/lib/submit'
 import { IssuedSecret } from './IssuedSecret'
 import { useIdempotencyKey } from '@isikk/core/hooks'
 
-/** A new secret for the same client id. Tokens already handed out keep working unless asked otherwise -
- *  right for routine rotation, wrong for a leak, so the choice is the owner's. */
+/** A new secret for the same client id. Existing tokens keep working unless asked otherwise: wrong for a leak. */
 export function RotateSecretPanel({ applicationId, clientId }: { applicationId: number; clientId: string }) {
   const { t } = useClientTranslation(['auth'])
   const { isSubmitting, submit } = useAPISubmit()
   const [revoke, setRevoke] = useState(false)
   const [secret, setSecret] = useState<string | null>(null)
-  // A retry after a lost answer is the same rotation, not a second one that would void the first secret too.
+  // A retry after a lost answer is the same rotation, not a second one voiding the first secret too.
   const rotation = useIdempotencyKey()
 
   async function rotate() {
@@ -29,7 +28,7 @@ export function RotateSecretPanel({ applicationId, clientId }: { applicationId: 
         failure: t('auth:applicationRotateError'),
         onSuccess: ({ data }) => {
           rotation.used()
-          setSecret(data!.client_secret)
+          setSecret(data.client_secret)
         },
       }
     )

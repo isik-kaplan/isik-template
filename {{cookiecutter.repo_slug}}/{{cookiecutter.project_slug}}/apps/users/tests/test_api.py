@@ -4,12 +4,10 @@ from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
 from apps.users.models.user import User
+from conftest import versioned
 
 
-# django-hosts resolves by Host header; the test client's default Host ("testserver") matches no
-# host() pattern, so it falls back to DEFAULT_HOST ("api") - these paths are relative to the api
-# host's own urlconf (urls/api.py), which mounts apps.api.urls at "v0/" directly (no "api/" prefix
-# - that's now the subdomain's job, not the path's).
+# The test client's Host matches no host() pattern, so these paths fall back to the api host's urlconf.
 
 
 @pytest.mark.django_db
@@ -88,7 +86,6 @@ def test_me_returns_the_logged_in_user(client):
     response = client.get("/v0/users/me/")
     assert response.status_code == 200
     assert response.json()["username"] == "alice"
-    # As they see themselves, not as somebody managing them would: their language, what they may do.
     assert set(response.json()) == {
         "id",
         "username",
@@ -106,8 +103,7 @@ def test_me_returns_the_logged_in_user(client):
 
 @pytest.mark.django_db
 def test_reading_me_writes_nothing(client):
-    """A read routed down the write path still answers 200 with the same body, so only the absence
-    of the write tells the two apart."""
+    """A read routed down the write path still answers 200, so only the absent write tells them apart."""
     user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
     client.force_login(user)
 
@@ -129,7 +125,9 @@ def test_a_user_can_set_their_own_language_preference(client, a_second_language)
     user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
     client.force_login(user)
 
-    response = client.patch("/v0/users/me/", {"language": "tr"}, content_type="application/json")
+    response = client.patch(
+        "/v0/users/me/", {"language": "tr"}, content_type="application/json", headers=versioned(user)
+    )
 
     assert response.status_code == 200
     assert response.json()["language"] == "tr"
@@ -142,7 +140,9 @@ def test_patching_me_with_an_unsupported_language_is_rejected(client):
     user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
     client.force_login(user)
 
-    response = client.patch("/v0/users/me/", {"language": "xx"}, content_type="application/json")
+    response = client.patch(
+        "/v0/users/me/", {"language": "xx"}, content_type="application/json", headers=versioned(user)
+    )
 
     assert response.status_code == 400
     user.refresh_from_db()
@@ -158,6 +158,7 @@ def test_patching_me_cannot_change_username_or_email(client):
         "/v0/users/me/",
         {"username": "mallory", "email": "mallory@example.test"},
         content_type="application/json",
+        headers=versioned(user),
     )
 
     assert response.status_code == 200
@@ -171,7 +172,7 @@ def test_a_users_history_records_its_creation(client):
     user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
     client.force_login(user)
 
-    # Signing in stamps last_login, so the creation is the oldest event rather than the only one.
+    # Signing in stamps last_login, so the creation isn't the only event.
     response = client.get(f"/v0/users/{user.id}/history/?action=insert")
 
     assert response.status_code == 200
@@ -212,15 +213,12 @@ def test_a_sign_in_is_listed_as_a_last_login_change(client):
 
 @pytest.mark.django_db
 def test_a_password_change_is_recorded_but_never_served(client):
-    # UserSerializer doesn't expose "password" at all - changed straight on the model here rather
-    # than through a real password-change request (test_auth.py's own job to cover end to end).
     user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
     user.set_password("a-new-password")
     user.save()
     client.force_login(user)
 
     response = client.get(f"/v0/users/{user.id}/history/")
-    # The sign-in that reads it is an update too (last_login), so the password's is the one before.
     update = next(event for event in response.json()["results"] if "password" in event["changes"])
     assert "password" not in update
     assert update["changes"]["password"] == [None, None]
@@ -280,15 +278,12 @@ def test_staff_read_the_cross_user_history(client):
     response = client.get("/v0/users/history/")
 
     assert response.status_code == 200
-    # root's own creation plus alice's - across every user, not just one.
     assert response.json()["count"] >= 2
 
 
 @pytest.mark.django_db
 def test_the_cross_user_history_filters_by_actor(client):
-    # HistoryMixin's own default "actor" filter assumes an integer pk - User.id is a uuid7, so
-    # this also proves UserViewSet's own filter_cls override is what's actually wired in, not just
-    # that the endpoint exists (a plain int filter would 400 on a UUID query value instead).
+    # HistoryMixin's default actor filter would 400 on a UUID.
     host = f"auth.{settings.PARENT_HOST}"
     superuser = User.objects.create_superuser(username="root", email="root@example.test", password="x")
     alice = User.objects.create_user(username="alice", email="alice@example.test", password="old-password")

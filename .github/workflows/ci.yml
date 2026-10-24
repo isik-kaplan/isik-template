@@ -13,9 +13,7 @@ jobs:
       - uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
-      # test_lockfiles.py's own bake needs a real npm on PATH to resolve a real package-lock.json -
-      # every other test in this job never installs anything (see conftest.py's
-      # skip_lockfile_generation).
+      # For test_lockfiles.py's package-lock.json; nothing else here installs.
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -32,9 +30,7 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync
-      # mutmut itself exits 0 regardless of survivors - check_mutants.py is what actually fails
-      # the build on one, unless it's an explained entry in mutation-exemptions.toml.
-      # Through the wrapper, so every mutant is named after its mutation - the registry is keyed on that.
+      # mutmut exits 0 with survivors; check_mutants.py is what fails the build.
       - name: Run mutation tests
         run: uv run python scripts/mutmut_run.py run
       - name: Check for unexplained survivors
@@ -51,17 +47,10 @@ jobs:
       # test_rate_limits.py boots the real nginx between stand-ins, building only the server image.
       - run: uv run pytest tests/test_docker_compose.py tests/test_rate_limits.py
 
-  # Bakes the default context, force-pushes it to a dedicated sandbox repo, and waits for that
-  # repo's own GitHub Actions to run the *real* generated ci.yml - lint, backend, backend-mutation,
-  # frontend, frontend-mutation and e2e, exactly as a real user's push would trigger them. This
-  # replaces separately hand-mirroring each of those jobs' commands here: a real run also catches
-  # bugs in the workflow file itself (trigger conditions, job graph, cache/action syntax) that no
-  # amount of replaying commands by hand ever could - see scripts/bake_and_trigger_real_ci.py.
+  # Runs the generated ci.yml for real in a sandbox repo, which also catches bugs in the workflow file itself.
   bake-real-ci:
     runs-on: ubuntu-latest
-    # Backstop against a hung sandbox run: the script itself polls with no upper bound, so this is
-    # what actually caps it. The slowest job is backend-mutation, a cold run on a shared runner seen
-    # anywhere from 76 to 94 minutes; at 90 this cancelled a sandbox run that went on to pass.
+    # The script polls unbounded; cold backend-mutation alone has taken 76-94 minutes.
     timeout-minutes: 150
     concurrency:
       group: bake-real-ci
@@ -78,10 +67,7 @@ jobs:
           GH_TOKEN: ${{ secrets.BAKE_SANDBOX_TOKEN }}
         run: uv run python scripts/bake_and_trigger_real_ci.py
 
-  # With social login switched off, the login/signup page renders differently (no provider buttons,
-  # no divider above the form), which bake-real-ci's run - OIDC on, as e2e/.env ships - never
-  # exercises. It's how a bare "or" divider with nothing above it once shipped unnoticed. Every
-  # other spec runs for real via bake-real-ci instead.
+  # bake-real-ci runs with OIDC on, so the login page without provider buttons is covered only here.
   e2e-no-social-login:
     runs-on: ubuntu-latest
     steps:
@@ -92,9 +78,7 @@ jobs:
       - run: uv sync
       - run: uv run pytest tests/test_e2e.py
 
-  # The backend suite on every context bake-real-ci doesn't bake: with "default" they meet every
-  # background_jobs answer with every storage backend and both tls_termination answers (see
-  # tests/test_backend.py). One context per job, side by side.
+  # With bake-real-ci's "default", these contexts cover every pair of service answers.
   backend:
     runs-on: ubuntu-latest
     strategy:
@@ -109,8 +93,7 @@ jobs:
       - run: uv sync
       - run: uv run pytest "tests/test_backend.py::test_the_backend_suite_passes[${{ matrix.context }}]"
 
-  # tls_termination: self against Pebble: certbot really issues through the generated nginx, and nginx really serves
-  # the result. Only the server image is built, so it stays out of the slow e2e jobs.
+  # Certbot issues against Pebble through the generated nginx; only the server image is built.
   self-tls-certificate:
     runs-on: ubuntu-latest
     steps:

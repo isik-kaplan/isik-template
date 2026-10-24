@@ -13,19 +13,15 @@ Application = get_application_model()
 
 
 class ApplicationSerializer(BaseModelSerializer):
-    """An application somebody registered, as its owner sees it.
-
-    The authorization code flow, with PKCE, or a device showing a code for somebody to enter - and never
-    without asking: an application reaches nobody's account until it is approved and that person consents
-    on this project's own page.
-    """
+    """An application somebody registered, as its owner sees it. It reaches nobody's account until it is
+    approved and that person consents."""
 
     authorization_grant_type = serializers.ChoiceField(
         choices=[
             (Application.GRANT_AUTHORIZATION_CODE, "Signs people in by sending them here and back"),
             (Application.GRANT_DEVICE_CODE, "Shows a code for people to enter here - a command line"),
         ],
-        # Not a default here: the API document would then call it required, defaults and all.
+        # No default here, or the API document calls it required.
         required=False,
         help_text=(
             "How it signs people in: authorization-code, the default, for a website or an app that can open a "
@@ -102,7 +98,6 @@ class ApplicationSerializer(BaseModelSerializer):
         return attrs
 
     def _validate_for_its_grant(self, attrs):
-        """What each way of signing people in needs, read off what is sent or what is already stored."""
         stored = self.instance or Application()
         grant = attrs.get("authorization_grant_type", stored.authorization_grant_type)
         redirect_uris = attrs.get("redirect_uris", stored.redirect_uris)
@@ -112,7 +107,6 @@ class ApplicationSerializer(BaseModelSerializer):
             return
         if redirect_uris:
             raise serializers.ValidationError({"redirect_uris": _("A device is never sent back anywhere.")})
-        # A command line anybody can download keeps no secret, so its client id has to be enough.
         if attrs.get("client_type", stored.client_type) != Application.CLIENT_PUBLIC:
             raise serializers.ValidationError({"client_type": _("A device keeps no secret: register it as public.")})
 

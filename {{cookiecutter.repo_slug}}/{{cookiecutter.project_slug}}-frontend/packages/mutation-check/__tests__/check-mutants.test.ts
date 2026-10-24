@@ -5,8 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-// Run as a process rather than imported: it is a CI gate, and its contract is the exit code and
-// what it prints.
+// Run as a process: its contract is the exit code and output.
 const SCRIPT = join(import.meta.dirname, '../check-mutants.mjs')
 const SOURCE = ['export const a = 1 + 2', 'export const b = 3 - 4']
 

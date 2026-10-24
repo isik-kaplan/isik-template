@@ -28,9 +28,7 @@ describe('Editor', () => {
   })
 
   it('calls onChange with the updated HTML when the document changes', async () => {
-    // A real keystroke goes through userEvent, which needs elementFromPoint/getClientRects for
-    // cursor placement - jsdom has neither. Dispatching the DOM "input" event ProseMirror listens
-    // for directly, after editing textContent by hand, reaches onUpdate without either.
+    // userEvent needs layout APIs jsdom lacks, so the text is edited by hand and "input" dispatched.
     const onChange = vi.fn()
     const { container } = render(<Editor content="<p>Hello</p>" onChange={onChange} />)
     const editable = await waitFor(() => {

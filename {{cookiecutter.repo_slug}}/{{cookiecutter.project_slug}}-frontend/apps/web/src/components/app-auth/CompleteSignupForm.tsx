@@ -20,9 +20,7 @@ import { detailOf } from '@isikk/core/allauth'
 import { z } from 'zod'
 
 export type CompleteSignupFormProps = {
-  // Always the verified address the provider itself supplied - never user-editable here, and
-  // never even sent as-typed: the backend's own pending-sociallogin state is the source of truth
-  // for the email regardless of what this form submits, so a fixed display value is all this needs.
+  // Display only: the backend's pending sociallogin owns the email, whatever this form sends.
   email: string
   suggestedUsername?: string
 }
@@ -48,8 +46,7 @@ export function CompleteSignupForm({ email, suggestedUsername = '' }: CompleteSi
 
     const authApi = new AuthApi(authOrigin())
     await submit((value) => authApi.completeProviderSignup({ ...value, email }), {
-      // Same 401-can-mean-success shape as every other auth endpoint here (see VerifyEmailButton) -
-      // mandatory email verification means the account can be created without becoming logged in.
+      // A 401 can mean success: mandatory verification creates the account without logging in.
       isSuccess: ({ data, error }) => Boolean(data) || detailOf(error) === undefined,
       failure: t('auth:completeSignupError'),
       leavesOnSuccess: true,

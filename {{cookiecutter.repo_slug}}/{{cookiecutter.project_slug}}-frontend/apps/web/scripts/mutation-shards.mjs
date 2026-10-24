@@ -1,36 +1,25 @@
 #!/usr/bin/env node
 /**
- * Which source files each mutation shard measures, and the `--mutate` value for one.
+ * Which source files each mutation shard mutates. Mutants are sharded, not tests: a mutant dies to any
+ * test, so every shard runs the whole suite. Grouped by purpose, so a red shard says where to look.
  *
- * The mutants are sharded, not the tests: a mutant dies if any test kills it, so a shard holding
- * part of the suite would report "survived" for mutants the rest kills. Every shard runs the whole
- * suite and differs only in what it mutates.
- *
- * Grouped by what a file is for, so a red shard says where to look. Sizes are uneven for that.
- * Re-measure as the suite grows, and divide the shard that stops fitting its CI budget.
- *
- *     node scripts/mutation-shards.mjs --list
- *     node scripts/mutation-shards.mjs --json
  *     npx stryker run --mutate "$(node scripts/mutation-shards.mjs auth)"
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-// A `--mutate` on the command line replaces the config's list rather than narrowing it, so its
-// exclusions are carried over - read from the config, so the two cannot drift apart.
+// `--mutate` replaces the config's list rather than narrowing it, so its exclusions are carried over.
 const EXCLUDED = JSON.parse(readFileSync(join(import.meta.dirname, '../stryker.config.json'), 'utf8')).mutate.filter(
   (pattern) => pattern.startsWith('!')
 )
 
-// A route segment like `[key]` is a glob character class, so the path matches nothing and the file
-// is silently left unmeasured. `[[]` and `[]]` are classes holding one bracket each, which match it
-// literally - unlike a backslash, which Stryker's matcher does not honour.
+// `[key]` is a glob character class; `[[]` and `[]]` match a bracket literally, and Stryker ignores backslashes.
 const escapeGlob = (file) => file.replace(/[[\]]/g, (bracket) => (bracket === '[' ? '[[]' : '[]]'))
 
 export const mutateFor = (shard) => [...SHARDS[shard].map(escapeGlob), ...EXCLUDED].join(',')
 
 export const SHARDS = {
-  // Talking to the backend: configuration, the session, i18n plumbing and the request helpers.
+  // Backend plumbing: config, the session, i18n and request helpers.
   request: [
     'src/config/public.ts',
     'src/config/server.ts',
@@ -46,7 +35,6 @@ export const SHARDS = {
     'src/lib/authOrigin.ts',
     'src/lib/getSession.ts',
     'src/lib/isLocalDevHost.ts',
-    'src/lib/nameFetchFailures.ts',
     'src/lib/oauthScopes.ts',
     'src/lib/reauthentication.ts',
     'src/lib/requestOrigin.ts',
@@ -96,7 +84,7 @@ export const SHARDS = {
     'src/components/app-auth/VerifyEmailButton.tsx',
     'src/components/app-auth/icons/brands.tsx',
   ],
-  // The signed-in account pages: details, emails, password, connections, sessions, tokens and applications.
+  // The signed-in account pages.
   profile: [
     'src/app/profile/(tabs)/applications/page.tsx',
     'src/app/profile/(tabs)/connections/page.tsx',
@@ -124,8 +112,7 @@ export const SHARDS = {
     'src/lib/historyLabels.ts',
     'src/lib/useEmailRowActions.ts',
   ],
-  // Other apps signing their users in with this one: registering and running one, the consent pages - a
-  // browser's and a device's - and the superusers' approvals.
+  // The OAuth provider: registering applications, the consent pages and approvals.
   oauth: [
     'src/app/applications/[id]/page.tsx',
     'src/app/applications/layout.tsx',
@@ -151,14 +138,14 @@ export const SHARDS = {
     'src/lib/applicationGrant.ts',
     'src/lib/redirectUris.ts',
   ],
-  // Running the people: who may sign in, their rank and what they may do.
+  // Managing people.
   people: [
     'src/app/staff/layout.tsx',
     'src/app/staff/people/[id]/page.tsx',
     'src/app/staff/people/page.tsx',
     'src/components/app-people/ManageUserForm.tsx',
   ],
-  // Second factors: the login challenge and the profile tab that enrolls and removes them.
+  // Second factors: the login challenge and the profile tab.
   factors: [
     'src/app/auth/two-factor/page.tsx',
     'src/app/profile/(tabs)/two-factor/page.tsx',
@@ -169,7 +156,7 @@ export const SHARDS = {
     'src/components/app-auth/TotpSetup.tsx',
     'src/lib/useFactorSubmit.ts',
   ],
-  // The legal pages, the signup line and footer that link to them, and the cookie disclosure.
+  // The legal pages, the links to them and the cookie disclosure.
   legal: [
     'src/app/legal/[doc]/page.tsx',
     'src/app/legal/layout.tsx',
@@ -182,7 +169,7 @@ export const SHARDS = {
     'src/lib/readLegalDocument.ts',
     'src/lib/storageDisclosure.ts',
   ],
-  // The app shell and the components every screen is built from.
+  // The app shell and shared components.
   ui: [
     'src/app/layout.tsx',
     'src/app/manifest.ts',
@@ -191,6 +178,7 @@ export const SHARDS = {
     'src/app/too-many-requests/page.tsx',
     'src/app/page.tsx',
     'src/components/app-auth/LanguageSwitcher.tsx',
+    'src/components/app/ConflictNotice.tsx',
     'src/components/app/EditMode.tsx',
     'src/components/app/Editor.tsx',
     'src/components/app/Filters/FilterBar.tsx',
@@ -227,7 +215,7 @@ export const SHARDS = {
   ],
 }
 
-// Only when run as a command: the shard test imports SHARDS, and a bare import must not exit.
+// Only when run as a command: the shard test imports SHARDS.
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop())) {
   cli(process.argv[2])
 }
@@ -236,8 +224,7 @@ function cli(argument) {
   if (argument === '--list') {
     for (const [name, files] of Object.entries(SHARDS)) console.log(`${name} (${files.length} files)`)
   } else if (argument === '--json') {
-    // CI builds its matrix from this rather than repeating the names, so a shard added here is
-    // dispatched without anyone remembering to add it there.
+    // CI builds its matrix from this, so a new shard needs no CI change.
     console.log(JSON.stringify(Object.keys(SHARDS)))
   } else if (Object.hasOwn(SHARDS, argument ?? '')) {
     console.log(mutateFor(argument))

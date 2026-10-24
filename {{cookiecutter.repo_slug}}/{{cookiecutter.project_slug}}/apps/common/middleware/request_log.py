@@ -1,9 +1,4 @@
-"""One line per request, written by nobody.
-
-The half of logging that does not depend on somebody remembering to call anything: whatever a view
-does or fails to do, the request it answered is written down. What it may say about the call is
-`apps.common.logging.redaction`'s business, which allows rather than forbids.
-"""
+"""One line per request, whatever the view does; `redaction` decides what it may say."""
 
 import time
 
@@ -15,16 +10,15 @@ from apps.common.logging.redaction import body_of, client_ip_of, headers_of, que
 
 
 class RequestLogMiddleware(Middleware):
-    """Below `HistoryContextMiddleware`, so the context this line is annotated with is already open
-    by the time the response comes back up."""
+    """Below `HistoryContextMiddleware`, so its context is open when the response comes back up."""
 
     def __call__(self, request):
         started = time.monotonic()
-        # Taken before the response, because a view may consume the stream and leave nothing behind.
+        # Before the view, which may consume the stream.
         body = body_of(request)
         queries = 0
 
-        # Counted rather than read off `queries_log`, which Django fills only under DEBUG.
+        # Not `queries_log`, which Django fills only under DEBUG.
         def count(execute, *query):
             nonlocal queries
             queries += 1

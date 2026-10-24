@@ -1,9 +1,6 @@
-"""Names every published choice set after the model and field that own it.
+"""Names each choice set after its owning model and field, not drf-spectacular's hashed `StatusF31Enum`.
 
-drf-spectacular names an enum after the field alone, so two models with a `status` of different
-choices end up sharing one component name, and the generator resolves that by hashing it into
-something like `StatusF31Enum`. Every tracked model has a generated event twin carrying the same
-field, so nothing would have a sole owner until those are excluded.
+Models isik generates are left out, or no field would have a sole owner; isik names theirs.
 """
 
 from django.apps import apps as django_apps
@@ -12,7 +9,7 @@ from isik.common.utils.strings import words_to_pascal
 
 
 def _is_generated(model):
-    return any(field.name.startswith("pgh_") for field in model._meta.get_fields())
+    return getattr(model, "isik_generated", None) is not None
 
 
 def _choice_sets():
@@ -24,11 +21,10 @@ def _choice_sets():
                 continue
             normalized = [(value, label) for value, label in choices if value not in ("", None)]
             try:
-                # The postprocessing hook drops blank and null before hashing; the two hashes match
-                # only if this does too.
+                # Must match the postprocessing hook, which drops blank and null before hashing.
                 key = list_hash(normalized)
             except TypeError:
-                # An unsortable choice set. Unnamed is the fallback anyway.
+                # Unsortable; left unnamed.
                 continue
             owners, _ = sets.setdefault(key, (set(), normalized))
             if not _is_generated(model):
@@ -37,7 +33,7 @@ def _choice_sets():
 
 
 def enum_name_overrides():
-    """`{name: choices}`, the shape `ENUM_NAME_OVERRIDES` takes - it hashes the choices itself."""
+    """`{name: choices}` for `ENUM_NAME_OVERRIDES`, which hashes the choices itself."""
     names = {}
     for owners, choices in _choice_sets().values():
         if len(owners) != 1:

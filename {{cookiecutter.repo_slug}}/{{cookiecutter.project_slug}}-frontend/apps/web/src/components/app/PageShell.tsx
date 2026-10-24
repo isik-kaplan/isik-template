@@ -5,8 +5,7 @@ import type React from 'react'
 import { LanguageSwitcher } from '@/components/app-auth/LanguageSwitcher'
 import { ThemeToggle } from '@/components/app/ThemeToggle'
 
-/** A page wider than the sign-in card, for lists and the settings of one thing: a title, what the page is
- *  for, and the way back. */
+/** A page wider than the sign-in card, for lists and settings. */
 export function PageShell({
   title,
   description,

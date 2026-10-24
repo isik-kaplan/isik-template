@@ -1,10 +1,6 @@
-"""Whether every registry key still names something mutmut generates.
+"""Whether every registry key still names something mutmut generates, for the whole codebase.
 
-An entry for a mutant that no longer exists excuses nothing and reads as though it did. The pipeline
-only notices one inside a tree that would hold it; this answers for the whole codebase, from the
-source, in seconds.
-
-    python -m scripts.toolbox.check_exemption_keys
+python -m scripts.toolbox.check_exemption_keys
 """
 
 import sys
@@ -14,7 +10,6 @@ from scripts.toolbox.generated import names_in, registered, source_of
 
 
 def missing_keys():
-    """(registry file name, key, why) per key nothing generates."""
     single, whole = registered()
     missing = []
     for registry, keys, single_mutant in ((EQUIVALENTS, single, True), (EXEMPTIONS, whole, False)):

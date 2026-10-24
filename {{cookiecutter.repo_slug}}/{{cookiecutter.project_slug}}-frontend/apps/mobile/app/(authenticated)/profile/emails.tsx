@@ -7,7 +7,7 @@ import { getAuthApi } from '@/lib/session'
 import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 import { spacing } from '@/theme'
 
-import { extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
+import { errorsOf } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
 import { useIsMounted } from '@isikk/core/hooks'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
@@ -45,7 +45,7 @@ export default function ProfileEmails() {
         setNewEmail('')
         return
       }
-      const authErrors = extractAuthErrors(response)
+      const authErrors = errorsOf(response)
       setError(authErrors?.[0]?.message ?? t('profileEmailsAddError'))
     } finally {
       setSubmitting(false)

@@ -1,8 +1,6 @@
-"""The line nobody writes, and what it is allowed to say about the call.
+"""The request line and what it may say.
 
-Asserted against a whole payload rather than a field at a time, because the risk here is a value
-that *appears* rather than one that goes missing: a test reading only the keys it expects would pass
-for a line carrying a password beside them.
+Payloads are asserted whole: the risk is a value that appears, which a per-key check would miss.
 """
 
 import json
@@ -45,8 +43,7 @@ def answered(status=200, **request_kwargs):
 
 class TestWhichRequestsEarnALine:
     def test_a_request_that_worked_is_not_worth_a_line(self):
-        """Most of the volume and the least of the information. It is the default, so this is what
-        somebody gets without choosing anything."""
+        """The default: most of the volume and the least of the information."""
         assert CONFIG.LOGGING.REQUESTS == "non-2xx"
         assert worth_logging(200, elapsed_ms=1) is False
 
@@ -67,16 +64,14 @@ class TestWhichRequestsEarnALine:
         assert worth_logging(500, elapsed_ms=1) is True
 
     def test_the_window_is_2xx_exactly(self):
-        """A redirect is not a success, and either edge of that range moved by one puts a whole
-        class of answer in the half nobody writes down."""
+        """A redirect is not a success; either edge moved by one hides a whole class of answer."""
         assert worth_logging(300, elapsed_ms=1) is True
         assert worth_logging(299, elapsed_ms=1) is False
         assert worth_logging(200, elapsed_ms=1) is False
         assert worth_logging(199, elapsed_ms=1) is True
 
     def test_as_slow_as_asked_is_slow_enough(self, monkeypatch):
-        """At least, not more than: a threshold that only fires past itself answers a different
-        question from the one the setting's name asks."""
+        """At least, not more than."""
         monkeypatch.setattr(CONFIG.LOGGING, "SLOW_REQUEST_MS", 1)
 
         assert worth_logging(200, elapsed_ms=1) is True
@@ -95,8 +90,7 @@ class TestWhichRequestsEarnALine:
 
 class TestWhatItMaySay:
     def test_a_value_nobody_named_is_never_written(self):
-        """The whole rule. A name absent from the allowlist is reported as having been there and
-        nothing else - which is what makes a field nobody has thought of yet safe."""
+        """A name absent from the allowlist is reported as present and nothing more."""
         request = RequestFactory().get("/x/", {"page": "2", "token": "hunter2", "email": "a@b.test"})
 
         assert query_of(request) == {"page": "2", "token": REDACTED, "email": REDACTED}
@@ -118,8 +112,7 @@ class TestWhatItMaySay:
 
     @pytest.mark.parametrize("method", ["POST", "PUT", "PATCH"])
     def test_every_method_that_carries_one_is_read_for_its_shape(self, method):
-        """All three write, so all three can carry a password - and a method left out of the list
-        is a method whose body is never looked at."""
+        """All three write, so all three can carry a password."""
         request = RequestFactory().generic(
             method, "/x/", data=json.dumps({"token": "hunter2"}), content_type="application/json"
         )
@@ -131,8 +124,7 @@ class TestWhatItMaySay:
         assert body_of(RequestFactory().generic(method, "/x/", data=b'{"token": "x"}')) is None
 
     def test_a_write_that_carried_nothing_carried_nothing(self):
-        """An empty body is an empty object rather than an unreadable one - "0 bytes nobody could
-        parse" reads as a client bug where there was none."""
+        """An empty object, not "0 unparseable bytes", which would read as a client bug."""
         assert body_of(RequestFactory().post("/x/", data=b"", content_type="application/json")) == {}
 
     @pytest.mark.parametrize(
@@ -146,8 +138,7 @@ class TestWhatItMaySay:
         ids=["an upload", "a list rather than an object", "malformed", "not text"],
     )
     def test_anything_not_an_object_is_reported_by_size_alone(self, sent, content_type):
-        """An upload's content is never a log line, and neither is a body this cannot read - saying
-        how much arrived is the most that can be said without saying what."""
+        """How much arrived is the most that can be said without saying what."""
         request = RequestFactory().post("/x/", data=sent, content_type=content_type)
 
         assert body_of(request) == {"unparsed_bytes": len(sent)}
@@ -191,8 +182,7 @@ class TestWhatItMaySay:
         assert body_of(request) == {}
 
     def test_the_three_headers_worth_stealing_are_not_kept(self):
-        """`Authorization`, `Cookie` and `X-CSRFToken` are the highest-value secrets in a request
-        and none of them is in the body, so a body-only rule would miss all three."""
+        """None of these is in the body, so a body-only rule would miss all three."""
         request = RequestFactory().get(
             "/x/",
             headers={
@@ -276,8 +266,7 @@ def test_the_line_carries_what_a_write_sent_and_who_sent_it(logged):
 
 @pytest.mark.django_db
 def test_an_upload_past_the_in_memory_limit_reaches_the_view_whole(logged):
-    """A multipart upload is streamed to disk by Django and only the body cap would refuse it - which
-    reading `request.body` for the log line used to apply to every file."""
+    """Reading `request.body` for the line would apply the body cap to a streamed upload."""
     content = b"x" * (3 * 1024 * 1024)
     assert len(content) > settings.DATA_UPLOAD_MAX_MEMORY_SIZE
     request = RequestFactory().post("/x/", data={"file": SimpleUploadedFile("big.bin", content)})
@@ -302,8 +291,7 @@ def test_an_empty_write_leaves_the_body_off_the_line(logged):
 
 @pytest.mark.django_db
 def test_the_line_counts_the_requests_own_queries_and_nobody_elses(logged, settings):
-    """What the request did, not what the process had done before it - and with DEBUG off, which is
-    where somebody hunting an N+1 is reading it."""
+    """Only this request's queries, and with DEBUG off, where somebody hunting an N+1 reads it."""
     settings.DEBUG = False
 
     def three_queries(_):
@@ -327,8 +315,7 @@ def test_a_request_that_worked_writes_nothing(logged):
 
 @pytest.mark.django_db
 def test_the_middleware_reads_the_context_history_opened(client, logged):
-    """Installed below HistoryContextMiddleware, so a refused write already names the request it
-    was part of."""
+    """Below HistoryContextMiddleware, so the line names the request's context."""
     client.post("/v0/users/", {"username": "bob"})
 
     (line,) = [line for line in logged if line["event"] == "request"]
@@ -336,7 +323,7 @@ def test_the_middleware_reads_the_context_history_opened(client, logged):
     assert "pgh_context" in line
     middleware = settings.MIDDLEWARE
     assert middleware.index("apps.common.middleware.request_log.RequestLogMiddleware") == (
-        middleware.index("apps.common.middleware.history_context.HistoryContextMiddleware") + 1
+        middleware.index("isik.django.apps.common.middleware.HistoryContextMiddleware") + 1
     )
 
 

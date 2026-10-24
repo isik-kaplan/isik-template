@@ -16,9 +16,7 @@ export default function ForgotPassword() {
 
   async function submit() {
     setSubmitting(true)
-    // allauth intentionally never reveals whether the address is registered - show the same
-    // "check your email" confirmation regardless of the response. No failure path to recover
-    // into means no need to reset `submitting` afterwards either - the form unmounts either way.
+    // allauth never reveals whether the address is registered, so every answer reads as sent.
     await getAuthApi().requestPasswordReset(email)
     setSent(true)
   }

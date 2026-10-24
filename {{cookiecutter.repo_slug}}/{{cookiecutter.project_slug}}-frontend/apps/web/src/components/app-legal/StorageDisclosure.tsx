@@ -10,8 +10,7 @@ import {
   storagePurposeLabels,
 } from '@/lib/storageDisclosure'
 
-/** The cookies-and-storage section, rendered from the disclosure list rather than written into the policy by hand,
- * so the policy cannot fall behind what the site really sets. */
+/** Rendered from the disclosure list, so the policy cannot fall behind what the site sets. */
 export function StorageDisclosure() {
   const { t } = useClientTranslation(['legal'])
   const kinds = storageKindLabels(t)

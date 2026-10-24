@@ -1,10 +1,5 @@
-"""Every backend a login can name is one AUTHENTICATION_BACKENDS lists, and every listed one imports.
-
-`authenticate()` stores the path as written in the setting, so a path through a re-exporting package
-is fine. What breaks is a path that imports nothing, or a `login(..., backend=...)` naming one the
-setting doesn't list - Django accepts it and the session is anonymous from its next request. Write
-such a login with isik's `login_through()`, which resolves the class to its listed path and raises.
-"""
+"""A login naming a backend the setting doesn't list is anonymous from its next request; use
+isik's `login_through()`, which raises instead."""
 
 import pytest
 from django.conf import settings

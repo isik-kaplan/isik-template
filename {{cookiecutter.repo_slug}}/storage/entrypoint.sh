@@ -1,7 +1,6 @@
 #!/bin/sh
-# Starts Garage, then makes sure of what the app needs from it on every start: a one-node layout,
-# the app's key with the secret .env gives it, and the bucket that key reads and writes. Creating
-# a bucket is a provisioning right the web process should not hold, so this does it instead.
+# Starts Garage and ensures the layout, the app's key and its bucket on every start, so the web
+# process never needs the right to create a bucket.
 set -eu
 
 rm -f /tmp/ready
@@ -29,18 +28,18 @@ trap 'kill -TERM "$server"; wait "$server"; exit 0' TERM INT
 until garage status >/dev/null 2>&1; do sleep 1; done
 
 if garage status | grep -q "NO ROLE ASSIGNED"; then
-    # Capacity only weighs nodes against each other - with one node it limits nothing.
+    # Capacity only weighs nodes against each other; with one node it limits nothing.
     garage layout assign -z local -c 1T "$(garage node id -q | cut -c1-16)"
     garage layout apply --version 1
 fi
 
-# Imported rather than generated, so the key is the one .env names; redone when the secret changed.
+# Imported, not generated, so the key is the one .env names; redone when the secret changes.
 if ! garage key info --show-secret "$ACCESS_KEY_ID" 2>/dev/null | grep -q "$SECRET_ACCESS_KEY"; then
     garage key delete --yes "$ACCESS_KEY_ID" >/dev/null 2>&1 || true
     garage key import --yes -n app "$ACCESS_KEY_ID" "$SECRET_ACCESS_KEY"
 fi
 
-# Only for the test suite, which makes a bucket per worker. A deployment turns it off.
+# Only the test suite needs it, for a bucket per worker.
 if [ "$KEY_CAN_CREATE_BUCKETS" = "true" ]; then
     garage key allow --create-bucket "$ACCESS_KEY_ID"
 else

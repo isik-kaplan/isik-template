@@ -16,10 +16,7 @@ import { z } from 'zod'
 
 export function ChangePasswordForm() {
   const { t } = useClientTranslation(['auth'])
-  // Keyed exactly like allauth's ChangePasswordInput ("current_password"/"new_password"), not
-  // camelCase - toFormErrors groups server-side errors by that literal API param, and a form-only
-  // key naming scheme would silently desync from it (client-side Zod errors would still show up
-  // fine under a mismatched key; only the server-side ones would go missing).
+  // allauth's param names, not camelCase: toFormErrors groups server errors by the literal param.
   const schema = useMemo(
     () =>
       z.object({

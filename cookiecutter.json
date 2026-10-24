@@ -16,8 +16,8 @@
   "background_jobs": ["celery-with-beat", "celery", "inline"],
   "storage": ["garage", "s3", "disk"],
   "cache": ["redis", "database"],
-  "isik_version": "0.23.0",
-  "isikk_core_version": "0.15.0",
+  "isik_version": "0.32.0",
+  "isikk_core_version": "0.20.0",
   "_copy_without_render": [
     "*/e2e/authentik-blueprints/*"
   ],

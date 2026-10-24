@@ -37,8 +37,7 @@ export function ProfileTabsList() {
   const tabs = TABS.filter((tab) => tab.segment !== 'applications' || CONFIG.OAUTH_PROVIDER.MODE !== 'off')
   const active = tabs.find((tab) => pathname.endsWith(`/profile/${tab.segment}`))?.segment ?? tabs[0].segment
 
-  // i18next-parser only detects a literal string argument, not a key looked up from TABS, so
-  // these are spelled out. Don't write the detected call shape into a comment - it gets collected.
+  // Spelled out: i18next-parser only detects literal keys, and collects them from comments too.
   const labels: Record<(typeof TABS)[number]['segment'], string> = {
     details: t('auth:profileDetailsTab'),
     password: t('auth:profilePasswordTab'),
@@ -58,20 +57,13 @@ export function ProfileTabsList() {
         router.push(nextPath)
       }}
     >
-      {/* w-full, not the base component's own w-fit: stretches the strip to the card's width so
-          TabsTrigger's own flex-1 (base/tabs.tsx) divides it evenly, instead of every trigger
-          shrinking to its own text and leaving the row short of the card's edge. Six labels do not
-          fit one row at the card's max-w-sm width, so the base strip wraps them onto a second. */}
+      {/* w-full, not w-fit, so the triggers' flex-1 divides the card's width evenly. */}
       <TabsList className="w-full">
         {tabs.map(({ segment, icon: Icon }) => (
           <TabsTrigger key={segment} value={segment}>
-            {/* Icon below `sm`, label at/above it - never both at once, which would make every trigger
-                wide enough to wrap even on a phone. */}
+            {/* Icon below `sm`, label above: both would wrap on a phone. */}
             <Icon className="size-4 sm:hidden" />
-            {/* `hidden` (display:none) removes text from the accessible name entirely below `sm` -
-                not just visually, screen readers get nothing either. `sr-only` keeps it in the
-                accessibility tree at every width; `sm:not-sr-only` is what actually shows it visually
-                at/above the breakpoint. */}
+            {/* sr-only, not hidden, which would drop it from the accessible name too. */}
             <span className="sr-only sm:not-sr-only sm:inline">{labels[segment]}</span>
           </TabsTrigger>
         ))}

@@ -11,6 +11,7 @@ import { scopeLabel } from '@/lib/oauthScopes'
 
 import { type ApiType, detailOf } from '@{{ cookiecutter.repo_slug }}/api'
 
+import { useIdempotencyKey } from '@isikk/core/hooks'
 import { toast } from 'sonner'
 
 export type AuthorizedApplicationsListProps = {
@@ -24,13 +25,16 @@ export function AuthorizedApplicationsList({ initialApplications, described = {}
   const { t } = useClientTranslation(['auth'])
   const [applications, setApplications] = useState(initialApplications)
   const [pending, setPending] = useState<number | null>(null)
+  // Keyed by which one, so a retry after a lost answer is the same revoke rather than a second.
+  const revoking = useIdempotencyKey()
 
   async function revoke(id: number) {
     setPending(id)
-    const { error, response } = await createApi(apiOrigin()).revokeAuthorizedApplication(id)
+    const { error, response } = await createApi(apiOrigin()).revokeAuthorizedApplication(id, revoking.keyFor(id))
     setPending(null)
 
     if (response.ok) {
+      revoking.used()
       setApplications((current) => current.filter((application) => application.id !== id))
       toast.success(t('auth:profileAuthorizedApplicationsRevoked'))
       return

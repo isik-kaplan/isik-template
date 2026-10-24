@@ -3,9 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/base/avatar'
 import { render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-// jsdom never fires a real <img> load event, so Base UI's Avatar.Image never becomes visible
-// without help - stubbing window.Image to resolve on the next microtask (like a cached image
-// would) lets a real test reach it instead of only proving the component mounts.
+// jsdom never fires <img> load, so window.Image resolves on the next microtask, like a cached image.
 class ResolvingImage {
   onload: (() => void) | null = null
   onerror: (() => void) | null = null
@@ -105,9 +103,7 @@ describe('Avatar', () => {
     expect(img.className).toContain('custom-class')
   })
 
-  // Base UI's Avatar.Image renders nothing until the image's load status resolves - without the
-  // stub above, that never happens under jsdom. This only proves the component mounts without
-  // throwing while unresolved, which the real test above doesn't otherwise cover.
+  // Unresolved, without the stub: only proves it mounts.
   it('mounts an image without throwing', () => {
     expect(() =>
       render(

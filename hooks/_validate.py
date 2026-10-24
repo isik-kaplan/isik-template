@@ -1,9 +1,4 @@
-"""The actual validation logic behind pre_gen_project.py's hook script.
-
-Kept in its own plain (non-templated) module, importable and unit-testable directly - the hook
-script itself is a Jinja template (cookiecutter renders it, then runs it as a subprocess), which
-neither pytest nor mutmut's coverage tracking can see into.
-"""
+"""pre_gen_project.py's checks, kept out of the templated hook so pytest and mutmut can reach them."""
 
 import re
 
@@ -14,14 +9,12 @@ class AnswersInvalid(ValueError):
 
 REQUIRED_FIELDS = ("project_name", "description", "author_name", "author_email", "domain")
 
-# The slugs name the Python package, the Docker services and the npm workspace, none of which take
-# spaces, punctuation or a leading digit.
+# Slugs name the Python package, Docker services and npm workspace.
 SLUG_PATTERNS = {"project_slug": r"[a-z][a-z0-9_]*", "repo_slug": r"[a-z][a-z0-9-]*"}
 
-# Characters each free-text answer can't carry: hooks, settings and pyproject escape answers with
-# tojson, but the same answers also land unescaped in TS literals, shell strings, .env and .po files.
+# These answers also land unescaped in TS literals, shell strings, .env and .po files.
 FORBIDDEN_CHARACTERS = {
-    # project_name also sits inside single-quoted TS strings and a double-quoted shell echo.
+    # Also inside single-quoted TS strings and a double-quoted shell echo.
     "project_name": "\"\\'`$",
     "description": '"\\',
     "author_email": '"\\',
@@ -29,9 +22,7 @@ FORBIDDEN_CHARACTERS = {
 
 DOMAIN_PATTERN = r"[a-z0-9.-]+"
 
-# django.conf.locale.LANG_INFO keys (Django 5.2) - the generated project's own settings.py builds
-# its LANGUAGES display names from that same dict, but this hook's environment has no Django
-# installed to import it from, so the codes are mirrored here instead.
+# django.conf.locale.LANG_INFO keys (Django 5.2), mirrored because the hook runs without Django.
 KNOWN_LANGUAGES = {
     "af",
     "ar",

@@ -4,8 +4,7 @@ import { Skeleton } from '@/components/base/skeleton'
 
 import { cn } from '@/lib/utils'
 
-/** Dims/blocks its children (a table, a form, a panel) behind a loading or disabled state,
- * without unmounting them - so the underlying content keeps its scroll position and layout. */
+/** Blocks its children while loading without unmounting them, so they keep scroll and layout. */
 export function LoadingOverlay({
   loading = false,
   disabled = false,

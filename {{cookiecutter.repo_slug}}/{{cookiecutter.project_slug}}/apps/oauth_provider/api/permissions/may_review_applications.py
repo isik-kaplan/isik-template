@@ -4,8 +4,7 @@ from isik.django.drf.permissions import SignedInPermission
 
 
 class MayReviewApplications(SignedInPermission):
-    """Superusers, while the provider is on. Only them for now: approving widens what an application may
-    ask everybody for, and nothing yet says who else should be trusted with that."""
+    """Superusers, while the provider is on: approving widens what an application may ask everybody for."""
 
     message = _("Only a superuser reviews applications.")
 

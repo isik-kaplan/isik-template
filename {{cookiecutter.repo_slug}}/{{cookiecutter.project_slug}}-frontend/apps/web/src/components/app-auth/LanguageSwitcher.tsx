@@ -11,11 +11,10 @@ import { useLanguage } from '@/lib/LanguageContext'
 import { createApi } from '@/lib/apiClients'
 import { apiOrigin } from '@/lib/apiOrigin'
 
-// Intl.DisplayNames, not a hand-written {en: "English", tr: "Turkish", ...} map - one more
-// language added to cookiecutter's "languages" needs no matching entry added here too.
-// String(), not "?? code": .of()'s own type is string | undefined, but it only actually returns
-// undefined with fallback: "none" - the default ("code") always returns a string for any
-// well-formed tag, which every entry in `languages` is.
+import { anyVersion } from '@isikk/core'
+import { useIdempotencyKey } from '@isikk/core/hooks'
+
+// String(), not "?? code": .of() only returns undefined with fallback: "none".
 function displayName(code: Language): string {
   return String(new Intl.DisplayNames([code], { type: 'language' }).of(code))
 }
@@ -23,19 +22,22 @@ function displayName(code: Language): string {
 export function LanguageSwitcher() {
   const router = useRouter()
   const language = useLanguage()
+  // Not crypto.randomUUID(), which a page served over plain http, as in dev, does not have.
+  const switching = useIdempotencyKey()
 
   async function handleChange(event: React.ChangeEvent<HTMLSelectElement>) {
     const next = event.target.value as Language
     if (next === language) return
-    await createApi(apiOrigin()).updateMe({ language: next })
-    // Instant feedback for this render's own client components; the server-rendered text
-    // (everything using sUseTranslation) only picks up the change once refresh() re-runs it.
+    // Any version: this writes the language alone, so there is nothing of anybody else's to overwrite.
+    const change = { language: next }
+    await createApi(apiOrigin()).updateMe(change, { ...anyVersion(), ...switching.headerFor(change) })
+    switching.used()
+    // For client components now; server-rendered text follows on refresh().
     await i18next.changeLanguage(next)
     router.refresh()
   }
 
-  // Nothing to switch between with only one language configured - matches ThemeToggle's own
-  // scope (it always has two, so this guard has no equivalent there).
+  // Nothing to switch between with one language.
   if (languages.length < 2) return null
 
   return (

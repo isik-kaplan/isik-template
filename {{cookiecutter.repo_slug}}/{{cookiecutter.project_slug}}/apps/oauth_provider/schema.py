@@ -1,4 +1,4 @@
-"""How the API document describes an application's token: on the operations that take one, and nowhere else."""
+"""An application's token, documented only on the operations that take one."""
 
 from drf_spectacular.extensions import OpenApiAuthenticationExtension
 

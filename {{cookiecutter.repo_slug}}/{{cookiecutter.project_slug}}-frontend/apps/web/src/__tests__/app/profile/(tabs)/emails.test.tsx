@@ -16,6 +16,7 @@ vi.mock('next/headers', () => ({
     return new Headers(init)
   },
 }))
+vi.mock('@/config/public', () => ({ CONFIG: { DOMAIN: 'test-project.test' } }))
 
 describe('ProfileEmailsPage', () => {
   it("renders the visitor's email addresses", async () => {

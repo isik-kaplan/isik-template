@@ -1,9 +1,5 @@
-# The customer IdP this stack stands in for. A real Authentik rather than a fake, so the OIDC
-# social-login spec drives a genuine round trip - the openid_connect SocialApp otherwise points at
-# a real IdP with no live server behind it during local dev.
-#
-# Appended to COMPOSE_FILE in e2e/.env, so relative paths resolve against the repo root (the
-# directory of the *first* file in that list), same as docker-compose.e2e.yml.
+# A real Authentik as the OIDC IdP, so the social-login spec drives a genuine round trip.
+# Relative paths resolve against the repo root, the directory of the first COMPOSE_FILE entry.
 services:
   authentik-postgres:
     image: postgres:16-alpine
@@ -12,9 +8,7 @@ services:
       POSTGRES_USER: authentik
       POSTGRES_PASSWORD: authentik-e2e-only
     networks:
-      # Fixed, outside server/dns's .10/.11 reservations - IPAM does not know about a declared
-      # static IP until that service claims it, so an unclaimed range would get handed out from
-      # under it.
+      # IPAM ignores a static IP until its service claims it, so it must sit outside the dynamic range.
       internal:
         ipv4_address: ${E2E_SUBNET_PREFIX:-172.30.0}.20
     healthcheck:
@@ -44,9 +38,7 @@ services:
       AUTHENTIK_POSTGRESQL__PASSWORD: authentik-e2e-only
       AUTHENTIK_REDIS__HOST: authentik-redis
       AUTHENTIK_SECRET_KEY: e2e-only-authentik-secret-key-not-a-real-secret
-      # Skips the manual setup wizard entirely - the akadmin token isn't used by anything here
-      # today (the blueprint below handles all setup declaratively) but is set for any future
-      # scripted use.
+      # Skips the setup wizard; the blueprint does the real setup.
       AUTHENTIK_BOOTSTRAP_PASSWORD: e2e-only-akadmin-password
       AUTHENTIK_BOOTSTRAP_TOKEN: e2e-only-akadmin-token-not-a-real-secret
       AUTHENTIK_BOOTSTRAP_EMAIL: akadmin@example.com
@@ -64,15 +56,8 @@ services:
       authentik-worker:
         condition: service_started
     healthcheck:
-      # Neither curl nor wget - this image is multi-arch, and its amd64 build (what every hosted CI
-      # runner is) carries neither, confirmed directly with `docker run --platform linux/amd64
-      # ... which curl` returning nothing. A Mac's own arm64 pull of the same tag genuinely does
-      # have curl, which is exactly why this passed locally through every earlier version of this
-      # check - the command itself only ever worked on the architecture nobody's CI runs on. What
-      # every build of the image does carry is its own bundled Python, so this uses that instead of
-      # depending on either external binary at all. The test client's own discovery document rather than
-      # liveness: the blueprint that creates it is applied after the server is up, and the first spec
-      # to use it would otherwise race that.
+      # Python, not curl: the amd64 image (every CI runner) has no curl or wget, though arm64 does.
+      # Polls the test client's discovery document, not liveness, since the blueprint lands after startup.
       test:
         - CMD
         - /ak-root/.venv/bin/python3
@@ -100,10 +85,7 @@ services:
       authentik-redis:
         condition: service_healthy
 
-  # Authentik has to be reachable before the backend/frontend/playwright are considered ready -
-  # the openid_connect provider resolves its issuer's /.well-known/openid-configuration on first
-  # use, and a social-login spec clicking through before Authentik is live would fail with a
-  # confusing connection-refused rather than a clear "still starting up".
+  # The OIDC provider fetches the issuer's discovery document on first use.
   backend:
     depends_on:
       authentik-server:

@@ -7,8 +7,7 @@ import { Button } from '@/components/base/button'
 
 import { useClientTranslation } from '@/i18n/client'
 
-// Read first, edit on request: always-live inputs make a page somebody came to read look like a
-// half-filled form. Context, because the toggle and the fields sit at opposite ends of the page.
+// Context, because the toggle and the fields sit at opposite ends of the page.
 type EditModeValue = { editing: boolean; start: () => void; stop: () => void }
 
 const EditModeContext = createContext<EditModeValue | null>(null)
@@ -56,7 +55,7 @@ export function WhileEditing({ children }: { children: React.ReactNode }) {
   return useEditMode().editing ? <>{children}</> : null
 }
 
-/** The way out of a form: save, or put it back the way it was. Shared so every screen agrees. */
+/** Save, or put it back the way it was. */
 export function SaveActions({ isSubmitting, disabled = false }: { isSubmitting: boolean; disabled?: boolean }) {
   const { t } = useClientTranslation(['common'])
   const { stop } = useEditMode()

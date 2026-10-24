@@ -2,15 +2,12 @@
 
 import { useEffect } from 'react'
 
-import { globalApi, noDirectConsoleLog } from '@/lib/monkeypatches'
+import { globalApi } from '@/lib/monkeypatches'
 
 export default function MonkeyPatches() {
   useEffect(() => {
-    noDirectConsoleLog(window)
     const {{ cookiecutter.project_slug }} = globalApi(window)
-    // Primes the CSRF token/session cookie on initial page load, the same round trip every
-    // AuthApi call makes lazily on its own first request - doing it here just means the console
-    // client is ready to use immediately instead of on its first real call.
+    // Primes the CSRF cookie at load, so the console client is ready before its first call.
     void {{ cookiecutter.project_slug }}.auth.session()
   }, [])
 

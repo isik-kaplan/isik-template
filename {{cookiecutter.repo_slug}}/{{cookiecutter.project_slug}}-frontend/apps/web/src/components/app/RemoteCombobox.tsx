@@ -9,14 +9,12 @@ import { cn } from '@/lib/utils'
 
 export type RemoteOption = { value: string; label: string }
 
-/** One page of an answer. `hasMore` is the endpoint's own word for it rather than a guess from the
- *  page's length, which is wrong on a last page that lands exactly full. */
+/** `hasMore` comes from the endpoint: a full last page looks like more. */
 export type RemotePage = { options: RemoteOption[]; hasMore: boolean }
 
 export type RemoteComboboxProps = {
   label: string
-  // The chosen id, and what to call it - resolved by whoever renders this, because a chosen value has
-  // to read as a name before anybody types anything.
+  // Named by the caller, so a chosen value reads as a name before anything is typed.
   value: string
   valueLabel?: string
   // Shown when nothing is chosen, and the option that clears it.
@@ -28,8 +26,7 @@ export type RemoteComboboxProps = {
   moreLabel: string
   search: (term: string, page: number) => Promise<RemotePage>
   onPick: (value: string) => void
-  // Reaching the end of a list is already the gesture that means "more"; a button is for a costly
-  // search, or a list somebody is meant to narrow rather than walk.
+  // A button for a costly search or a list meant to be narrowed rather than scrolled.
   more?: 'observer' | 'button'
   className?: string
 }
@@ -38,8 +35,7 @@ const FIRST_PAGE = 1
 const DEBOUNCE_MS = 250
 const NOTHING: RemotePage = { options: [], hasMore: false }
 
-/** The listing envelope every paginated endpoint answers with, as a page of options. Read off
- *  `total_pages`: a page that lands exactly full is indistinguishable from the last one by length. */
+/** A paginated listing as a page of options; `total_pages`, since a full last page looks like more. */
 export function pageOf<Row>(
   data: { total_pages: number; results: Row[] } | undefined,
   page: number,
@@ -48,8 +44,7 @@ export function pageOf<Row>(
   return data ? { options: data.results.map(option), hasMore: page < data.total_pages } : NOTHING
 }
 
-// Asks the server as you type rather than fetching a directory: one request per search instead of a
-// page of rows per render, and it reaches rows the first page never had.
+// Searches the server as you type, reaching rows a first page never had.
 export function RemoteCombobox({
   label,
   value,
@@ -67,8 +62,7 @@ export function RemoteCombobox({
   const id = useId()
   const [term, setTerm] = useState('')
   const [options, setOptions] = useState<RemoteOption[]>([])
-  // Whether a search has landed at all - otherwise an empty list on open would say "nothing matched"
-  // before anything was asked.
+  // Else an empty list on open would say "nothing matched".
   const [answered, setAnswered] = useState(false)
   const [searching, setSearching] = useState(false)
   const [open, setOpen] = useState(false)
@@ -76,8 +70,7 @@ export function RemoteCombobox({
   const [hasMore, setHasMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const fetching = useRef(false)
-  // Which search is current: a slower earlier answer must not overwrite a later one, and a page asked
-  // for under the previous term must not be appended to this one's.
+  // Which search is current, so a stale answer neither overwrites nor appends.
   const latest = useRef(0)
 
   useEffect(() => {
@@ -86,8 +79,7 @@ export function RemoteCombobox({
     }
     latest.current += 1
     const mine = latest.current
-    // The searching flag is set inside the timer, not beside it: in the effect it would cascade a
-    // render per keystroke and flash for terms that never reach the server.
+    // Set inside the timer: in the effect it would render per keystroke and flash.
     const timer = setTimeout(async () => {
       setSearching(true)
       const found = await search(term, FIRST_PAGE).catch(() => NOTHING)
@@ -103,9 +95,7 @@ export function RemoteCombobox({
   }, [term, open, search])
 
   const loadMore = useCallback(async () => {
-    // A ref, not state: an observer fires again while the sentinel is still on screen, before React
-    // commits, so a state flag still reads false in that call and the same page is asked for twice.
-    // Nothing else to guard: the sentinel and the button only exist while there is more to fetch.
+    // A ref, not state: the observer can fire again before React commits, asking for a page twice.
     if (fetching.current) {
       return
     }

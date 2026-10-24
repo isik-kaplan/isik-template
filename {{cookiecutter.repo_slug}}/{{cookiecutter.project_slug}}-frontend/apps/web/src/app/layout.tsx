@@ -35,7 +35,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         <MonkeyPatches />
       </head>
-      {/* A column, so every page's own flex-1 fills the screen above the footer rather than pushing it off. */}
+      {/* A column, so a page's flex-1 fills the screen above the footer. */}
       <body className="flex min-h-svh flex-col">
         <PublicConfigScript />
         <ThemeProvider attribute="data-theme" defaultTheme="system" enableSystem>

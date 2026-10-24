@@ -1,8 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-// The web app's legal folder, mounted read-only (docker-compose.e2e.yml), so the specs check the documents and the
-// cookie list this checkout really ships rather than a copy of them.
+// The web app's legal folder, mounted read-only.
 const LEGAL = '/legal'
 
 export const DOCUMENTS: { slug: string; disclosesStorage?: boolean }[] = JSON.parse(

@@ -1,7 +1,6 @@
 """The naming patch, and the upstream function it wraps.
 
-Upstream's own arrangement is loaded fresh rather than read off mutmut: inside a mutants tree the
-patch is already installed, and the module attribute is the wrapped one there.
+Upstream is loaded fresh: inside a mutants tree mutmut's attribute is already the patched one.
 """
 
 import importlib.util
@@ -29,7 +28,6 @@ def upstream():
 
 @pytest.fixture
 def as_it_was():
-    """Whatever this process had, put back afterwards - inside the tree that is the patched one."""
     saved = (
         file_mutation.MutationVisitor._skip_node_and_children,
         file_mutation.function_trampoline_arrangement,
@@ -67,7 +65,6 @@ def test_the_name_is_the_change_rather_than_a_position():
 
 
 def test_the_same_change_twice_in_one_function_is_still_two_names():
-    """A shared name would leave the second mutant unreachable through the trampoline."""
     names = list(mutation_naming.identities([_mutation('"."', '"X"'), _mutation('"."', '"X"'), _mutation("a", "b")]))
 
     assert len(set(names)) == 3
@@ -86,7 +83,7 @@ def test_a_name_still_reads_as_a_mutant_to_everything_that_parses_one():
 
 
 def test_upstream_returns_one_name_per_mutant_in_the_order_it_was_given_them(upstream):
-    """The whole contract the renaming rests on: it pairs upstream's names with its own by position."""
+    """The renaming pairs upstream's names with its own by position."""
     function = cst.parse_module("def add(a, b):\n    return a + b\n").body[0]
 
     _, methods, _, names = upstream(function, [_mutation("a + b", "a - b"), _mutation("a + b", "b + a")], None)
@@ -139,14 +136,10 @@ def test_the_dispatch_dict_is_keyed_on_the_names_the_mutants_now_carry(upstream)
     ],
 )
 def test_a_package_init_is_named_as_the_package_itself(path, module):
-    """mutmut files an `__init__.py`'s mutants under the package; a name carrying `.__init__` is
-    one no verdict is ever recorded against."""
     assert mutation_naming.module_of(path) == module
 
 
 def test_applying_is_idempotent_and_composes_with_the_decorator_patch(as_it_was):
-    """Both entry-point orders - naming first or decorators first - generate the same hashed names,
-    and a decorated function's copies still carry none of its decorators."""
     source = "@receiver\ndef handle(a):\n    return a + 1\n"
     found = []
     orders = ((mutation_naming.apply, mutmut_decorators.install), (mutmut_decorators.install, mutation_naming.apply))

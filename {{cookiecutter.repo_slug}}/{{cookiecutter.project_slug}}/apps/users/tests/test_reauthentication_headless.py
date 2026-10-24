@@ -1,5 +1,3 @@
-"""The gate on allauth's own endpoints, driven through them the way a client calls them."""
-
 import json
 import time
 from types import SimpleNamespace
@@ -38,7 +36,6 @@ def test_an_act_is_refused_without_a_proof_and_says_which_gate_stopped_it(headle
     response = _add_email(headless)
 
     assert _refused(response)
-    # allauth's own re-authentication answer, so its flows still say how to prove it.
     assert {"id": "reauthenticate"} in response.json()["data"]["flows"]
     assert not EmailAddress.objects.filter(email="second@example.test").exists()
 
@@ -105,7 +102,7 @@ def test_an_act_refused_for_another_reason_is_refused_first_and_keeps_the_proof(
 
 @pytest.mark.django_db
 def test_signing_in_with_a_password_is_not_a_proof(headless, alice):
-    """Whatever was typed for it, a login is not a re-authentication - allauth's view since 65.20."""
+    """A login is not a re-authentication (allauth since 65.20)."""
     signed_in = headless.call("POST", "account:login", {"username": "alice", "password": PASSWORD})
 
     assert signed_in.status_code == 200
@@ -157,15 +154,13 @@ def test_setting_a_first_password_is_an_act_and_spends_the_proof(headless, clien
     password = {"new_password": "a-whole-new-password"}
 
     refused = headless.call("POST", "account:change_password", password)
-    # Nothing to type for an account with no password, so the proof here is the session's own record
-    # of a challenge - the shape a provider round trip leaves behind.
+    # No password to type, so a provider round trip's record stands in.
     _record_a_social_proof(headless)
     accepted = headless.call("POST", "account:change_password", password)
 
     assert _refused(refused)
     assert accepted.status_code == 200
-    # The act gave the account a password, which would make it no longer look like an act - the proof
-    # is spent all the same.
+    # Spent even though, with a password now, it no longer looks like an act.
     assert _refused(_add_email(headless))
 
 
@@ -195,7 +190,7 @@ def test_signing_out_this_session_is_not_an_act(headless, client, signed_in):
 
     response = headless.call("DELETE", "usersessions:sessions", {"sessions": [current.pk]})
 
-    # Signed out, which allauth reports as an unauthenticated session rather than a refusal.
+    # Signed out: an unauthenticated session, not a refusal.
     assert response.status_code == 401
     assert REAUTHENTICATION_REQUIRED_HEADER not in response
 
@@ -357,7 +352,7 @@ class _GatedRecording(ProvesWhoTheyAre, _Records):
 
 
 def test_the_gate_hands_allauth_the_whole_request_it_was_given():
-    """allauth's headless views read their URL arguments off dispatch(), so none may go missing."""
+    """allauth's headless views read their URL arguments off dispatch()."""
     view = _GatedRecording()
     request = RequestFactory().get("/")
 

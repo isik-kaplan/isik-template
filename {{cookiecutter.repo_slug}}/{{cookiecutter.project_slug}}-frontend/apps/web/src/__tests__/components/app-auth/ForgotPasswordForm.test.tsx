@@ -39,9 +39,7 @@ describe('ForgotPasswordForm', () => {
   })
 
   it('always redirects to the confirmation page, regardless of whether the account exists', async () => {
-    // Catches a real regression, not just this test's own assertions: an input whose initial
-    // value is undefined rather than '' starts uncontrolled and switches to controlled the
-    // moment something is typed into it, which React warns loudly about.
+    // An input starting undefined rather than '' turns controlled on typing, which React warns about.
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     // allauth intentionally never reveals whether the address is registered.
     globalThis.fetch = vi.fn(async () => jsonResponse(200, {}))

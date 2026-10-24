@@ -6,15 +6,12 @@ import { useEffect } from 'react'
 
 import { LOGIN_PATH, onSessionCleared } from '@/lib/sessionChannel'
 
-// Renders nothing - it exists to close the two gaps in the X-Session-Cleared auto-logout
-// (lib/apiClients.ts), which is otherwise only reactive: it fires on the tab that happened to make
-// the request. Mounted on authenticated surfaces (profile/layout.tsx), not the root layout, so
-// /auth/** never revalidates a session it is in the middle of establishing.
+// Closes two gaps in the X-Session-Cleared logout, which only fires in the tab that made the request.
+// Not in the root layout, so /auth/** never revalidates a session it is establishing.
 export function SessionWatcher() {
   const router = useRouter()
 
-  // Gap 1, live: a sibling tab already learned the session is dead. window.location.href, not
-  // router.push - a soft navigation would re-render against the same dead session.
+  // A sibling tab learned the session is dead. A hard navigation: a soft one keeps stale state.
   useEffect(
     () =>
       onSessionCleared(() => {
@@ -23,10 +20,8 @@ export function SessionWatcher() {
     []
   )
 
-  // Gap 2, not live but where it matters: a session killed server-side (password changed
-  // elsewhere, expiry) reaches no tab until one asks. refresh() re-runs the layout's own gate,
-  // which is what redirects - no endpoint knowledge needed here, so it works for every segment.
-  // It preserves useState and scroll position, so a refocus never costs unsaved form input.
+  // A session killed server-side reaches no tab until one asks: on becoming visible, refresh()
+  // re-runs the layout's gate, keeping state and scroll.
   useEffect(() => {
     function revalidateWhenVisible() {
       if (document.visibilityState === 'visible') {

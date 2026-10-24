@@ -1,9 +1,4 @@
-"""The permission catalog's protection, proven where it is enforced.
-
-Raw SQL throughout, because a trigger exists so the rule holds for a shell and a data migration too.
-What is protected is a cascade: both grant tables cascade off `auth_permission`, which cascades off
-`django_content_type`, so one delete up that chain takes every grant with it.
-"""
+"""Raw SQL throughout: the triggers must hold for a shell or a data migration too."""
 
 import pgtrigger
 import pytest
@@ -20,14 +15,13 @@ CODENAME = model_db_column(Permission, "codename")
 
 
 def _execute(sql, params):
-    # Its own savepoint: the failed statement aborts the transaction, and the test's has to survive.
+    # Its own savepoint, so the test's transaction survives the failure.
     with transaction.atomic(), connection.cursor() as cursor:
         cursor.execute(sql, params)
 
 
 @pytest.fixture
 def permission():
-    """Hand-authored the way real ones are, hung off auth.Permission's own content type."""
     return Permission.objects.create(
         name="probe",
         codename="probe_read_thing",
@@ -53,7 +47,6 @@ def test_an_orm_delete_of_a_permission_is_refused_too(permission):
 
 @pytest.mark.django_db
 def test_renaming_a_permissions_codename_is_refused(permission):
-    """The codename is what callers name, so an update re-aims every check while the row looks untouched."""
     with pytest.raises(ProgrammingError, match="pgtrigger"):
         _execute(f"UPDATE {PERMISSION} SET {CODENAME} = %s WHERE id = %s", ["probe_write_thing", permission.pk])
 
@@ -75,7 +68,6 @@ def test_repointing_a_permission_at_another_content_type_is_refused(permission):
 
 @pytest.mark.django_db
 def test_the_display_name_stays_writable(permission):
-    """Only identity is frozen. `name` is displayed and nothing resolves through it."""
     column = model_db_column(Permission, "name")
 
     _execute(f"UPDATE {PERMISSION} SET {column} = %s WHERE id = %s", ["probe renamed", permission.pk])
@@ -96,8 +88,8 @@ def test_a_raw_delete_of_a_content_type_is_refused():
 
 @pytest.mark.django_db
 def test_a_content_type_can_still_be_renamed():
-    """Updates stay open so `RenameContentType` keeps working when a model is renamed."""
-    # Its own row: get_for_model's cache would hand a renamed instance to every later test.
+    """Updates stay open for `RenameContentType`."""
+    # Its own row: get_for_model's cache would leak the rename into later tests.
     content_type = ContentType.objects.create(app_label="probe", model="before")
     column = model_db_column(ContentType, "model")
 
@@ -109,7 +101,6 @@ def test_a_content_type_can_still_be_renamed():
 
 @pytest.mark.django_db
 def test_retiring_a_permission_on_purpose_goes_through_ignore(permission):
-    """The escape hatch is the reason "protected" does not mean "unrecoverable"."""
     with pgtrigger.ignore("users.ProtectedPermission:protect_permission_delete"):
         Permission.objects.filter(pk=permission.pk).delete()
 

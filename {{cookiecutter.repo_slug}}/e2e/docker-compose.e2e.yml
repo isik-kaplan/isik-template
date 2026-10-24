@@ -1,13 +1,10 @@
 services:
-  # Local-only resolver so the browser (running inside the playwright container) and the app's own
-  # containers can reach {{ cookiecutter.domain }} and its subdomains without touching a real
-  # domain or the host's /etc/hosts.
+  # Resolves {{ cookiecutter.domain }} and its subdomains inside the stack, without the host's /etc/hosts.
   dns:
     build:
-      # Relative to the project directory (repo root), not this file's own directory - same
-      # resolution rule as env_file above.
+      # Relative to the repo root, not this file's directory.
       context: ./e2e/dnsmasq
-    # The answers live here rather than in dnsmasq.conf so they follow E2E_SUBNET_PREFIX (see e2e/.env).
+    # Here rather than in dnsmasq.conf so they follow E2E_SUBNET_PREFIX.
     command:
       - dnsmasq
       - -k
@@ -22,10 +19,9 @@ services:
   server:
     networks:
       internal:
-        # Fixed, not an alias: dnsmasq's address=/.../<ip> directive needs a literal IP to answer
-        # with, not a name it would have to resolve itself.
+        # Fixed: dnsmasq's address= directive needs a literal IP.
         ipv4_address: ${E2E_SUBNET_PREFIX:-172.30.0}.10
-    # https beside http, so the passkey specs' pages are secure contexts - see nginx.tls.conf.
+    # https beside http, so the passkey specs' pages are secure contexts.
     volumes:
       - ./e2e/nginx.tls.conf:/etc/nginx/extra-listen/tls.conf:ro
       - certs:/certs:ro
@@ -33,8 +29,7 @@ services:
       e2e-certs:
         condition: service_completed_successfully
 
-  # One self-signed certificate for every name the stack serves. The backend image, rather than one
-  # more to pull: it already carries openssl.
+  # One self-signed certificate for every name; the backend image already carries openssl.
   e2e-certs:
     image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-backend:latest
     volumes:
@@ -54,11 +49,7 @@ services:
   backend:
     dns:
       - ${E2E_SUBNET_PREFIX:-172.30.0}.11
-    # A second env_file, not a replacement - concatenated with the base compose's env_file: .env,
-    # so both apply (later entries win on key conflicts). Written "e2e/.env", not ".env": relative
-    # env_file paths resolve against the *project directory* (the first file listed in
-    # COMPOSE_FILE, i.e. the repo root), not against whichever compose file declared them - a bare
-    # ".env" here would silently re-read the root .env a second time instead of this directory's.
+    # Added to the base .env, not replacing it. "e2e/.env" because env_file resolves against the repo root.
     env_file: [e2e/.env]
 
 {%- if cookiecutter.background_jobs != "inline" %}
@@ -75,8 +66,7 @@ services:
   frontend:
     dns:
       - ${E2E_SUBNET_PREFIX:-172.30.0}.11
-    # Its server-side fetches follow the page's own scheme, so on an https page they meet the
-    # self-signed certificate too.
+    # Server-side fetches follow the page's scheme, so they meet the self-signed certificate too.
     environment:
       NODE_EXTRA_CA_CERTS: /certs/cert.pem
     volumes:
@@ -86,9 +76,7 @@ services:
         condition: service_completed_successfully
 
   playwright:
-    # Behind a profile so `up` never starts it: its image runs the whole suite on start, and a second
-    # copy racing the one `run` starts shares the stack - one spec raising the login ladder while the
-    # other signs in. `run playwright` still works, named services ignore profiles.
+    # Behind a profile so `up` never starts a second suite racing the one `run` starts on the same stack.
     profiles: [suite]
     build:
       context: ./e2e/playwright
@@ -96,11 +84,10 @@ services:
       - internal
     dns:
       - ${E2E_SUBNET_PREFIX:-172.30.0}.11
-    # The seeded superuser's credentials (SETUP__SUPERUSER__*), read from the same file the backend
-    # seeds it from - auth/login-ladder.spec.ts signs in to the admin with them.
+    # For the seeded superuser's credentials, which login-ladder.spec.ts uses.
     env_file: [.env]
     environment:
-      # Which social specs have a button to press - the same value the app's containers get.
+      # The same value the app's containers get.
       {{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS: {{ '${' + cookiecutter.config_prefix + '__SOCIAL_LOGIN__PROVIDERS:-}' }}
     depends_on:
       server:
@@ -108,7 +95,7 @@ services:
     volumes:
       - ./e2e/playwright/playwright-report:/e2e/playwright-report
       - ./e2e/playwright/test-results:/e2e/test-results
-      # The documents and cookie list the legal specs check against, as this checkout ships them.
+      # What the legal specs check against.
       - ./{{ cookiecutter.project_slug }}-frontend/apps/web/src/legal:/legal:ro
 
 volumes:
@@ -119,6 +106,5 @@ networks:
     ipam:
       config:
         - subnet: ${E2E_SUBNET_PREFIX:-172.30.0}.0/24
-          # Every container without a fixed address draws from the top half, so none of them can take
-          # one of the fixed addresses (.10, .11, .22) before the container it belongs to starts.
+          # Dynamic addresses come from the top half, so none can take a fixed one before its owner starts.
           ip_range: ${E2E_SUBNET_PREFIX:-172.30.0}.128/25

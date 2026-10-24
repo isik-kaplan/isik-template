@@ -8,13 +8,7 @@ import pytest
 from conftest import load_context
 
 
-# Not opt-in: bakes a project, builds every image, boots the full compose stack (database, broker,
-# backend, worker, scheduler, frontend, server, dns, mailpit, authentik, playwright) and runs every
-# auth spec - including social login - against real containers. Several minutes, unlike the rest of
-# this suite, but this is the one test that has caught every real bug this template has shipped
-# (CORS, key-encoding, 401-as-success, a hardcoded config prefix, a missing pyjwt dependency, an
-# infinite redirect loop) - none of them visible to a faster tier. Skips only if docker itself isn't
-# available, same as the build tests.
+# Slow but not opt-in: the full stack in a browser has caught bugs no faster tier saw.
 pytestmark = pytest.mark.skipif(shutil.which("docker") is None, reason="docker not available")
 
 LEGAL_FIXTURES = Path(__file__).parent / "fixtures" / "legal"
@@ -25,9 +19,7 @@ def _compose(e2e_path, *args, check=False):
 
 
 def _reclaim_ownership(project_path):
-    """Several images here have no USER, so they write the bind-mounted bake directory as root.
-    pytest-cookies' own teardown then can't remove it as the CI runner's unprivileged user - a
-    throwaway container chowns it back before that teardown runs."""
+    """Images without a USER write the bind-mounted bake as root, which pytest-cookies' teardown can't remove."""
     owner = f"{os.getuid()}:{os.getgid()}"
     subprocess.run(
         ["docker", "run", "--rm", "-v", f"{project_path}:/x", "alpine", "chown", "-R", owner, "/x"],
@@ -36,16 +28,14 @@ def _reclaim_ownership(project_path):
 
 
 def _publish_fixture_legal_documents(project_path, project_slug):
-    """A bake ships no legal text, so the legal specs would only ever see the not-added-yet state: these give them
-    real documents to render, and a TERMS_VERSION for signup to record, the way an owner's commit would."""
+    """A bake ships no legal text; without these the legal specs only see the not-added-yet state."""
     shutil.copytree(LEGAL_FIXTURES, project_path / f"{project_slug}-frontend/apps/web/src/legal", dirs_exist_ok=True)
     # Exits 1 for "rewritten", which is the point here.
     subprocess.run([sys.executable, "scripts/pre-commit/legal_version.py"], cwd=project_path, capture_output=True)
 
 
 def _switch_social_login_off(project_path):
-    """e2e/.env offers the OIDC test IdP; with no provider named, the stack serves a login page with
-    no provider buttons and no divider above the form, and the OIDC specs skip themselves."""
+    """With no provider named, the OIDC specs skip themselves."""
     env = project_path / "e2e" / ".env"
     text = env.read_text()
     line = next(line for line in text.splitlines() if line.endswith("__SOCIAL_LOGIN__PROVIDERS=openid_connect"))
@@ -53,14 +43,7 @@ def _switch_social_login_off(project_path):
 
 
 def test_generated_project_passes_its_own_e2e_suite(cookies):
-    """The one test that proves the auth flows the template ships (signup, verify-email, login,
-    logout, password reset) actually work end to end in a browser, not just that the code compiles
-    - this is exactly the suite that first caught the CORS/CSRF/key-encoding bugs this template
-    used to ship with. Run with social login switched off: that renders a different login/signup
-    page (no provider buttons, no divider above the form) that the generated project's own e2e
-    never exercises - it's how a bare "or" divider with nothing above it once shipped unnoticed.
-    The OIDC side runs for real instead, in the generated project's own CI via bake-real-ci - see
-    scripts/bake_and_trigger_real_ci.py."""
+    """Social login off: the login page without provider buttons is never exercised by the generated CI."""
     result = cookies.bake(extra_context=load_context("minimal"))
     assert result.exit_code == 0
     _publish_fixture_legal_documents(result.project_path, result.context["project_slug"])
@@ -68,20 +51,13 @@ def test_generated_project_passes_its_own_e2e_suite(cookies):
     e2e_path = result.project_path / "e2e"
 
     try:
-        # Split rather than `up -d --build`: worker/scheduler share backend's image tag with no
-        # build of their own, and starting them before that build finishes tagging the image can
-        # race compose into pulling it instead of using what was just built.
+        # Not `up -d --build`: worker/scheduler share backend's tag and could race into pulling it.
         build = _compose(e2e_path, "build")
         assert build.returncode == 0, build.stderr
 
         up = _compose(e2e_path, "up", "-d")
         if up.returncode != 0:
-            # A service failing its own healthcheck reports only "unhealthy" here - the reason
-            # lives in that service's own log, which `up` never prints. Pulled into the failure
-            # message directly, since a CI run's only record of this is what pytest captured.
-            # `up` failing on one dependency leaves every container it already started running
-            # (nothing here tears down on its own), so the exact healthcheck command still runs
-            # against a live target - closer to the truth than reasoning about the log alone.
+            # `up` only says "unhealthy"; the containers are still running, so rerun the healthcheck for its output.
             probe_command = [
                 "docker",
                 "compose",
@@ -100,8 +76,7 @@ def test_generated_project_passes_its_own_e2e_suite(cookies):
                 f"--- docker compose logs (tail) ---\n{logs[-8000:]}"
             )
 
-        # --build, as the generated CI has it: `build` above skips this service, so a rerun would otherwise
-        # run the specs baked into the image an earlier run left behind.
+        # `build` above skips this service; without --build a rerun would use stale specs.
         run = _compose(e2e_path, "run", "--build", "--rm", "playwright", "npx", "playwright", "test", "--reporter=list")
         assert run.returncode == 0, run.stdout + run.stderr
     finally:

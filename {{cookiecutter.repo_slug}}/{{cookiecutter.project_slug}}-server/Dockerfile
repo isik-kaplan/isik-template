@@ -2,8 +2,7 @@ FROM nginx:1.27-alpine
 
 WORKDIR /server
 {% if cookiecutter.tls_termination == "self" %}
-# Alpine's nginx image doesn't carry the openssl CLI by itself (only the libs nginx links
-# against) - certificate.sh's own placeholder certificate needs the binary.
+# certificate.sh's placeholder needs the openssl CLI, which the image lacks.
 RUN apk add --no-cache openssl
 {% endif %}
 COPY . /server/

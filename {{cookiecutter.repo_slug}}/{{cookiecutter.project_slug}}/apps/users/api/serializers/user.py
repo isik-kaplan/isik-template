@@ -6,8 +6,7 @@ from apps.users.models.user import User
 
 
 class UserSerializer(BaseModelSerializer):
-    """The signed-in person, as they see and edit themselves. Their rank and permissions are read-only here:
-    nobody changes their own."""
+    """The signed-in person, as they see and edit themselves; nobody changes their own rank or permissions."""
 
     permissions = serializers.SerializerMethodField(
         help_text="Everything they may do, as permission names - what was granted and what that implies."

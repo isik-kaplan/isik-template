@@ -3,10 +3,7 @@ import { expect, test } from '@playwright/test'
 import { OIDC_CONFIGURED, login, proveWithPassword, signInAtAuthentik } from '../helpers'
 import { extractLinkFromEmail } from '../mailpit'
 
-// An account made through a provider has no password, so allauth has nothing to challenge it with -
-// this is the proof it gets instead: signing in again at the disposable Authentik instance, which has
-// to say it really asked (auth_time) after the gate sent them. Its own identity, oidc-e2e-user-3
-// (e2e/authentik-blueprints/oidc-test-idp.yaml), so no other spec's account is involved.
+// A passwordless account proves itself by signing in again at the IdP, whose auth_time must postdate the gate.
 const IDENTITY = 'oidc-e2e-user-3'
 const IDENTITY_EMAIL = 'oidc-e2e-user-3@example.com'
 
@@ -15,7 +12,7 @@ test.skip(!OIDC_CONFIGURED, 'SOCIAL_LOGIN__PROVIDERS does not name openid_connec
 test('somebody with no password proves it at their provider, and can set a password by email instead', async ({
   page,
 }) => {
-  // Signed up through the provider - see auth/social-login.spec.ts for why either path can happen.
+  // Either signup path can happen, as in auth/social-login.spec.ts.
   await page.goto('/auth/login')
   await page.getByRole('button', { name: 'Continue with Openid Connect' }).click()
   await signInAtAuthentik(page, IDENTITY)
@@ -47,8 +44,7 @@ test('somebody with no password proves it at their provider, and can set a passw
   await page.getByRole('button', { name: 'Add email' }).click()
   await expect(page).toHaveURL('/auth/prove?next=%2Fprofile%2Femails')
   await expect(page.getByRole('button', { name: 'Confirm with OpenID Connect' })).toBeVisible()
-  // A retry of this spec meets the password its own first attempt set by email below - the account is
-  // no longer social-only, so it proves the ordinary way and there is nothing left here to show.
+  // A retry meets the password its first attempt set below, so there is nothing left to show.
   if (await page.getByLabel('Password', { exact: true }).isVisible()) {
     await proveWithPassword(page, 'a-password-set-by-email')
     await expect(page).toHaveURL('/profile/emails')
@@ -58,7 +54,7 @@ test('somebody with no password proves it at their provider, and can set a passw
   await page.getByRole('button', { name: 'Confirm with OpenID Connect' }).click()
   // prompt=login: the provider asks again even though its own session is still open.
   await signInAtAuthentik(page, IDENTITY)
-  // Through the provider's callback and the prove page, both server round trips of their own.
+  // Two server round trips: the provider's callback and the prove page.
   await expect(page).toHaveURL('/profile/emails', { timeout: 30_000 })
 
   const added = `oidc-reauth-added-${Date.now()}@example.test`
@@ -79,8 +75,7 @@ test('somebody with no password proves it at their provider, and can set a passw
   await page.getByRole('button', { name: 'Set new password' }).click()
   await expect(page).not.toHaveURL(/password-reset/)
 
-  // A new password ends the sessions the old credentials opened. Signing in with it is no proof, but
-  // the account now has a password to prove with, the ordinary way.
+  // A new password ends the old sessions; the account now proves the ordinary way.
   await login(page, IDENTITY_EMAIL, 'a-password-set-by-email')
   await expect(page.getByText(/Signed in as/)).toBeVisible()
   await page.goto('/profile/emails')

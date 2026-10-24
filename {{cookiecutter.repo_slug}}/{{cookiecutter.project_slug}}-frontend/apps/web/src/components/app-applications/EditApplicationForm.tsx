@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useMemo } from 'react'
 import type React from 'react'
 
+import { ConflictNotice } from '@/components/app/ConflictNotice'
 import { Button } from '@/components/base/button'
 import { Input } from '@/components/base/input'
 import { Label } from '@/components/base/label'
@@ -14,7 +15,7 @@ import { createApi } from '@/lib/apiClients'
 import { apiOrigin } from '@/lib/apiOrigin'
 import { DEVICE_GRANT } from '@/lib/applicationGrant'
 import { redirectUrisFrom } from '@/lib/redirectUris'
-import { useValidatedFormState } from '@/lib/submit'
+import { useVersionedFormState } from '@/lib/submit'
 
 import type { ApiType } from '@{{ cookiecutter.repo_slug }}/api'
 
@@ -22,9 +23,27 @@ import { type Scope, ScopeChecklist } from './ScopeChecklist'
 import { FIELD_CLASS } from './fieldClass'
 import { z } from 'zod'
 
-/** What an application says about itself, where its sign-ins return to, and what it asks to do. Changing
- *  where it returns to or asking for more asks its owner to prove who they are. */
-export function EditApplicationForm({ application, scopes }: { application: ApiType<'Application'>; scopes: Scope[] }) {
+/** An application as this form holds it: its redirect URIs one to a line. */
+function asForm(application: ApiType<'Application'>) {
+  return {
+    name: application.name,
+    description: application.description ?? '',
+    redirect_uris: (application.redirect_uris ?? []).join('\n'),
+    requested_scopes: application.requested_scopes ?? [],
+  }
+}
+
+/** Editing an application. Changing its redirect URIs or asking for more needs its owner to prove it is them. */
+export function EditApplicationForm({
+  application,
+  etag,
+  scopes,
+}: {
+  application: ApiType<'Application'>
+  // The read's ETag header: the version this form was opened on.
+  etag: string | null
+  scopes: Scope[]
+}) {
   const { t } = useClientTranslation(['auth'])
   const router = useRouter()
   // A device is sent back nowhere, so it has no redirect URIs to edit - and none are sent.
@@ -44,22 +63,32 @@ export function EditApplicationForm({ application, scopes }: { application: ApiT
       }),
     [t, device]
   )
-  const { formState, formErrors, handleFormStateEvent, handleFormStateValue, isSubmitting, submit } =
-    useValidatedFormState(schema, {
-      name: application.name,
-      description: application.description ?? '',
-      redirect_uris: (application.redirect_uris ?? []).join('\n'),
-      requested_scopes: application.requested_scopes ?? [],
-    })
+  const {
+    formState,
+    formErrors,
+    handleFormStateEvent,
+    handleFormStateValue,
+    isSubmitting,
+    submit,
+    conflict,
+    takeTheirs,
+    keepMine,
+  } = useVersionedFormState(schema, asForm(application), {
+    // A save names the version it was opened on, so somebody else's save is not overwritten.
+    etag,
+    fromServer: (current) => asForm(current as ApiType<'Application'>),
+  })
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
-    // A PATCH, which the backend asks no idempotency key of: the one the hook mints is left unsent.
-    await submit((changes) => createApi(apiOrigin()).updateOAuthApplication(application.id, changes), {
-      success: t('auth:applicationSaved'),
-      failure: t('auth:applicationSaveError'),
-      onSuccess: () => router.refresh(),
-    })
+    await submit(
+      (changes, headers) => createApi(apiOrigin()).updateOAuthApplication(application.id, changes, headers),
+      {
+        success: t('auth:applicationSaved'),
+        failure: t('auth:applicationSaveError'),
+        onSuccess: () => router.refresh(),
+      }
+    )
   }
 
   return (
@@ -107,6 +136,7 @@ export function EditApplicationForm({ application, scopes }: { application: ApiT
         onChange={handleFormStateValue('requested_scopes')}
       />
       {formErrors?.non_field_errors && <p className="text-sm text-destructive">{formErrors.non_field_errors[0]}</p>}
+      <ConflictNotice conflict={conflict} takeTheirs={takeTheirs} keepMine={keepMine} disabled={isSubmitting} />
       <Button type="submit" className="self-start" disabled={isSubmitting}>
         {t('auth:applicationSave')}
       </Button>

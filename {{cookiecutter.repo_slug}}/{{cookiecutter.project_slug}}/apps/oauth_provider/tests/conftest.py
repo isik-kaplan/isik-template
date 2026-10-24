@@ -17,7 +17,7 @@ from apps.users.permissions import Permission as PermissionName
 from apps.users.tests import conftest as users
 
 
-# The users app's own fixtures, shared: a conftest only reaches the tests beneath it.
+# Shared, since a conftest only reaches the tests beneath it.
 alice = users.alice
 signed_in = users.signed_in
 headless = users.headless
@@ -58,8 +58,7 @@ def permission(name):
 
 @pytest.fixture
 def application(db, alice):
-    """A confidential application alice registered and a superuser approved, asking to read the people list
-    and approved for it, with the secret it was issued."""
+    """Confidential, approved to read the people list, with the secret it was issued."""
     with deciding():
         application = make_application(
             name="Acme Notes",
@@ -84,7 +83,7 @@ def make_application(**fields):
 
 
 def set_approval(application, approval):
-    """Puts an application in any state at all, past the trigger that keeps real moves to the lifecycle."""
+    """Any state at all, past the lifecycle trigger."""
     with pgtrigger.ignore("oauth_provider.Application:approval_follows_the_lifecycle", *APPROVAL_GUARDS):
         Application.objects.filter(pk=application.pk).update(approval=approval)
     application.refresh_from_db()
@@ -112,8 +111,7 @@ def consent(client, application, allow=True, **overrides):
 
 
 def tokens_for(client, application, scope="openid profile email"):
-    """The whole authorization code flow for whoever `client` is signed in as: consent, then the code
-    exchanged for tokens."""
+    """Consent, then the code exchanged for tokens."""
     redirect = consent(client, application, scope=scope)
     code = parse_qs(urlsplit(redirect["Location"]).query)["code"][0]
     response = client.post(

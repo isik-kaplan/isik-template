@@ -8,5 +8,5 @@ class ProviderTokenView(ProvesWhoTheyAre, _ProviderTokenView):
     reauthentication_methods = frozenset({"POST"})
 
     def is_an_act(self):
-        # Connecting hands this account another way in; a token login is only a login.
+        # Only a connect adds a way in.
         return super().is_an_act() and self.input.cleaned_data["process"] == AuthProcess.CONNECT

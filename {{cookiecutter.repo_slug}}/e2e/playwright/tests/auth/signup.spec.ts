@@ -15,7 +15,7 @@ test('signup requires email verification before the account can log in', async (
   await page.getByRole('button', { name: 'Sign up' }).click()
   await expect(page).toHaveURL('/auth/signup-email-sent')
 
-  // Not logged in yet - the account exists but email verification is mandatory.
+  // Not logged in yet: email verification is mandatory.
   await page.goto('/')
   await expect(page.getByRole('link', { name: 'Log in' })).toBeVisible()
 

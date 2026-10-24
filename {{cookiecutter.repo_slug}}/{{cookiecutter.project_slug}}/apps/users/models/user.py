@@ -13,13 +13,7 @@ def language_choices():
 
 @track_events()
 class User(AbstractUser, BaseModel):
-    # Blank, not a sentinel value - "no preference, follow the browser's Accept-Language" (see
-    # UserLanguageMiddleware). Django's own blank-skips-choice-validation means "" stays valid even
-    # though it's not itself one of the choices.
-    #
-    # choices=language_choices, not choices=settings.LANGUAGES directly: a callable keeps the field
-    # re-reading what is configured. The CHECK isik derives from the choices is a list in the
-    # migration all the same, so changing LANGUAGES means a migration that rewrites that constraint.
+    # The derived CHECK is still a fixed list in the migration: changing LANGUAGES needs a new migration.
     language = models.CharField(
         max_length=15,
         choices=language_choices,
@@ -28,8 +22,7 @@ class User(AbstractUser, BaseModel):
         help_text="The language this user chose for the interface, or blank to follow their browser's.",
         db_comment="A code from settings.LANGUAGES, or empty for no preference: Accept-Language decides then.",
     )
-    # A column despite the history log: a later terms change asks whoever accepted an older version to accept again,
-    # which makes this a live input rather than an audit record.
+    # A column despite the history log: a terms change re-asks whoever accepted an older version.
     terms_version = models.CharField(
         max_length=64,
         blank=True,
@@ -44,26 +37,25 @@ class User(AbstractUser, BaseModel):
         db_comment="Set with terms_version at signup; null when there was nothing to agree to.",
     )
 
+    # The write version covers grants too, so a stale page can't quietly undo an admin grant.
+    concurrency_relations = ("groups", "user_permissions")
+
     class Meta(AbstractUser.Meta):
         swappable = "AUTH_USER_MODEL"
 
     @property
     def acting_through_a_token(self):
-        """Set for one request by the authenticator that took a token - an application's or one of their own
-        personal access tokens - acting for this person with only the scopes that token was given."""
         return getattr(self, "token_scopes", None) is not None
 
     @property
     def may_see_every_account(self):
-        """Staff read every account, and holders of `users:manage:user` - but a token acting for somebody
-        only by the permission: being staff is a rank, never something a token was let have."""
+        """A token counts only the permission: staff is a rank, never delegated."""
         if self.has_perm(Permission.USERS_MANAGE_USER):
             return True
         return self.is_staff and not self.acting_through_a_token
 
     def has_perm(self, perm, obj=None):
-        """Django's, without its superuser shortcut for a token acting for one: being a superuser is a rank,
-        and what a token may do is only ever the permissions it was given."""
+        """Without Django's superuser shortcut for a token: a token holds only its scopes."""
         if self.acting_through_a_token:
             return self.is_active and _user_has_perm(self, perm, obj)
         return super().has_perm(perm, obj)

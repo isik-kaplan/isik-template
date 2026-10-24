@@ -20,7 +20,6 @@ class Command(BaseCommand):
                 email=config.SETUP.SUPERUSER.EMAIL,
                 password=config.SETUP.SUPERUSER.PASSWORD,
             )
-            # The address is the operator's own, written into their config: there is nobody to confirm it to,
-            # and without it the account could sign in only to the admin, never to the app.
+            # Without a verified address the account could sign in only to the admin.
             EmailAddress.objects.create(user=user, email=user.email, verified=True, primary=True)
         self.stdout.write(self.style.SUCCESS(f"Created superuser '{config.SETUP.SUPERUSER.USERNAME}'."))

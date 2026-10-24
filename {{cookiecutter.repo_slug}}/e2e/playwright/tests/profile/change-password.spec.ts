@@ -10,16 +10,13 @@ test('changing your password while logged in requires the current one and takes 
   const newPassword = 'new-correct-horse-battery'
   await signUpAndVerify(page, username, `${username}@example.test`, oldPassword)
   await login(page, username, oldPassword)
-  // login() doesn't itself wait for the post-submit redirect to land - most other specs never
-  // need to since they read the resulting page directly, but a goto() right after can otherwise
-  // race the session cookie actually being set and bounce off the next page's own auth gate.
+  // login() doesn't wait for the redirect; a goto() right after would race the session cookie.
   await expect(page.getByText(`Signed in as ${username}.`)).toBeVisible()
 
   await page.goto('/profile/password')
   await page.getByLabel('Current password').fill('definitely-the-wrong-password')
   await page.getByLabel('New password').fill(newPassword)
   await page.getByRole('button', { name: 'Change password' }).click()
-  // allauth's own message, surfaced verbatim rather than a generic fallback.
   await expect(page.getByText('Please type your current password.')).toBeVisible()
 
   await page.getByLabel('Current password').fill(oldPassword)

@@ -54,7 +54,6 @@ describe('judgeMutants', () => {
     expect(judge({ 'src/a.ts': [mutant(1, 'CompileError')] }, {})).toMatchObject({ alive: 0, unexplained: [] })
   })
 
-  // Same lines, different mutator: an entry excuses only the kind of change its reason was written for.
   it('excuses only the mutator an entry names', () => {
     const verdict = judge({ 'src/a.ts': [mutant(1, 'Survived', 'StringLiteral')] }, { 'src/a.ts': [entry(1)] })
 
@@ -62,8 +61,7 @@ describe('judgeMutants', () => {
     expect(verdict.stale).toEqual([{ file: 'src/a.ts', entry: entry(1) }])
   })
 
-  // The recheck: Stryker runs exempt mutants like any other, so an entry nothing survives under has
-  // been disproved by this very run.
+  // Stryker runs exempt mutants too, so this run disproves an entry nothing survives under.
   it('reports an entry whose mutant a test now kills as stale', () => {
     const verdict = judge({ 'src/a.ts': [mutant(1, 'Killed')] }, { 'src/a.ts': [entry(1)] })
 
@@ -77,7 +75,6 @@ describe('judgeMutants', () => {
     expect(verdict.stale).toEqual([{ file: 'src/a.ts', entry: entry(1) }])
   })
 
-  // A sharded run reports its own files alone; another shard's entries are that shard's to judge.
   it('leaves the entries of a file this run did not measure alone', () => {
     const verdict = judge({ 'src/a.ts': [mutant(1, 'Survived')] }, { 'src/a.ts': [entry(1)], 'src/b.ts': [entry(2)] }, [
       'src/a.ts',
@@ -93,7 +90,6 @@ describe('judgeMutants', () => {
     ])
   })
 
-  // A fingerprint spans whole lines, so one line can hand an entry several mutants of its kind.
   it('counts the mutants an entry excuses when there is more than one', () => {
     const verdict = judge({ 'src/a.ts': [mutant(3, 'Survived'), mutant(3, 'Timeout')] }, { 'src/a.ts': [entry(3)] })
 
@@ -101,7 +97,6 @@ describe('judgeMutants', () => {
     expect(verdict).toMatchObject({ unexplained: [], stale: [] })
   })
 
-  // One entry per mutant: identical entries share a key, and each needs a mutant of its own.
   it('counts identical entries against the mutants their key matches', () => {
     const both = judge(
       { 'src/a.ts': [mutant(3, 'Survived'), mutant(3, 'Survived')] },

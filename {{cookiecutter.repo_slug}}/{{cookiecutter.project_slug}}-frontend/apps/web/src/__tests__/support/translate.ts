@@ -1,5 +1,4 @@
 import type { Translate } from '@/i18n/config'
 
-// Answers with the key it was handed, so a test asserts which key code reaches for rather than what
-// English says today. Cast because a stub needs only the first of `Translate`'s overloads.
+// Answers with the key, so tests assert keys rather than English. Cast: a stub needs one overload.
 export const echoKeys = ((key: string) => key) as unknown as Translate

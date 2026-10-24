@@ -17,14 +17,13 @@ from {{ cookiecutter.project_slug }}.celery import app as celery_app
 
 
 def test_ping_task_returns_pong():
-    # Calling a Task instance directly runs it synchronously, in-process - no broker needed.
     assert ping() == "pong"
 
 
 @pytest.mark.django_db
 def test_the_people_a_rung_shuts_out_get_one_task_each():
     SiteSettings.objects.create(login_policy=SiteSettings.LoginPolicy.STAFF)
-    # The ones it skips first, so skipping one is not taken for being done.
+    # Skipped ones first, so skipping one isn't mistaken for being done.
     User.objects.create_user(username="gone", email="gone@example.test", is_active=False)
     User.objects.create_user(username="no-address", email="")
     User.objects.create_user(username="staff", email="staff@example.test", is_staff=True)
@@ -38,7 +37,7 @@ def test_the_people_a_rung_shuts_out_get_one_task_each():
 
 @pytest.mark.django_db
 def test_each_one_is_mailed_in_their_own_language(a_second_language):
-    """The worker has no request whose language could stand in, so the recipient's own is the only one."""
+    """The worker has no request language to fall back on."""
     member = User.objects.create_user(username="member", email="member@example.test", language="tr")
     seen = []
     templates = []
@@ -56,7 +55,7 @@ def test_each_one_is_mailed_in_their_own_language(a_second_language):
         tell_one_person_a_rung_signed_out(str(member.pk))
 
     assert set(seen) == {"tr"}
-    # By exact name: a case-insensitive filesystem would find these templates under any spelling.
+    # Exact names: a case-insensitive filesystem would find any spelling.
     prefix = "account/email/logins_closed"
     assert sorted(templates) == [f"{prefix}/message.html", f"{prefix}/message.txt", f"{prefix}/subject.txt"]
     (sent,) = mail.outbox
@@ -89,7 +88,7 @@ def test_the_mail_says_why_they_were_signed_out():
 
 @pytest.fixture
 def retries_run_in_process(monkeypatch):
-    """An in-process task that propagates its failures raises its own retry rather than running it."""
+    """With propagation on, an eager task raises its retry instead of running it."""
     monkeypatch.setattr(celery_app.conf, "task_eager_propagates", False)
 
 

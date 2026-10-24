@@ -1,10 +1,4 @@
-# Auto-applied by Authentik on boot (mounted read-only into authentik-server/authentik-worker's
-# /blueprints/custom). Gives the OIDC social-login spec a real IdP to drive, instead of the
-# placeholder-credentialed SocialApp shipped for every other provider.
-#
-# Schema verified against the real authentik_providers_oauth2.oauth2provider model - extracted
-# from ghcr.io/goauthentik/server:2026.2's own /blueprints/schema.json (`docker create` +
-# `docker cp` the image, no running instance needed) rather than assumed from documentation.
+# Applied by Authentik on boot. Schema checked against the 2026.2 image's /blueprints/schema.json.
 version: 1
 metadata:
   name: E2E test OIDC IdP
@@ -19,24 +13,15 @@ entries:
       client_type: confidential
       client_id: e2e-oidc-client-id
       client_secret: e2e-oidc-client-secret-not-a-real-secret
-      # Must match auth.{{ cookiecutter.domain }}'s actual callback path exactly - see
-      # urls/auth.py (allauth's classic, non-headless URLs mounted at v0/provider-callback/),
-      # allauth's own OPENID_CONNECT_URL_PREFIX default ("oidc"), and
-      # openid_connect/urls.py (<provider_id>/login/callback/). "authentik" here has to match
-      # {{ cookiecutter.config_prefix }}__OAUTH__OPENID_CONNECT__PROVIDER_ID in e2e/.env.
+      # "authentik" must match {{ cookiecutter.config_prefix }}__OAUTH__OPENID_CONNECT__PROVIDER_ID in e2e/.env.
       redirect_uris:
         - matching_mode: strict
           url: http://auth.{{ cookiecutter.domain }}/v0/provider-callback/oidc/authentik/login/callback/
-        # The same callback reached through docker-compose.tls-proxy-for-e2e.yml's https front door.
+        # The same callback through the tls-proxy overlay.
         - matching_mode: strict
           url: https://auth.{{ cookiecutter.domain }}/v0/provider-callback/oidc/authentik/login/callback/
       signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
-      # Without these the id_token/userinfo response carries no claims beyond "sub" - allauth's
-      # openid_connect provider has no email to extract then, and since ACCOUNT_SIGNUP_FIELDS
-      # requires one, the whole login silently redirects back to the callback_url with an
-      # unlogged `error` query param rather than a pending signup, and no account ever gets
-      # created. Verified against the real, non-empty set of managed default mappings a running
-      # instance actually has (GET /api/v3/propertymappings/provider/scope/), not assumed.
+      # Without these only "sub" comes back, and with no email the login silently fails.
       property_mappings:
         - !Find [authentik_providers_oauth2.scopemapping, [managed, "goauthentik.io/providers/oauth2/scope-openid"]]
         - !Find [authentik_providers_oauth2.scopemapping, [managed, "goauthentik.io/providers/oauth2/scope-email"]]
@@ -49,13 +34,7 @@ entries:
       name: E2E OIDC Test
       provider: !KeyOf e2e-oidc-provider
 
-  # Two identities, not one: auth/social-login.spec.ts needs a login this IdP has never seen
-  # before, but profile/connections.spec.ts's own repeated-attempt handling (see its docstring)
-  # only accounts for colliding with *itself* across retries, not with a completely different spec
-  # that happens to run first. Sharing one identity made whichever spec ran second see a returning,
-  # already-linked login instead of the first-ever one its own assertions assume - allauth then
-  # signs it straight into the *other* spec's account instead of routing to pending-signup or
-  # pending-verification, which read as this test's actual failure mode when it broke.
+  # One identity per spec: a shared one signs the second spec into the first spec's account.
   - model: authentik_core.user
     identifiers:
       username: oidc-e2e-user
@@ -76,8 +55,7 @@ entries:
       password: correct-horse-battery-staple
       type: internal
 
-  # profile/reauthentication-social.spec.ts's own: an account made through this IdP, proving it is
-  # them by signing in here again.
+  # profile/reauthentication-social.spec.ts's.
   - model: authentik_core.user
     identifiers:
       username: oidc-e2e-user-3
@@ -88,8 +66,7 @@ entries:
       password: correct-horse-battery-staple
       type: internal
 
-  # auth/login-ladder.spec.ts's own: a social sign-in the login policy turns away, which must never
-  # create an account - so it gets an identity no other spec signs in with.
+  # auth/login-ladder.spec.ts's: turned away, so it must never be used to create an account.
   - model: authentik_core.user
     identifiers:
       username: oidc-e2e-user-4

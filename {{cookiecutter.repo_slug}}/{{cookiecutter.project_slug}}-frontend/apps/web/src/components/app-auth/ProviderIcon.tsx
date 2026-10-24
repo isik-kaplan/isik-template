@@ -1,20 +1,14 @@
 import { BRAND_ICONS } from './icons/brands'
 
-// A bundled brand icon always wins when one exists (crisp, no extra request); iconUrl - the
-// deployment's SOCIAL_LOGIN__ICONS entry for it, see socialProviders.ts - only fills the
-// gap for providers with no bundled icon, typically a deployment's own openid_connect/SAML IdP,
-// which by definition has no single "brand" this template could ship for it.
+// A bundled brand icon wins; iconUrl (SOCIAL_LOGIN__ICONS) covers providers without one.
 export function ProviderIcon({ providerId, name, iconUrl }: { providerId: string; name: string; iconUrl: string }) {
   const Icon = BRAND_ICONS[providerId]
   if (Icon) {
     return <Icon className="size-4" />
   }
   if (iconUrl) {
-    // next/image's optimizer needs every remote origin allow-listed ahead of time
-    // (images.remotePatterns) - iconUrl is an arbitrary, per-deployment URL or local path, and a
-    // 16px icon has no meaningful LCP/optimization benefit anyway.
-    // A real alt so a broken URL falls back to globals.css's tile rather than Chromium's glyph, but
-    // hidden from assistive tech: the provider's name is already the text right beside it.
+    // Not next/image: iconUrl is an arbitrary origin it would need allow-listed.
+    // A real alt for the globals.css fallback, hidden from assistive tech: the name is beside it.
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={iconUrl} alt={name} aria-hidden data-fallback="tile" className="size-4" />
   }

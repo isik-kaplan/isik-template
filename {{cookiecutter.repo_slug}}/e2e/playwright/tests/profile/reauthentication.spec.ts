@@ -2,8 +2,6 @@ import { expect, test } from '@playwright/test'
 
 import { login, proveWithPassword, signUpAndVerify } from '../helpers'
 
-// The re-authentication gate, driven rather than around: an act the backend refuses until somebody
-// proves it is them sends them to the prove page and back, and the proof buys exactly one act.
 test('an act asks for the password again, comes back to finish, and the proof buys only that act', async ({
   page,
 }) => {

@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
-"""Fails unless every mutant `mutmut run` left alive is named in mutation-exemptions.toml, and every
-name there is still a mutant left alive. Run right after `scripts/mutmut_run.py run` - it reads
-`mutmut results`.
-
-Entries are keyed by mutant, named after the mutation itself (the generated project's
-scripts/mutation_naming.py), so an entry excuses exactly the mutation its reason describes: a new
-mutant in the same function needs its own, and an edit that removes the mutation leaves the entry
-stale - which fails here rather than quietly excusing nothing.
-"""
+"""Fails unless the surviving mutants and mutation-exemptions.toml's entries match exactly, both ways."""
 
 import subprocess
 import sys
@@ -16,13 +8,11 @@ from pathlib import Path
 
 
 EXEMPTIONS_PATH = Path(__file__).resolve().parent.parent / "mutation-exemptions.toml"
-# Everything else mutmut can report is a mutant nothing killed: "no tests" was never run, "timeout"
-# and "suspicious" were given up on, "not checked" never reached - none of them is a pass.
+# Anything else ("no tests", "timeout", "suspicious", "not checked") is not a pass.
 SETTLED = ("killed", "skipped", "caught by type check")
 
 
 def alive(results):
-    """{mutant name: verdict} for every line of `mutmut results` that is not a settled verdict."""
     found = {}
     for line in results.splitlines():
         name, _, verdict = line.strip().rpartition(": ")

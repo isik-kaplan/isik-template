@@ -6,11 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const CHANNEL_NAME = '{{ cookiecutter.project_slug }}-session'
 
-// A plain setTimeout(0) is enough in isolation, but not under the heavy CPU contention a mutation
-// testing run puts every test under - BroadcastChannel delivery is a real macrotask, and a busy
-// event loop can push it well past the next tick. A longer, once-only wait for the *absence* of a
-// call still proves the negative; a polling wait for the *presence* of one doesn't need the delay
-// at all once it arrives.
+// Longer than setTimeout(0): under a mutation run's load, BroadcastChannel delivery slips past the next tick.
 function waitForQuiet() {
   return new Promise((resolve) => setTimeout(resolve, 100))
 }

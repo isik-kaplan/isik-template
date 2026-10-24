@@ -1,4 +1,4 @@
-# Installed and built inside the image, for its own platform - a laptop's copies would overwrite them.
+# Built inside the image for its own platform; host copies would overwrite them.
 **/node_modules
 **/.next
 **/dist

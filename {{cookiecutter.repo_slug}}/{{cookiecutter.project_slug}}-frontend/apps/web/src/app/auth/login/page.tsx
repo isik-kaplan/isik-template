@@ -7,17 +7,15 @@ import { SocialLoginSection } from '@/components/app-auth/SocialLoginSection'
 import { sUseTranslation } from '@/i18n'
 import { afterSignIn } from '@/lib/afterSignIn'
 import { redirectIfAuthenticated } from '@/lib/getSession'
-import { isLocalDevHost } from '@/lib/isLocalDevHost'
+import { requestOrigin } from '@/lib/requestOrigin'
 
 import { PROVIDER_REDIRECT_PATH } from '@{{ cookiecutter.repo_slug }}/auth-api'
-
-import { getRequestOrigin } from '@isikk/core/next/request'
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const next = afterSignIn((await searchParams).next)
   await redirectIfAuthenticated(next)
   const { t } = await sUseTranslation(['auth'])
-  const origin = getRequestOrigin(await headers(), { isLocalDevHost })
+  const origin = requestOrigin(await headers())
 
   return (
     <AuthCard

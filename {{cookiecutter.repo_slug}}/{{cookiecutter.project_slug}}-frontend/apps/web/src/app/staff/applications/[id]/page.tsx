@@ -11,11 +11,13 @@ import { DEVICE_GRANT, grantLabel } from '@/lib/applicationGrant'
 import { describedScopes, scopeLabel } from '@/lib/oauthScopes'
 import { serverApi } from '@/lib/serverApi'
 
+import { etagOf } from '@{{ cookiecutter.repo_slug }}/api'
+
 /** One application under review: whose it is, where it signs people in to, and what it asks for. */
 export default async function ApplicationReviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const api = await serverApi()
-  const [{ data: me }, { data: application }, { data: scopes }] = await Promise.all([
+  const [{ data: me }, { data: application, response }, { data: scopes }] = await Promise.all([
     api.me(),
     api.oauthApplicationReview(Number(id)),
     api.delegatableScopes(),
@@ -58,7 +60,7 @@ export default async function ApplicationReviewPage({ params }: { params: Promis
         </dl>
       </section>
       <section className="flex flex-col gap-3 border-t border-border pt-6">
-        <ApprovalPanel application={application} scopes={offered} />
+        <ApprovalPanel application={application} etag={etagOf(response)} scopes={offered} />
       </section>
     </PageShell>
   )

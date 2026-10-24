@@ -13,6 +13,10 @@
   "tooManyRequests": "Too many requests. Wait a moment, then try again.",
   "tooManyRequestsFor_one": "Too many requests. Try again in {{count}} second.",
   "tooManyRequestsFor_other": "Too many requests. Try again in {{count}} seconds.",
-  "tryAgain": "Try again"
+  "tryAgain": "Try again",
+  "staleChanged": "Someone else changed this since you opened it. Review their changes.",
+  "conflictTitle": "Someone else saved this since you opened it.",
+  "conflictTakeTheirs": "Use their version",
+  "conflictKeepMine": "Save mine over it"
 }
 {%- endraw %}

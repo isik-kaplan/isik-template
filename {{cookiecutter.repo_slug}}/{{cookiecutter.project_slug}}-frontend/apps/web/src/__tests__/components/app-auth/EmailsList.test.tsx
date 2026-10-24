@@ -10,10 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
-// Base UI's real Popover hangs jsdom the moment anything is awaited after opening it (confirmed:
-// the identical AuthApi call with no Popover in the tree resolves in single-digit milliseconds).
-// Rendering the menu content unconditionally here tests EmailsList's own conditionals and click
-// handlers directly, without going anywhere near that mechanism.
+// Base UI's Popover hangs jsdom once anything is awaited after opening it, so the menu renders open.
 vi.mock('@/components/app/Overlay', () => ({
   Overlay: ({ children }: { children: ReactNode }) => children,
   OverlayTrigger: ({ children }: { children: ReactNode }) => children,

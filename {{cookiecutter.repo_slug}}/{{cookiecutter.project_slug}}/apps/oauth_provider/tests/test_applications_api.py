@@ -12,6 +12,7 @@ from rest_framework.exceptions import ValidationError
 from apps.oauth_provider.api.viewsets.application import ApplicationViewSet
 from apps.oauth_provider.tests.conftest import REDIRECT_URI, make_application, set_approval
 from apps.users.models.user import User
+from conftest import versioned
 
 
 AccessToken = get_access_token_model()
@@ -169,7 +170,12 @@ def test_a_device_given_somewhere_to_return_to_later_is_refused_too(client, prov
     application = Application.objects.get(pk=client.post(LIST, DEVICE, content_type="application/json").json()["id"])
     headless.prove()
 
-    response = client.patch(_detail(application), {"redirect_uris": [REDIRECT_URI]}, content_type="application/json")
+    response = client.patch(
+        _detail(application),
+        {"redirect_uris": [REDIRECT_URI]},
+        content_type="application/json",
+        headers=versioned(application),
+    )
 
     assert response.status_code == 400
     assert response.json() == {"redirect_uris": ["A device is never sent back anywhere."]}
@@ -180,7 +186,9 @@ def test_an_application_taking_away_everywhere_it_returns_to_is_refused(client, 
     application.user = proven
     application.save()
 
-    response = client.patch(_detail(application), {"redirect_uris": []}, content_type="application/json")
+    response = client.patch(
+        _detail(application), {"redirect_uris": []}, content_type="application/json", headers=versioned(application)
+    )
 
     assert response.json() == {"redirect_uris": ["Give at least one place to return to."]}
 
@@ -194,6 +202,7 @@ def test_how_it_signs_people_in_is_settled_when_it_is_registered(client, proven,
         _detail(application),
         {"authorization_grant_type": Application.GRANT_DEVICE_CODE},
         content_type="application/json",
+        headers=versioned(application),
     )
 
     application.refresh_from_db()
@@ -325,7 +334,9 @@ def test_somebody_sees_only_their_own_applications_newest_first(client, signed_i
 
 @pytest.mark.django_db
 def test_renaming_needs_no_proof(client, signed_in, provider, application):
-    response = client.patch(_detail(application), {"name": "Acme Notes 2"}, content_type="application/json")
+    response = client.patch(
+        _detail(application), {"name": "Acme Notes 2"}, content_type="application/json", headers=versioned(application)
+    )
 
     assert response.status_code == 200
     application.refresh_from_db()
@@ -336,16 +347,28 @@ def test_renaming_needs_no_proof(client, signed_in, provider, application):
 def test_pointing_its_sign_ins_elsewhere_needs_a_proof(client, signed_in, provider, application, headless):
     elsewhere = {"redirect_uris": ["https://elsewhere.example.test/cb"]}
 
-    assert client.patch(_detail(application), elsewhere, content_type="application/json").status_code == 403
+    assert (
+        client.patch(
+            _detail(application), elsewhere, content_type="application/json", headers=versioned(application)
+        ).status_code
+        == 403
+    )
     headless.prove()
-    assert client.patch(_detail(application), elsewhere, content_type="application/json").status_code == 200
+    assert (
+        client.patch(
+            _detail(application), elsewhere, content_type="application/json", headers=versioned(application)
+        ).status_code
+        == 200
+    )
     application.refresh_from_db()
     assert application.redirect_uris == "https://elsewhere.example.test/cb"
 
 
 @pytest.mark.django_db
 def test_the_client_type_is_settled_when_it_is_registered(client, signed_in, provider, application):
-    client.patch(_detail(application), {"client_type": "public"}, content_type="application/json")
+    client.patch(
+        _detail(application), {"client_type": "public"}, content_type="application/json", headers=versioned(application)
+    )
 
     application.refresh_from_db()
     assert application.client_type == Application.CLIENT_CONFIDENTIAL
@@ -355,9 +378,9 @@ def test_the_client_type_is_settled_when_it_is_registered(client, signed_in, pro
 def test_deleting_one_needs_a_proof_and_then_removes_it(client, signed_in, provider, application, headless):
     client.post(_action(application, "disable"))
 
-    assert client.delete(_detail(application)).status_code == 403
+    assert client.delete(_detail(application), headers=versioned(application)).status_code == 403
     headless.prove()
-    assert client.delete(_detail(application)).status_code == 204
+    assert client.delete(_detail(application), headers=versioned(application)).status_code == 204
     assert not Application.objects.exists()
 
 
@@ -365,7 +388,7 @@ def test_deleting_one_needs_a_proof_and_then_removes_it(client, signed_in, provi
 def test_one_still_switched_on_is_not_deleted_and_nobody_proves_themselves_to_hear_it(
     client, signed_in, provider, application
 ):
-    response = client.delete(_detail(application))
+    response = client.delete(_detail(application), headers=versioned(application))
 
     assert response.status_code == 400
     assert response.json() == {
@@ -381,7 +404,7 @@ def test_one_still_switched_on_is_not_deleted_even_by_somebody_who_proved_themse
     # Past the early refusal, as a race with switching it back on would be.
     monkeypatch.setattr(ApplicationViewSet, "refuse_before_proving", lambda self, request: None)
 
-    response = client.delete(_detail(application))
+    response = client.delete(_detail(application), headers=versioned(application))
 
     assert response.status_code == 400
     assert Application.objects.exists()
@@ -480,7 +503,7 @@ def test_a_rotation_asked_for_in_nonsense_is_refused(client, proven, application
 
 @pytest.mark.django_db
 def test_one_still_switched_on_is_not_deleted_whatever_reaches_the_delete(proven, application):
-    """The check before proving answers first; this is the one standing behind it."""
+    """The backstop behind the check before proving."""
     with pytest.raises(ValidationError) as refused:
         ApplicationViewSet().perform_destroy(application)
 
@@ -494,7 +517,9 @@ def test_one_still_switched_on_is_not_deleted_whatever_reaches_the_delete(proven
 def test_a_device_is_edited_without_saying_again_that_it_is_public(client, proven):
     application = Application.objects.get(pk=client.post(LIST, DEVICE, content_type="application/json").json()["id"])
 
-    response = client.patch(_detail(application), {"name": "Renamed CLI"}, content_type="application/json")
+    response = client.patch(
+        _detail(application), {"name": "Renamed CLI"}, content_type="application/json", headers=versioned(application)
+    )
 
     assert response.status_code == 200
     assert response.json()["name"] == "Renamed CLI"
@@ -512,7 +537,9 @@ def test_a_public_application_has_no_secret_to_rotate(client, proven, applicatio
 
 @pytest.mark.django_db
 def test_asking_for_less_narrows_what_it_was_approved_for_at_once(client, proven, application):
-    response = client.patch(_detail(application), {"requested_scopes": []}, content_type="application/json")
+    response = client.patch(
+        _detail(application), {"requested_scopes": []}, content_type="application/json", headers=versioned(application)
+    )
 
     assert response.json()["requested_scopes"] == []
     assert response.json()["approved_scopes"] == []
@@ -522,7 +549,12 @@ def test_asking_for_less_narrows_what_it_was_approved_for_at_once(client, proven
 def test_asking_for_more_waits_for_a_superuser_while_the_provider_asks_for_approval(client, proven, application):
     both = [GRANT, MANAGE]
 
-    body = client.patch(_detail(application), {"requested_scopes": both}, content_type="application/json").json()
+    body = client.patch(
+        _detail(application),
+        {"requested_scopes": both},
+        content_type="application/json",
+        headers=versioned(application),
+    ).json()
 
     assert body["requested_scopes"] == both
     assert body["approved_scopes"] == [MANAGE]
@@ -538,7 +570,10 @@ def test_asking_for_more_is_approved_at_once_while_the_provider_approves_by_itse
     set_approval(application, approval)
 
     body = client.patch(
-        _detail(application), {"requested_scopes": [GRANT, MANAGE]}, content_type="application/json"
+        _detail(application),
+        {"requested_scopes": [GRANT, MANAGE]},
+        content_type="application/json",
+        headers=versioned(application),
     ).json()
 
     assert body["approved_scopes"] == [GRANT, MANAGE]
@@ -553,7 +588,10 @@ def test_asking_for_more_waits_for_a_superuser_whose_answer_is_still_due_or_was_
     set_approval(application, approval)
 
     body = client.patch(
-        _detail(application), {"requested_scopes": [GRANT, MANAGE]}, content_type="application/json"
+        _detail(application),
+        {"requested_scopes": [GRANT, MANAGE]},
+        content_type="application/json",
+        headers=versioned(application),
     ).json()
 
     assert body["approved_scopes"] == [MANAGE]
@@ -561,7 +599,12 @@ def test_asking_for_more_waits_for_a_superuser_whose_answer_is_still_due_or_was_
 
 @pytest.mark.django_db
 def test_asking_for_more_needs_a_proof(client, signed_in, provider, application):
-    response = client.patch(_detail(application), {"requested_scopes": [GRANT]}, content_type="application/json")
+    response = client.patch(
+        _detail(application),
+        {"requested_scopes": [GRANT]},
+        content_type="application/json",
+        headers=versioned(application),
+    )
 
     assert response.status_code == 403
 
@@ -572,7 +615,7 @@ def test_somebody_elses_application_is_not_found(client, proven, application):
     application.save()
 
     assert client.get(_detail(application)).status_code == 404
-    assert client.delete(_detail(application)).status_code == 404
+    assert client.delete(_detail(application), headers=versioned(application)).status_code == 404
 
 
 @pytest.mark.django_db

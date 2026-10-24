@@ -1,17 +1,23 @@
 'use client'
 
+import { i18next } from '@/i18n/client'
+
 import { tooManyRequestsMessage } from './tooManyRequestsMessage'
 import { allauthEnvelope } from '@isikk/core/allauth'
 import { createSubmitHooks } from '@isikk/core/hooks'
 import { toast } from 'sonner'
 
-// Called when a refusal is reported rather than once here, so it is in the language the page is in by then.
+// Called per refusal, so it is in the page's language at that moment.
 const throttled = tooManyRequestsMessage
+const stale = () => i18next.t('common:staleChanged')
 
-/** The submit hooks for the main API, which is DRF and answers in the shape the library reads by default. */
-export const { useAPISubmit, useValidatedFormState } = createSubmitHooks(toast, { throttled })
+/** Submit hooks for the main API, whose DRF errors (412 included) are the library's default shape. */
+export const { useAPISubmit, useValidatedFormState, useVersionedFormState } = createSubmitHooks(toast, {
+  throttled,
+  stale,
+})
 
-/** The same pair, reading allauth's refusals - its headless API answers in its own shape, not DRF's. */
+/** The same pair for allauth's headless error shape. */
 export const { useAPISubmit: useAuthAPISubmit, useValidatedFormState: useAuthValidatedFormState } = createSubmitHooks(
   toast,
   { envelope: allauthEnvelope, throttled }

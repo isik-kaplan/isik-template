@@ -1,25 +1,20 @@
 #!/usr/bin/env python3
-"""`mutmut`, with every mutant named after the mutation it makes - see the generated project's
-scripts/mutation_naming.py, the one copy this imports.
+"""`mutmut` with every mutant named after its mutation; use it in place of the `mutmut` command.
 
-The naming has to be in place before mutmut generates anything, which is before any pytest plugin
-loads, so it cannot ride in through `[tool.mutmut]`. Run this in place of the `mutmut` command:
-
-    uv run python scripts/mutmut_run.py run
-    uv run python scripts/mutmut_run.py results
+The naming must be in place before any pytest plugin loads, so `[tool.mutmut]` can't carry it.
 """
 
 import sys
 from pathlib import Path
 
 
-# The template's copy is plain Python with no Jinja in it, so it runs from inside the template tree as-is.
+# The template's copy has no Jinja, so it runs from inside the template tree.
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE_SCRIPTS = ROOT / "{{cookiecutter.repo_slug}}" / "{{cookiecutter.project_slug}}" / "scripts"
 
 
 def main():
-    # No __pycache__ left inside the template tree, where the next bake would copy it into the project.
+    # A __pycache__ in the template tree would be copied into the next bake.
     sys.dont_write_bytecode = True
     sys.path.insert(0, str(TEMPLATE_SCRIPTS))
     from mutation_naming import apply

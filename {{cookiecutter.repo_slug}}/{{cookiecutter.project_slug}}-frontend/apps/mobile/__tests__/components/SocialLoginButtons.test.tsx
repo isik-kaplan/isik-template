@@ -34,7 +34,7 @@ describe('SocialLoginButtons', () => {
   })
 
   it("defaults to the build's own configuration when no override is passed", async () => {
-    // The real default wiring, not the override path every other test here exercises.
+    // The real default wiring, not the override props.
     process.env.EXPO_PUBLIC_SOCIAL_LOGIN_PROVIDERS = 'github,google'
     Platform.OS = 'ios'
     await render(<SocialLoginButtons onError={jest.fn()} />)

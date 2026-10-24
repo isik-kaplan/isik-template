@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-// PublicConfigScript (unused by these tests) awaits next/server's connection() to force a
-// per-request render - a real dependency in the app, but not one worth pulling into a unit test.
+// PublicConfigScript, unused here, awaits next/server's connection().
 vi.mock('next/server', () => ({ connection: vi.fn() }))
 
 describe('CONFIG (public)', () => {

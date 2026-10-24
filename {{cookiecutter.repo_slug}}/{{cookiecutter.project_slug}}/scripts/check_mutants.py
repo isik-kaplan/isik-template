@@ -1,9 +1,6 @@
-"""Fail the build unless every mutant is accounted for.
+"""Fail the build unless every mutant is accounted for; `mutmut run` exits 0 regardless.
 
-`mutmut run` exits 0 whether mutants survived or not, so the policy is enforced here. Two separate
-things: the guards, because a tree built for another layout or a suite that failed to collect produces
-numbers indistinguishable from a clean pass; and the policy, which only `confirm_survivors.py` can
-answer, since phase one under-selects.
+Guards against results that look clean but are not (stale tree, suite that failed to collect).
 """
 
 import argparse
@@ -20,8 +17,7 @@ DEFAULT_STATS = ROOT / "mutants" / "mutmut-cicd-stats.json"
 DEFAULT_TREE = ROOT / "mutants"
 DEFAULT_PYPROJECT = ROOT / "pyproject.toml"
 
-# A mutant nothing reliably killed: `suspicious` and `timeout` were given up on, not objected to.
-# `skipped` is the one benign bucket.
+# `suspicious` and `timeout` were given up on, not killed.
 ALIVE = ("survived", "suspicious", "timeout", "no_tests", "segfault")
 BUCKETS = ("total", "killed", "skipped", *ALIVE)
 
@@ -31,42 +27,27 @@ def alive_in(stats):
 
 
 def mutated_files(tree=DEFAULT_TREE):
-    """The files mutmut actually produced results for, read from the `.meta` it writes beside each.
-
-    The exported stats are totals and cannot say which files they came from, which is the whole
-    question here.
-    """
+    """Files mutmut produced results for, from the `.meta` beside each (the stats are only totals)."""
     tree = Path(tree)
     return {str(path.relative_to(tree))[: -len(".meta")] for path in tree.rglob("*.py.meta")}
 
 
 def scoped_files(pyproject=DEFAULT_PYPROJECT):
-    """The files a future `only_mutate` would claim, or None when nothing is scoped.
-
-    Nothing sets `only_mutate` yet - see the mutation CI job for when introducing it (sharding) starts
-    paying for itself - but the check stays generic rather than assuming a single, unscoped run forever.
-    """
+    """The `only_mutate` scope, or None when nothing is scoped."""
     return tomllib.loads(Path(pyproject).read_text())["tool"]["mutmut"].get("only_mutate")
 
 
 def tree_problems(tree=DEFAULT_TREE, pyproject=DEFAULT_PYPROJECT):
-    """Whether the results on disk belong to the code being reported on.
-
-    mutmut builds `mutants/` once and neither adds scaffolding for a newly included file nor removes a
-    deleted one, so a stale tree answers with a previous run's numbers and nothing in the totals shows
-    it. `rm -rf mutants` between runs avoids this; this checks that it happened.
-    """
+    """Whether the results on disk belong to this code: mutmut never adds or removes files in `mutants/`."""
     tree = Path(tree)
     if not tree.exists():
         return []
 
     problems = []
     mutated = mutated_files(tree)
-    # Existence is resolved against the pyproject's own directory rather than this file's, so the tree,
-    # the scope and the source being compared are always the same checkout.
+    # Against the pyproject's checkout, not this file's.
     source_root = Path(pyproject).resolve().parent
-    # Every file copied in, not only the ones with results: a stale migration fails the run as a clash
-    # between two initials, reported as "failed to collect stats".
+    # Every copied file, not only ones with results: a stale migration surfaces as "failed to collect stats".
     copied = {str(path.relative_to(tree)) for path in tree.rglob("*.py")}
     gone = sorted(path for path in mutated | copied if not (source_root / path).exists())
     if gone:
@@ -99,22 +80,13 @@ def tree_problems(tree=DEFAULT_TREE, pyproject=DEFAULT_PYPROJECT):
 
 
 def unrun(stats):
-    """Whether a run produced mutants but a verdict for none of them.
-
-    "Nothing survived" and "nothing ran" are identical in every bucket. Seen twice: a suite that failed
-    to collect inside `mutants/`, and an edit to `[tool.mutmut]` that invalidated every stored verdict.
-    """
+    """Mutants but no verdicts: "nothing ran" otherwise looks exactly like "nothing survived"."""
     accounted = stats.get("killed", 0) + stats.get("skipped", 0) + alive_in(stats)
     return bool(stats.get("total", 0)) and not accounted
 
 
 def killed_by_one_test(path):
-    """Whether one test killed every mutant here, which no working suite does.
-
-    A tree that fails on import fails every mutant, each failure is recorded as a kill, and the run
-    reports a clean sweep. A count alone cannot tell the two apart - but one test doing all of it can
-    only be the tree.
-    """
+    """One test killing everything means a tree that fails on import, not a suite."""
     path = Path(path)
     if not path.exists():
         return None
@@ -133,12 +105,7 @@ def killed_by_one_test(path):
 
 
 def confirmed(path):
-    """`confirm_survivors.py`'s report: mutant name -> verdict, or None when it has not run.
-
-    `error` counts as unsettled rather than as a kill. A mutant that takes the fixtures down with it
-    does produce a failing suite, but so does a broken database, and the two are not distinguishable
-    from a return code.
-    """
+    """`confirm_survivors.py`'s verdicts, or None. `error` is unsettled: a broken database fails the same way."""
     path = Path(path)
     if not path.exists():
         return None
@@ -146,11 +113,7 @@ def confirmed(path):
 
 
 def cost_of(stats_path, names):
-    """What each surviving mutant costs, from the map the stats step already built.
-
-    Only a survivor pays for its whole traced set - measured at dozens of times an ordinary mutant in
-    a suite this size, enough to visibly extend a run on its own.
-    """
+    """Seconds and suite share each survivor costs: a survivor runs its whole traced test set."""
     path = Path(stats_path)
     if not path.exists():
         return {}
@@ -166,8 +129,7 @@ def cost_of(stats_path, names):
 
 
 def exempt(equivalents, exemptions, names):
-    """Which of `names` a registry records as unkillable: by mutant in `mutation-equivalents.toml`,
-    by function in `mutation-exemptions.toml`."""
+    """Which of `names` either registry records as unkillable."""
     single = set(tomllib.loads(Path(equivalents).read_text())) if Path(equivalents).exists() else set()
     whole = set(tomllib.loads(Path(exemptions).read_text())) if Path(exemptions).exists() else set()
     return {name for name in names if name in single or (name.rpartition("__mutmut_")[0] or name) in whole}
@@ -181,7 +143,6 @@ def read(path):
 
 
 def table(rows):
-    """One line per row plus a total. Widest column wins; no dependencies."""
     columns = ["run", *BUCKETS]
     widths = {name: len(name) for name in columns}
     for label, stats in rows:
@@ -239,7 +200,6 @@ def main(argv=None):
 
     found = [(options.label or Path(path).stem, path) for path in (options.paths or [DEFAULT_STATS])]
 
-    # Before reading a single number: are these results for this code? See tree_problems.
     rows, problems = [], tree_problems(options.tree)
     for label, path in found:
         if not Path(path).exists():
@@ -287,15 +247,14 @@ def main(argv=None):
         print("\nno surviving mutants")
         return 0
 
-    # A mutant phase two never reached is absent rather than unsettled, so without the queue a report
-    # holding one verdict reads like a complete one.
+    # Without the queue, a report missing mutants reads as complete.
     if options.queue:
         queued = {
             line.rpartition(": ")[0].strip() or line.strip()
             for line in Path(options.queue).read_text().splitlines()
             if line.strip()
         }
-        # An exempt mutant is absent for the one reason that is not a hole; confirm_survivors guards the rest.
+        # Exempt mutants are legitimately absent.
         missing = sorted(queued - set(verdicts) - exempt(options.equivalents, options.exemptions, queued))
         if missing:
             print(f"\n{len(missing):,} of {len(queued):,} queued mutant(s) have no verdict at all:")

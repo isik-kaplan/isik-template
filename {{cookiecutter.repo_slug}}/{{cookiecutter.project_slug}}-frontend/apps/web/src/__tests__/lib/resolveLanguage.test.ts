@@ -4,15 +4,8 @@ import { resolveLanguage } from '@/lib/resolveLanguage'
 
 import { describe, expect, it } from 'vitest'
 
-// Every assertion that needs to prove a real match - not just "didn't crash, landed on en", which
-// a broken isSupported() would also produce - needs a second configured language to point at
-// instead of "en", which is also the fallback and so proves nothing on its own. With only "en"
-// configured (the default template), there is no such language, and these are skipped rather than
-// asserting something they cannot actually check.
-// Explicit `code is Language` predicate, not a plain `(code) => code !== 'en'` - with the default
-// single-language template, TypeScript infers that plain callback's return type as `code is never`
-// (it can prove the comparison is always false for a one-member union), which then makes every use
-// of `other` below a type error rather than the always-undefined value it actually is at runtime.
+// A real match needs a language other than "en", the fallback; with only "en" these are skipped.
+// An explicit predicate: with one language TypeScript would infer `code is never`.
 const other = languages.find((code): code is Language => code !== 'en')
 
 describe('resolveLanguage', () => {
@@ -37,9 +30,7 @@ describe('resolveLanguage', () => {
     expect(resolveLanguage(undefined, 'xx, yy')).toBe('en')
   })
 
-  // Each of these narrows `other` with its own `if (!other) return` rather than relying on
-  // `it.runIf`'s runtime skip alone - that gate isn't visible to TypeScript, so without a real
-  // narrowing check in scope, `other` still type-checks as possibly undefined below.
+  // `if (!other) return` narrows for TypeScript, which cannot see `it.runIf`'s skip.
   it.runIf(Boolean(other))('uses a supported user preference over the browser header', () => {
     if (!other) return
     expect(resolveLanguage(other, 'xx')).toBe(other)

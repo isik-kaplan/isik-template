@@ -1,10 +1,7 @@
 import { queryFrom } from './filterSpec'
 import type { Asked, FilterSpec } from './filterSpec'
 
-/**
- * How many rows a listing asks for. One number for every listing, sent to the API and never put in
- * the address bar, so a shared link is a link to a page of rows rather than to a page size.
- */
+/** Rows per page for every listing, never in the address bar. */
 export const LISTING_PAGE_SIZE = 25
 
 /** Which page the address bar asks for. Anything that is not a page number is the first one. */

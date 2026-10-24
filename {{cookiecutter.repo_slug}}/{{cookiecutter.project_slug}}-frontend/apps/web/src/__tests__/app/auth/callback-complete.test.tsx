@@ -4,8 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 const getSessionState = vi.fn()
 vi.mock('@/lib/getSession', () => ({ getSessionState: () => getSessionState() }))
-// redirect() interrupts rendering in real Next.js - mocked to throw here too, so this page's own
-// fall-through logic (or lack of one) is exercised the same way it is in production.
+// redirect() throws in real Next.js, so the page's fall-through runs as in production.
 vi.mock('next/navigation', () => ({
   redirect: (url: string) => {
     throw new Error(`REDIRECT:${url}`)

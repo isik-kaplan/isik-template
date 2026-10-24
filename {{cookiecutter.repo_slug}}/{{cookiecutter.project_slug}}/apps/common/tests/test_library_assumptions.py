@@ -1,13 +1,6 @@
-"""Facts about the stack this project leans on, proven against the real libraries rather than assumed.
+"""Library behaviours this codebase or mutation-equivalents.toml depends on, proven against the real thing.
 
-Not tests of this project's code: each pins a behavior of Django, allauth, Celery or Postgres that
-some piece of this codebase - or an entry in mutation-equivalents.toml - quietly depends on. Proving
-one here, once, beats restating it as an assumption in a docstring, and a library upgrade that breaks
-it fails here by name instead of somewhere far away.
-
-Add a test here whenever a feature's correctness rests on a library behavior that is not obvious.
-A test named by a `verified_by` in mutation-equivalents.toml must make the very call that entry's
-reason is about, not a stand-in that happens to look similar.
+A test named by a `verified_by` must make the very call its entry's reason is about, not a stand-in.
 """
 
 from types import SimpleNamespace
@@ -44,10 +37,9 @@ def test_a_response_header_is_case_insensitive():
 
 
 def test_populate_user_never_reads_the_request():
-    """SocialAccountAdapter.populate_user passes its request straight through to allauth's, which
-    only reads `data` and `sociallogin.user` - so what is passed as the request cannot matter."""
+    """allauth's populate_user reads only `data` and `sociallogin.user`, so the request cannot matter."""
     data = {"username": "ada", "email": "ada@example.test", "name": "Ada Lovelace"}
-    # The instrument first: an empty record means nothing only if a read would have been recorded.
+    # Prove the probe records reads first, or an empty record means nothing.
     probe = _Watched()
     with pytest.raises(AttributeError):
         _ = probe.META
@@ -65,8 +57,7 @@ def test_populate_user_never_reads_the_request():
 
 
 def test_save_user_never_reads_the_request():
-    """AccountAdapter.save_user passes its request straight through to allauth's, which hands it only to
-    populate_username - and that never reads it either - so what is passed as the request cannot matter."""
+    """allauth's save_user hands the request only to populate_username, which never reads it."""
     data = {"username": "ada", "email": "ada@example.test", "password1": "correct horse battery staple"}
     watched = _Watched()
     users = []
@@ -80,8 +71,7 @@ def test_save_user_never_reads_the_request():
 
 
 def test_a_shared_task_is_a_proxy_rather_than_the_task_itself():
-    """Why mutation-exemptions.toml's OnCommitTask.apply_async entry says mutmut cannot attribute a
-    hit there: every call reaches the task through celery.local.Proxy, never by naming it."""
+    """Why mutmut cannot attribute OnCommitTask.apply_async hits: calls go through celery.local.Proxy."""
     from apps.users.tasks.health_check import ping
 
     assert type(ping) is Proxy
@@ -91,8 +81,7 @@ def test_a_shared_task_is_a_proxy_rather_than_the_task_itself():
 
 @pytest.mark.django_db(transaction=True)
 def test_on_commit_runs_after_the_commit_and_never_after_a_rollback():
-    """OnCommitTask dispatches through transaction.on_commit, so a task asked for inside a transaction
-    that rolls back must never be sent - and one asked for outside any transaction is sent at once."""
+    """OnCommitTask relies on this: a rolled-back task is never sent, one outside a transaction at once."""
     ran = []
 
     with pytest.raises(RuntimeError), transaction.atomic():
@@ -110,8 +99,7 @@ def test_on_commit_runs_after_the_commit_and_never_after_a_rollback():
 
 @pytest.mark.django_db
 def test_postgres_truncates_a_long_identifier_rather_than_refusing_it():
-    """Why conftest.py refuses a test database name past 63 characters itself: Postgres would
-    silently cut two different long names down to one, and two runs would share a database."""
+    """Why conftest.py refuses long test database names: Postgres would cut two names down to one."""
     with connection.cursor() as cursor:
         cursor.execute("SELECT %s::name = %s::name, length(%s::name)", ["a" * 63 + "x", "a" * 63 + "y", "a" * 70])
         same, length = cursor.fetchone()

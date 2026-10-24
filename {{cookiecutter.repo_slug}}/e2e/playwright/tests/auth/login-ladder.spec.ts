@@ -3,8 +3,7 @@ import { expect, test } from '@playwright/test'
 
 import { OIDC_CONFIGURED, login, signInAtAuthentik, signUpAndVerify } from '../helpers'
 
-// The graduated "who may still sign in" switch, raised and lowered the way an operator does it in an
-// incident: from the admin, as the seeded superuser (SETUP__SUPERUSER__*, see docker-compose.e2e.yml).
+// Raised and lowered from the admin, as an operator would in an incident.
 const ADMIN = 'http://admin.{{ cookiecutter.domain }}'
 const SUPERUSER = process.env.{{ cookiecutter.config_prefix }}__SETUP__SUPERUSER__USERNAME ?? ''
 const SUPERUSER_PASSWORD = process.env.{{ cookiecutter.config_prefix }}__SETUP__SUPERUSER__PASSWORD ?? ''
@@ -25,7 +24,7 @@ async function setLoginPolicy(browser: Browser, policy: string): Promise<Page> {
 }
 
 test.afterEach(async ({ browser }) => {
-  // Whatever happened above, the ladder comes back down - every later spec signs in as a member.
+  // Every later spec signs in as a member.
   const page = await setLoginPolicy(browser, 'Everyone')
   await page.context().close()
 })
@@ -44,7 +43,7 @@ test('raising the ladder signs out and shuts out whoever it excludes, on both do
   await expect(admin.getByText(/\d+ sessions? signed out\./)).toBeVisible()
   await admin.context().close()
 
-  // Signed out straight away, not at the session's natural end.
+  // Signed out at once, not at the session's natural end.
   await page.goto('/profile/details')
   await expect(page).toHaveURL(/\/auth\/login/)
 
@@ -52,7 +51,7 @@ test('raising the ladder signs out and shuts out whoever it excludes, on both do
   await expect(page).toHaveURL(/\/auth\/login/)
   await expect(page.getByText(/username and\/or password you specified are not correct/i)).toBeVisible()
 
-  // The social door answers to the same ladder, before any account is made.
+  // The social door too, before any account is made.
   if (OIDC_CONFIGURED) {
     await page.getByRole('button', { name: 'Continue with Openid Connect' }).click()
     await signInAtAuthentik(page, 'oidc-e2e-user-4')

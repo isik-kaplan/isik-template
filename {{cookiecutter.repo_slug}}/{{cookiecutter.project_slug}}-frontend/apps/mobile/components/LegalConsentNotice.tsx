@@ -6,11 +6,10 @@ import { colors } from '@/theme'
 
 import { Linking, StyleSheet, Text } from 'react-native'
 
-// Stands in for the document list while the sentence is translated, so the links go where the translation put it.
+// Placeholder for the document list, so the links go where the translation puts it.
 const LIST = '\u0000'
 
-/** "By continuing, you agree to the ..." with a link to each document's web page, shown wherever an account is
- * created. Joined by hand rather than with Intl.ListFormat, which Hermes does not ship. */
+/** Joined by hand: Hermes does not ship Intl.ListFormat. */
 export function LegalConsentNotice() {
   const { t } = useTranslation()
   const titles = legalTitles(t)

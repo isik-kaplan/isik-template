@@ -7,8 +7,7 @@ import { AutoFormButton } from './AutoFormButton'
 import { ProviderIcon } from './ProviderIcon'
 
 export type SocialLoginButtonsProps = {
-  // Both full absolute URLs, computed server-side by the page (getRequestOrigin) and passed down
-  // - see AutoFormButton's own comment on why this isn't built here from window.location.origin.
+  // Absolute URLs, computed server-side by the page (see AutoFormButton).
   action: string
   callbackUrl: string
 }

@@ -29,10 +29,7 @@ describe('Home', () => {
   })
 
   it('does not update state after unmount', async () => {
-    // A spy, not just checking the text stayed absent: an unguarded setState after unmount would
-    // still leave the DOM looking unchanged (nothing re-reads it), but React itself would warn
-    // loudly about updating an unmounted component - that warning is what the `cancelled` guard
-    // actually prevents, so it's what proves the guard ran.
+    // An unguarded setState after unmount changes nothing visible; only React's warning shows it.
     const consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined)
     let resolveSession: (value: unknown) => void = () => undefined
     mockSession.mockReturnValue(new Promise((resolve) => (resolveSession = resolve)))

@@ -1,9 +1,5 @@
-"""That a write through the project's viewset base is actually covered, driven over HTTP.
-
-The mechanism is isik's and tested there; what is ours is that `BaseModelViewSet` carries the mixin,
-that a key is required, and that `ATOMIC_REQUESTS` gives the claim a transaction to commit inside - so
-these go through the real request stack rather than calling the mixin.
-"""
+"""Over the real request stack: ours is that `BaseModelViewSet` carries the mixin and `ATOMIC_REQUESTS`
+gives the claim a transaction."""
 
 import json
 import uuid
@@ -22,8 +18,8 @@ REPLAYED = IdempotencyMixin.idempotency_replayed_header
 
 @pytest.fixture
 def writer(client, settings):
-    settings.ROOT_HOSTCONF = "apps.idempotency.tests.hosts"
-    settings.ROOT_URLCONF = "apps.idempotency.tests.urls"
+    settings.ROOT_HOSTCONF = "apps.common.tests.idempotency_hosts"
+    settings.ROOT_URLCONF = "apps.common.tests.idempotency_urls"
     client.force_login(User.objects.create_user(username="writer", email="writer@example.test", password="x"))
     return client
 
@@ -47,8 +43,6 @@ def test_a_write_takes_a_claim(writer):
 
 @pytest.mark.django_db
 def test_the_same_key_and_body_answers_again_without_doing_the_work(writer):
-    """The case this exists for: the first answer was lost, so the retry receives it rather than
-    creating a second row."""
     key = uuid.uuid4()
 
     created = _create(writer, key)
@@ -67,7 +61,6 @@ def test_a_first_answer_does_not_claim_to_be_a_replay(writer):
 
 @pytest.mark.django_db
 def test_the_same_key_for_a_different_body_is_refused(writer):
-    """Answering it would hand one row back as though it were another."""
     key = uuid.uuid4()
     _create(writer, key, username="first")
 
@@ -79,7 +72,7 @@ def test_the_same_key_for_a_different_body_is_refused(writer):
 
 @pytest.mark.django_db
 def test_a_post_without_a_key_is_refused(writer):
-    """`generic` rather than `post`, which the conftest fixture gives a key the way a real client does."""
+    """`generic`, since conftest gives every `post` a key."""
     body = json.dumps({"username": "keyless", "email": "keyless@example.test"})
 
     refused = writer.generic("POST", _path(), body, content_type="application/json")
@@ -101,13 +94,11 @@ def test_a_key_that_is_not_a_uuid_is_refused(writer):
 
 @pytest.mark.django_db
 def test_a_method_no_key_guards_needs_none(writer):
-    """A GET is not a POST, and a listing that demanded a key would be the rule leaking."""
     assert writer.generic("GET", _path()).status_code == 200
 
 
 @pytest.mark.django_db
 def test_a_refused_request_leaves_its_key_unspent(writer):
-    """A refusal rolls its claim back, so the same key is free once whatever refused it has changed."""
     key = uuid.uuid4()
     body = {"username": "not a username!", "email": "bob@example.test"}
 

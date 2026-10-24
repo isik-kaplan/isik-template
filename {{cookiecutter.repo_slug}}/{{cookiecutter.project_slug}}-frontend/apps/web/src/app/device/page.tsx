@@ -17,9 +17,7 @@ function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value
 }
 
-/** Where a device - a command line - sends somebody to let it in: the code it shows, entered here or
- *  carried in the link it printed, then what it asks for and the answer. Signed in first, so whoever
- *  answers decides for their own account. */
+/** Where a device sends somebody to enter its code and answer it, signed in so it is for their account. */
 export default async function DevicePage({ searchParams }: { searchParams: Promise<{ code?: string | string[] }> }) {
   if (!applicationsAreOn()) notFound()
   const code = first((await searchParams).code)?.trim() ?? ''

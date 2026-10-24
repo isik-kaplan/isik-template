@@ -4,25 +4,23 @@ import { PasskeyList } from '@/components/app-auth/PasskeyList'
 import { RecoveryCodesSection } from '@/components/app-auth/RecoveryCodesSection'
 import { TotpSetup } from '@/components/app-auth/TotpSetup'
 
-import { isLocalDevHost } from '@/lib/isLocalDevHost'
 import { REAUTHENTICATION_REQUIRED_HEADER, provePath } from '@/lib/reauthentication'
+import { requestOrigin } from '@/lib/requestOrigin'
 import { visitorFetch } from '@/lib/visitor'
 
 import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
 import { detailOf } from '@isikk/core/allauth'
-import { getRequestOrigin } from '@isikk/core/next/request'
 
 export default async function ProfileTwoFactorPage() {
   // Gating already happened one level up, in profile/layout.tsx.
   const requestHeaders = await headers()
-  const authOrigin = getRequestOrigin(requestHeaders, { isLocalDevHost }).replace('://', '://auth.')
+  const authOrigin = requestOrigin(requestHeaders).replace('://', '://auth.')
   const authApi = new AuthApi(authOrigin, {
     cookieHeader: requestHeaders.get('cookie') ?? undefined,
     baseFetch: visitorFetch(requestHeaders),
   })
-  // Read here rather than in the browser: allauth rotates the secret on every status call, so a
-  // second read would invalidate the QR code already on screen.
+  // Read here: allauth rotates the secret on every status call, voiding a QR code on screen.
   const [totp, { data: listed }] = await Promise.all([authApi.totpStatus(), authApi.authenticators()])
   // Not the recovery-codes endpoint: reading it spends the one viewing MFA_RECOVERY_CODES_SHOW_ONCE allows.
   const authenticators = listed?.data ?? []
@@ -34,8 +32,7 @@ export default async function ProfileTwoFactorPage() {
       name: authenticator.name as string,
       createdAt: authenticator.created_at,
     }))
-  // Asked before a secret is handed out rather than when the code comes back, so a proof never
-  // sends somebody away from a QR code they have already scanned.
+  // Asked before a secret is handed out, so a proof never leads away from a scanned QR code.
   const needsProof = totp.response?.headers.get(REAUTHENTICATION_REQUIRED_HEADER) === '1'
   const setup = totp.error && 'meta' in totp.error ? totp.error.meta : undefined
 

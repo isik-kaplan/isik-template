@@ -6,17 +6,14 @@ import { ProveContent } from '@/components/app-auth/ProveContent'
 
 import { sUseTranslation } from '@/i18n'
 import { requireSession } from '@/lib/getSession'
-import { isLocalDevHost } from '@/lib/isLocalDevHost'
 import { provePath, safeNext } from '@/lib/reauthentication'
+import { requestOrigin } from '@/lib/requestOrigin'
 import { visitorFetch } from '@/lib/visitor'
 
 import { Api } from '@{{ cookiecutter.repo_slug }}/api'
 import { PROVIDER_REAUTHENTICATE_PATH } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
-import { getRequestOrigin } from '@isikk/core/next/request'
-
-// Where an act the backend refused until somebody proved it is them sends them, and where a
-// provider round trip comes back to (`proved` or `error` on the URL) before going on to `next`.
+// Where a refused act sends somebody to prove it is them; a provider round trip returns here first.
 export default async function ProvePage({
   searchParams,
 }: {
@@ -28,7 +25,7 @@ export default async function ProvePage({
   if (proved === '1') redirect(next)
 
   const requestHeaders = await headers()
-  const origin = getRequestOrigin(requestHeaders, { isLocalDevHost })
+  const origin = requestOrigin(requestHeaders)
   const api = new Api(origin.replace('://', '://api.'), {
     cookieHeader: requestHeaders.get('cookie') ?? undefined,
     baseFetch: visitorFetch(requestHeaders),

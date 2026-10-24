@@ -5,9 +5,7 @@ import { STORAGE_ITEMS } from '../legal'
 
 const DOMAIN = '{{ cookiecutter.domain }}'
 
-// The privacy policy's cookie section is rendered from storage.json, and there is no consent banner because
-// everything on it is strictly necessary or asked for. This is what keeps both true: walk the app the way a person
-// does, then refuse anything the browser holds for this site that the list does not disclose.
+// No consent banner holds only while everything stored is disclosed in storage.json as necessary or asked for.
 test('everything a signed-in visit stores in the browser is in the disclosure list', async ({ page, context }) => {
   const username = `storage-${Date.now()}`
   const password = 'correct-horse-battery-staple'

@@ -237,6 +237,15 @@ describe('getSession', () => {
       expect(redirect).not.toHaveBeenCalled()
     })
 
+    it('redirects to complete-signup, not the login page, when a provider signup is pending', async () => {
+      sessionMock.mockResolvedValue({ error: { data: { flows: [{ id: 'provider_signup' }] } } })
+      const { requireSession } = await freshGetSession()
+
+      await requireSession()
+
+      expect(redirect).toHaveBeenCalledWith('/auth/complete-signup')
+    })
+
     it('redirects to the default login path when not logged in', async () => {
       sessionMock.mockResolvedValue({ error: { data: {} } })
       const { requireSession } = await freshGetSession()

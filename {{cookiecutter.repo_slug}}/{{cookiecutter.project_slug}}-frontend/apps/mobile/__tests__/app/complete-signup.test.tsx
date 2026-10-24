@@ -87,9 +87,7 @@ describe('CompleteSignup', () => {
   })
 
   it('sends back to login when the response carries an empty errors array (no real failure)', async () => {
-    // Same "empty array isn't a real failure" rule as web's own CompleteSignupForm
-    // (isSuccess: Boolean(data) || !extractAuthErrors(error)?.length) - an account created but
-    // needing separate email verification looks exactly like this.
+    // An account created but awaiting email verification looks exactly like this.
     mockPendingProviderSignup.mockResolvedValue(pending)
     mockCompleteProviderSignup.mockResolvedValue({ data: undefined, error: { errors: [] } })
     await render(<CompleteSignup />)
@@ -152,8 +150,7 @@ describe('CompleteSignup', () => {
     mockCompleteProviderSignup.mockReturnValue(new Promise((resolve) => (resolveComplete = resolve)))
     await render(<CompleteSignup />)
     await waitFor(() => expect(screen.getByTestId('complete-signup-submit')).toBeTruthy())
-    // Not awaited: the promise above deliberately never resolves, and fireEvent's own act()
-    // wrapper waits for pending work to settle - awaiting it here would hang forever.
+    // Not awaited: fireEvent's act() would wait on the never-resolving promise.
     fireEvent.press(screen.getByTestId('complete-signup-submit'))
     await waitFor(() => expect(screen.getByText('Saving…')).toBeTruthy())
     resolveComplete({ data: { meta: { is_authenticated: true } }, error: undefined })

@@ -15,7 +15,7 @@ PREFIX = "{{ cookiecutter.config_prefix }}__OAUTH"
 
 
 def test_social_login_installs_and_configures_exactly_the_named_providers():
-    """The variable is read in a fresh interpreter, since settings are built once, at import."""
+    """A fresh interpreter, since settings are built once, at import."""
     script = (
         "from {{ cookiecutter.project_slug }} import settings; "
         "print([app for app in settings.INSTALLED_APPS if '.providers.' in app]); "
@@ -32,8 +32,7 @@ def test_social_login_installs_and_configures_exactly_the_named_providers():
 
 
 def test_the_signing_key_may_spell_its_line_breaks_as_backslash_n():
-    """So a PEM fits on one line of an .env file. Read in a fresh interpreter, since settings are built
-    once, at import."""
+    """A fresh interpreter, since settings are built once, at import."""
     script = "from {{ cookiecutter.project_slug }} import settings; print(repr(settings.OAUTH2_PROVIDER['OIDC_RSA_PRIVATE_KEY']))"
     env = {
         **os.environ,
@@ -108,7 +107,6 @@ def test_csrf_trusts_the_frontend_and_every_backend_subdomain():
 
 @pytest.mark.django_db
 def test_the_frontend_may_send_an_idempotency_key_across_origins(client):
-    """The preflight a browser sends before a POST to api.<domain> carrying the header every write does."""
     response = client.options(
         "/v0/oauth-applications/",
         HTTP_HOST=f"api.{config.DOMAIN}",
@@ -130,8 +128,7 @@ def test_cors_allows_only_the_frontend_origin():
     [("false", ["31536000", "True", "False"]), ("true", ["0", "False", "False"])],
 )
 def test_outside_debug_browsers_stay_on_https_for_a_year_across_subdomains(debug, expected):
-    """Settings are built once, at import, from the environment - so each DEBUG is read in an
-    interpreter of its own. Preload stays off either way: it is the owner's one-way decision."""
+    """Each DEBUG in an interpreter of its own, since settings are built once, at import."""
     script = (
         "from {{ cookiecutter.project_slug }} import settings; "
         "print(settings.SECURE_HSTS_SECONDS, settings.SECURE_HSTS_INCLUDE_SUBDOMAINS, "

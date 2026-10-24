@@ -1,30 +1,9 @@
-"""Phase two: re-run every unsettled mutant against the whole suite.
+"""Phase two: re-run every unsettled mutant against the whole suite, one process per mutant.
 
-Phase one tests each mutant against only the tests mutmut's tracing associates with it. That is cheap
-and wrong in exactly one direction: tracing can miss a test that would have killed the mutant, but it
-cannot invent one that kills a mutant the suite would have let live. So a kill in phase one is final,
-and everything tracing gets wrong arrives here.
+Tracing can miss a killing test but never invent one, so phase-one kills are final and only
+survived/timeout/not-checked/no-tests mutants come here. Results are saved per mutant, so a rerun resumes.
 
-Four kinds of mutant land in this queue, and only the first is what the name suggests:
-
-  * survived - tracing found no test that objected, which may or may not be true of the whole suite.
-  * timeout  - shot for running past its wall limit, which under concurrent runs says more about the
-               load than about the mutant.
-  * not checked - never ran at all.
-  * no tests - tracing associated no test with it, so mutmut skipped it. Unsettled rather than clean:
-               a mutant nothing ran is a mutant nothing killed, and the whole suite may well kill it.
-
-Each is re-run in its own process with the whole suite behind it. `-x` means a mutant that does die
-stops at the first test to object, so only genuine survivors pay for a full pass. A separate process
-per mutant also sidesteps what phase one cannot avoid: mutmut runs thousands of pytest sessions in one
-interpreter, where anything a session leaves behind is the next session's problem.
-
-Usage:
-
-    python scripts/confirm_survivors.py --queue unsettled.txt
     python scripts/confirm_survivors.py --queue unsettled.txt --jobs 6
-
-Results are written after every mutant, so an interrupted run resumes rather than restarting.
 """
 
 import argparse
@@ -51,12 +30,10 @@ REPORT = MUTANTS / "mutmut-confirmed.json"
 # Long enough that "equivalent" or "n/a" cannot pass for an explanation.
 SHORTEST_USEFUL_REASON = 40
 
-# 2 is a kill only when pytest also reported a failure: under xdist `-x` raises rather than stopping
-# cleanly, and a genuine interrupt looks the same.
+# 2 is a kill only alongside a reported failure: under xdist `-x` exits 2, as does a real interrupt.
 SURVIVED, FAILURES, INTERRUPTED = 0, 1, 2
 
-# Past this it is hung, not slow. Overridable because that is a property of the machine: a loaded
-# laptop takes longer, where every survivor times out and takes the control run with it.
+# Hung, not slow. Overridable: a loaded machine needs longer.
 WALL_LIMIT = int(os.environ.get("MUTMUT_WALL_LIMIT", "900"))
 
 # Short because Postgres truncates at 63 and the whole name is `test_<database>_p2<run><slot>_<worker>`.
@@ -64,17 +41,12 @@ RUN = f"{os.getpid() % 1000:03d}"
 
 
 def _load(path):
-    """A registry's entries, each guarded the same way.
-
-    An escape hatch from a policy, so it is guarded like one: an entry without a real explanation is
-    rejected here rather than quietly shrinking the survivor list.
-    """
+    """A registry's entries; one without a real reason is rejected."""
     if not path.exists():
         return {}
     entries = tomllib.loads(path.read_text())
     for name, entry in entries.items():
-        # A bare `[a.b.c]` header is a nested table in TOML, not a key called "a.b.c", so a mutant's
-        # dotted name has to be quoted - unquoted it matches nothing and reads as having no reason.
+        # An unquoted `[a.b.c]` is a nested TOML table, not a dotted key.
         if not isinstance(entry, dict) or any(isinstance(value, dict) for value in entry.values()):
             raise SystemExit(
                 f"{path.name}: [{name}] is a nested table, so the mutant name was not quoted. "
@@ -87,18 +59,15 @@ def _load(path):
 
 
 def load_equivalents():
-    """Single mutants no test can kill, because the mutated code behaves identically."""
     entries = _load(EQUIVALENTS)
     for name, entry in entries.items():
-        # A positional name is the one thing this file exists not to hold: the number moves with any
-        # edit above it in the function, and the entry starts excusing a mutation nobody read.
+        # A positional name moves with any edit above it and silently excuses a different mutation.
         if not re.search(r"__mutmut__[0-9a-f]{12}(_[0-9]+)?$", name):
             raise SystemExit(
                 f"{EQUIVALENTS.name}: {name} is not named by its mutation - generate the name with "
                 "scripts/mutation_naming.py applied (see the file's header)."
             )
-        # Shape only. That the test exists is asserted by the suite, the only thing that can answer
-        # it - an entry naming a test nobody collects is an exemption re-checked by nothing at all.
+        # Shape only; the suite asserts that the test exists.
         verified_by = entry.get("verified_by")
         if verified_by is not None and (not isinstance(verified_by, str) or "::" not in verified_by):
             raise SystemExit(
@@ -109,7 +78,6 @@ def load_equivalents():
 
 
 def load_exemptions():
-    """Whole functions mutmut's tracing cannot attribute to a test, covering every mutant of each."""
     entries = _load(EXEMPTIONS)
     for name in entries:
         if "__mutmut_" in name:
@@ -121,7 +89,6 @@ def load_exemptions():
 
 
 def mutants_in_tree():
-    """Every mutant name this tree was built for, read from the per-file metadata mutmut writes."""
     names = set()
     for meta in MUTANTS.rglob("*.py.meta"):
         try:
@@ -132,17 +99,15 @@ def mutants_in_tree():
 
 
 def run_one(name, xdist, slot):
-    """The whole suite, with this one mutant active."""
     environment = {
         **os.environ,
         "MUTANT_UNDER_TEST": name,
-        # The run is in the name because slot numbers repeat across concurrent processes.
+        # Slot numbers repeat across concurrent runs.
         "MUTMUT_DB_SUFFIX": f"p2{RUN}{slot}",
         "PY_IGNORE_IMPORTMISMATCH": "1",
     }
     command = [sys.executable, "-m", "pytest", "-x", "-q", "--no-cov", "-n", str(xdist), "--dist", "loadfile"]
-    # Its own process group: `subprocess.run(timeout=...)` kills only its direct child, and xdist
-    # workers outlive it holding the stdout pipe.
+    # Own process group: a timeout kills only the direct child, and xdist workers would hold the pipe open.
     process = subprocess.Popen(
         command,
         cwd=MUTANTS,
@@ -158,40 +123,28 @@ def run_one(name, xdist, slot):
         try:
             os.killpg(os.getpgid(process.pid), signal.SIGKILL)
         except ProcessLookupError:
-            # It exited between the timeout expiring and the kill, which is not an error here.
             pass
         output, _ = process.communicate()
-        # Not every mutant fails a test - some make one hang. Counted apart from a survivor, because a
-        # suite that never finishes has not passed.
         return "timeout", f"no verdict within {WALL_LIMIT}s"
     completed = subprocess.CompletedProcess(command, process.returncode, output, "")
-    # Errors count with failures: a mutant that breaks model wiring takes the fixtures down with it, so
-    # the suite errors rather than fails, and the suite objecting is what a kill is.
+    # Errors count as kills: a mutant breaking model wiring errors the fixtures rather than failing a test.
     reported_a_failure = re.search(r"\d+ (failed|error)", completed.stdout) is not None
     if completed.returncode == FAILURES or (completed.returncode == INTERRUPTED and reported_a_failure):
         return "killed", None
     if completed.returncode == SURVIVED:
         return "survived", None
-    # The code is recorded, not only the output. Without it an error cannot be told apart from a kill
-    # after the fact: the tail shows pytest objecting either way, and which one it was is the code.
+    # Keep the exit code: the output tail alone can't tell an error from a kill.
     return "error", f"exit {completed.returncode}\n{completed.stdout[-600:]}"
 
 
 def record(name, result):
-    """One verdict into the report, merged under a lock rather than written from memory.
-
-    Two runs against one tree each hold the whole report, so the last to write drops everything the
-    other settled - silently, and toward "survived", since a verdict that was never recorded reads as
-    one that was never taken.
-    """
-    # Both paths are derived from REPORT rather than from the tree root, which resolves to a different
-    # directory when the suite runs from inside `mutants/`.
+    """Merge one verdict under a lock, so concurrent runs against one tree don't drop each other's."""
+    # Derived from REPORT, not the tree root, which differs when run from inside `mutants/`.
     with open(REPORT.with_name(REPORT.name + ".lock"), "w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         on_disk = json.loads(REPORT.read_text()) if REPORT.exists() else {}
         on_disk[name] = result
-        # Staged and renamed rather than written in place: `write_text` truncates before it writes, and
-        # a run killed in that window would leave no verdicts at all rather than the last ones.
+        # Rename, not write in place: a kill mid-`write_text` would leave an empty report.
         staged = REPORT.with_name(REPORT.name + ".staged")
         staged.write_text(json.dumps(on_disk, indent=2, sort_keys=True))
         os.replace(staged, REPORT)
@@ -199,15 +152,8 @@ def record(name, result):
 
 
 def tree_is_sound(slot):
-    """The suite, with no mutant selected, which must pass before a kill means anything.
-
-    A kill is `pytest objected`, and pytest objects just as loudly when the tree it is running in is
-    broken - so a run against a damaged tree reports every mutant killed and reads as a perfect score.
-    That is exactly what a mutant emptying `mutants/pyproject.toml` mid-run produces.
-
-    Checked again at the end, because the damage is done by a mutant partway through: everything before
-    it was measured against a sound tree and everything after it against a ruin.
-    """
+    """The suite with no mutant must pass, or every kill is the broken tree. Checked again at the end
+    because a mutant can damage the tree (e.g. empty `mutants/pyproject.toml`) mid-run."""
     verdict, detail = run_one("", 0, slot)
     return verdict == "survived", verdict if detail is None else f"{verdict} - {detail}"
 
@@ -216,8 +162,6 @@ def main(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("--queue", required=True, help="file of `<mutant name>: <phase one verdict>` lines")
     parser.add_argument("--jobs", type=int, default=6, help="mutants confirmed at once")
-    # 0, and it may not be raised: one worker defeats pytest-django's ordering of transaction=True
-    # tests, and the flush that follows is recorded as the mutant's kill.
     parser.add_argument("--xdist", type=int, default=0, help="pytest workers within each (0, see below)")
     arguments = parser.parse_args(argv)
 
@@ -239,8 +183,7 @@ def main(argv):
         if name:
             unsettled.append(name)
 
-    # A registered mutant this tree holds but did not queue is a hole nobody chose. Judged against the
-    # tree, since the registries cover a codebase the queue is only a slice of.
+    # A registered mutant in the tree but not the queue was killed. Judged against the tree: the queue is a slice.
     in_tree = mutants_in_tree()
     stale = sorted({name for name in in_tree if registered(name)} - set(unsettled))
     if stale:
@@ -250,9 +193,9 @@ def main(argv):
         )
     queue = [name for name in unsettled if not registered(name)]
 
-    # Only a kill and a survival are terminal: an interrupted run writes `error` for everything it held.
+    # Only kill and survival are terminal; an interrupted run writes `error`.
     settled = json.loads(REPORT.read_text()) if REPORT.exists() else {}
-    # The gate reads the report, so a verdict cached before its mutant was exempted would keep failing.
+    # Drop verdicts cached before the mutant was exempted, or the gate keeps failing on them.
     settled = {name: result for name, result in settled.items() if not registered(name)}
     decided = {name for name, result in settled.items() if result.get("verdict") in ("killed", "survived")}
     todo = [name for name in queue if name not in decided]
@@ -260,8 +203,6 @@ def main(argv):
 
     sound, output = tree_is_sound(0)
     if not sound:
-        # The output, not just the verdict: a damaged tree, a test failing for its own reasons and an
-        # expired wall limit are told apart only by what pytest said.
         raise SystemExit(
             "the suite this run settles mutants against does not pass with no mutant selected, so every"
             f" mutant would be recorded as killed. Rebuild the tree. The control run's own verdict was: {output}"
@@ -270,16 +211,14 @@ def main(argv):
     lock = Lock()
     counter = {"done": 0, "killed": 0, "survived": 0, "timeout": 0, "error": 0}
 
-    # Handed out rather than `index % jobs`: items finish out of order, so two would share a slot and
-    # the newcomer would drop the other's database - whose mass failure is then recorded as a kill.
+    # Not `index % jobs`: out-of-order finishes would share a slot and drop each other's database.
     free_slots = SimpleQueue()
     for slot_number in range(arguments.jobs):
         free_slots.put(slot_number)
 
     def confirm(name):
         slot = free_slots.get()
-        # Caught, not raised: `ThreadPoolExecutor.map` holds an exception until the results are
-        # iterated, so a raise here would record no verdict.
+        # `pool.map` defers exceptions until iteration, so a raise would record no verdict.
         try:
             verdict, detail = run_one(name, arguments.xdist, slot)
         except Exception as exception:  # noqa: BLE001
@@ -308,8 +247,7 @@ def main(argv):
             f" written so far cannot be told apart. The control run's own verdict was: {output}"
         )
 
-    # Written even when nothing ran, which is what a tree whose every survivor is exempt produces. An
-    # absent report reads to the gate as a phase two that never happened.
+    # Written even when nothing ran: an absent report reads to the gate as no phase two.
     REPORT.write_text(json.dumps(settled, indent=2, sort_keys=True))
 
     real = sorted(name for name, result in settled.items() if result["verdict"] == "survived")

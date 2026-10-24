@@ -12,16 +12,19 @@ import { grantLabel } from '@/lib/applicationGrant'
 import { describedScopes, scopeLabel } from '@/lib/oauthScopes'
 import { serverApi } from '@/lib/serverApi'
 
+import { etagOf } from '@{{ cookiecutter.repo_slug }}/api'
+
 /** One application its owner registered: how it signs people in, what it may do, and its lifecycle. */
 export default async function ApplicationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const api = await serverApi()
-  const [{ data: application }, { data: scopes }] = await Promise.all([
+  const [{ data: application, response }, { data: scopes }] = await Promise.all([
     api.oauthApplication(Number(id)),
     api.delegatableScopes(),
   ])
   if (!application) notFound()
   const { t } = await sUseTranslation(['auth'])
+  const etag = etagOf(response)
   const offered = scopes ?? []
   const described = describedScopes(offered)
   const waiting = (application.requested_scopes ?? []).filter((scope) => !application.approved_scopes.includes(scope))
@@ -58,7 +61,7 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
       </section>
       <section className="flex flex-col gap-3 border-t border-border pt-6">
         <h2 className="text-sm font-semibold">{t('auth:applicationSettingsTitle')}</h2>
-        <EditApplicationForm application={application} scopes={offered} />
+        <EditApplicationForm application={application} etag={etag} scopes={offered} />
       </section>
       {application.client_type === 'confidential' && (
         <section className="flex flex-col gap-3 border-t border-border pt-6">
@@ -68,7 +71,7 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
       )}
       <section className="flex flex-col gap-3 border-t border-border pt-6">
         <h2 className="text-sm font-semibold">{t('auth:applicationLifecycleTitle')}</h2>
-        <ApplicationLifecycle application={application} />
+        <ApplicationLifecycle application={application} etag={etag} />
       </section>
     </PageShell>
   )

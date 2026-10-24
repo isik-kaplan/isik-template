@@ -1,9 +1,5 @@
-// Drives app-privacy-policy-generator's own page in a headless browser and prints the Markdown it produces, as
-// JSON on stdout. Run by scripts/generate-legal.sh inside the e2e Playwright image; see that script for why.
-//
-// The page is served from the generator's published files on disk, through request interception: no server, and
-// nothing leaves the machine. Its globals (appState, appWizard, getContent, convertHtmlToMd) are the page's own
-// state and Markdown export, so this sets what its wizard would and reads what its Markdown button would.
+// Drives app-privacy-policy-generator's page headlessly and prints its Markdown as JSON. The page is served from
+// disk through request interception, so nothing leaves the machine.
 import { chromium } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
 import { extname, join, normalize } from 'node:path'
@@ -22,7 +18,6 @@ const TYPES = {
   '.webmanifest': 'application/manifest+json',
   '.woff2': 'font/woff2',
 }
-// The generator's three privacy policy flavours, by the element its page renders each into.
 const POLICIES = {
   simple: { type: 1, element: 'privacy_simple_content' },
   'no-tracking': { type: 2, element: 'privacy_notrack_content' },

@@ -1,8 +1,4 @@
-"""The scope ceiling, enforced in the database.
-
-There as well as in the API because a many-to-many is writable from a shell, a migration or any view that
-forgets - and one approved scope outside the request makes the review decorative.
-"""
+"""In the database too: a many-to-many is writable from a shell, a migration or a view that forgets."""
 
 from apps.common.db import model_db_column, model_db_name
 
@@ -11,7 +7,6 @@ WITHIN_REQUESTED_DECLARE = [("was_requested", "boolean")]
 
 
 def approved_within_requested(model):
-    """A superuser can only approve something the application asked for."""
     from apps.oauth_provider.models import Application
 
     requested = Application.requested_scopes.through

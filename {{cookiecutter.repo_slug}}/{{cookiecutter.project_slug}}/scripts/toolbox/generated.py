@@ -1,4 +1,4 @@
-"""Mutants as the tree generates them, read back from the source rather than from a built tree."""
+"""Mutants as the tree generates them, read from source rather than a built tree."""
 
 import difflib
 from functools import cache
@@ -13,15 +13,13 @@ from scripts.mutmut_decorators import install as install_mutmut_decorators
 
 
 def _patched():
-    """Both patches, before anything generates: without them a decorated function contributes no
-    names, and every other name is positional and matches nothing in either registry."""
+    """Both patches, or names won't match the tree's or the registries'."""
     install_mutmut_decorators()
     name_mutants_by_change()
 
 
 @cache
 def mutated(relative):
-    """mutmut's own output for one source path, relative to the project root."""
     from mutmut.__main__ import mutate_file_contents
 
     _patched()
@@ -29,13 +27,11 @@ def mutated(relative):
 
 
 def names_in(relative):
-    """Every mutant of one source path, fully qualified the way mutmut records a verdict."""
     return [f"{module_of(relative)}.{name}" for name in mutated(relative).mutant_names]
 
 
 def source_of(name):
-    """The source path a mutant or function name lives in, or None. Walked back from the longest
-    dotted prefix, so a package's `__init__.py` answers only when no module of that name does."""
+    """The source path a name lives in, or None; a module wins over a package `__init__.py`."""
     parts = name.split(".")
     for cut in range(len(parts) - 1, 0, -1):
         for candidate in (Path(*parts[:cut]).with_suffix(".py"), Path(*parts[:cut], "__init__.py")):
@@ -45,7 +41,6 @@ def source_of(name):
 
 
 def diff_of(name):
-    """The lines a mutant changes against the unmutated copy, or None when it is not generated."""
     relative = source_of(name)
     if relative is None:
         return None
@@ -59,8 +54,7 @@ def diff_of(name):
     diff = difflib.unified_diff(
         lines[original.start - 1 : original.end], lines[span.start - 1 : span.end], lineterm="", n=0
     )
-    # The renamed `def` line differs in every mutant and says nothing, so it is dropped by content -
-    # a hunk lists all its removals before its additions, and a fixed slice would eat a real line.
+    # Drop the renamed `def` line by content; a fixed slice would eat a real line.
     return [
         line
         for line in diff
@@ -69,7 +63,6 @@ def diff_of(name):
 
 
 def registered():
-    """(single mutants, whole functions) the two registries already account for."""
     single = tomllib.loads(EQUIVALENTS.read_text()) if EQUIVALENTS.exists() else {}
     whole = tomllib.loads(EXEMPTIONS.read_text()) if EXEMPTIONS.exists() else {}
     return set(single), set(whole)

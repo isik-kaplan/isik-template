@@ -27,9 +27,7 @@ export function VerifyEmailButton({ verificationKey }: { verificationKey: string
       setError(tooManyRequestsMessage(retryAfterOf(response)))
       return
     }
-    // A confirmed-but-not-yet-authenticated key still comes back as a 401 (see schema.ts) - only
-    // an actually invalid/expired key carries a non-empty `errors` array, so that's what a real
-    // failure looks like here, not the response's HTTP status.
+    // A valid key can still answer 401; only a bad one carries `errors`.
     if (data || detailOf(apiError) === undefined) {
       router.push(response.status === 200 ? '/' : '/auth/login')
       return

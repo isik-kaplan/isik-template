@@ -117,8 +117,7 @@ describe('Login', () => {
     let resolveLogin: (value: unknown) => void = () => undefined
     mockLogin.mockReturnValue(new Promise((resolve) => (resolveLogin = resolve)))
     await render(<Login />)
-    // Not awaited: the promise above deliberately never resolves, and fireEvent's own act()
-    // wrapper waits for pending work to settle - awaiting it here would hang forever.
+    // Not awaited: fireEvent's act() would wait on the never-resolving promise.
     fireEvent.press(screen.getByTestId('login-submit'))
     await waitFor(() => expect(screen.getByText('Logging in…')).toBeTruthy())
     resolveLogin({ data: { meta: { is_authenticated: true } }, error: undefined })

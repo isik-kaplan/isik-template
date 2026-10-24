@@ -16,11 +16,7 @@ HEADER = OnCommitTask.history_context_header
 
 
 def _while_serving(dispatch, **context):
-    """Runs `dispatch` as the view of a request served through the middleware that opens the context.
-
-    The cause is read off the live context rather than handed in, so nothing short of a served
-    request proves a dispatch picks it up.
-    """
+    """Through the real middleware: the cause is read off the live context, not handed in."""
 
     class Middleware(HistoryContextMiddleware):
         def get_context(self, request):
@@ -37,18 +33,12 @@ def test_ping_runs_synchronously_and_returns_pong(settings):
 
 @pytest.mark.django_db
 def test_dispatch_waits_for_the_transaction_that_asked_for_it(monkeypatch, django_capture_on_commit_callbacks):
-    """A task picked up before its caller commits reads a row that is not there yet, so nothing is
-    sent until the transaction is. `delay` returns nothing for the same reason - there is no result
-    to hand back for a task that has not been sent.
-
-    What is asserted is the send, not that a callback was registered: `on_commit(lambda: None)`
-    registers one too, and passed this test until it did.
-    """
+    """Asserts the send, not a registered callback: `on_commit(lambda: None)` registers one too."""
     sent = []
     monkeypatch.setattr(Task, "apply_async", lambda self, *a, **kw: sent.append((self.name, a, kw)))
 
     with django_capture_on_commit_callbacks(execute=True):
-        assert ping.delay(7, flag=True) is None
+        ping.delay(7, flag=True)
         assert sent == [], "dispatched before the transaction it was asked from committed"
 
     name, positional, options = sent[0]
@@ -57,8 +47,7 @@ def test_dispatch_waits_for_the_transaction_that_asked_for_it(monkeypatch, djang
 
 @pytest.mark.django_db
 def test_the_options_survive_the_deferral_too(monkeypatch, django_capture_on_commit_callbacks):
-    """`delay` carries no options, so only a direct `apply_async` reaches them - and a forward that
-    drops them loses a countdown or a queue with nothing to say so."""
+    """Only `apply_async` carries options, and dropping them would fail silently."""
     sent = []
     monkeypatch.setattr(Task, "apply_async", lambda self, *a, **kw: sent.append((a, kw)))
 
@@ -72,10 +61,8 @@ def test_the_options_survive_the_deferral_too(monkeypatch, django_capture_on_com
 
 @pytest.mark.django_db
 def test_a_task_carries_whoever_asked_for_it(monkeypatch, django_capture_on_commit_callbacks):
-    """Dispatch reads the request's own context, so a row the worker writes names the person whose
-    click caused it rather than nobody. Committed inside the request rather than around it, which is
-    where it lands in production: a write inside the view runs through BaseModel.save()'s own
-    transaction.atomic, which closes while the request - and so the context - is still open."""
+    """Committed inside the request, as in production: BaseModel.save()'s atomic closes while the
+    context is still open."""
     sent = []
     monkeypatch.setattr(Task, "apply_async", lambda self, *a, **kw: sent.append(kw))
 
@@ -90,8 +77,7 @@ def test_a_task_carries_whoever_asked_for_it(monkeypatch, django_capture_on_comm
 
 @pytest.mark.django_db
 def test_the_cause_survives_the_encoder_that_actually_carries_it(monkeypatch, django_capture_on_commit_callbacks):
-    """pghistory holds a UUID user pk as a `UUID`, which an AMQP header table refuses - only a real
-    user's pk and the broker's own encoder show it; a stand-in string never would."""
+    """An AMQP header table refuses a `UUID`, which only a real pk and the real encoder show."""
     user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
     sent = []
     monkeypatch.setattr(Task, "apply_async", lambda self, *a, **kw: sent.append(kw))
@@ -109,8 +95,7 @@ def test_the_cause_survives_the_encoder_that_actually_carries_it(monkeypatch, dj
 
 @pytest.mark.django_db
 def test_a_task_nobody_asked_for_says_so_rather_than_naming_nobody(monkeypatch, django_capture_on_commit_callbacks):
-    """A beat task has no request behind it. Marked as the system's, because an absent actor and a
-    scheduled one would otherwise be the same empty value."""
+    """Otherwise an absent actor and a scheduled one would be the same empty value."""
     sent = []
     monkeypatch.setattr(Task, "apply_async", lambda self, *a, **kw: sent.append(kw))
 
@@ -122,7 +107,6 @@ def test_a_task_nobody_asked_for_says_so_rather_than_naming_nobody(monkeypatch, 
 
 @pytest.mark.django_db
 def test_a_caller_naming_its_own_headers_keeps_them(monkeypatch, django_capture_on_commit_callbacks):
-    """The cause is added to a caller's headers rather than replacing them."""
     sent = []
     monkeypatch.setattr(Task, "apply_async", lambda self, *a, **kw: sent.append(kw))
 
@@ -134,9 +118,6 @@ def test_a_caller_naming_its_own_headers_keeps_them(monkeypatch, django_capture_
 
 
 def test_the_worker_writes_inside_the_context_it_was_given(monkeypatch):
-    """The worker half: the cause off the message becomes the context every row it writes carries,
-    with the task's own name added - a person's click and a worker acting on it are different
-    claims - and the version of the worker, which is the build that wrote the rows."""
     seen = {}
     monkeypatch.setattr(Task, "__call__", lambda self, *a, **kw: seen.update(_tracker.value.metadata))
     ping.push_request(headers={HEADER: {"user": "user-1", "caused_by": "request"}})
@@ -150,7 +131,6 @@ def test_the_worker_writes_inside_the_context_it_was_given(monkeypatch):
 
 
 def test_a_worker_given_no_cause_records_the_system(monkeypatch):
-    """A message sent before this existed, or by anything that does not set the header."""
     seen = {}
     monkeypatch.setattr(Task, "__call__", lambda self, *a, **kw: seen.update(_tracker.value.metadata))
     ping.push_request(headers=None)

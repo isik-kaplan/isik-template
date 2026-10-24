@@ -39,7 +39,6 @@ def test_send_mail_renders_with_the_request_bound_by_allauth_and_leaves_the_send
 
 
 def _languages_a_mail_renders_in(user):
-    """Sends a mail to `user` and reports the language active while each of its parts rendered."""
     seen = []
 
     def render(*args):
@@ -93,14 +92,11 @@ def test_mail_waits_for_the_transaction_that_asked_for_it(django_capture_on_comm
 
 
 def test_populate_user_gives_the_unsaved_user_a_real_timestamp_not_the_db_default_sentinel():
-    """Without this, the pending-signup path 500s trying to JSON-serialize the suggested user's
-    created_at (BaseModel's db_default Now() expression, not a real datetime, since the user is
-    never saved before allauth stashes it in the session) - see the adapter's own comment."""
     user = get_user_model()()
     sociallogin = SimpleNamespace(user=user)
     fixed_now = datetime(2024, 1, 1, tzinfo=dt_timezone.utc)
 
-    with patch("apps.users.adapters.social_account.timezone.now", return_value=fixed_now):
+    with patch("isik.django.apps.common.db.orm.timezone.now", return_value=fixed_now):
         result = SocialAccountAdapter().populate_user(None, sociallogin, {})
 
     assert result is user

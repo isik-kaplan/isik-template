@@ -19,9 +19,7 @@ describe('AutoFormButton', () => {
   afterEach(() => {
     Cookies.remove('csrftoken')
     globalThis.fetch = originalFetch
-    // The component appends the form directly to document.body outside React's render tree (a
-    // real browser navigation on submit would discard it along with the whole page) - render()'s
-    // own cleanup only unmounts what React rendered, so forms would otherwise accumulate.
+    // The form is appended to document.body outside React's tree, which render()'s cleanup misses.
     document.querySelectorAll('form').forEach((form) => form.remove())
   })
 
@@ -57,8 +55,7 @@ describe('AutoFormButton', () => {
       expect.stringContaining('/v0/browser/v1/auth/session'),
       expect.objectContaining({ credentials: 'include' })
     )
-    // Priming a fresh browser with no cookie yet still submits - just with an empty token, since
-    // this mocked fetch doesn't actually set one the way the real session endpoint would.
+    // Still submits with no cookie yet, with an empty token: this fetch mock sets none.
     const form = document.querySelector('form') as HTMLFormElement
     expect((form.elements.namedItem('csrfmiddlewaretoken') as HTMLInputElement).value).toBe('')
   })

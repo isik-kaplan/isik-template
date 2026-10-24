@@ -10,8 +10,7 @@ from conftest import PAIRWISE, load_context
 
 pytestmark = [
     pytest.mark.skipif(shutil.which("docker") is None, reason="docker not available"),
-    # Only `docker compose config` here - no image is ever built, so there's nothing for a real
-    # install to do (see conftest.py's skip_lockfile_generation).
+    # Only `docker compose config`; nothing is built.
     pytest.mark.usefixtures("skip_lockfile_generation"),
 ]
 
@@ -57,8 +56,7 @@ def _services(project_path, *args):
 
 
 def test_bundled_garage_is_the_storage_the_backend_waits_for(cookies):
-    """The app holds no s3:CreateBucket, so the storage service makes sure of the key and the bucket
-    itself, and is healthy only once it has."""
+    """The app holds no s3:CreateBucket, so storage is healthy only once it has made the key and bucket."""
     result = cookies.bake(extra_context=load_context("default"))
     assert result.exit_code == 0
 
@@ -250,8 +248,7 @@ def test_compose_project_name_prefixes_every_resource(cookies):
 
 
 def test_e2e_stack_adds_a_self_signed_https_listener_for_passkeys(cookies):
-    """WebAuthn exists only in a secure context, so the e2e stack serves https beside http - and the
-    frontend's server-side fetches, which follow the page's scheme, have to trust that certificate."""
+    """WebAuthn needs a secure context; the frontend's server-side fetches must trust the certificate too."""
     result = cookies.bake(extra_context=load_context("default"))
     assert result.exit_code == 0
 
@@ -295,7 +292,7 @@ def test_only_the_backend_services_receive_the_backends_secrets(cookies, context
         f"{prefix}__DOMAIN": result.context["domain"],
         # The one secret nginx holds: it checks the frontend's fetches with it.
         f"{prefix}__FRONTEND_KEY": "local-insecure-frontend-key-change-in-real-deployments",
-        # nginx alone in front: self mode's default, and what .env.example sets for local development.
+        # nginx alone in front, as .env.example sets for local development.
         f"{prefix}__TRUSTED_PROXY_COUNT": "1",
         f"{prefix}__RATE_LIMITS__ENABLED": "true",
         f"{prefix}__RATE_LIMITS__REQUESTS_PER_SECOND": "20",
@@ -309,8 +306,7 @@ def test_only_the_backend_services_receive_the_backends_secrets(cookies, context
 
 
 def test_e2e_tls_proxy_override_fronts_every_name_the_browser_uses(cookies):
-    """The external-mode variant: a TLS-terminating proxy in front of nginx, as in production, with dnsmasq sending
-    the browser to it instead of to nginx."""
+    """External mode: dnsmasq sends the browser to a TLS-terminating proxy in front of nginx."""
     result = cookies.bake(extra_context=load_context("default"))
     assert result.exit_code == 0
     e2e_path = result.project_path / "e2e"

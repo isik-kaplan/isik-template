@@ -22,6 +22,9 @@ const BOB = {
   permissions: ['users:manage:user'],
 } as unknown as Parameters<typeof ManageUserForm>[0]['user']
 
+// The read's ETag header, which the page hands the form beside the user.
+const ETAG = '"7"'
+
 // An answer that left its access unsaid.
 const EVE = { id: 'u2', username: 'eve' } as typeof BOB
 const STAFF_SUPERUSER = { ...BOB, is_staff: true, is_superuser: true, is_active: false }
@@ -44,7 +47,7 @@ describe('ManageUserForm', () => {
   })
 
   it('starts from their access and what they were granted', () => {
-    render(<ManageUserForm user={BOB} permissions={PERMISSIONS} />)
+    render(<ManageUserForm user={BOB} etag={ETAG} permissions={PERMISSIONS} />)
 
     expect(screen.getByRole('group', { name: 'Access' })).toBeTruthy()
     expect(screen.getByRole('group', { name: 'Permissions' })).toBeTruthy()
@@ -58,7 +61,7 @@ describe('ManageUserForm', () => {
   it('reads an account whose answer left its access unsaid as an ordinary one', async () => {
     const fetchMock = vi.fn(async () => jsonResponse(200, BOB))
     globalThis.fetch = fetchMock
-    render(<ManageUserForm user={EVE} permissions={PERMISSIONS} />)
+    render(<ManageUserForm user={EVE} etag={ETAG} permissions={PERMISSIONS} />)
 
     expect(box(/May sign in/).checked).toBe(true)
     expect(box(/^Staff/).checked).toBe(false)
@@ -70,7 +73,7 @@ describe('ManageUserForm', () => {
   })
 
   it('starts a staff superuser as one', () => {
-    render(<ManageUserForm user={STAFF_SUPERUSER} permissions={PERMISSIONS} />)
+    render(<ManageUserForm user={STAFF_SUPERUSER} etag={ETAG} permissions={PERMISSIONS} />)
 
     expect(box(/May sign in/).checked).toBe(false)
     expect(box(/^Staff/).checked).toBe(true)
@@ -80,7 +83,7 @@ describe('ManageUserForm', () => {
   it('saves every flag and the permissions together, then reads the page again', async () => {
     const fetchMock = vi.fn(async () => jsonResponse(200, BOB))
     globalThis.fetch = fetchMock
-    render(<ManageUserForm user={BOB} permissions={PERMISSIONS} />)
+    render(<ManageUserForm user={BOB} etag={ETAG} permissions={PERMISSIONS} />)
 
     await userEvent.click(box(/May sign in/))
     await userEvent.click(box(/^Staff/))
@@ -91,6 +94,9 @@ describe('ManageUserForm', () => {
     const [request] = fetchMock.mock.calls[0] as unknown as [Request]
     expect(request.method).toBe('PATCH')
     expect(new URL(request.url).pathname).toBe('/v0/users/u1/')
+    // Against the version this page showed, so a change made since is not overwritten.
+    expect(request.headers.get('If-Match')).toBe('"7"')
+    expect(request.headers.get('Idempotency-Key')).toBeTruthy()
     expect(await request.json()).toEqual({
       is_active: false,
       is_staff: true,
@@ -101,9 +107,22 @@ describe('ManageUserForm', () => {
     expect(refresh).toHaveBeenCalled()
   })
 
+  it('shows them as they are now when somebody else changed them since the page loaded', async () => {
+    globalThis.fetch = vi.fn(async () =>
+      jsonResponse(412, { detail: 'Changed.', code: 'precondition_failed', current: BOB })
+    )
+    render(<ManageUserForm user={BOB} etag={ETAG} permissions={PERMISSIONS} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(toast.error).toHaveBeenCalledWith('Someone else changed this since you opened it. Review their changes.')
+    expect(toast.success).not.toHaveBeenCalled()
+    expect(refresh).toHaveBeenCalled()
+  })
+
   it('says why the backend would not let it be saved', async () => {
     globalThis.fetch = vi.fn(async () => jsonResponse(403, { detail: 'You cannot change what other people may do.' }))
-    render(<ManageUserForm user={BOB} permissions={PERMISSIONS} />)
+    render(<ManageUserForm user={BOB} etag={ETAG} permissions={PERMISSIONS} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
 
@@ -113,7 +132,7 @@ describe('ManageUserForm', () => {
 
   it('says so in its own words when saving fails with nothing to show', async () => {
     globalThis.fetch = vi.fn(async () => new Response(null, { status: 500 }))
-    render(<ManageUserForm user={BOB} permissions={PERMISSIONS} />)
+    render(<ManageUserForm user={BOB} etag={ETAG} permissions={PERMISSIONS} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
 
@@ -122,7 +141,7 @@ describe('ManageUserForm', () => {
 
   it('holds the button while saving', async () => {
     globalThis.fetch = vi.fn(() => new Promise<Response>(() => {}))
-    render(<ManageUserForm user={BOB} permissions={PERMISSIONS} />)
+    render(<ManageUserForm user={BOB} etag={ETAG} permissions={PERMISSIONS} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
 

@@ -1,6 +1,4 @@
-# Runs Playwright itself inside the compose network - see docker-compose.e2e.yml's `playwright`
-# service and `dns` for why, instead of requiring host-side DNS/hosts configuration for the app's
-# real domain and subdomains.
+# Inside the compose network, so the stack's dnsmasq resolves the domain without host configuration.
 FROM node:{{ cookiecutter.node_version }}-bookworm-slim
 
 WORKDIR /e2e

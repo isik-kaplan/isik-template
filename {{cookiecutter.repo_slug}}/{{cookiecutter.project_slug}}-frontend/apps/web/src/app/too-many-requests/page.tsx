@@ -3,8 +3,7 @@ import Link from 'next/link'
 import { sUseTranslation } from '@/i18n'
 import { safeNext } from '@/lib/reauthentication'
 
-/** Where a page goes when the API refused to answer its render for now (lib/serverApi.ts): a page
- *  missing what it was refused would read as empty, or as not there at all. */
+/** Where a page goes when the API refused its render for now, rather than reading as empty. */
 export default async function TooManyRequests({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const { t } = await sUseTranslation(['common'])
   const { next } = await searchParams

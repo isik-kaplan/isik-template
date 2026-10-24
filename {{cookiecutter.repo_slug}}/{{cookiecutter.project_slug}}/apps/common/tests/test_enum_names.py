@@ -1,5 +1,4 @@
-"""The derivation itself, rather than the document it ends up in - a document with no warnings is
-true whether the names are right or merely not wrong."""
+"""The derivation itself: a warning-free document only shows the names are not wrong."""
 
 import pytest
 from django.conf import settings
@@ -21,8 +20,8 @@ class _Field:
         self.choices = choices
 
 
-def _model(name, *fields):
-    return type(name, (), {"_meta": _Meta(list(fields))})
+def _model(name, *fields, generated=None):
+    return type(name, (), {"_meta": _Meta(list(fields)), "isik_generated": generated})
 
 
 def _registry(monkeypatch, *models):
@@ -32,8 +31,8 @@ def _registry(monkeypatch, *models):
 STATUS = [("draft", "Draft"), ("live", "Live")]
 
 
-def test_a_model_that_carries_pgh_columns_is_a_generated_twin():
-    assert enum_names._is_generated(_model("ThingEvent", _Field("pgh_id"), _Field("status", STATUS)))
+def test_a_model_isik_marked_as_generated_is_left_out():
+    assert enum_names._is_generated(_model("ThingEvent", _Field("status", STATUS), generated="event"))
 
 
 def test_a_model_we_wrote_is_not():
@@ -41,12 +40,11 @@ def test_a_model_we_wrote_is_not():
 
 
 def test_the_twin_does_not_count_as_a_second_owner(monkeypatch):
-    """The whole reason the exclusion exists: a tracked model and its event table carry the same
-    field, so without it no choice set has a sole owner and nothing is ever named."""
+    """A tracked model and its event table share the field, so without the exclusion nothing is named."""
     _registry(
         monkeypatch,
         _model("Thing", _Field("status", STATUS)),
-        _model("ThingEvent", _Field("pgh_id"), _Field("status", STATUS)),
+        _model("ThingEvent", _Field("status", STATUS), generated="event"),
     )
 
     assert enum_names.enum_name_overrides() == {"ThingStatus": STATUS}
@@ -71,17 +69,14 @@ def test_a_field_with_no_choices_contributes_nothing(monkeypatch):
 
 
 def test_blank_and_null_are_dropped_before_hashing(monkeypatch):
-    """The postprocessing hook drops them before it hashes, so a set that keeps them here hashes to
-    something the override can never match - and comes back normalized, since that is what the hook
-    will hash."""
+    """The hook hashes the normalized set, so this must too, and returns it normalized."""
     _registry(monkeypatch, _model("Thing", _Field("status", [("", "---"), (None, "-"), *STATUS])))
 
     assert enum_names.enum_name_overrides() == {"ThingStatus": STATUS}
 
 
 def test_a_choice_set_that_cannot_be_sorted_is_left_unnamed(monkeypatch):
-    """django-celery-beat's timezone field holds values with no ordering between them. Unnamed is
-    the fallback, so skipping it costs nothing - raising would cost every other name."""
+    """django-celery-beat's timezone field, for one; raising would cost every other name."""
     unsortable = [(object(), "a"), (object(), "b")]
     _registry(monkeypatch, _model("Thing", _Field("zone", unsortable), _Field("status", STATUS)))
 
@@ -89,7 +84,7 @@ def test_a_choice_set_that_cannot_be_sorted_is_left_unnamed(monkeypatch):
 
 
 def test_nothing_is_named_when_every_owner_is_generated(monkeypatch):
-    _registry(monkeypatch, _model("ThingEvent", _Field("pgh_id"), _Field("status", STATUS)))
+    _registry(monkeypatch, _model("ThingEvent", _Field("status", STATUS), generated="event"))
 
     assert enum_names.enum_name_overrides() == {}
 
@@ -102,8 +97,7 @@ def test_the_name_joins_the_model_to_the_field_it_came_from(monkeypatch, field, 
 
 
 def test_an_ambiguous_set_does_not_stop_the_ones_after_it(monkeypatch):
-    """Two distinct sets, the shared one first: a loop that stops rather than skips names nothing
-    after it."""
+    """The shared set first: a loop that stops rather than skips names nothing after it."""
     shared = [("a", "A"), ("b", "B")]
     its_own = [("x", "X"), ("y", "Y")]
     _registry(
@@ -118,7 +112,8 @@ def test_an_ambiguous_set_does_not_stop_the_ones_after_it(monkeypatch):
 
 def test_ready_hands_the_names_to_drf_spectacular():
     """In `CoreConfig.ready()`, after the registry exists and before spectacular reads its settings."""
-    overrides = settings.SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"]
+    # isik's lazy mapping: ours, plus the names of the models isik generates.
+    overrides = dict(settings.SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"].items())
 
-    assert overrides == enum_names.enum_name_overrides()
+    assert enum_names.enum_name_overrides().items() <= overrides.items()
     assert overrides["UserLanguage"] == list(settings.LANGUAGES)

@@ -5,8 +5,7 @@ import { cn } from '@/lib/utils'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
-/** Renders markdown source (content policy, ToS, changelogs, ...) inside a styled card, so a
- * static .md file can become a real page without hand-writing its layout. */
+/** Markdown in a styled card. */
 export function Markdown({ children, className }: { children: string; className?: string }) {
   return (
     <Card className={cn('prose dark:prose-invert max-w-none', className)}>

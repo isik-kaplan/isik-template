@@ -3,7 +3,7 @@ services:
     build:
       context: ./database
     image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-database:latest
-    # Only its own credentials, never all of .env: each service holds just the secrets it needs.
+    # Its own credentials, not all of .env: each service holds only the secrets it needs.
     environment:
       POSTGRES_DB: {{ '${' + cookiecutter.config_prefix + '__DB__NAME}' }}
       POSTGRES_USER: {{ '${' + cookiecutter.config_prefix + '__DB__USER}' }}
@@ -40,8 +40,7 @@ services:
 {%- endif %}
 {%- if cookiecutter.cache == "redis" %}
 
-  # Where every rate limit keeps its counts (settings.py's CACHES), and whatever else is cached. Nothing
-  # in it outlives a restart that matters: counts start again, and cached values are made again.
+  # Rate-limit counts and the cache: nothing in it needs to survive a restart, so no persistence.
   cache:
     image: redis:8.8-alpine
     command:
@@ -57,7 +56,7 @@ services:
       - --maxmemory-policy
       - allkeys-lru
     environment:
-      # redis-cli's, for the healthcheck - the server itself takes it from --requirepass.
+      # For the healthcheck's redis-cli; the server takes --requirepass.
       REDISCLI_AUTH: {{ '${' + cookiecutter.config_prefix + '__CACHE__PASSWORD}' }}
     networks:
       - internal
@@ -72,8 +71,7 @@ services:
 {% if cookiecutter.storage == "garage" %}
   # S3-compatible object storage: Garage, one node, in dev, tests and production alike.
 {%- else %}
-  # S3-compatible object storage for local dev and the test suite only - a deployment points
-  # STORAGE__* at its provider and leaves the local-storage profile off (see .env.example).
+  # S3-compatible object storage for local dev and tests only; a deployment uses its provider's.
 {%- endif %}
   storage:
     build:
@@ -83,7 +81,7 @@ services:
     profiles: ["local-storage"]
 {%- endif %}
     environment:
-      # The entrypoint makes sure of this key and bucket on every start - the app never creates one.
+      # The entrypoint ensures this key and bucket on every start; the app never creates one.
       BUCKET_NAME: {{ '${' + cookiecutter.config_prefix + '__STORAGE__BUCKET_NAME}' }}
       REGION_NAME: {{ '${' + cookiecutter.config_prefix + '__STORAGE__REGION_NAME}' }}
       ACCESS_KEY_ID: {{ '${' + cookiecutter.config_prefix + '__STORAGE__ACCESS_KEY_ID}' }}
@@ -94,16 +92,14 @@ services:
       - storage_data:/var/lib/garage
     networks:
       - internal
-      # Only so the port below can be published at all - Docker publishes nothing for a container
-      # whose every network is `internal`.
+      # Docker publishes no ports for a container on internal networks only.
       - external
     ports:
-      # Loopback only, for poking at it by hand (`aws --endpoint-url=http://localhost:3900 s3 ls`);
-      # the backend reaches it as storage:3900.
+      # Loopback only, for inspecting by hand.
       - "127.0.0.1:{{ '${' + cookiecutter.config_prefix + '__STORAGE__PORT:-3900}' }}:3900"
     restart: unless-stopped
     healthcheck:
-      # Ready once the key and bucket are made sure of, so a backend never starts before them.
+      # Ready only once the key and bucket exist, so the backend never starts before them.
       test: ["CMD-SHELL", "test -f /tmp/ready && garage status >/dev/null"]
       interval: 10s
       timeout: 5s
@@ -123,10 +119,7 @@ services:
 {%- endif %}
     networks:
       internal:
-        # nginx's named upstream (server/template.nginx.conf) targets this, not the bare
-        # "backend" service name - a container on more than one network answers to its bare name
-        # on *either* one, which leaves DNS free to hand back whichever address resolved first
-        # instead of reliably this network's.
+        # nginx targets this, not "backend": on two networks the bare name may resolve to either one.
         aliases:
           - backend-internal
       external:
@@ -142,11 +135,10 @@ services:
         condition: service_healthy
 {%- endif %}
 {%- if cookiecutter.storage != "disk" %}
-      # A real dependency, not a nice-to-have: an upload is a synchronous call from the request.
       storage:
         condition: service_healthy
 {%- if cookiecutter.storage == "s3" %}
-        # Only while the local-storage profile runs it; a deployment's bucket is somebody else's.
+        # Only while the local-storage profile runs it.
         required: false
 {%- endif %}
 {%- endif %}
@@ -203,8 +195,7 @@ services:
 {%- endif %}
 {%- endif %}
 
-  # The frontend suites in the image the app is built in, the same way CI runs them. Profiled, so
-  # `docker compose up` never starts it: `docker compose run --rm frontend-test`.
+  # The frontend suites, as CI runs them: `docker compose run --rm frontend-test`.
   frontend-test:
     build:
       context: ./{{ cookiecutter.project_slug }}-frontend
@@ -214,8 +205,7 @@ services:
     profiles: ["test"]
     working_dir: /repo
     volumes:
-      # Sources live, so a run needs no rebuild - but never the installed trees, which belong to the
-      # image and are resolved for its platform.
+      # Live sources, but the image's own node_modules, which are built for its platform.
       - ./{{ cookiecutter.project_slug }}-frontend:/repo
       - /repo/node_modules
       - /repo/apps/web/node_modules
@@ -227,33 +217,24 @@ services:
       context: ./{{ cookiecutter.project_slug }}-frontend
       dockerfile: apps/web/Dockerfile
       args:
-        # Build-time by necessity - next build inlines it into the client bundle. Every other
-        # frontend value is read at runtime from the environment below.
+        # The one build-time value: next build inlines it into the client bundle.
         NEXT_PUBLIC_SENTRY_DSN: {{ '${NEXT_PUBLIC_SENTRY_DSN:-}' }}
     image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-frontend:latest
-    # Named one by one rather than all of .env: this is the public-facing process, and none of the
-    # backend's secrets belong in it.
+    # Named one by one: none of the backend's secrets belong in the public-facing process.
     environment:
 {%- set server_sentry_dsn = cookiecutter.config_prefix + '_SERVER__SENTRY__DSN' %}
       {{ cookiecutter.config_prefix }}__DOMAIN: {{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
-      # Whether the profile offers the applications tab - the backend's own setting.
       {{ cookiecutter.config_prefix }}__OAUTH_PROVIDER__MODE: {{ '${' + cookiecutter.config_prefix + '__OAUTH_PROVIDER__MODE:-off}' }}
-      # The same list the backend installs its providers from, so the two can't disagree.
       {{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS: {{ '${' + cookiecutter.config_prefix + '__SOCIAL_LOGIN__PROVIDERS:-}' }}
       {{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__ICONS: {{ '${' + cookiecutter.config_prefix + '__SOCIAL_LOGIN__ICONS:-}' }}
       {{ server_sentry_dsn }}: {{ '${' + server_sentry_dsn + ':-}' }}
-      # Proves to nginx that a fetch made while rendering a page is the frontend's, so it counts
-      # against the visitor it names rather than against the frontend - see template.nginx.conf. Under
-      # the server-only prefix (config/server.ts), as it is a secret.
+      # A secret, so under the server-only prefix.
       {{ cookiecutter.config_prefix }}_SERVER__FRONTEND_KEY: {{ '${' + cookiecutter.config_prefix + '__FRONTEND_KEY:-}' }}
 {%- if cookiecutter.tls_termination == "external" %}
-      # Set in .env by scripts/dev-tls.sh, local dev only.
+      # Written by scripts/dev-tls.sh.
       NODE_EXTRA_CA_CERTS: {{ '${NODE_EXTRA_CA_CERTS:-}' }}
 {%- endif %}
-      # Node's http.Server default (5000ms) is shorter than nginx's upstream keepalive_timeout
-      # to this container (server/template.nginx.conf) - nginx would keep reusing a connection
-      # this server had already dropped, reproducing the exact uwsgi keep-alive bug one hop over.
-      # Must stay longer than every upstream keepalive_timeout pointed at this container.
+      # Must outlast nginx's upstream keepalive_timeout, or nginx reuses connections Node already closed.
       KEEP_ALIVE_TIMEOUT: 65000
     networks:
       internal:
@@ -265,22 +246,18 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      # Not "/" - that renders the root layout, which calls getSession() and reaches out to the
-      # backend; manifest.webmanifest is a plain route handler, unaffected, and already fast.
+      # Not "/": that renders the root layout, which calls the backend.
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/manifest.webmanifest"]
       interval: 10s
       timeout: 5s
       retries: 10
 
-  # The only service publishing a host port. Unlike a dynamic multi-tenant setup, this domain is
-  # fixed and known at generation time, so nginx routes by a small, explicit set of server_name
-  # blocks (see server/template.nginx.conf) rather than anything wildcard/dynamic.
+  # The only service publishing a host port.
   server:
     build:
       context: ./{{ cookiecutter.project_slug }}-server
     image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-server:latest
-    # The values the nginx template is rendered with (entrypoint.sh substitutes every variable it
-    # holds). The one secret is the frontend's key, which nginx checks.
+    # entrypoint.sh renders the nginx template with every variable here.
     environment:
       {{ cookiecutter.config_prefix }}__DOMAIN: {{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
       {{ cookiecutter.config_prefix }}__FRONTEND_KEY: {{ '${' + cookiecutter.config_prefix + '__FRONTEND_KEY:-}' }}
@@ -305,29 +282,20 @@ services:
         condition: service_healthy
     ports:
 {%- if cookiecutter.tls_termination == "self" %}
-      # Both on every interface, not 127.0.0.1 - nothing else sits in front of this container in
-      # self-termination mode, so the public internet has to reach both directly (80 for
-      # certbot's HTTP-01 challenge and the plain-http->https redirect, 443 for everything else).
+      # Every interface: nothing sits in front, and certbot's HTTP-01 challenge needs 80 too.
       - "80:80"
       - "443:443"
 {%- else %}
-      # Loopback unless HTTP_BIND says otherwise: an off-host load balancer needs the host's private address.
       - "{{ '${' + cookiecutter.config_prefix + '__HTTP_BIND:-127.0.0.1}' }}:{{ '${' + cookiecutter.config_prefix + '__HTTP_PORT:-80}' }}:80"
 {%- endif %}
     networks:
       internal:
-        # The frontend's own SSR fetches resolve these the same way a browser's requests do -
-        # straight to backend (as they did before) would let SSR silently take a different path
-        # through the stack than the browser, which is exactly what let a keep-alive mismatch
-        # between nginx and uwsgi go unnoticed: nginx's access log never saw that traffic, and
-        # every fix aimed at nginx accordingly missed the hop that mattered.
+        # So the frontend's server-side fetches go through nginx like a browser's, not straight to the backend.
         aliases:
           - api.{{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
           - admin.{{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
           - auth.{{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
-      # Without it Docker publishes none of the ports above - it publishes nothing for a container
-      # whose every network is `internal`.{% if cookiecutter.storage == "s3" %} It is also the way out to the provider's bucket,
-      # which nginx fetches stored files from.{% endif %}
+      # Docker publishes no ports for a container on internal networks only.{% if cookiecutter.storage == "s3" %} Also nginx's way out to the provider's bucket.{% endif %}
       external:
     restart: unless-stopped
     healthcheck:
@@ -336,9 +304,7 @@ services:
       timeout: 5s
       retries: 10
 {% if cookiecutter.tls_termination == "self" %}
-  # Only job: get the first real certificate and keep renewing it - nginx (server/entrypoint.sh)
-  # reloads periodically on its own to pick up whatever lands in the shared `letsencrypt` volume,
-  # so this never needs to reach into that container.
+  # Issues and renews the certificate; nginx reloads periodically to pick it up from the shared volume.
   certbot:
     image: certbot/certbot:latest
     volumes:

@@ -88,7 +88,7 @@ describe('useFactorSubmit', () => {
       await result.current.submit(async () => answered, { failure: 'Failed.', onSuccess })
     })
 
-    expect(onSuccess).toHaveBeenCalledWith(answered, { replayed: false })
+    expect(onSuccess).toHaveBeenCalledWith(answered, { replayed: false, etag: null })
     expect(toast.success).not.toHaveBeenCalled()
   })
 

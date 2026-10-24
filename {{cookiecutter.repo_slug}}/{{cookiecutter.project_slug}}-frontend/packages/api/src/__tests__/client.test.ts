@@ -1,7 +1,12 @@
 import { Api } from '../client'
 import { test } from '@fast-check/vitest'
+import { idempotencyKey, ifMatch } from '@isikk/core'
 import fc from 'fast-check'
 import { describe, expect, it, vi } from 'vitest'
+
+const READ = ifMatch('"3"')
+const KEY = idempotencyKey('the-key')['Idempotency-Key']
+const WRITE = { ...READ, ...idempotencyKey('the-key') }
 
 describe('Api', () => {
   it('sends credentials and reads the CSRF token from the browser cookie', async () => {
@@ -38,34 +43,39 @@ describe('Api', () => {
       (api: Api) =>
         api.registerOAuthApplication(
           { name: 'Acme', client_type: 'public', redirect_uris: ['https://a.test/cb'] },
-          'the-key'
+          KEY
         ),
       'POST',
       '/v0/oauth-applications/',
     ],
-    ['deleteOAuthApplication', (api: Api) => api.deleteOAuthApplication(7), 'DELETE', '/v0/oauth-applications/7/'],
+    [
+      'deleteOAuthApplication',
+      (api: Api) => api.deleteOAuthApplication(7, WRITE),
+      'DELETE',
+      '/v0/oauth-applications/7/',
+    ],
     ['oauthApplication', (api: Api) => api.oauthApplication(7), 'GET', '/v0/oauth-applications/7/'],
     [
       'updateOAuthApplication',
-      (api: Api) => api.updateOAuthApplication(7, { name: 'Acme' }),
+      (api: Api) => api.updateOAuthApplication(7, { name: 'Acme' }, WRITE),
       'PATCH',
       '/v0/oauth-applications/7/',
     ],
     [
       'disableOAuthApplication',
-      (api: Api) => api.disableOAuthApplication(7, 'the-key'),
+      (api: Api) => api.disableOAuthApplication(7, KEY),
       'POST',
       '/v0/oauth-applications/7/disable/',
     ],
     [
       'restoreOAuthApplication',
-      (api: Api) => api.restoreOAuthApplication(7, 'the-key'),
+      (api: Api) => api.restoreOAuthApplication(7, KEY),
       'POST',
       '/v0/oauth-applications/7/restore/',
     ],
     [
       'rotateOAuthApplicationSecret',
-      (api: Api) => api.rotateOAuthApplicationSecret(7, true, 'the-key'),
+      (api: Api) => api.rotateOAuthApplicationSecret(7, true, KEY),
       'POST',
       '/v0/oauth-applications/7/rotate-secret/',
     ],
@@ -74,24 +84,24 @@ describe('Api', () => {
     ['oauthApplicationReview', (api: Api) => api.oauthApplicationReview(7), 'GET', '/v0/oauth-application-reviews/7/'],
     [
       'approveOAuthApplication',
-      (api: Api) => api.approveOAuthApplication(7, ['users:manage:user'], 'the-key'),
+      (api: Api) => api.approveOAuthApplication(7, ['users:manage:user'], KEY, READ),
       'POST',
       '/v0/oauth-application-reviews/7/approve/',
     ],
     [
       'withdrawOAuthApplication',
-      (api: Api) => api.withdrawOAuthApplication(7, 'the-key'),
+      (api: Api) => api.withdrawOAuthApplication(7, KEY),
       'POST',
       '/v0/oauth-application-reviews/7/withdraw/',
     ],
     ['users', (api: Api) => api.users(), 'GET', '/v0/users/'],
     ['permissions', (api: Api) => api.permissions(), 'GET', '/v0/users/permissions/'],
     ['user', (api: Api) => api.user('u1'), 'GET', '/v0/users/u1/'],
-    ['updateUser', (api: Api) => api.updateUser('u1', { is_active: false }), 'PATCH', '/v0/users/u1/'],
+    ['updateUser', (api: Api) => api.updateUser('u1', { is_active: false }, WRITE), 'PATCH', '/v0/users/u1/'],
     ['authorizedApplications', (api: Api) => api.authorizedApplications(), 'GET', '/v0/authorized-applications/'],
     [
       'revokeAuthorizedApplication',
-      (api: Api) => api.revokeAuthorizedApplication(7),
+      (api: Api) => api.revokeAuthorizedApplication(7, KEY),
       'DELETE',
       '/v0/authorized-applications/7/',
     ],
@@ -103,20 +113,15 @@ describe('Api', () => {
     ],
     [
       'approveDevice',
-      (api: Api) => api.approveDevice('BCDFGHJK', 'the-key'),
+      (api: Api) => api.approveDevice('BCDFGHJK', KEY),
       'POST',
       '/v0/device-authorizations/BCDFGHJK/approve/',
     ],
-    [
-      'denyDevice',
-      (api: Api) => api.denyDevice('BCDFGHJK', 'the-key'),
-      'POST',
-      '/v0/device-authorizations/BCDFGHJK/deny/',
-    ],
+    ['denyDevice', (api: Api) => api.denyDevice('BCDFGHJK', KEY), 'POST', '/v0/device-authorizations/BCDFGHJK/deny/'],
     ['personalAccessTokens', (api: Api) => api.personalAccessTokens(), 'GET', '/v0/personal-access-tokens/'],
     [
       'deletePersonalAccessToken',
-      (api: Api) => api.deletePersonalAccessToken('t1'),
+      (api: Api) => api.deletePersonalAccessToken('t1', KEY),
       'DELETE',
       '/v0/personal-access-tokens/t1/',
     ],
@@ -137,7 +142,7 @@ describe('Api', () => {
   it('sends the application to register as its body, under the idempotency key it was given', async () => {
     const baseFetch = vi.fn<typeof fetch>(async () => new Response('{}', { status: 201 }))
     const data = { name: 'Acme', client_type: 'confidential' as const, redirect_uris: ['https://a.test/cb'] }
-    await new Api('https://api.example.test', { baseFetch }).registerOAuthApplication(data, 'the-key')
+    await new Api('https://api.example.test', { baseFetch }).registerOAuthApplication(data, KEY)
     const [request, init] = baseFetch.mock.calls[0]
     expect(await (request as Request).json()).toEqual(data)
     expect(new Headers(init?.headers).get('Idempotency-Key')).toBe('the-key')
@@ -146,7 +151,7 @@ describe('Api', () => {
   it('sends the token to make as its body, under the idempotency key it was given', async () => {
     const baseFetch = vi.fn<typeof fetch>(async () => new Response('{}', { status: 201 }))
     const data = { name: 'CI', scopes: ['users:manage:user'], expires_at: null }
-    await new Api('https://api.example.test', { baseFetch }).makePersonalAccessToken(data, 'the-key')
+    await new Api('https://api.example.test', { baseFetch }).makePersonalAccessToken(data, KEY)
     const [request, init] = baseFetch.mock.calls[0]
     expect((request as Request).method).toBe('POST')
     expect(String((request as Request).url)).toBe('https://api.example.test/v0/personal-access-tokens/')
@@ -155,11 +160,40 @@ describe('Api', () => {
   })
 
   it.each([
-    ['approveDevice', (api: Api) => api.approveDevice('BCDFGHJK', 'the-key')],
-    ['denyDevice', (api: Api) => api.denyDevice('BCDFGHJK', 'the-key')],
+    ['approveDevice', (api: Api) => api.approveDevice('BCDFGHJK', KEY)],
+    ['denyDevice', (api: Api) => api.denyDevice('BCDFGHJK', KEY)],
+    ['revokeAuthorizedApplication', (api: Api) => api.revokeAuthorizedApplication(7, KEY)],
+    ['deletePersonalAccessToken', (api: Api) => api.deletePersonalAccessToken('t1', KEY)],
+    ['updateMe', (api: Api) => api.updateMe({ language: 'en' }, WRITE)],
+    ['updateUser', (api: Api) => api.updateUser('u1', { is_active: false }, WRITE)],
+    ['updateOAuthApplication', (api: Api) => api.updateOAuthApplication(7, { name: 'Acme' }, WRITE)],
+    ['deleteOAuthApplication', (api: Api) => api.deleteOAuthApplication(7, WRITE)],
   ])('%s answers under the idempotency key it was given', async (_name, call) => {
     const baseFetch = vi.fn<typeof fetch>(async () => new Response(null, { status: 204 }))
     await call(new Api('https://api.example.test', { baseFetch }))
+    const [, init] = baseFetch.mock.calls[0]
+    expect(new Headers(init?.headers).get('Idempotency-Key')).toBe('the-key')
+  })
+
+  it.each([
+    ['updateMe', (api: Api) => api.updateMe({ language: 'en' }, WRITE)],
+    ['updateUser', (api: Api) => api.updateUser('u1', { is_active: false }, WRITE)],
+    ['updateOAuthApplication', (api: Api) => api.updateOAuthApplication(7, { name: 'Acme' }, WRITE)],
+    ['deleteOAuthApplication', (api: Api) => api.deleteOAuthApplication(7, WRITE)],
+    ['approveOAuthApplication', (api: Api) => api.approveOAuthApplication(7, [], KEY, READ)],
+  ])('%s names the version it was made against', async (_name, call) => {
+    const baseFetch = vi.fn<typeof fetch>(async () => new Response('{}', { status: 200 }))
+    await call(new Api('https://api.example.test', { baseFetch }))
+    const [, init] = baseFetch.mock.calls[0]
+    expect(new Headers(init?.headers).get('If-Match')).toBe('"3"')
+  })
+
+  it('approves under both its idempotency key and the version it was made against', async () => {
+    const baseFetch = vi.fn<typeof fetch>(async () => new Response('{}', { status: 200 }))
+    await new Api('https://api.example.test', { baseFetch }).approveOAuthApplication(7, [], KEY, {
+      ...READ,
+      'Idempotency-Key': 'a-hook-key',
+    })
     const [, init] = baseFetch.mock.calls[0]
     expect(new Headers(init?.headers).get('Idempotency-Key')).toBe('the-key')
   })
@@ -172,5 +206,20 @@ describe('Api', () => {
     expect(String(request instanceof Request ? request.url : request)).toBe(
       'https://api.example.test/v0/users/user-1/history/?action=update&page=2'
     )
+  })
+
+  // Held by the type checker, not at runtime: each line fails to compile unless the client refuses it.
+  it('refuses at compile time a write that never decided its version or its key', async () => {
+    const baseFetch = vi.fn<typeof fetch>(async () => new Response('{}', { status: 200 }))
+    const api = new Api('https://api.example.test', { baseFetch })
+    // @ts-expect-error - a hand-built If-Match is not ifMatch() or anyVersion()
+    await api.updateMe({ language: 'en' }, { 'If-Match': '"3"' })
+    // @ts-expect-error - nor are headers with no version at all
+    await api.deleteOAuthApplication(7, {})
+    // @ts-expect-error - a version without a key is refused too
+    await api.updateOAuthApplication(7, { name: 'Acme' }, READ)
+    // @ts-expect-error - a plain string is no idempotency key
+    await api.withdrawOAuthApplication(7, 'the-key')
+    expect(baseFetch).toHaveBeenCalledTimes(4)
   })
 })

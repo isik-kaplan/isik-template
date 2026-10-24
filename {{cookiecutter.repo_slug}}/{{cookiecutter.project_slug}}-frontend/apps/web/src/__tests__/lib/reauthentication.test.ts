@@ -13,6 +13,8 @@ describe('safeNext', () => {
     ['https://elsewhere.example/steal', '/'],
     ['//elsewhere.example/steal', '/'],
     ['/\\elsewhere.example/steal', '/'],
+    ['/\t/elsewhere.example/steal', '/'],
+    ['/\n/elsewhere.example/steal', '/'],
     ['profile', '/'],
   ])('keeps %j only when it is a path on this site', (next, expected) => {
     expect(safeNext(next)).toBe(expected)
@@ -22,7 +24,7 @@ describe('safeNext', () => {
     const safe = safeNext(next)
 
     expect(safe.startsWith('/')).toBe(true)
-    expect(safe.startsWith('//') || safe.startsWith('/\\')).toBe(false)
+    expect(new URL(safe, 'http://site.invalid').origin).toBe('http://site.invalid')
   })
 })
 

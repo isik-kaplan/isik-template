@@ -1,8 +1,6 @@
 """The renderer encodes what DRF actually hands it, error bodies included.
 
-msgspec encodes exact types, and `ErrorDetail` is a `str` subclass - so the library's own renderer
-turns every 401, 403 and validation error into a 500. Tested on the encoder directly, since the error
-paths are the half a green suite is least likely to exercise through it.
+Tested on the encoder directly, since a green suite rarely reaches the error paths through it.
 """
 
 import msgspec
@@ -65,8 +63,7 @@ def test_a_refusal_served_over_http_is_a_refusal_rather_than_a_crash(client):
 
 @pytest.mark.django_db
 def test_a_session_survives_the_msgspec_serializer(client, django_user_model):
-    """SESSION_SERIALIZER is msgspec's too, so a login that could not be written back would sign
-    nobody in."""
+    """SESSION_SERIALIZER is msgspec's too; a session it could not write would sign nobody in."""
     user = django_user_model.objects.create_user(username="alice", email="alice@example.test", password="x")
     client.force_login(user)
 

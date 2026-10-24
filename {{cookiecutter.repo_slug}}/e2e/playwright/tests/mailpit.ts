@@ -11,14 +11,10 @@ async function emailsTo(address: string): Promise<MailpitMessageSummary[]> {
   return ((await response.json()) as MailpitSearchResponse).messages
 }
 
-/** Waits until `address` has been sent exactly `count` emails - for a step whose whole point is that
- * it sends another one. */
 export async function waitForEmailCount(address: string, count: number): Promise<void> {
   await expect(async () => expect(await emailsTo(address)).toHaveLength(count)).toPass({ timeout: 10_000 })
 }
 
-/** Polls mailpit for the most recent email to `address`, since delivery is async relative to the
- * request that triggered it (allauth sends via a signal, not inline in the response). */
 export async function waitForLatestEmailTo(address: string): Promise<MailpitMessage> {
   await expect(async () => {
     const response = await fetch(`${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(`to:${address}`)}`)
@@ -28,14 +24,11 @@ export async function waitForLatestEmailTo(address: string): Promise<MailpitMess
 
   const response = await fetch(`${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(`to:${address}`)}`)
   const data = (await response.json()) as MailpitSearchResponse
-  // Most recent first - a suite that sends this address more than one email (e.g. signup then a
-  // later password reset) always wants the latest, not the first ever sent.
+  // Most recent first.
   const messageResponse = await fetch(`${MAILPIT_URL}/api/v1/message/${data.messages[0].ID}`)
   return (await messageResponse.json()) as MailpitMessage
 }
 
-/** Extracts the first link matching `pathPrefix` (e.g. "/auth/verify-email/") from the latest
- * email sent to `address`. */
 export async function extractLinkFromEmail(address: string, pathPrefix: string): Promise<string> {
   const message = await waitForLatestEmailTo(address)
   const body = message.Text || message.HTML

@@ -12,9 +12,7 @@ async function ownId(request: APIRequestContext): Promise<string> {
   return (await response.json()).id
 }
 
-// An account's history says when its password changed and from where - its owner's to read (and
-// staff's), not every visitor's. To anybody else signed in the account is not there at all, so its id says
-// nothing either.
+// To anybody else signed in the account is not there at all, so its id reveals nothing.
 test("an account history is its owner's to read, not found by anybody else and refused to nobody signed in", async ({
   page,
   browser,

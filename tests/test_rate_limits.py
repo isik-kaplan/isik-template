@@ -8,9 +8,7 @@ import pytest
 from conftest import load_context
 
 
-# Boots a bake's real nginx between two stand-ins that echo every request back, so what nginx tells
-# the backend and the frontend can be read off a real request: who the client is, what it counted, and
-# how it refuses. Only the server image is built. The backend's own limits are its suite's to test.
+# The real nginx between two stand-ins that echo each request's headers back.
 pytestmark = [
     pytest.mark.skipif(shutil.which("docker") is None, reason="docker not available"),
     pytest.mark.usefixtures("skip_lockfile_generation"),
@@ -150,8 +148,7 @@ def test_nginx_names_the_client_to_the_backend_whatever_the_client_claims(stack)
     stack.up(TRUSTED_PROXY_COUNT="2", RATE_LIMITS__ENABLED="false")
 
     seen = stack.seen_by_backend(**{"X-Forwarded-For": "6.6.6.6, 203.0.113.5", "X-Client-Ip": "6.6.6.6"})
-    # One proxy in front of nginx: the entry it appended is the client, and whatever came before it
-    # is the client's own word.
+    # One proxy in front: its appended entry is the client; earlier ones are the client's own word.
     assert seen["x-client-ip"] == "203.0.113.5"
 
     # Fewer entries than proxies trusted: something reached nginx without them, and its own address is the answer.

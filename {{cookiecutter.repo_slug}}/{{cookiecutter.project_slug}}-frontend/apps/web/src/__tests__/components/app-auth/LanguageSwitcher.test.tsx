@@ -5,8 +5,7 @@ import { LanguageProvider } from '@/lib/LanguageContext'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-// The checked-in default template only ever configures one language - a real second one has to be
-// mocked in to exercise this component's actual body (it renders nothing below two languages).
+// A second language mocked in: the component renders nothing below two.
 vi.mock('@/i18n/config', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/i18n/config')>()),
   languages: ['en', 'tr'],
@@ -37,8 +36,7 @@ describe('LanguageSwitcher', () => {
     const select = screen.getByRole('combobox', { name: 'Language' }) as HTMLSelectElement
     expect(select.value).toBe('en')
     expect(Array.from(select.options).map((option) => option.value)).toEqual(['en', 'tr'])
-    // Each option's own language names itself - "Türkçe", not "Turkish" (that would be English's
-    // name for it, what an empty display-locale falls back to).
+    // Each option names itself in its own language - "Türkçe", not "Turkish".
     expect(screen.getByRole('option', { name: 'Türkçe' })).toBeTruthy()
     expect(screen.getByRole('option', { name: 'English' })).toBeTruthy()
   })
@@ -56,7 +54,10 @@ describe('LanguageSwitcher', () => {
     await Promise.resolve()
     await Promise.resolve()
 
-    expect(updateMe).toHaveBeenCalledWith({ language: 'tr' })
+    expect(updateMe).toHaveBeenCalledWith(
+      { language: 'tr' },
+      { 'If-Match': '*', 'Idempotency-Key': expect.any(String) }
+    )
     expect(changeLanguage).toHaveBeenCalledWith('tr')
     expect(refresh).toHaveBeenCalledOnce()
   })

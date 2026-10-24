@@ -5,8 +5,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// Hyphens/dots/underscores count as name-part separators too, since usernames commonly use them
-// in place of a space; single-word names fall back to the first two characters.
+// Usernames use - . _ as spaces; a single word falls back to its first two characters.
 export function getInitials(name: string): string {
   const parts = name
     .trim()

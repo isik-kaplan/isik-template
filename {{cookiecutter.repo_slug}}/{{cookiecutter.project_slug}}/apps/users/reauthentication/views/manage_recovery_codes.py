@@ -4,5 +4,5 @@ from apps.users.reauthentication.gate import ProvesWhoTheyAre
 
 
 class ManageRecoveryCodesView(ProvesWhoTheyAre, _ManageRecoveryCodesView):
-    # A fresh set is a fresh way past the second factor, shown once to whoever asked for it.
+    # A fresh set is a fresh way past the second factor.
     reauthentication_methods = frozenset({"POST"})

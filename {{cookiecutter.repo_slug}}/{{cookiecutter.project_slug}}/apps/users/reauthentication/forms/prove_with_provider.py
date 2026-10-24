@@ -7,8 +7,7 @@ from apps.users.reauthentication.proof import can_prove_with
 
 
 class ProveWithProviderForm(forms.Form):
-    """Which of the signed-in person's own connected providers to prove themselves at, and where to
-    come back to. Only one that can be held to a fresh challenge is accepted."""
+    """One of the person's own providers that can be held to a fresh challenge, and where to return."""
 
     provider = forms.CharField()
     callback_url = forms.CharField()

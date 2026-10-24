@@ -101,10 +101,8 @@ body {
 }
 
 @layer base {
-  /* What an image that will not load shows instead of the browser's broken glyph. An <img> whose
-     source fails stops being a replaced element, the one moment it renders its own pseudo-elements,
-     so this costs nothing while the image is fine and needs no error handler anywhere. Chromium
-     draws its own placeholder when `alt` is empty, so an image worth a fallback needs a real alt. */
+  /* A failed <img> stops being a replaced element and renders pseudo-elements: this is its fallback.
+     Chromium draws its own placeholder for an empty `alt`, so it needs a real alt. */
   img {
     position: relative;
   }

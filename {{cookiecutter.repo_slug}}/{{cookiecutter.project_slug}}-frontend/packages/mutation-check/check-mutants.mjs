@@ -1,17 +1,7 @@
 #!/usr/bin/env node
-// Fails the build unless every mutant in StrykerJS's own JSON report (reports/mutation/mutation.json,
-// relative to the app directory passed as argv[2]) is either killed, or named in that app's
-// mutation-exemptions.json with a reason - mirroring the backend's mutation-exemptions.toml/
-// check_mutants.py pair. Never an inline `// Stryker disable` comment: this is the one place
-// equivalent mutants get documented, so a survivor can't be silenced without a reviewable reason.
-//
-// Catalog entries are keyed by (file, mutatorName, fingerprint), where fingerprint is a hash of the
-// exact source text the mutant's own location spans - not a line number, so a reformat or an edit
-// elsewhere in the file can't leave an entry silently covering the wrong code.
-//
-// Stryker never skips an exempt mutant here, so every run re-measures every exemption: an entry
-// that no surviving mutant matches any more (a test kills it now, or its code is gone) fails too,
-// rather than sitting in the catalog excusing nothing until it one day excuses something new.
+// Fails unless every surviving mutant is exempted, with a reason, in the app's mutation-exemptions.json -
+// never by inline directives. Entries are keyed by a hash of the mutant's source text, not a line number.
+// Exempt mutants still run, so an entry no survivor matches any more fails as stale.
 import { inlineDirectives, judgeMutants, weakReasons } from './judge-mutants.mjs'
 import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
@@ -34,7 +24,6 @@ function main() {
     exists: (file) => existsSync(path.join(appRoot, file)),
   })
   const weak = weakReasons(catalog)
-  // The files this run mutated, which is where a directive would have silenced something.
   const directives = inlineDirectives(
     Object.fromEntries(Object.keys(report.files).map((file) => [file, readFileSync(path.join(appRoot, file), 'utf8')]))
   )
@@ -61,8 +50,7 @@ function main() {
   }
 
   if (plural.length > 0) {
-    // Not a failure: a fingerprint spans whole lines, so one line holding two mutants of the same
-    // kind hands both to its entry. Printed so the reason can be checked against all of them.
+    // Not a failure: a fingerprint spans whole lines, so two same-kind mutants on one line share an entry.
     console.log(
       `${plural.length} exemption(s) match more mutants than they have entries - check each reason covers them all:\n`
     )

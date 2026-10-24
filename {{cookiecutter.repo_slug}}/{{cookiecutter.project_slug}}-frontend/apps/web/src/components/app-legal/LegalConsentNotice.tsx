@@ -6,11 +6,10 @@ import { useClientTranslation } from '@/i18n/client'
 import { useLanguage } from '@/lib/LanguageContext'
 import { LEGAL_DOCUMENTS, type LegalSlug, legalHref, legalTitles } from '@/lib/legalDocuments'
 
-// Stands in for the document list while the sentence is translated, so the links can go where the translation
-// put the list rather than where English puts it.
+// A placeholder for the list, so the links go where the translation puts it.
 const LIST = '\u0000'
 
-/** "By continuing, you agree to the ..." with a link to every document, shown wherever an account is created. */
+/** "By continuing, you agree to ..." with a link to every document, wherever an account is created. */
 export function LegalConsentNotice() {
   const { t } = useClientTranslation(['legal'])
   const language = useLanguage()

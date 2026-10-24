@@ -1,27 +1,20 @@
 import pgtrigger
 from django.db import models
 from django.db.models import Q
-from isik.django.apps.common.db import track_events
+from isik.django.apps.common.db import VersionedModel, track_events
 from oauth2_provider.models import AbstractApplication
 
 
 @track_events()
-class Application(AbstractApplication):
-    """An application somebody registered so its users can sign in with this project, and later act here
-    on their behalf within the scopes each of them lets it have.
-
-    DOT's own row, swapped for this one so the review state and the scopes sit on it. `user` is DOT's
-    column for the person who registered it - its owner, who answers for it, never whose account it acts
-    in: that is whoever lets it in.
-    """
+class Application(VersionedModel, AbstractApplication):
+    """`user` is its owner, never whose account it acts in. Versioned, since DOT's `updated` is `auto_now`,
+    which a QuerySet.update() never touches."""
 
     class Approval(models.TextChoices):
         PENDING = "pending", "Pending review"
         APPROVED = "approved", "Approved"
-        # A superuser taking an application down, for cause.
         WITHDRAWN = "withdrawn", "Withdrawn"
-        # Its owner's own off switch, kept apart from WITHDRAWN so the owner cannot undo a withdrawal by
-        # switching it off and on again.
+        # Apart from WITHDRAWN, so an owner cannot undo a withdrawal by switching it off and on.
         DISABLED = "disabled", "Disabled by its owner"
 
     description = models.TextField(
@@ -36,8 +29,7 @@ class Application(AbstractApplication):
         help_text="Where it stands. Only an approved application signs anybody in or holds working tokens.",
         db_comment="A state machine trigger governs the moves; OAUTH_PROVIDER__MODE=auto starts it approved.",
     )
-    # Permissions rather than strings, so a scope naming nothing is refused by the foreign key and retiring
-    # one cascades out with no sweep to write.
+    # Permissions, not strings: the foreign key refuses a bogus scope and cascades a retired one.
     requested_scopes = models.ManyToManyField(
         "auth.Permission",
         related_name="requested_by_applications",
@@ -64,15 +56,11 @@ class Application(AbstractApplication):
                     ("approved", "withdrawn"),
                     ("approved", "disabled"),
                     ("disabled", "approved"),
-                    # Reinstating is a superuser's to do.
                     ("withdrawn", "approved"),
-                    # A superuser may still take down something its owner already switched off.
                     ("disabled", "withdrawn"),
                 ],
             ),
-            # Every move, and every birth past pending, is a service's in apps/oauth_provider/services.py,
-            # which opens these for the one write it makes. Anything else - DOT's admin, a shell, a stray
-            # update() - cannot approve an application or take one down without revoking its tokens.
+            # Only services.py opens these, so nothing else approves or takes one down without revoking.
             pgtrigger.Protect(
                 name="approval_moves_only_through_its_services",
                 operation=pgtrigger.Update,
@@ -85,8 +73,7 @@ class Application(AbstractApplication):
             ),
         ]
         constraints = [
-            # DOT's own columns, which its admin offers to change: skipping the question would let an
-            # application in nobody let in, and any other grant is one this project does not serve.
+            # DOT's columns, which its admin offers to change.
             models.CheckConstraint(condition=Q(skip_authorization=False), name="always_asks"),
             models.CheckConstraint(
                 condition=Q(
@@ -104,6 +91,5 @@ class Application(AbstractApplication):
         return self.approval == self.Approval.APPROVED
 
     def is_usable(self, request):
-        """DOT asks this before every authorization, token, refresh and revocation, so an application not
-        approved - pending, withdrawn or switched off by its owner - is a client that does not exist."""
+        """DOT asks this before every authorization, token, refresh and revocation."""
         return self.is_approved

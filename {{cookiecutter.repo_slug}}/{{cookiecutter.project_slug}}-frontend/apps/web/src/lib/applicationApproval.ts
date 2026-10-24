@@ -4,8 +4,7 @@ import type { ApiType } from '@{{ cookiecutter.repo_slug }}/api'
 
 export type Approval = ApiType<'ApplicationApproval'>
 
-/** Where an application stands, in words - spelled out per state because i18next-parser only finds a
- *  literal key. */
+/** Spelled out per state: i18next-parser only finds a literal key. */
 export function approvalLabel(approval: Approval, t: Translate): string {
   const labels: Record<Approval, string> = {
     pending: t('auth:applicationApprovalPending'),

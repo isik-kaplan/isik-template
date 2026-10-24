@@ -91,9 +91,7 @@ describe('Drawer', () => {
 
     expect(document.querySelector('[data-slot="drawer-overlay"]')?.className).toContain('bg-black/10')
 
-    // The popup's className is built from several `cn()` arguments (base, nested, bleed, sizing,
-    // stack, transitions, per-axis, per-direction) - one substring per section, so a single class
-    // check per section actually exercises each literal instead of only the first.
+    // One class per `cn()` argument, so each literal is exercised.
     const popupClassName = document.querySelector('[data-slot="drawer-popup"]')?.className ?? ''
     for (const substring of [
       'bg-popover', // base

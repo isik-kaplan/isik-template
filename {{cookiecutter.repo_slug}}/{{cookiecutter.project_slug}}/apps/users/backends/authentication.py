@@ -5,4 +5,4 @@ from apps.users.backends.authentication_only import AuthenticationOnlyMixin
 
 
 class AuthenticationBackend(AuthenticationOnlyMixin, AdmittedByLoginPolicyMixin, _AuthenticationBackend):
-    """allauth's backend, and nothing about permissions."""
+    pass

@@ -1,37 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 {% if cookiecutter.tls_termination == "self" %}
-# This project terminates its own TLS (tls_termination: self) - nginx already serves :443 off the
-# certificate in the letsencrypt volume, so there is no plain-http dev stack for this to upgrade.
 echo "tls_termination is \"self\": nginx already serves https off its own certificate (see README.md's TLS" >&2
 echo "section). This script only applies to the plain-http stack tls_termination: external generates." >&2
 exit 1
 {%- else %}
-# Local-only https for the plain-http dev stack, so browser APIs that exist only in a secure context
-# (WebAuthn/passkeys, service workers, parts of the clipboard API) work on a laptop. It writes a
-# certificate and a `listen 443 ssl` snippet into the server's dev-tls/ directory, which both nginx
-# server blocks include - empty (the default, and every real deployment) keeps nginx on :80 only.
-#
-# mkcert when it is installed, because its CA is already in the system and browser trust stores and
-# there is no warning to click through. Self-signed otherwise, which still makes the origin secure
-# once the warning is accepted - except for WebAuthn, which Chromium refuses on any certificate
-# error. `brew install mkcert && mkcert -install` (or your OS's package), then rerun this.
+# Local https for the dev stack, so secure-context-only browser APIs (passkeys, service workers) work.
+# Uses mkcert when installed; a self-signed certificate otherwise, which Chromium refuses for WebAuthn.
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TLS_DIR="$HERE/{{ cookiecutter.project_slug }}-server/dev-tls"
 ENV_FILE="$HERE/.env"
 
 read_env() {
-  # The value as .env spells it, without sourcing the file - it is not a shell script, and a stray
-  # `#` or space in an unrelated line should not decide whether this works.
+  # Not sourced: .env is not a shell script.
   sed -n "s/^$1=//p" "$ENV_FILE" | tail -n 1 | tr -d '"'
 }
 
 DOMAIN="$(read_env {{ cookiecutter.config_prefix }}__DOMAIN)"
 : "${DOMAIN:?{{ cookiecutter.config_prefix }}__DOMAIN is not set in .env}"
 
-# The four names nginx answers on, listed rather than a wildcard: `*.{{ cookiecutter.domain }}` would not cover the
-# bare domain, and naming them is what the rest of the stack already does.
+# Listed rather than a wildcard, which would not cover the bare domain.
 NAMES=("$DOMAIN" "api.$DOMAIN" "admin.$DOMAIN" "auth.$DOMAIN")
 SAN="$(printf 'DNS:%s,' "${NAMES[@]}")"
 SAN="${SAN%,}"
@@ -39,8 +28,7 @@ SAN="${SAN%,}"
 mkdir -p "$TLS_DIR"
 
 if [ -f "$TLS_DIR/cert.pem" ] && openssl x509 -checkend 86400 -noout -in "$TLS_DIR/cert.pem" 2>/dev/null; then
-  # Read out of -text rather than with -ext: macOS ships LibreSSL, which has no -ext at all, and
-  # this branch failing is a script that stops working on its second run.
+  # Parsed from -text, not -ext: macOS's LibreSSL has no -ext.
   HAVE="$(openssl x509 -in "$TLS_DIR/cert.pem" -noout -text \
     | sed -n '/X509v3 Subject Alternative Name/{n;p;}' | tr -d ' \n')"
   if [ "$HAVE" = "$SAN" ]; then
@@ -66,9 +54,7 @@ if [ ! -f "$TLS_DIR/cert.pem" ]; then
   chmod 644 "$TLS_DIR/cert.pem" "$TLS_DIR/key.pem"
 fi
 
-# What has to be trusted, which is not always what is served: mkcert signs with a root of its own,
-# and a leaf verifies nothing. Node appends this to its own roots (NODE_EXTRA_CA_CERTS), so there is
-# no bundle to rebuild - unlike SSL_CERT_FILE, which replaces them.
+# The CA to trust, which for mkcert is its root, not the served leaf.
 if command -v mkcert >/dev/null 2>&1; then
   cp "$(mkcert -CAROOT)/rootCA.pem" "$TLS_DIR/ca.pem"
 else
@@ -76,8 +62,7 @@ else
 fi
 chmod 644 "$TLS_DIR/ca.pem"
 
-# Directives, not a server block: included inside both existing server blocks, so :443 serves exactly
-# the routes :80 does with nothing duplicated.
+# Directives, not a server block: included in both server blocks, so :443 serves exactly what :80 does.
 cat > "$TLS_DIR/listen.conf" <<CONF
 listen 443 ssl;
 http2 on;
@@ -85,10 +70,7 @@ ssl_certificate     /etc/nginx/extra-listen/cert.pem;
 ssl_certificate_key /etc/nginx/extra-listen/key.pem;
 CONF
 
-# The frontend fetches this deployment's own API server-side, so over https it is a Node client
-# verifying this certificate - and it rejects one nothing told it about, which surfaces as a 500 on
-# every page rather than as a certificate error. Written into .env, which the frontend's `environment`
-# in docker-compose.yml passes on.
+# Without it the frontend's server-side fetches reject the certificate, and every page is a 500.
 CA_LINE="NODE_EXTRA_CA_CERTS=/etc/dev-tls/ca.pem"
 if ! grep -q "^NODE_EXTRA_CA_CERTS=" "$ENV_FILE"; then
   printf '\n# Written by scripts/dev-tls.sh - the CA the frontend trusts for this stack'"'"'s local https.\n%s\n' \
@@ -96,8 +78,6 @@ if ! grep -q "^NODE_EXTRA_CA_CERTS=" "$ENV_FILE"; then
   echo "added $CA_LINE to .env"
 fi
 
-# The override that mounts this directory and publishes :443 - kept out of the base file so a
-# deployment behind its own TLS proxy never claims the port that proxy listens on.
 OVERRIDE="docker-compose.dev-tls.yml"
 if ! grep -q "^COMPOSE_FILE=" "$ENV_FILE"; then
   printf '\n# Written by scripts/dev-tls.sh - layers the local-https override onto the stack.\n%s\n' \

@@ -1,9 +1,4 @@
-"""The promises an entry in the mutation registries makes, that only the suite can check.
-
-`reason`, quoting and the shape of a name are checked where scripts/confirm_survivors.py loads the
-files. What can only be checked here is the other half of a `verified_by`: it buys a mutant out of the
-re-run that would otherwise re-check it, and it is worth that only while the test it names exists.
-"""
+"""A `verified_by` spares a mutant its re-run, which is worth it only while the named test exists."""
 
 import ast
 import re
@@ -23,8 +18,7 @@ def _verified():
 
 
 def _readable(name):
-    """A parametrize id mutmut can hand back to pytest: it re-runs tests by node id, and the `::` a
-    `verified_by` carries, or the `ǁ` of a mangled method name, makes one pytest cannot resolve."""
+    """mutmut re-runs by node id, and a `::` or a mangled name's `ǁ` makes one pytest cannot resolve."""
     return re.sub(r"[^0-9A-Za-z_]", "_", name.rpartition(".")[2])[:60]
 
 

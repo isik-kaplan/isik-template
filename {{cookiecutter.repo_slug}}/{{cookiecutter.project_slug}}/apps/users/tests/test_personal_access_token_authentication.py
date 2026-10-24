@@ -25,7 +25,7 @@ def permission(name):
 
 
 def _with(path, token):
-    """A script's request: the token and nothing else - no session."""
+    """The token and no session."""
     return Client().get(path, HTTP_AUTHORIZATION=f"Bearer {token}")
 
 
@@ -196,7 +196,6 @@ def test_the_scheme_is_read_whatever_its_case(alice):
 
 @pytest.mark.django_db
 def test_a_view_that_names_no_action_takes_no_token(alice):
-    """A plain APIView has no `action` at all, which is no action a token may take either."""
     token = _token(alice)
     request = Request(
         APIRequestFactory().get(USERS, HTTP_AUTHORIZATION=f"Bearer {token}"), parser_context={"view": object()}

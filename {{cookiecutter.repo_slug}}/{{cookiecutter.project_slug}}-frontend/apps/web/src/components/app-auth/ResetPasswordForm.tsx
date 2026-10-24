@@ -30,9 +30,7 @@ export function ResetPasswordForm({ resetKey }: { resetKey: string }) {
     event.preventDefault()
 
     await submit(({ password }) => new AuthApi(authOrigin()).resetPassword(resetKey, password), {
-      // A confirmed-but-not-yet-authenticated key still comes back as a 401 (see schema.ts) - only
-      // an actually invalid/expired key carries a non-empty `errors` array, so that's what a real
-      // failure looks like here, not the response's HTTP status.
+      // A valid key can still answer 401; only a bad one carries `errors`.
       isSuccess: ({ data, error }) => Boolean(data) || detailOf(error) === undefined,
       failure: t('auth:resetPasswordError'),
       leavesOnSuccess: true,

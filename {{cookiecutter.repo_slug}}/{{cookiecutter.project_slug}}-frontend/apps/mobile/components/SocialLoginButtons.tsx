@@ -4,7 +4,7 @@ import { getAuthApi } from '@/lib/session'
 import { appleSignInEnabled, googleSignInEnabled } from '@/lib/socialProviders'
 import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 
-import { extractAuthErrors, pendingMfaTypes } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
+import { errorsOf, pendingMfaTypes } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
 import { Button } from './Button'
 import { router } from 'expo-router'
@@ -12,15 +12,12 @@ import { Platform } from 'react-native'
 
 type SocialLoginButtonsProps = {
   onError: (message: string) => void
-  // Default to the build's own configuration - overridable so tests can exercise every on/off
-  // combination directly.
+  // Default to the build's configuration.
   googleEnabled?: boolean
   appleEnabled?: boolean
 }
 
-/** Renders nothing at all when neither provider is configured for this build (see
- * lib/socialProviders.ts) - Apple's own button is further limited to iOS, the only platform its
- * SDK supports. */
+/** Apple's button is iOS-only, the only platform its SDK supports. */
 export function SocialLoginButtons({
   onError,
   googleEnabled = googleSignInEnabled(),
@@ -47,14 +44,12 @@ export function SocialLoginButtons({
         router.push('/two-factor')
         return
       }
-      const authErrors = extractAuthErrors(error)
+      const authErrors = errorsOf(error)
       if (authErrors?.length) {
         onError(authErrors[0].message)
         return
       }
-      // No error, but not authenticated either - SOCIALACCOUNT_AUTO_SIGNUP is off, so a
-      // never-seen-before provider account always lands in this pending state first.
-      // complete-signup.tsx re-fetches that pending state itself, so it's always safe to go there.
+      // Auto-signup is off, so a new provider account lands in a pending signup.
       router.push('/complete-signup')
     } catch {
       onError(t('socialLoginError'))

@@ -5,9 +5,6 @@ import { SUPERUSER_PASSWORD, act, asTheSuperuser, login, signUpAndVerify } from 
 const PASSWORD = 'correct-horse-battery-staple'
 const DEVICE_GRANT = 'urn:ietf:params:oauth:grant-type:device_code'
 
-// A command line signing somebody in, from every end: somebody registers it as a device, a superuser
-// approves it, the device is handed a code, a signed-out visitor follows the link it printed through sign-in
-// to the question, and the device's poll comes back with one token acting for them - and only one.
 test('a device shows a code, somebody lets it in, and it gets one token for them', async ({ page, browser }) => {
   const username = `device-${Date.now()}`
   const name = `Acme CLI ${Date.now()}`
@@ -41,7 +38,7 @@ test('a device shows a code, somebody lets it in, and it gets one token for them
   )
   await superuser.context().close()
 
-  // The device: no browser, no cookies - a form post and a poll.
+  // The device: no browser, no cookies.
   const authOrigin = new URL(page.url()).origin.replace('://', '://auth.')
   const device = (await browser.newContext({ ignoreHTTPSErrors: true })).request
   const asked = await device.post(`${authOrigin}/o/device-authorization/`, {
@@ -59,7 +56,7 @@ test('a device shows a code, somebody lets it in, and it gets one token for them
     })
   expect((await (await poll()).json()).error).toBe('authorization_pending')
 
-  // Somebody else's browser, signed out, following the link the device printed.
+  // A signed-out browser following the device's link.
   const visitor = await (await browser.newContext({ ignoreHTTPSErrors: true })).newPage()
   await visitor.goto(codes.verification_uri_complete)
   await expect(visitor).toHaveURL(/\/auth\/login\?next=/)
@@ -80,10 +77,9 @@ test('a device shows a code, somebody lets it in, and it gets one token for them
     headers: { Authorization: `Bearer ${accessToken}` },
   })
   expect((await userinfo.json()).sub).toBeTruthy()
-  // The code bought one token: asking again is told it expired.
+  // One token per code.
   expect((await (await poll()).json()).error).toBe('expired_token')
 
-  // The same code, entered by hand afterwards, is nothing anybody is waiting on.
   await visitor.goto('/device')
   await visitor.getByLabel('Code').fill(codes.user_code)
   await visitor.getByRole('button', { name: 'Continue' }).click()

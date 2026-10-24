@@ -15,8 +15,7 @@ async function signedInUser(page: Page, prefix: string) {
   return username
 }
 
-// Logging out through the UI is logout.spec.ts's business; dropping the cookies is the same thing
-// to the server and keeps these specs about the second factor.
+// Dropping the cookies is a logout to the server, without the UI.
 async function logInAgain(page: Page, username: string) {
   await page.context().clearCookies()
   await login(page, username, PASSWORD)

@@ -1,8 +1,4 @@
-"""The re-authentication gate, mixed into the allauth headless views that carry an act.
-
-Server-side, and that is the whole point: a prompt in the frontend alone moves the check to the one
-place an attacker is not - anybody holding a session can call the endpoint directly.
-"""
+"""The server-side re-authentication gate: anybody holding a session can skip a frontend prompt."""
 
 from allauth.headless.base.response import ReauthenticationResponse
 
@@ -10,45 +6,37 @@ from apps.common.logging import REAUTHENTICATION_DEMANDED, log
 from apps.users.reauthentication.proof import has_proven_who_they_are, spend_the_proof
 
 
-# DRF and allauth both answer a refusal with a status code alone, which cannot tell "prove it is you,
-# then retry" apart from "you are not allowed" - this header is what the clients act on.
+# A status code alone can't tell "prove it is you" from "not allowed".
 REAUTHENTICATION_REQUIRED_HEADER = "X-Reauthentication-Required"
 
 
 def reauthentication_required(request):
-    """allauth's own answer to "re-authenticate first" (a 401 listing the ways to), plus the header."""
+    """allauth's 401 listing the ways to re-authenticate, plus the header."""
     response = ReauthenticationResponse(request)
     response[REAUTHENTICATION_REQUIRED_HEADER] = "1"
     return response
 
 
 class ProvesWhoTheyAre:
-    """Mixed in ahead of an allauth headless view; `reauthentication_methods` names the HTTP methods
-    on it that are acts, and `is_an_act()` narrows one further where the body decides.
-
-    The gate runs after allauth has validated the input, so a request that would be refused anyway
-    (an unknown address, the last way to sign in) is refused without a round trip to prove anything.
-    """
+    """Runs after allauth validates input, so a request refused anyway costs no proof round trip."""
 
     reauthentication_methods = frozenset()
 
-    # Per request: set once the gate has let an act through, so the response knows to spend the proof
-    # even when the act itself changed what `is_an_act()` would now answer.
+    # Set at the gate, since the act itself may change what `is_an_act()` answers afterwards.
     spends_a_proof = False
 
     def is_an_act(self):
         return self.request.method in self.reauthentication_methods
 
     def act_of(self, request):
-        # An allauth view has no DRF `action`; its class and method are what name the act instead.
         return f"{type(self).__name__}.{request.method}"
 
     def refuse_unproven(self):
-        """None when this request may go on, or the response refusing it."""
+        """None, or the refusal."""
         if not self.is_an_act():
             return None
         if not has_proven_who_they_are(self.request):
-            # Here rather than in `refusal()`, which a view may override with a shape of its own.
+            # Not in `refusal()`, which views override.
             log(REAUTHENTICATION_DEMANDED, user=str(self.request.user.pk), act=self.act_of(self.request))
             return self.refusal()
         self.spends_a_proof = True
@@ -67,7 +55,6 @@ class ProvesWhoTheyAre:
         return response
 
     def spend_the_proof_on_success(self, request, response):
-        # Spent on success only, so a refused act does not cost a proof somebody just went through a
-        # challenge to get.
+        # A refused act doesn't cost the proof.
         if self.spends_a_proof and response.status_code < 400:
             spend_the_proof(request, self.act_of(request))

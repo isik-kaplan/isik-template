@@ -2,12 +2,10 @@ import { headers } from 'next/headers'
 
 import { ConnectionsList } from '@/components/app-auth/ConnectionsList'
 
-import { isLocalDevHost } from '@/lib/isLocalDevHost'
+import { requestOrigin } from '@/lib/requestOrigin'
 import { visitorFetch } from '@/lib/visitor'
 
 import { AuthApi, PROVIDER_REDIRECT_PATH } from '@{{ cookiecutter.repo_slug }}/auth-api'
-
-import { getRequestOrigin } from '@isikk/core/next/request'
 
 export default async function ProfileConnectionsPage({
   searchParams,
@@ -16,17 +14,14 @@ export default async function ProfileConnectionsPage({
 }) {
   // Gating already happened one level up, in profile/layout.tsx.
   const requestHeaders = await headers()
-  const origin = getRequestOrigin(requestHeaders, { isLocalDevHost })
+  const origin = requestOrigin(requestHeaders)
   const authOrigin = origin.replace('://', '://auth.')
   const authApi = new AuthApi(authOrigin, {
     cookieHeader: requestHeaders.get('cookie') ?? undefined,
     baseFetch: visitorFetch(requestHeaders),
   })
   const { data: providers } = await authApi.providers()
-  // The connect flow's own callback_url below points straight back at this page, not at
-  // /auth/callback-complete or /auth/provider-error, so a failed connect attempt (already linked
-  // to another user, session not fresh enough, etc.) surfaces its `error` code here - see
-  // ConnectionsList's own comment for how it's turned into an inline banner.
+  // The connect flow's callback_url points back here, so a failed connect arrives as `error`.
   const { error } = await searchParams
 
   return (

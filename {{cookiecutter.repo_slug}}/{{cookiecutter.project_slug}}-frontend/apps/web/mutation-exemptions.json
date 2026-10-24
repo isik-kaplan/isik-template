@@ -617,6 +617,24 @@
       ]
     }
   ],
+  "src/components/app/ConflictNotice.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "fe50cdbbb654",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'common:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "fe50cdbbb654",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'common:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
   "src/components/app/Editor.tsx": [
     {
       "mutator": "BooleanLiteral",

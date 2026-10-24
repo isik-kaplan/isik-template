@@ -5,11 +5,7 @@ from apps.users.permissions import VOCABULARY
 
 
 class PermissionsBackend(ModelBackend):
-    """The only backend that answers permission questions, and it authenticates nobody.
-
-    Permissions read as bare `where:action:what` names rather than `app_label.codename`, expanded through
-    what each one requires.
-    """
+    """The only permission backend. Names are bare `where:action:what`, expanded through what each requires."""
 
     def authenticate(self, request, **kwargs):
         return None
@@ -28,27 +24,21 @@ class PermissionsBackend(ModelBackend):
         return getattr(user_obj, cache_name)
 
     def get_all_permissions(self, user_obj, obj=None):
-        """Direct and group grants, expanded through what each requires.
-
-        `get_user_permissions` and `get_group_permissions` stay unexpanded on purpose: they answer "what was
-        granted", this answers "what can this user do".
-        """
+        """Expanded, unlike `get_user_permissions`/`get_group_permissions`, which answer "what was granted"."""
         if not user_obj.is_active or user_obj.is_anonymous or obj is not None:
             return set()
         if not hasattr(user_obj, "_perm_cache"):
             granted = VOCABULARY.closure({*self.get_user_permissions(user_obj), *self.get_group_permissions(user_obj)})
-            # Set by a token's authenticator for one request: the person may hold more than the token they
-            # handed an application, or made for themselves, was given.
+            # Set by a token authenticator: the token may hold less than its person.
             token_scopes = getattr(user_obj, "token_scopes", None)
             if token_scopes is not None:
-                # Both sides expanded before they meet. Narrowing first would make a permission that is only
-                # implied impossible to give a token on its own.
+                # Both expanded first, or an implied-only permission could never be given to a token.
                 granted &= VOCABULARY.closure(token_scopes)
             user_obj._perm_cache = granted
         return user_obj._perm_cache
 
     def has_module_perms(self, user_obj, app_label):
-        """`has_module_perms("users")` means "holds any `users:*`". `ModelBackend`'s splits on a dot."""
+        """`has_module_perms("users")` means "holds any `users:*`"."""
         return user_obj.is_active and any(
             permission.split(":")[0] == app_label for permission in self.get_all_permissions(user_obj)
         )

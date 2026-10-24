@@ -6,7 +6,7 @@ import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
 import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 
-import { extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
+import { errorsOf } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
 import { useIsMounted } from '@isikk/core/hooks'
 import { router } from 'expo-router'
@@ -14,9 +14,7 @@ import { Text } from 'react-native'
 
 type Account = { email: string; hasPassword: boolean }
 
-/** Where the backend's re-authentication gate sends this app: a password typed again, then back to
- * whatever asked. An account with no password - one made through a provider - is offered setting one
- * by email instead, since a provider round trip needs a browser this screen does not open. */
+/** A passwordless account is offered setting one by email: a provider round trip needs a browser. */
 export default function Prove() {
   const { t } = useTranslation()
   const [account, setAccount] = useState<Account | null>(null)
@@ -49,7 +47,7 @@ export default function Prove() {
       router.back()
       return
     }
-    setError(extractAuthErrors(response)?.[0]?.message ?? t('proveError'))
+    setError(errorsOf(response)?.[0]?.message ?? t('proveError'))
   }
 
   async function sendSetPasswordLink(email: string) {

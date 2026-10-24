@@ -37,8 +37,7 @@ describe('proxy', () => {
   it('strips an empty query param before the auth check ever runs', async () => {
     const response = await proxy(requestFor('/profile/emails?tab='))
 
-    // stripEmptyQueryParams redirects to the same path with the param removed - not to login,
-    // even though this visitor has no session cookie either.
+    // To the same path without the param, not to login, despite no session cookie.
     expect(response.headers.get('location')).toBe('https://example.test/profile/emails')
   })
 
@@ -86,6 +85,12 @@ describe('proxy', () => {
     const response = await proxy(requestFor('/too-many-requests-and-more'))
 
     expect(response.headers.get('location')).toContain('/auth/login')
+  })
+
+  it("lets an anonymous visitor fetch the files a crawler or browser asks for, which Next's matcher lets in", async () => {
+    for (const path of ['/robots.txt', '/.well-known/security.txt']) {
+      expect((await proxy(requestFor(path))).headers.get('location')).toBeNull()
+    }
   })
 
   it('tells the page it renders which page that is, query and all', async () => {

@@ -6,11 +6,7 @@ import pytest
 from conftest import load_context
 
 
-# The backend suite, 100% coverage included, on every context the sandbox run doesn't bake. Between
-# them and "default" they meet every background_jobs, cache and tls_termination answer with every
-# other and with every storage backend (S3 or disk), each running the code its answers render: tasks
-# inline or through Celery, files on disk or in Garage, counts in Redis or in Postgres, a proxy in
-# front of nginx or none. Each context is its own CI job, so they run side by side.
+# Every context the sandbox run doesn't bake; with "default" they cover every pair of service answers.
 pytestmark = [
     pytest.mark.skipif(shutil.which("docker") is None, reason="docker not available"),
     # Only the backend image is built, which needs uv.lock and not the frontend's npm install.
@@ -21,8 +17,7 @@ CONTEXTS = ["minimal", "self-tls", "beat-disk-self-tls", "celery-disk", "inline-
 
 
 def _reclaim_ownership(project_path):
-    """The backend image writes the bind-mounted bake as root (coverage data, caches), which
-    pytest-cookies' teardown can't remove as the CI runner's own user."""
+    """The backend image writes the bind-mounted bake as root, which pytest-cookies' teardown can't remove."""
     owner = f"{os.getuid()}:{os.getgid()}"
     subprocess.run(
         ["docker", "run", "--rm", "-v", f"{project_path}:/x", "alpine", "chown", "-R", owner, "/x"],

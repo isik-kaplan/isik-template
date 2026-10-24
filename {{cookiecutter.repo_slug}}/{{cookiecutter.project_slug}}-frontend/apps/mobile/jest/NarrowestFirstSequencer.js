@@ -1,8 +1,7 @@
 const Sequencer = require('@jest/test-sequencer').default
 const { statSync } = require('fs')
 
-// The narrowest test files first, by size then path, whatever the last run's cache says: a mutant dies
-// fastest to its own file's unit test, and StopAtFirstKillEnvironment skips its tests after that.
+// Smallest files first, ignoring the cache: a mutant dies fastest to its own file's unit test.
 class NarrowestFirstSequencer extends Sequencer {
   sort(tests) {
     const size = (test) => statSync(test.path).size

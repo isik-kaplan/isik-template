@@ -6,7 +6,7 @@ import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
 import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 
-import { extractAuthErrors } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
+import { errorsOf } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
 import { Text } from 'react-native'
 
@@ -42,7 +42,7 @@ export default function ProfilePassword() {
         setSuccess(true)
         return
       }
-      const authErrors = extractAuthErrors(response)
+      const authErrors = errorsOf(response)
       setError(authErrors?.[0]?.message ?? t('profilePasswordError'))
     } finally {
       setSubmitting(false)

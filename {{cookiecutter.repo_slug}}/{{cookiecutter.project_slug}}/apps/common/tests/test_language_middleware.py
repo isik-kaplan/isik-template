@@ -58,8 +58,7 @@ def test_falls_back_to_language_code_when_neither_names_a_supported_language(set
 
 
 def test_a_users_language_not_in_the_currently_configured_set_is_ignored(settings):
-    # A project reconfigured its languages after this user picked one no longer offered - stale
-    # data, not a value to actually activate.
+    # Stale: the language was dropped after the user picked it.
     settings.LANGUAGES = [("en", "English")]
     seen = {}
     middleware = UserLanguageMiddleware(get_response=_capture(seen))

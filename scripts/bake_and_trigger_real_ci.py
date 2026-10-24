@@ -1,11 +1,6 @@
-"""Bakes the template and force-pushes the result to a dedicated sandbox repo, then waits for that
-repo's own GitHub Actions to run the generated project's real ci.yml - the one thing no hand-mirrored
-bake test can prove, since those replay commands by hand instead of letting a real runner parse the
-real workflow file.
+"""Pushes a bake to a sandbox repo and waits for a real runner to run its generated ci.yml.
 
-`GH_TOKEN` must carry a PAT scoped to the sandbox repo (the default GITHUB_TOKEN is deliberately
-blocked by GitHub from triggering new workflow runs on push, to prevent recursive workflows) - both
-for the push itself and for every `gh` call below, which is why this never calls `gh auth login`.
+`GH_TOKEN` must be a PAT scoped to the sandbox repo: the default GITHUB_TOKEN can't trigger workflow runs.
 """
 
 import json
@@ -30,10 +25,7 @@ def load_context(name):
 
 
 def clear_stale_caches():
-    """Every sandbox push is a disconnected commit unrelated to the one before it, so each run starts
-    from no cache at all, as a project's first push would. The Stryker caches fall back to an earlier
-    commit's by design, which here would be a commit this one has no history with.
-    """
+    """Each push is an unrelated commit, so start cacheless; Stryker would otherwise reuse an unrelated commit's."""
     result = subprocess.run(
         ["gh", "cache", "list", "--repo", SANDBOX_REPO, "--json", "id", "-L", "100"],
         capture_output=True,
@@ -67,8 +59,7 @@ def bake_and_push(token):
                 "user.email=bake@isik-template.invalid",
                 "commit",
                 "-q",
-                "--no-verify",  # machine-generated fixture output, not an authored commit -
-                # the global commit-msg hook enforces conventions meant for the latter.
+                "--no-verify",  # generated output; commit-msg hooks are for authored commits
                 "-m",
                 f"Bake output for CI verification (source commit {source_sha})",
             ],
@@ -80,8 +71,6 @@ def bake_and_push(token):
         ).stdout.strip()
 
         remote = f"https://x-access-token:{token}@github.com/{SANDBOX_REPO}.git"
-        # No secrets in the failure path: a failed push prints argv, and argv here never contains
-        # the token - it's baked into a URL that's passed as a single arg, not echoed by git itself.
         subprocess.run(["git", "push", "--force", "--quiet", remote, "HEAD:master"], cwd=project_path, check=True)
 
     return push_sha
@@ -97,9 +86,7 @@ def find_run(push_sha):
             check=True,
         )
         for run in json.loads(result.stdout):
-            # event filter matters: a brand-new repo's first push also gets a same-sha "dynamic"
-            # run from GitHub's own onboarding, which is unrelated to ci.yml and finishes first -
-            # matching on headSha alone picks that one up instead and reports a false pass.
+            # A new repo's first push also gets a same-sha "dynamic" run that finishes first: a false pass.
             if run["headSha"] == push_sha and run["event"] == "push":
                 return run["databaseId"]
         time.sleep(5)

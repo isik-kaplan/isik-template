@@ -7,16 +7,14 @@ import { LegalConsentNotice } from '@/components/app-legal/LegalConsentNotice'
 
 import { sUseTranslation } from '@/i18n'
 import { redirectIfAuthenticated } from '@/lib/getSession'
-import { isLocalDevHost } from '@/lib/isLocalDevHost'
+import { requestOrigin } from '@/lib/requestOrigin'
 
 import { PROVIDER_REDIRECT_PATH } from '@{{ cookiecutter.repo_slug }}/auth-api'
-
-import { getRequestOrigin } from '@isikk/core/next/request'
 
 export default async function SignupPage() {
   await redirectIfAuthenticated()
   const { t } = await sUseTranslation(['auth'])
-  const origin = getRequestOrigin(await headers(), { isLocalDevHost })
+  const origin = requestOrigin(await headers())
 
   return (
     <AuthCard
@@ -34,7 +32,7 @@ export default async function SignupPage() {
         dividerText={t('auth:orDivider')}
       />
       <SignupForm />
-      {/* Below both the provider buttons and the form, so it covers every way an account starts here. */}
+      {/* Below both provider buttons and form, covering every way an account starts. */}
       <LegalConsentNotice />
     </AuthCard>
   )

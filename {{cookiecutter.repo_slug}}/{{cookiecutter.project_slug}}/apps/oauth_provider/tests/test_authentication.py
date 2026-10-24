@@ -62,8 +62,6 @@ def test_a_permission_its_token_holds_is_nothing_if_its_person_does_not_hold_it(
 @pytest.mark.django_db
 @pytest.mark.parametrize("rank", ["is_staff", "is_superuser"])
 def test_a_rank_is_never_an_applications_to_act_with(client, provider, application, signed_in, bob, rank):
-    """A superuser passes every permission check in a session; through an application, only what it was
-    let have."""
     setattr(signed_in, rank, True)
     signed_in.save()
     tokens = tokens_for(client, application, scope="openid")

@@ -11,10 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * @description Every application holding a token for this account - a refresh token too, which outlives the
-         *     access token it came with and can mint another.
-         */
+        /** @description Every application holding a token for this account, refresh tokens included. */
         get: operations["authorized_applications_list"];
         put?: never;
         post?: never;
@@ -34,10 +31,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /**
-         * @description Every token the application holds for this person, refresh tokens first and through `revoke()`:
-         *     deleting an access token leaves its refresh token alive, and that mints a new one.
-         */
+        /** @description Revokes every token the application holds for this person. */
         delete: operations["authorized_applications_destroy"];
         options?: never;
         head?: never;
@@ -51,10 +45,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * @description A device asking to act for whoever enters the code it shows - see apps/oauth_provider/device_codes.py.
-         *     Whoever answers decides for their own account: allowed, the device's next poll gets a token for it.
-         */
+        /** @description A device asking to act for whoever enters the code it shows; allowed, its next poll gets a token. */
         get: operations["device_authorizations_retrieve"];
         put?: never;
         post?: never;
@@ -105,10 +96,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * @description Every application, for the superusers who approve and withdraw them. A second viewset over the same
-         *     model rather than the owner's one behaving differently by role, so each documents one audience.
-         */
+        /** @description Every application, for the superusers who approve and withdraw them. */
         get: operations["oauth_application_reviews_list"];
         put?: never;
         post?: never;
@@ -125,10 +113,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * @description Every application, for the superusers who approve and withdraw them. A second viewset over the same
-         *     model rather than the owner's one behaving differently by role, so each documents one audience.
-         */
+        /** @description Every application, for the superusers who approve and withdraw them. */
         get: operations["oauth_application_reviews_retrieve"];
         put?: never;
         post?: never;
@@ -147,10 +132,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * @description Approved, for these of what it asked for. Also how a withdrawn one is reinstated, and how one asking
-         *     for more since it was approved is let have it.
-         */
+        /** @description Approve it for these of the scopes it asked for; also reinstates a withdrawn one. */
         post: operations["oauth_application_reviews_approve_create"];
         delete?: never;
         options?: never;
@@ -167,10 +149,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * @description Taken down everywhere, now: every token it holds goes, and nobody signs in with it again until a
-         *     superuser approves it again.
-         */
+        /** @description Take it down everywhere, now: every token it holds goes. */
         post: operations["oauth_application_reviews_withdraw_create"];
         delete?: never;
         options?: never;
@@ -186,14 +165,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description The applications the signed-in person registered. Whether a new one works at once or waits for a
-         *     superuser is the provider's mode - see apps/oauth_provider/mode.py.
+         * @description The applications the signed-in person registered. Whether a new one waits for a superuser depends on
+         *     the provider's mode.
          */
         get: operations["oauth_applications_list"];
         put?: never;
         /**
-         * @description The applications the signed-in person registered. Whether a new one works at once or waits for a
-         *     superuser is the provider's mode - see apps/oauth_provider/mode.py.
+         * @description The applications the signed-in person registered. Whether a new one waits for a superuser depends on
+         *     the provider's mode.
          */
         post: operations["oauth_applications_create"];
         delete?: never;
@@ -210,22 +189,22 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description The applications the signed-in person registered. Whether a new one works at once or waits for a
-         *     superuser is the provider's mode - see apps/oauth_provider/mode.py.
+         * @description The applications the signed-in person registered. Whether a new one waits for a superuser depends on
+         *     the provider's mode.
          */
         get: operations["oauth_applications_retrieve"];
         put?: never;
         post?: never;
         /**
-         * @description The applications the signed-in person registered. Whether a new one works at once or waits for a
-         *     superuser is the provider's mode - see apps/oauth_provider/mode.py.
+         * @description The applications the signed-in person registered. Whether a new one waits for a superuser depends on
+         *     the provider's mode.
          */
         delete: operations["oauth_applications_destroy"];
         options?: never;
         head?: never;
         /**
-         * @description The applications the signed-in person registered. Whether a new one works at once or waits for a
-         *     superuser is the provider's mode - see apps/oauth_provider/mode.py.
+         * @description The applications the signed-in person registered. Whether a new one waits for a superuser depends on
+         *     the provider's mode.
          */
         patch: operations["oauth_applications_partial_update"];
         trace?: never;
@@ -239,10 +218,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * @description Its owner's own off switch: every token it holds goes now, and nobody signs in with it until it
-         *     is switched back on. The only state it may be deleted from.
-         */
+        /** @description Its owner's off switch: every token it holds goes now. The only state it may be deleted from. */
         post: operations["oauth_applications_disable_create"];
         delete?: never;
         options?: never;
@@ -260,8 +236,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * @description The applications the signed-in person registered. Whether a new one works at once or waits for a
-         *     superuser is the provider's mode - see apps/oauth_provider/mode.py.
+         * @description The applications the signed-in person registered. Whether a new one waits for a superuser depends on
+         *     the provider's mode.
          */
         post: operations["oauth_applications_restore_create"];
         delete?: never;
@@ -311,16 +287,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * @description The signed-in person's own tokens, for a script or a command line to call the API as them. Made and
-         *     deleted, never edited: a token that should do something else is a new one.
-         */
+        /** @description The signed-in person's own tokens for calling the API as them. Made and deleted, never edited. */
         get: operations["personal_access_tokens_list"];
         put?: never;
-        /**
-         * @description The signed-in person's own tokens, for a script or a command line to call the API as them. Made and
-         *     deleted, never edited: a token that should do something else is a new one.
-         */
+        /** @description The signed-in person's own tokens for calling the API as them. Made and deleted, never edited. */
         post: operations["personal_access_tokens_create"];
         delete?: never;
         options?: never;
@@ -335,17 +305,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * @description The signed-in person's own tokens, for a script or a command line to call the API as them. Made and
-         *     deleted, never edited: a token that should do something else is a new one.
-         */
+        /** @description The signed-in person's own tokens for calling the API as them. Made and deleted, never edited. */
         get: operations["personal_access_tokens_retrieve"];
         put?: never;
         post?: never;
-        /**
-         * @description The signed-in person's own tokens, for a script or a command line to call the API as them. Made and
-         *     deleted, never edited: a token that should do something else is a new one.
-         */
+        /** @description The signed-in person's own tokens for calling the API as them. Made and deleted, never edited. */
         delete: operations["personal_access_tokens_destroy"];
         options?: never;
         head?: never;
@@ -377,9 +341,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description The project's accounts. Whoever may see everybody's - staff, and holders of `users:manage:user` -
-         *     lists all of them, anybody else signed in only their own; holders of `users:manage:user` change other
-         *     people's, and everybody edits their own through `me`.
+         * @description The project's accounts. Staff and holders of `users:manage:user` see everybody's, others only their own;
+         *     holders of `users:manage:user` change other people's, and everybody edits their own through `me`.
          */
         get: operations["users_list"];
         put?: never;
@@ -398,9 +361,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description The project's accounts. Whoever may see everybody's - staff, and holders of `users:manage:user` -
-         *     lists all of them, anybody else signed in only their own; holders of `users:manage:user` change other
-         *     people's, and everybody edits their own through `me`.
+         * @description The project's accounts. Staff and holders of `users:manage:user` see everybody's, others only their own;
+         *     holders of `users:manage:user` change other people's, and everybody edits their own through `me`.
          */
         get: operations["users_retrieve"];
         put?: never;
@@ -409,9 +371,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * @description The project's accounts. Whoever may see everybody's - staff, and holders of `users:manage:user` -
-         *     lists all of them, anybody else signed in only their own; holders of `users:manage:user` change other
-         *     people's, and everybody edits their own through `me`.
+         * @description The project's accounts. Staff and holders of `users:manage:user` see everybody's, others only their own;
+         *     holders of `users:manage:user` change other people's, and everybody edits their own through `me`.
          */
         patch: operations["users_partial_update"];
         trace?: never;
@@ -462,9 +423,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description The project's accounts. Whoever may see everybody's - staff, and holders of `users:manage:user` -
-         *     lists all of them, anybody else signed in only their own; holders of `users:manage:user` change other
-         *     people's, and everybody edits their own through `me`.
+         * @description The project's accounts. Staff and holders of `users:manage:user` see everybody's, others only their own;
+         *     holders of `users:manage:user` change other people's, and everybody edits their own through `me`.
          */
         get: operations["users_me_retrieve"];
         put?: never;
@@ -472,10 +432,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /**
-         * @description How a user changes their own language preference (or name) - username/email stay
-         *     untouchable here too, via UserSerializer's own create_only_fields.
-         */
+        /** @description The signed-in person changes their own name or language. */
         patch: operations["users_me_partial_update"];
         trace?: never;
     };
@@ -518,11 +475,8 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
-         * @description An application somebody registered, as its owner sees it.
-         *
-         *     The authorization code flow, with PKCE, or a device showing a code for somebody to enter - and never
-         *     without asking: an application reaches nobody's account until it is approved and that person consents
-         *     on this project's own page.
+         * @description An application somebody registered, as its owner sees it. It reaches nobody's account until it is
+         *     approved and that person consents.
          */
         Application: {
             readonly id: number;
@@ -556,12 +510,16 @@ export interface components {
         ApplicationAuthorizationGrantType: "authorization-code" | "urn:ietf:params:oauth:grant-type:device_code";
         /** @enum {string} */
         ApplicationClientType: "confidential" | "public";
+        /** @description A 412's body: the object as it is now, in `current`. */
+        ApplicationPreconditionFailed: {
+            detail: string;
+            /** @description Always precondition_failed. */
+            code: string;
+            current: components["schemas"]["Application"];
+        };
         /**
-         * @description An application somebody registered, as its owner sees it.
-         *
-         *     The authorization code flow, with PKCE, or a device showing a code for somebody to enter - and never
-         *     without asking: an application reaches nobody's account until it is approved and that person consents
-         *     on this project's own page.
+         * @description An application somebody registered, as its owner sees it. It reaches nobody's account until it is
+         *     approved and that person consents.
          */
         ApplicationRequest: {
             /** @description Shown to everybody asked to let it in. */
@@ -582,10 +540,7 @@ export interface components {
             /** @description A subset of what it requested - empty approves signing people in and nothing beyond it. */
             approved_scopes: string[];
         };
-        /**
-         * @description One application holding access to this account - not one token. A person thinks "it can see my
-         *     email", not "it holds four tokens", and tokens are minted and rotated behind the scenes.
-         */
+        /** @description One application holding access to this account, not one token. */
         AuthorizedApplication: {
             /** @description The application's own id, which revoking names. */
             readonly id: number;
@@ -601,10 +556,7 @@ export interface components {
         };
         /** @enum {unknown} */
         Blank: "";
-        /**
-         * @description A scope a token may be given - by an application asking for it, or somebody making their own - and
-         *     what it lets the token do, in words.
-         */
+        /** @description A scope a token may be given, and what it lets the token do. */
         DelegatableScope: {
             /** @description The scope, as a token is given it. */
             readonly name: string;
@@ -622,10 +574,22 @@ export interface components {
             /** @description What it asks for, as OAuth scopes - the sign-in ones and permissions it may act with. */
             readonly scopes: string[];
         };
-        /**
-         * @description Somebody's account, as whoever manages accounts sees it: who they are is read-only here, and what
-         *     they may do is the point. Raising anything is a grant - see apps/users/granting.py.
-         */
+        IdempotencyKeyConflict: {
+            detail: string;
+            /** @description One of idempotency_key_in_flight, idempotency_key_not_replayable. */
+            code: string;
+        };
+        IdempotencyKeyInFlight: {
+            detail: string;
+            /** @description Always idempotency_key_in_flight. */
+            code: string;
+        };
+        IdempotencyKeyReused: {
+            detail: string;
+            /** @description Always idempotency_key_reused. */
+            code: string;
+        };
+        /** @description Somebody's account as an account manager sees it: identity read-only, access editable. */
         ManagedUser: {
             /**
              * Format: uuid
@@ -670,6 +634,13 @@ export interface components {
              * @description When the row last changed, by the database's clock.
              */
             readonly updated_at: string;
+        };
+        /** @description A 412's body: the object as it is now, in `current`. */
+        ManagedUserPreconditionFailed: {
+            detail: string;
+            /** @description Always precondition_failed. */
+            code: string;
+            current: components["schemas"]["ManagedUser"];
         };
         PaginatedApplicationList: {
             /**
@@ -762,11 +733,8 @@ export interface components {
             results: components["schemas"]["UserHistory"][];
         };
         /**
-         * @description An application somebody registered, as its owner sees it.
-         *
-         *     The authorization code flow, with PKCE, or a device showing a code for somebody to enter - and never
-         *     without asking: an application reaches nobody's account until it is approved and that person consents
-         *     on this project's own page.
+         * @description An application somebody registered, as its owner sees it. It reaches nobody's account until it is
+         *     approved and that person consents.
          */
         PatchedApplicationRequest: {
             /** @description Shown to everybody asked to let it in. */
@@ -782,10 +750,7 @@ export interface components {
             /** @description What it asks to do on somebody's behalf, beyond signing them in. Each person it signs in is asked again, and a token can only ever do what that person can. */
             requested_scopes?: string[];
         };
-        /**
-         * @description Somebody's account, as whoever manages accounts sees it: who they are is read-only here, and what
-         *     they may do is the point. Raising anything is a grant - see apps/users/granting.py.
-         */
+        /** @description Somebody's account as an account manager sees it: identity read-only, access editable. */
         PatchedManagedUserRequest: {
             /**
              * Active
@@ -805,10 +770,7 @@ export interface components {
             /** @description What they were granted, as permission names - not what that implies. */
             permissions?: components["schemas"]["Permissions"][];
         };
-        /**
-         * @description The signed-in person, as they see and edit themselves. Their rank and permissions are read-only here:
-         *     nobody changes their own.
-         */
+        /** @description The signed-in person, as they see and edit themselves; nobody changes their own rank or permissions. */
         PatchedUserRequest: {
             /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
             username?: string;
@@ -819,7 +781,7 @@ export interface components {
             /** @description The language this user chose for the interface, or blank to follow their browser's. */
             language?: components["schemas"]["UserLanguage"] | components["schemas"]["Blank"];
         };
-        /** @description A permission this project declares - see apps/users/permissions.py. */
+        /** @description A permission this project declares. */
         PermissionDeclaration: {
             /** @description The permission, as `where:action:what`. */
             readonly name: string;
@@ -832,7 +794,7 @@ export interface components {
         };
         /** @enum {string} */
         Permissions: "users:grant:rights" | "users:manage:user";
-        /** @description A token somebody made for themselves, as they see it - the token itself only in the answer to making it. */
+        /** @description A token somebody made for themselves; the secret appears only in the answer to making it. */
         PersonalAccessToken: {
             /**
              * Format: uuid
@@ -866,7 +828,7 @@ export interface components {
              */
             readonly updated_at: string;
         };
-        /** @description A token somebody made for themselves, as they see it - the token itself only in the answer to making it. */
+        /** @description A token somebody made for themselves; the secret appears only in the answer to making it. */
         PersonalAccessTokenRequest: {
             /** @description What its owner called it, to tell it from their others. */
             name: string;
@@ -878,7 +840,12 @@ export interface components {
              */
             expires_at?: string | null;
         };
-        /** @description One way to prove it is you - see `ways_to_prove()`. Only the fields its flow carries are sent. */
+        PreconditionRequired: {
+            detail: string;
+            /** @description Always precondition_required. */
+            code: string;
+        };
+        /** @description One way to prove it is you. Only the fields its flow carries are sent. */
         ReauthenticationFlow: {
             id: string;
             types?: string[];
@@ -917,6 +884,13 @@ export interface components {
             /** Format: date-time */
             readonly updated: string;
         };
+        /** @description A 412's body: the object as it is now, in `current`. */
+        ReviewedApplicationPreconditionFailed: {
+            detail: string;
+            /** @description Always precondition_failed. */
+            code: string;
+            current: components["schemas"]["ReviewedApplication"];
+        };
         /** @description Whether the tokens already handed out go down with the old secret. */
         RotateSecretRequest: {
             /**
@@ -930,10 +904,7 @@ export interface components {
             /** @description Shown once, here. It is stored hashed, so this is the only copy. */
             readonly client_secret: string;
         };
-        /**
-         * @description The signed-in person, as they see and edit themselves. Their rank and permissions are read-only here:
-         *     nobody changes their own.
-         */
+        /** @description The signed-in person, as they see and edit themselves; nobody changes their own rank or permissions. */
         User: {
             /**
              * Format: uuid
@@ -1053,7 +1024,10 @@ export interface operations {
     authorized_applications_destroy: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+            };
             path: {
                 /** @description The application. */
                 id: number;
@@ -1068,6 +1042,22 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
             };
         };
     };
@@ -1097,7 +1087,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description A UUID of the caller's choosing. Sending the same key with the same body again returns what the first attempt answered rather than doing the work twice. It belongs to the attempt, not to the call: mint a new one when the payload changes or once a submit succeeds. */
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
                 "Idempotency-Key": string;
             };
             path: {
@@ -1114,6 +1104,22 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
             };
         };
     };
@@ -1121,7 +1127,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description A UUID of the caller's choosing. Sending the same key with the same body again returns what the first attempt answered rather than doing the work twice. It belongs to the attempt, not to the call: mint a new one when the payload changes or once a submit succeeds. */
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
                 "Idempotency-Key": string;
             };
             path: {
@@ -1138,6 +1144,22 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
             };
         };
     };
@@ -1183,7 +1205,10 @@ export interface operations {
                 /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
                 only?: string[];
             };
-            header?: never;
+            header?: {
+                /** @description The ETag of the version already held - a 304 with no body if it's still current. */
+                "If-None-Match"?: string;
+            };
             path: {
                 /** @description A unique integer value identifying this application. */
                 id: number;
@@ -1194,11 +1219,22 @@ export interface operations {
         responses: {
             200: {
                 headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ReviewedApplication"];
                 };
+            };
+            /** @description The version If-None-Match named is still current. */
+            304: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -1211,8 +1247,10 @@ export interface operations {
                 only?: string[];
             };
             header: {
-                /** @description A UUID of the caller's choosing. Sending the same key with the same body again returns what the first attempt answered rather than doing the work twice. It belongs to the attempt, not to the call: mint a new one when the payload changes or once a submit succeeds. */
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
                 "Idempotency-Key": string;
+                /** @description The ETag of the version this request was made against, or * for whatever is current. */
+                "If-Match": string;
             };
             path: {
                 /** @description A unique integer value identifying this application. */
@@ -1230,10 +1268,46 @@ export interface operations {
         responses: {
             200: {
                 headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ReviewedApplication"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            412: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewedApplicationPreconditionFailed"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreconditionRequired"];
                 };
             };
         };
@@ -1247,7 +1321,7 @@ export interface operations {
                 only?: string[];
             };
             header: {
-                /** @description A UUID of the caller's choosing. Sending the same key with the same body again returns what the first attempt answered rather than doing the work twice. It belongs to the attempt, not to the call: mint a new one when the payload changes or once a submit succeeds. */
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
                 "Idempotency-Key": string;
             };
             path: {
@@ -1264,6 +1338,22 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReviewedApplication"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
                 };
             };
         };
@@ -1309,7 +1399,7 @@ export interface operations {
                 only?: string[];
             };
             header: {
-                /** @description A UUID of the caller's choosing. Sending the same key with the same body again returns what the first attempt answered rather than doing the work twice. It belongs to the attempt, not to the call: mint a new one when the payload changes or once a submit succeeds. */
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
                 "Idempotency-Key": string;
             };
             path?: never;
@@ -1325,10 +1415,28 @@ export interface operations {
         responses: {
             201: {
                 headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["Application"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyConflict"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
                 };
             };
         };
@@ -1341,7 +1449,10 @@ export interface operations {
                 /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
                 only?: string[];
             };
-            header?: never;
+            header?: {
+                /** @description The ETag of the version already held - a 304 with no body if it's still current. */
+                "If-None-Match"?: string;
+            };
             path: {
                 /** @description A unique integer value identifying this application. */
                 id: number;
@@ -1352,11 +1463,22 @@ export interface operations {
         responses: {
             200: {
                 headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["Application"];
                 };
+            };
+            /** @description The version If-None-Match named is still current. */
+            304: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -1368,7 +1490,12 @@ export interface operations {
                 /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
                 only?: string[];
             };
-            header?: never;
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+                /** @description The ETag of the version this request was made against, or * for whatever is current. */
+                "If-Match": string;
+            };
             path: {
                 /** @description A unique integer value identifying this application. */
                 id: number;
@@ -1384,6 +1511,40 @@ export interface operations {
                 };
                 content?: never;
             };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            412: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationPreconditionFailed"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreconditionRequired"];
+                };
+            };
         };
     };
     oauth_applications_partial_update: {
@@ -1394,7 +1555,12 @@ export interface operations {
                 /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
                 only?: string[];
             };
-            header?: never;
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+                /** @description The ETag of the version this request was made against, or * for whatever is current. */
+                "If-Match": string;
+            };
             path: {
                 /** @description A unique integer value identifying this application. */
                 id: number;
@@ -1411,10 +1577,46 @@ export interface operations {
         responses: {
             200: {
                 headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["Application"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            412: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationPreconditionFailed"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreconditionRequired"];
                 };
             };
         };
@@ -1428,7 +1630,7 @@ export interface operations {
                 only?: string[];
             };
             header: {
-                /** @description A UUID of the caller's choosing. Sending the same key with the same body again returns what the first attempt answered rather than doing the work twice. It belongs to the attempt, not to the call: mint a new one when the payload changes or once a submit succeeds. */
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
                 "Idempotency-Key": string;
             };
             path: {
@@ -1445,6 +1647,22 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Application"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
                 };
             };
         };
@@ -1458,7 +1676,7 @@ export interface operations {
                 only?: string[];
             };
             header: {
-                /** @description A UUID of the caller's choosing. Sending the same key with the same body again returns what the first attempt answered rather than doing the work twice. It belongs to the attempt, not to the call: mint a new one when the payload changes or once a submit succeeds. */
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
                 "Idempotency-Key": string;
             };
             path: {
@@ -1477,6 +1695,22 @@ export interface operations {
                     "application/json": components["schemas"]["Application"];
                 };
             };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
         };
     };
     oauth_applications_rotate_secret_create: {
@@ -1488,7 +1722,7 @@ export interface operations {
                 only?: string[];
             };
             header: {
-                /** @description A UUID of the caller's choosing. Sending the same key with the same body again returns what the first attempt answered rather than doing the work twice. It belongs to the attempt, not to the call: mint a new one when the payload changes or once a submit succeeds. */
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
                 "Idempotency-Key": string;
             };
             path: {
@@ -1511,6 +1745,22 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RotatedSecret"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyConflict"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
                 };
             };
         };
@@ -1584,7 +1834,7 @@ export interface operations {
                 only?: string[];
             };
             header: {
-                /** @description A UUID of the caller's choosing. Sending the same key with the same body again returns what the first attempt answered rather than doing the work twice. It belongs to the attempt, not to the call: mint a new one when the payload changes or once a submit succeeds. */
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
                 "Idempotency-Key": string;
             };
             path?: never;
@@ -1600,10 +1850,28 @@ export interface operations {
         responses: {
             201: {
                 headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["PersonalAccessToken"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyConflict"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
                 };
             };
         };
@@ -1616,7 +1884,10 @@ export interface operations {
                 /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
                 only?: string[];
             };
-            header?: never;
+            header?: {
+                /** @description The ETag of the version already held - a 304 with no body if it's still current. */
+                "If-None-Match"?: string;
+            };
             path: {
                 id: string;
             };
@@ -1626,11 +1897,22 @@ export interface operations {
         responses: {
             200: {
                 headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["PersonalAccessToken"];
                 };
+            };
+            /** @description The version If-None-Match named is still current. */
+            304: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -1642,7 +1924,10 @@ export interface operations {
                 /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
                 only?: string[];
             };
-            header?: never;
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+            };
             path: {
                 id: string;
             };
@@ -1656,6 +1941,22 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
             };
         };
     };
@@ -1730,7 +2031,10 @@ export interface operations {
                 /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
                 only?: string[];
             };
-            header?: never;
+            header?: {
+                /** @description The ETag of the version already held - a 304 with no body if it's still current. */
+                "If-None-Match"?: string;
+            };
             path: {
                 id: string;
             };
@@ -1740,11 +2044,22 @@ export interface operations {
         responses: {
             200: {
                 headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ManagedUser"];
                 };
+            };
+            /** @description The version If-None-Match named is still current. */
+            304: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -1756,7 +2071,12 @@ export interface operations {
                 /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
                 only?: string[];
             };
-            header?: never;
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+                /** @description The ETag of the version this request was made against, or * for whatever is current. */
+                "If-Match": string;
+            };
             path: {
                 id: string;
             };
@@ -1772,10 +2092,46 @@ export interface operations {
         responses: {
             200: {
                 headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ManagedUser"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            412: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagedUserPreconditionFailed"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreconditionRequired"];
                 };
             };
         };
@@ -1848,7 +2204,10 @@ export interface operations {
                 /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
                 only?: string[];
             };
-            header?: never;
+            header?: {
+                /** @description The ETag of the version already held - a 304 with no body if it's still current. */
+                "If-None-Match"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1856,11 +2215,22 @@ export interface operations {
         responses: {
             200: {
                 headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["User"];
                 };
+            };
+            /** @description The version If-None-Match named is still current. */
+            304: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -1872,7 +2242,12 @@ export interface operations {
                 /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
                 only?: string[];
             };
-            header?: never;
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+                /** @description The ETag of the version this request was made against, or * for whatever is current. */
+                "If-Match": string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1886,10 +2261,46 @@ export interface operations {
         responses: {
             200: {
                 headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["User"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            412: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagedUserPreconditionFailed"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreconditionRequired"];
                 };
             };
         };

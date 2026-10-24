@@ -1,15 +1,7 @@
 #!/usr/bin/env node
-// Fails the build unless every uncovered statement/branch in the istanbul-format
-// coverage/coverage-final.json (vitest's v8 provider and jest's babel/istanbul provider both
-// produce this same shape) is named in coverage-exemptions.json with a reason - mirroring
-// mutation-exemptions.json/check-mutants.mjs. Never an inline `/* istanbul ignore next */` or
-// `/* v8 ignore next */`: this is the one place a gap gets documented, so it can't be silenced
-// without a reviewable reason, and the two coverage providers stop needing two different
-// comment dialects to say the same thing.
-//
-// Entries are keyed by (file, kind, fingerprint[, branchIndex]) - fingerprint is a hash of the
-// exact source text the gap's own location spans, so a reformat or an edit elsewhere in the file
-// can't leave a stale entry silently covering the wrong code.
+// Fails unless every uncovered statement/branch in coverage-final.json is exempted, with a reason, in
+// coverage-exemptions.json - never by inline ignore comments, so every gap has a reviewable reason.
+// Entries are keyed by a hash of the gap's source text, not a line number, so they can't drift onto other code.
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'

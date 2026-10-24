@@ -1,8 +1,8 @@
-import { globalApi, noDirectConsoleLog } from '@/lib/monkeypatches'
+import { globalApi } from '@/lib/monkeypatches'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-describe('noDirectConsoleLog', () => {
+describe('the console switch globalApi sets up', () => {
   const original = {
     log: window.console.log,
     info: window.console.info,
@@ -23,7 +23,7 @@ describe('noDirectConsoleLog', () => {
     }
     Object.assign(window.console, spies)
 
-    noDirectConsoleLog(window)
+    const { debug } = globalApi(window)
     window.console.log('a')
     window.console.info('b')
     window.console.warn('c')
@@ -34,7 +34,7 @@ describe('noDirectConsoleLog', () => {
     expect(spies.warn).not.toHaveBeenCalled()
     expect(spies.error).not.toHaveBeenCalled()
 
-    globalApi(window).debug(true)
+    debug(true)
     window.console.log('a')
     window.console.info('b')
     window.console.warn('c')
@@ -45,7 +45,9 @@ describe('noDirectConsoleLog', () => {
     expect(spies.warn).toHaveBeenCalledWith('c')
     expect(spies.error).toHaveBeenCalledWith('d')
 
-    globalApi(window).debug(false)
+    debug(false)
+    window.console.log('e')
+    expect(spies.log).not.toHaveBeenCalledWith('e')
   })
 })
 

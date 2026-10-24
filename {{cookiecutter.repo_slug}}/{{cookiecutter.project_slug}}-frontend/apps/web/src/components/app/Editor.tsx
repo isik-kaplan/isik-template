@@ -6,8 +6,7 @@ import Mention from '@tiptap/extension-mention'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 
-/** A minimal rich-text editor - extend with more tiptap extensions as your content model needs
- * them (e.g. mentions of real users/orgs, wired through Mention's suggestion option). */
+/** A minimal rich-text editor; add tiptap extensions as needed. */
 export function Editor({
   content,
   onChange,
@@ -27,9 +26,7 @@ export function Editor({
     onUpdate: ({ editor }) => onChange?.(editor.getHTML()),
     editorProps: {
       attributes: {
-        // border-border, not a bare border - Tailwind v4 has no implicit default border color
-        // (border-color inherits currentColor), so this rendered as a solid dark line instead of
-        // a subtle input-like border. See profile/(tabs)/layout.tsx's own comment on the same bug.
+        // border-border: Tailwind v4 has no default border color, so a bare border draws dark.
         class: cn(
           'prose dark:prose-invert max-w-none min-h-32 rounded-md border border-border p-3 focus:outline-none',
           className

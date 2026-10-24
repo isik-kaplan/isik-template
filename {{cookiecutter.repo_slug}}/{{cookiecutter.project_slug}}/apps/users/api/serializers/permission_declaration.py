@@ -2,9 +2,8 @@ from rest_framework import serializers
 
 
 class PermissionDeclarationSerializer(serializers.Serializer):
-    """A permission this project declares - see apps/users/permissions.py."""
+    """A permission this project declares."""
 
-    # The declaration is its own name.
     name = serializers.CharField(source="*", read_only=True, help_text="The permission, as `where:action:what`.")
     label = serializers.CharField(read_only=True, help_text="What it lets somebody do.")
     delegatable = serializers.BooleanField(

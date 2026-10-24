@@ -17,8 +17,7 @@ import { Popover as PopoverPrimitive } from '@base-ui/react/popover'
 
 const PopoverClose = PopoverPrimitive.Close
 
-// Tailwind's scanner needs these classes to appear literally in source - a template string like
-// `${breakpoint}:block` is invisible to it and would need a safelist entry to generate any CSS.
+// Literal classes: Tailwind's scanner cannot see a template string.
 export type OverlayBreakpoint = 'sm' | 'md' | 'lg' | 'xl' | '2xl'
 
 const DESKTOP_VISIBLE_CLASSES: Record<OverlayBreakpoint, string> = {
@@ -50,9 +49,7 @@ type OverlayProps = {
   children: ReactNode
 }
 
-// Renders both a popover and a drawer at once, and shows/hides each with plain CSS breakpoints
-// rather than picking one variant with a media-query hook - useMediaQuery would only resolve
-// after hydration, so the wrong overlay kind would flash on first paint every time.
+// Both render, switched by CSS breakpoints: a media-query hook resolves after hydration and flashes.
 export function Overlay({
   breakpoint,
   swipeDirection = 'down',
@@ -98,8 +95,7 @@ export function OverlayTrigger({ children }: OverlayTriggerProps) {
 type OverlayContentProps = {
   children: ReactNode
   className?: string
-  // Base UI's Drawer sets its slide direction on the Overlay root's swipeDirection, not per
-  // content - align/side/sideOffset are only meaningful for the popover variant.
+  // The Drawer's direction is set on the root; align/side/sideOffset are popover-only.
   side?: React.ComponentProps<typeof PopoverContent>['side']
   align?: React.ComponentProps<typeof PopoverContent>['align']
   alignOffset?: number

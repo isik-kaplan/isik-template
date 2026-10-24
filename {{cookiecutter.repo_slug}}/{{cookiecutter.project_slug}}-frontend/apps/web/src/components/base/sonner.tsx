@@ -7,9 +7,7 @@ import { CircleCheckIcon, InfoIcon, Loader2Icon, OctagonXIcon, TriangleAlertIcon
 import { useTheme } from 'next-themes'
 import { Toaster as Sonner, type ToasterProps } from 'sonner'
 
-// Hoisted out of the JSX below, not inlined as a double-curly-brace JSX object attribute - this
-// file is itself a Jinja template (cookiecutter renders every file), and that syntax is
-// indistinguishable from a real Jinja expression to the renderer.
+// Hoisted: an inline JSX object literal's double brace would be a cookiecutter expression.
 const toasterIcons: ToasterProps['icons'] = {
   success: <CircleCheckIcon className="size-4" />,
   info: <InfoIcon className="size-4" />,

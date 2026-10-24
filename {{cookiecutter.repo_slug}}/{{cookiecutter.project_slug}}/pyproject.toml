@@ -13,16 +13,11 @@ dependencies = [
     "django-hosts>=6.0",
     # "mfa" pulls in fido2 (passkeys) and qrcode, which allauth.mfa imports but does not require.
     "django-allauth[mfa]>=65.20.0",
-    # Not pulled in by django-allauth itself unless installed with its "socialaccount"/"headless"
-    # extra - needed for the openid_connect provider's id_token verification specifically
-    # (allauth.socialaccount.internal.jwtkit). Every other provider works without it.
+    # For openid_connect's id_token verification; allauth only pulls it in with an extra.
     "pyjwt[crypto]>=2.13.0",
     "django-cors-headers>=4.4.0",
-    # "Sign in with" this project for other apps - see OAUTH_PROVIDER__MODE.
     "django-oauth-toolkit>=3.4.1",
-    # DRF rendering/parsing and session serialization on msgspec's encoder - see apps/common/api/renderers.py.
     "django-msgspec>=1.0.1",
-    # Fernet, for apps/common/fields/encrypted.py.
     "cryptography>=49.0.0",
     "requests>=2.32.0",
     "celery>=5.5.0",
@@ -48,9 +43,7 @@ dev-dependencies = [
     "pytest-cov>=5.0.0",
     "pytest-xdist>=3.6.0",
     "hypothesis>=6.130.0",
-    # Pinned exactly: 3.8.0 renamed the internals scripts/mutation_run.py calls directly (Config.
-    # ensure_loaded, the PytestRunner class) without a deprecation period. Bump deliberately, together
-    # with that file, not by widening this.
+    # Pinned: 3.8.0 renamed internals scripts/mutation_run.py calls. Bump together with that file.
     "mutmut==3.7.0",
     "ruff>=0.9.0",
     "pre-commit>=3.0.0",
@@ -69,27 +62,23 @@ fix = true
 extend-exclude = ["*/migrations/*"]
 
 [tool.ruff.lint]
-# T20 bans `print`: a management command writes to `self.stdout`, which a test can capture, and
-# everything else logs.
+# T20 bans `print`: a command writes to `self.stdout`, everything else logs.
 select = ["E", "F", "I", "UP", "B", "T20", "TID251"]
 fixable = ["ALL"]
 unfixable = []
 
-# A logger taken by hand writes outside the declared vocabulary in apps/common/logging/events.py.
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "logging.getLogger".msg = "Declare an event in apps/common/logging/events.py and write it with log() or audit()."
 "logging.Logger".msg = "Declare an event in apps/common/logging/events.py and write it with log() or audit()."
 
 [tool.ruff.lint.per-file-ignores]
 "apps/common/logging/emit.py" = ["TID251"]
-# The tooling is a command somebody runs and reads; its output is the product.
 "scripts/*" = ["T20"]
 
 [tool.ruff.lint.isort]
 lines-after-imports = 2
 known-first-party = ["apps"]
-# The project package in a block of its own after `apps`, so the order does not depend on whether its
-# name sorts before or after "apps".
+# So the order does not depend on whether the project name sorts before "apps".
 section-order = ["future", "standard-library", "third-party", "first-party", "project", "local-folder"]
 
 [tool.ruff.lint.isort.sections]
@@ -98,52 +87,34 @@ project = ["{{ cookiecutter.project_slug }}"]
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "{{ cookiecutter.project_slug }}.settings"
 addopts = "-n auto --dist loadfile --cov --cov-report=term-missing --strict-markers"
-# pytest's own defaults plus `mutants`, the copy of the tree a mutation run leaves behind.
+# pytest's own defaults plus `mutants`.
 norecursedirs = ["*.egg", ".*", "_darcs", "build", "CVS", "dist", "node_modules", "venv", "{arch}", "mutants"]
 
 [tool.coverage.run]
 source = ["apps", "{{ cookiecutter.project_slug }}"]
 branch = true
-# wsgi.py (and asgi.py, once one exists) is pure deployment glue - only ever imported by uwsgi
-# itself, never by the test suite - so it's excluded the same way migrations are, not chased with
-# a dedicated test.
+# Deployment glue the test suite never imports.
 omit = ["*/migrations/*", "*/wsgi.py", "*/asgi.py", "*/celery.py"]
 
 [tool.coverage.report]
 show_missing = true
 fail_under = 100
-# Never an inline `# pragma: no cover` in the source itself - every exclusion lives here, as an
-# exact-text pattern (so a reformat or edit of the line stops matching and the gate starts failing
-# again) with the reason next to it, the same discipline mutation-exemptions.toml applies to
-# mutants. Add a line here only when it is genuinely unreachable through the normal test suite,
-# never to silence a gap a real test could close instead.
+# Every exclusion lives here as an exact-text pattern, never an inline pragma, so an edited line
+# stops matching. Only for what the suite genuinely cannot reach.
 exclude_lines = [
     "raise NotImplementedError",
     "if TYPE_CHECKING:",
-    # Only false in the e2e environment (a separate docker-compose stack this suite's coverage
-    # run never touches) - see settings.py's own ACCOUNT_RATE_LIMITS comment just above this line.
+    # Only false in the e2e stack.
     "if not config\\.RATE_LIMITS\\.ENABLED:",
-    # Only true when SENTRY__DSN is actually configured, which no test environment does -
-    # see settings.py's own comment just above this line.
+    # No test environment configures SENTRY__DSN.
     "if config\\.SENTRY\\.DSN:",
 ]
 
 [tool.mutmut]
 source_paths = ["apps", "{{ cookiecutter.project_slug }}"]
-# Migrations are generated and tests are the oracle - mutating either measures nothing. wsgi/asgi/
-# celery.py are deployment glue never exercised by the suite, same reason they're omitted from
-# coverage above.
 do_not_mutate = ["*/migrations/*", "*/tests/*", "*/conftest.py", "*/wsgi.py", "*/asgi.py", "*/celery.py"]
-# None of these are under source_paths, so mutmut wouldn't otherwise put them in the copied tree
-# it runs tests against - without conftest.py the cache-clearing fixture stops applying there,
-# without templates/ every allauth email test fails on a missing template rather than on a
-# mutation, and without scripts/ pytest_add_cli_args' own -p plugin below fails to import inside
-# the tree every mutant actually runs in. Copied rather than mutated: do_not_mutate can only exempt
-# a source_paths file, and scripts/ isn't one - see scripts/mutation_test_order.py's own docstring.
-# The registries are read by a test that runs inside the tree too, and re-copied every run rather
-# than copied once, so the tree never answers with a stale one. Without the compiled locale catalogs
-# the tree serves the default language whatever is active, so every mutant of anything translated
-# would be measured where translation never works - the mutation job compiles them first.
+# Outside source_paths, but the tests need them in the copied tree. The mutation job compiles the
+# locale catalogs first, or nothing translated is measured where translation works.
 also_copy = [
     "conftest.py",
     "templates",
@@ -152,12 +123,6 @@ also_copy = [
     "mutation-exemptions.toml",
     "locale",
 ]
-# --no-cov: the trampolines mutmut instruments add statements our 100% coverage gate can't account
-# for. -n 0: xdist workers would share one test database and race each other; mutmut's own
-# --max-children handles process isolation between mutants instead. -p scripts.mutation_test_order:
-# runs each mutant's cheapest and likeliest-to-kill tests first instead of in mutmut's own set order.
+# --no-cov: mutmut's trampolines break the coverage gate. -n 0: xdist workers would share one test
+# database; --max-children isolates mutants instead.
 pytest_add_cli_args = ["--no-cov", "-n", "0", "-p", "scripts.mutation_test_order"]
-# mutmut's defaults (10s floor, 2x the clean-run time) are sized on whatever ran them last, so a
-# number copied from another project's CI machine either times out fine mutants here or lets a truly
-# hung one ride out a much longer wait than the wall-clock is worth. Raise these only against a
-# measured false timeout, and re-measure rather than reusing a figure from a different run.

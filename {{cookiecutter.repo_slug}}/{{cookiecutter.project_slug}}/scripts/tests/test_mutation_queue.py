@@ -24,15 +24,13 @@ def test_an_equivalent_excuses_its_own_mutant_and_no_other_in_the_function():
 
 
 def test_a_mutant_the_tree_already_answered_is_not_run_again():
-    """mutmut's own reuse switches off as soon as any name is passed, so phase one, which always
-    names its mutants, has to leave the answered ones out itself - or a restored cache saves nothing."""
+    """mutmut stops reusing answers once any name is passed, so the queue must drop them itself."""
     answers = {ORDINARY: 1, OTHER_MUTANT_SAME_FUNCTION: None, EQUIVALENT: 0}
 
     assert mutation_queue.to_run(IN_TREE, EQUIVALENTS, EXEMPTIONS, answers) == {OTHER_MUTANT_SAME_FUNCTION}
 
 
 def test_a_survivor_is_an_answer_too():
-    """Run again it survives again; phase two is what settles it, and it reads the stored verdict."""
     assert mutation_queue.to_run({ORDINARY}, {}, {}, {ORDINARY: 0}) == set()
 
 
@@ -45,13 +43,11 @@ def test_a_verified_entry_is_rechecked_by_its_test_rather_than_a_rerun():
 
 
 def test_an_entry_for_a_mutant_the_tree_does_not_hold_is_never_named():
-    """Naming another tree's mutant to mutmut is an error, so the registries are intersected."""
+    """Naming a mutant the tree doesn't hold is a mutmut error."""
     assert mutation_queue.rechecked({ORDINARY}, EQUIVALENTS, EXEMPTIONS) == set()
 
 
 def test_the_queue_names_a_package_init_the_way_mutmut_does(tmp_path, monkeypatch):
-    """An `__init__.py` named with its `.__init__` kept is queued under a name nothing answers to, and
-    every mutant in it comes back "not checked" - read downstream as a survivor."""
     (tmp_path / "pkg").mkdir()
     (tmp_path / "pkg" / "__init__.py").write_text("def double(a):\n    return a * 2\n")
     (tmp_path / "pkg" / "tests").mkdir()

@@ -11,9 +11,7 @@ function Probe() {
 }
 
 describe('useClientTranslation', () => {
-  // Every test here shares one module-level i18next instance, so a language left over from
-  // whichever test ran before would make the next one's own "already en" or "needs to switch"
-  // premise false depending on run order.
+  // One shared i18next instance: a leftover language would make results depend on run order.
   beforeEach(async () => {
     await i18next.changeLanguage('en')
   })
@@ -35,8 +33,7 @@ describe('useClientTranslation', () => {
   })
 
   it('switches the shared instance when the context language no longer matches it', async () => {
-    // Forces a mismatch first - the beforeEach above leaves the shared instance on "en" already,
-    // which would make this a no-op the effect never actually needs to act on.
+    // A mismatch first: beforeEach leaves the instance on "en".
     await i18next.changeLanguage('xx')
 
     render(
@@ -69,8 +66,7 @@ describe('useClientTranslation', () => {
     )
     expect(i18next.language).toBe('en')
 
-    // Not a real configured language - this only needs to prove the effect re-runs on a prop
-    // change, the same way the mismatch test above proves it runs at mount.
+    // Not a configured language: this only proves the effect re-runs on a prop change.
     rerender(
       <LanguageProvider language={'xx' as Language}>
         <Probe />

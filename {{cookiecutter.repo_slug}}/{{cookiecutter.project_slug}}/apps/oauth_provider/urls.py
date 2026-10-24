@@ -11,10 +11,7 @@ from apps.oauth_provider.views.device_authorization import DeviceAuthorizationVi
 
 app_name = "oauth2_provider"
 
-# What this provider serves of DOT's, named rather than filtered: everything else is a flow it does not
-# offer (dynamic client registration, which lets anybody register a client), a page the project replaces
-# (DOT's application, token and device pages are unstyled templates, and its token delete left the
-# refresh token alive) or introspection, which no resource server here needs.
+# An allowlist: DOT's other routes are flows not offered (dynamic client registration) or pages replaced.
 SERVED = {
     "token",
     "revoke-token",
@@ -26,8 +23,7 @@ SERVED = {
 
 
 def served_while_on(view):
-    """404 while OAUTH_PROVIDER__MODE is off: no endpoint, discovery document or key to find. Decided
-    per request rather than by leaving the routes out, so the mode never changes the routing itself."""
+    """404 while the provider is off, decided per request so the mode never changes the routing."""
 
     @wraps(view)
     def serve(request, *args, **kwargs):

@@ -21,13 +21,10 @@ test('forgot password sends a reset link that lets you set a new password and lo
   await page.getByRole('button', { name: 'Set new password' }).click()
   await expect(page).toHaveURL('/auth/login')
 
-  // The old password no longer works.
   await login(page, username, oldPassword)
   await expect(page).toHaveURL('/auth/login')
-  // allauth's own message (see login.spec.ts) - renders under the password field, not as a banner.
   await expect(page.getByText(/username and\/or password you specified are not correct/i)).toBeVisible()
 
-  // The new one does.
   await login(page, username, newPassword)
   await expect(page).toHaveURL('/')
   await expect(page.getByText(`Signed in as ${username}.`)).toBeVisible()

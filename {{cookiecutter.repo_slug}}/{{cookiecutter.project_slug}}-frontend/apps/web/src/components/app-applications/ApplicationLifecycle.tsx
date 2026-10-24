@@ -13,32 +13,47 @@ import type { ApiType } from '@{{ cookiecutter.repo_slug }}/api'
 
 import { useIdempotencyKey } from '@isikk/core/hooks'
 
-/** Switching an application off and on again, and deleting one that is off - what can be done depends on
- *  where it stands, and a superuser's decision is not its owner's to undo. */
-export function ApplicationLifecycle({ application }: { application: ApiType<'Application'> }) {
+/** Switching off and on, and deleting once off; a superuser's decision is not the owner's to undo. */
+export function ApplicationLifecycle({
+  application,
+  etag,
+}: {
+  application: ApiType<'Application'>
+  // The read's ETag header, which deleting it names.
+  etag: string | null
+}) {
   const { t } = useClientTranslation(['auth'])
   const router = useRouter()
   const { isSubmitting, submit } = useAPISubmit()
   // One per act, so a retry after a lost answer is recognised as the same one rather than done twice.
   const disabling = useIdempotencyKey()
   const restoring = useIdempotencyKey()
+  const deleting = useIdempotencyKey()
   const api = () => createApi(apiOrigin())
 
+  // What every act says and does after, whether or not it names a version.
+  function settled(success: string, failure: string, { then = '', used }: { then?: string; used: () => void }) {
+    return {
+      success,
+      failure,
+      // Changed since this page loaded: shown as it is now, for its owner to decide again.
+      onStale: () => router.refresh(),
+      leavesOnSuccess: Boolean(then),
+      onSuccess: () => {
+        used()
+        return then ? router.push(then) : router.refresh()
+      },
+    }
+  }
+
+  // Switching it off and on again go under an idempotency key, not a version.
   async function act(
     call: () => Promise<{ response: Response }>,
     success: string,
     failure: string,
-    { then = '', used }: { then?: string; used?: () => void }
+    after: { then?: string; used: () => void }
   ) {
-    await submit(call, {
-      success,
-      failure,
-      leavesOnSuccess: Boolean(then),
-      onSuccess: () => {
-        used?.()
-        return then ? router.push(then) : router.refresh()
-      },
-    })
+    await submit(call, settled(success, failure, after))
   }
 
   if (application.approval === 'approved') {
@@ -87,11 +102,16 @@ export function ApplicationLifecycle({ application }: { application: ApiType<'Ap
             variant="destructive"
             disabled={isSubmitting}
             onClick={() =>
-              act(
-                () => api().deleteOAuthApplication(application.id),
-                t('auth:applicationDeleted'),
-                t('auth:applicationDeleteError'),
-                { then: '/applications' }
+              // Against the version shown, so a change made since is not deleted unseen.
+              submit(
+                (headers) => api().deleteOAuthApplication(application.id, { ...headers, ...deleting.headerFor(null) }),
+                {
+                  ...settled(t('auth:applicationDeleted'), t('auth:applicationDeleteError'), {
+                    then: '/applications',
+                    used: deleting.used,
+                  }),
+                  etag,
+                }
               )
             }
           >

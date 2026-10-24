@@ -1,5 +1,4 @@
-# Garage's own image is the binary alone, with no shell to make sure of a layout, a key and a bucket
-# in - so the static binary is copied onto one that has.
+# Garage's image has no shell for the entrypoint, so its static binary is copied onto alpine.
 FROM dxflrs/garage:v2.4.1 AS garage
 
 FROM alpine:3.22

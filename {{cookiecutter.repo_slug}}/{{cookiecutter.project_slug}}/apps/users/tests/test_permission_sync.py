@@ -1,5 +1,3 @@
-"""The declaration becoming rows, on every migrate."""
-
 import pgtrigger
 import pytest
 from django.apps import apps as django_apps
@@ -16,8 +14,6 @@ from apps.users.sync import sync_permissions
 
 @pytest.fixture
 def sentinel():
-    """Every permission hangs off auth.Permission's own content type: they are capabilities rather than
-    facts about a table."""
     return ContentType.objects.get(app_label="auth", model="permission")
 
 
@@ -44,7 +40,6 @@ def test_a_missing_permission_is_recreated_with_its_label(sentinel):
 
 @pytest.mark.django_db
 def test_the_sync_is_idempotent(sentinel):
-    """A no-op migrate fires post_migrate too, so this runs far more often than the declaration changes."""
     before = set(_rows(sentinel).values_list("pk", "codename", "name"))
 
     sync_permissions()
@@ -54,8 +49,7 @@ def test_the_sync_is_idempotent(sentinel):
 
 @pytest.mark.django_db
 def test_a_changed_label_is_written_back_naming_the_label_and_nothing_else(sentinel):
-    """The identity trigger refuses a codename or content_type change, so a save restating them would put
-    the sync one differing row away from being refused outright."""
+    """The identity trigger would refuse a save that restates codename or content_type."""
     _rows(sentinel).filter(codename=Permission.USERS_MANAGE_USER).update(name="something else")
 
     with CaptureQueriesContext(connection) as queries:
@@ -69,7 +63,6 @@ def test_a_changed_label_is_written_back_naming_the_label_and_nothing_else(senti
 
 @pytest.mark.django_db
 def test_a_permission_no_longer_declared_is_retired(sentinel):
-    """The sync is the only thing that may delete one; every other path is refused by the trigger."""
     retired = PermissionRow.objects.create(name="Gone", codename="gone:read:all", content_type=sentinel)
 
     sync_permissions()
@@ -89,8 +82,6 @@ def test_rows_under_another_content_type_are_left_alone():
 
 
 def test_the_sync_is_connected_to_this_app_config_under_its_own_uid():
-    """post_migrate is sent once per app config, so a receiver bound to no sender would run once per
-    installed app; and without the uid a second `ready()` would connect a second copy."""
     config = django_apps.get_app_config("users")
 
     was_connected = post_migrate.disconnect(dispatch_uid=SYNC_PERMISSIONS_UID, sender=config)

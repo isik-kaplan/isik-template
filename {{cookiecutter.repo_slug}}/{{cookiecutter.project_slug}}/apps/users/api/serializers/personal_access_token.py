@@ -8,12 +8,12 @@ from apps.users.models import PersonalAccessToken
 from apps.users.personal_access_tokens import make_token
 
 
-# Enough for every script somebody runs, few enough that a forgotten one is noticed in the list.
+# Few enough that a forgotten one is noticed in the list.
 TOKENS_PER_USER = 50
 
 
 class PersonalAccessTokenSerializer(BaseModelSerializer):
-    """A token somebody made for themselves, as they see it - the token itself only in the answer to making it."""
+    """A token somebody made for themselves; the secret appears only in the answer to making it."""
 
     scopes = ScopeField(
         many=True,
@@ -37,7 +37,6 @@ class PersonalAccessTokenSerializer(BaseModelSerializer):
         return getattr(personal_access_token, "issued_token", None)
 
     def validate_scopes(self, scopes):
-        # You may give a token only what you hold - the same rule as granting anybody anything.
         user = self.context["request"].user
         missing = sorted(scope.codename for scope in scopes if not user.has_perm(scope.codename))
         if missing:

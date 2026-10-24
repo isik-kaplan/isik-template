@@ -4,8 +4,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 import { ANY } from './filterSpec'
 
-// The URL is the filter: a narrowed listing is something somebody pastes into a ticket, and the
-// server is what narrows it either way.
+// The URL is the filter, so a narrowed listing can be shared.
 export function useFilterParams() {
   const router = useRouter()
   const pathname = usePathname()
@@ -21,8 +20,7 @@ export function useFilterParams() {
       } else {
         next.set(name, value)
       }
-      // Back to the first page: page 4 of the old filter is rarely a page of the new one, and
-      // landing on an empty page reads as "nothing matched".
+      // Back to page 1: a later page may be empty under the new filter, reading as "nothing matched".
       next.delete('page')
       router.push(`${pathname}?${next}`)
     },

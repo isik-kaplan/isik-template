@@ -1,15 +1,6 @@
 /**
- * Test files that would pass with no DOM and are not on the server list.
- *
- * The one weakness of `vitest.server-tests.ts` being a list is that a new server-side test gets
- * jsdom until somebody adds it, which is silent. This makes it loud on demand: it runs everything
- * not on the list under `node` and reports what did not need a DOM after all.
- *
- * Through a generated config rather than `--environment node`: that flag does not override a
- * project's own `environment`, so it would report every file as passing.
- *
- * Reported rather than enforced. A file can pass without a DOM and still be browser code, so the
- * answer is a person reading the list, not a gate failing the build.
+ * Test files not in vitest.server-tests.ts that pass with no DOM. Reported, not enforced: browser code can
+ * pass without a DOM too. A generated config, since `--environment node` doesn't override a project's own.
  */
 import { execFileSync } from 'node:child_process'
 import { readFileSync, rmSync, writeFileSync } from 'node:fs'
@@ -39,7 +30,7 @@ try {
     stdio: 'ignore',
   })
 } catch {
-  // A non-zero exit is the expected case: most of these need a DOM. The report is what matters.
+  // A non-zero exit is expected: most of these need a DOM.
 }
 
 let results = []

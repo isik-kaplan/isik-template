@@ -8,6 +8,7 @@ from oauth2_provider.models import get_access_token_model, get_application_model
 from apps.oauth_provider.tests.conftest import REDIRECT_URI, make_application, permission, set_approval
 from apps.users.models.user import User
 from apps.users.permissions import Permission
+from conftest import versioned
 
 
 AccessToken = get_access_token_model()
@@ -107,7 +108,12 @@ def test_the_queue_can_be_narrowed_to_one_state(client, superuser, provider, app
 
 @pytest.mark.django_db
 def test_approving_lets_it_ask_for_what_was_approved(client, reviewer, pending):
-    response = client.post(_action(pending, "approve"), {"approved_scopes": [MANAGE]}, content_type="application/json")
+    response = client.post(
+        _action(pending, "approve"),
+        {"approved_scopes": [MANAGE]},
+        content_type="application/json",
+        headers=versioned(pending),
+    )
 
     assert response.status_code == 200
     assert response.json()["approval"] == "approved"
@@ -117,7 +123,10 @@ def test_approving_lets_it_ask_for_what_was_approved(client, reviewer, pending):
 @pytest.mark.django_db
 def test_approving_for_everything_it_asked_for_is_an_answer_too(client, reviewer, pending):
     response = client.post(
-        _action(pending, "approve"), {"approved_scopes": [GRANT, MANAGE]}, content_type="application/json"
+        _action(pending, "approve"),
+        {"approved_scopes": [GRANT, MANAGE]},
+        content_type="application/json",
+        headers=versioned(pending),
     )
 
     assert response.json()["approved_scopes"] == [GRANT, MANAGE]
@@ -125,7 +134,12 @@ def test_approving_for_everything_it_asked_for_is_an_answer_too(client, reviewer
 
 @pytest.mark.django_db
 def test_approving_for_nothing_beyond_signing_people_in_is_an_answer_too(client, reviewer, pending):
-    response = client.post(_action(pending, "approve"), {"approved_scopes": []}, content_type="application/json")
+    response = client.post(
+        _action(pending, "approve"),
+        {"approved_scopes": []},
+        content_type="application/json",
+        headers=versioned(pending),
+    )
 
     assert response.json()["approval"] == "approved"
     assert response.json()["approved_scopes"] == []
@@ -135,7 +149,12 @@ def test_approving_for_nothing_beyond_signing_people_in_is_an_answer_too(client,
 def test_nothing_it_did_not_ask_for_is_approved(client, reviewer, pending):
     pending.requested_scopes.set([permission(MANAGE)])
 
-    response = client.post(_action(pending, "approve"), {"approved_scopes": [GRANT]}, content_type="application/json")
+    response = client.post(
+        _action(pending, "approve"),
+        {"approved_scopes": [GRANT]},
+        content_type="application/json",
+        headers=versioned(pending),
+    )
 
     assert response.status_code == 400
     assert response.json() == {"approved_scopes": ["An application cannot be approved for a scope it never asked for."]}
@@ -143,7 +162,12 @@ def test_nothing_it_did_not_ask_for_is_approved(client, reviewer, pending):
 
 @pytest.mark.django_db
 def test_approving_needs_a_proof(client, superuser, provider, pending):
-    response = client.post(_action(pending, "approve"), {"approved_scopes": []}, content_type="application/json")
+    response = client.post(
+        _action(pending, "approve"),
+        {"approved_scopes": []},
+        content_type="application/json",
+        headers=versioned(pending),
+    )
 
     assert response.status_code == 403
     assert response["X-Reauthentication-Required"] == "1"
@@ -153,7 +177,12 @@ def test_approving_needs_a_proof(client, superuser, provider, pending):
 def test_a_withdrawn_application_is_reinstated_by_approving_it_again(client, reviewer, application):
     set_approval(application, "withdrawn")
 
-    response = client.post(_action(application, "approve"), {"approved_scopes": []}, content_type="application/json")
+    response = client.post(
+        _action(application, "approve"),
+        {"approved_scopes": []},
+        content_type="application/json",
+        headers=versioned(application),
+    )
 
     assert response.json()["approval"] == "approved"
 
@@ -162,7 +191,12 @@ def test_a_withdrawn_application_is_reinstated_by_approving_it_again(client, rev
 def test_one_its_owner_switched_off_is_theirs_to_switch_back_on(client, reviewer, application):
     set_approval(application, "disabled")
 
-    response = client.post(_action(application, "approve"), {"approved_scopes": []}, content_type="application/json")
+    response = client.post(
+        _action(application, "approve"),
+        {"approved_scopes": []},
+        content_type="application/json",
+        headers=versioned(application),
+    )
 
     assert response.status_code == 400
     assert response.json() == {"detail": "Its owner switched it off; switching it back on is theirs to do."}

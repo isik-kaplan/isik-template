@@ -43,8 +43,7 @@ export function SessionsList({ initialSessions }: SessionsListProps) {
     if (data) {
       setSessions(data.data as Session[])
       toast.success(successMessage)
-      // Ending your own session leaves this tab holding a cookie the server no longer honours;
-      // the layout's gate is what decides where to send it.
+      // Ending your own session: the layout's gate decides where to send this tab.
       router.refresh()
       return
     }

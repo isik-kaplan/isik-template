@@ -64,9 +64,7 @@ describe('SignupForm', () => {
     await user.type(screen.getByLabelText('Username'), 'jane')
     await user.type(screen.getByLabelText('Email'), 'not-an-email')
     await user.type(screen.getByLabelText('Password'), 'correct-horse-battery')
-    // A real click would let the browser's own type="email" constraint validation intercept the
-    // submit event before React ever sees it - firing "submit" directly is how a value that
-    // reaches our Zod check despite that (e.g. a paste) would actually behave.
+    // Submitted directly: a click would let the browser's type="email" validation intercept it.
     fireEvent.submit(container.querySelector('form') as HTMLFormElement)
 
     expect(await screen.findByText('Enter a valid email address.')).toBeTruthy()

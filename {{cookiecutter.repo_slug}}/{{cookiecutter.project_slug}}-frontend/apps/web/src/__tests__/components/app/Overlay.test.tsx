@@ -61,9 +61,7 @@ describe('Overlay', () => {
     expect(screen.getAllByRole('button', { name: 'Open' })).toHaveLength(2)
   })
 
-  // defaultOpen renders both panes open at mount, with no click and nothing awaited afterward -
-  // interacting with an open Popover and then awaiting anything hangs under jsdom (see
-  // EmailsList.test.tsx); a static already-open render doesn't hit that path.
+  // Open at mount, nothing awaited: awaiting after opening a Popover hangs jsdom.
   it('renders the drawer content, title, description and close control on the mobile pane', () => {
     render(
       <Overlay breakpoint="md" defaultOpen>

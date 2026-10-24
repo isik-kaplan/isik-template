@@ -1,6 +1,6 @@
 import { createOpenApiClient } from './httpClient'
 import type { paths } from './schema'
-import Cookies from 'js-cookie'
+import { createDjangoFetch } from '@isikk/core'
 
 export type AuthApiOptions = {
   csrfCookieName?: string
@@ -9,52 +9,19 @@ export type AuthApiOptions = {
 }
 
 export const SESSION_PATH = '/v0/browser/v1/auth/session'
-// Not a client.POST() call like every other endpoint here - this one has to be a real HTML form
-// submission (see components/app-auth/AutoFormButton.tsx) so the browser follows the 302 to the
-// provider natively. A fetch()-based POST would just receive the redirect response as inert JSON.
+// Submitted as a real HTML form, not fetch(), so the browser follows the 302 to the provider.
 export const PROVIDER_REDIRECT_PATH = '/v0/browser/v1/auth/provider/redirect'
-// The same kind of form submission, to the backend's own endpoint that sends a signed-in person back
-// to their provider to prove it is them (apps/users/reauthentication/views/prove_with_provider.py).
+// Also a form submission: sends a signed-in person back to their provider to prove it is them.
 export const PROVIDER_REAUTHENTICATE_PATH = '/v0/browser/v1/auth/provider/reauthenticate'
 
-function readCookie(cookieHeader: string, name: string): string | undefined {
-  const match = cookieHeader.match(new RegExp(`(?:^|; )${name}=([^;]*)`))
-  return match ? decodeURIComponent(match[1]) : undefined
-}
-
-/** Typed client for the allauth headless API (auth-api/v0), served on the auth.<domain> host. */
 export class AuthApi {
-  private csrfCookieName: string
-  private cookieHeader?: string
-  private isServerSide: boolean
-  private baseFetch: typeof fetch
-  private baseUrl: string
   client: ReturnType<typeof createOpenApiClient<paths>>
 
-  constructor(baseUrl: string, options: AuthApiOptions = {}) {
-    const { csrfCookieName = 'csrftoken', cookieHeader, baseFetch } = options
-    this.baseUrl = baseUrl
-    this.csrfCookieName = csrfCookieName
-    this.cookieHeader = cookieHeader
-    this.isServerSide = 'cookieHeader' in options
-    this.baseFetch = baseFetch ?? fetch.bind(globalThis)
-    this.client = createOpenApiClient<paths>({ baseUrl, fetch: this.fetch })
-  }
-
-  private fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const headers = new Headers(input instanceof Request ? input.headers : undefined)
-    new Headers(init?.headers).forEach((value, key) => headers.set(key, value))
-    let csrfToken = this.cookieHeader
-      ? readCookie(this.cookieHeader, this.csrfCookieName)
-      : Cookies.get(this.csrfCookieName)
-    // A first-ever visitor has no csrftoken cookie yet - prime it with one harmless GET.
-    if (!csrfToken && !this.isServerSide) {
-      await this.baseFetch(`${this.baseUrl}${SESSION_PATH}`, { credentials: 'include' })
-      csrfToken = Cookies.get(this.csrfCookieName)
-    }
-    if (csrfToken) headers.set('X-CSRFToken', csrfToken)
-    if (this.cookieHeader) headers.set('Cookie', this.cookieHeader)
-    return this.baseFetch(input, { ...init, headers, credentials: 'include' })
+  constructor(baseUrl: string, { csrfCookieName = 'csrftoken', cookieHeader, baseFetch }: AuthApiOptions = {}) {
+    // A first-ever visitor has no csrftoken cookie yet, so the browser primes it with one harmless GET.
+    const primeUrl = `${baseUrl}${SESSION_PATH}`
+    const fetch = createDjangoFetch({ baseUrl, csrfCookieName, cookieHeader, baseFetch, primeUrl })
+    this.client = createOpenApiClient<paths>({ baseUrl, fetch })
   }
 
   async session() {
@@ -63,8 +30,7 @@ export class AuthApi {
 
   async isAuthenticated(): Promise<boolean> {
     const { data, error } = await this.session()
-    // allauth: a 401 can still mean "authenticated but a flow is pending" - meta carries the
-    // real answer either way, the HTTP status alone does not.
+    // A 401 can still mean "authenticated, flow pending" - only meta is reliable.
     return data?.meta.is_authenticated ?? error?.meta?.is_authenticated ?? false
   }
 
@@ -132,15 +98,12 @@ export class AuthApi {
     return this.client.GET('/v0/browser/v1/auth/sessions')
   }
 
-  // Ending the current session logs this browser out too, so the response can come back
-  // unauthenticated - callers should re-check rather than assume a session list.
+  // Ending the current session too means the response can come back unauthenticated.
   async endSessions(sessions: number[]) {
     return this.client.DELETE('/v0/browser/v1/auth/sessions', { body: { sessions } })
   }
 
-  // "Sign out everywhere else" is a filter over the list, not its own endpoint. Returns the list
-  // untouched when this is the only session: allauth's `sessions` field is required, so an empty
-  // array is a 400 rather than a no-op.
+  // An empty `sessions` array is a 400, not a no-op, so the lone-session case returns the list.
   async endOtherSessions() {
     const listed = await this.sessions()
     const others = (listed.data?.data ?? []).filter((session) => !session.is_current)
@@ -182,7 +145,7 @@ export class AuthApi {
     return this.client.GET('/v0/browser/v1/account/authenticators')
   }
 
-  // A 404 here is not a failure: it means no TOTP yet, and carries a freshly rotated secret to enroll.
+  // A 404 means no TOTP yet, and carries a fresh secret to enroll.
   async totpStatus() {
     return this.client.GET('/v0/browser/v1/account/authenticators/totp')
   }

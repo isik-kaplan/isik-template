@@ -1,4 +1,4 @@
-"""What the registries refuse at load time, before a run can be scored against a bad entry."""
+"""What the registries refuse at load time."""
 
 import pytest
 

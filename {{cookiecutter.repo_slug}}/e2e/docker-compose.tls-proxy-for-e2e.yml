@@ -1,5 +1,4 @@
-# Puts a TLS-terminating proxy in front of the e2e stack, the shape of a real external-mode deployment, and points
-# every name the browser uses at it. Layered on the e2e stack once it is up, from this directory:
+# A TLS-terminating proxy in front of the e2e stack, as in external mode. Layered on once the stack is up:
 #
 #   COMPOSE_FILE="$(sed -n 's/^COMPOSE_FILE=//p' .env):docker-compose.tls-proxy-for-e2e.yml" docker compose up -d
 #   docker compose run --rm -e E2E_BASE_URL=https://{{ cookiecutter.domain }} playwright \
@@ -12,7 +11,7 @@ services:
       - certs:/certs:ro
     networks:
       internal:
-        # Fixed for dnsmasq's answer below, and past the dynamic range like authentik's addresses.
+        # Fixed for dnsmasq's answer below.
         ipv4_address: ${E2E_SUBNET_PREFIX:-172.30.0}.24
     depends_on:
       server:

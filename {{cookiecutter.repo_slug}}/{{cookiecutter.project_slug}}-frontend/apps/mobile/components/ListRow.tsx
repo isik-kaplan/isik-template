@@ -9,8 +9,6 @@ type ListRowProps = {
   children: ReactNode
 }
 
-/** One row in a settings-style list: a divider between rows, consistent vertical padding. Used by
- * every profile screen that lists things (emails, connected providers, active sessions). */
 export function ListRow({ testID, children }: ListRowProps) {
   return (
     <View testID={testID} style={styles.row}>

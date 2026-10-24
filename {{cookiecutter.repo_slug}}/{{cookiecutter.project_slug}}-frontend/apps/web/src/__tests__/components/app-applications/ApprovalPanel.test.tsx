@@ -55,7 +55,7 @@ describe('ApprovalPanel', () => {
   })
 
   it('offers only what was asked for, all of it ticked while it waits', () => {
-    render(<ApprovalPanel application={application('pending')} scopes={SCOPES} />)
+    render(<ApprovalPanel application={application('pending')} etag={'"5"'} scopes={SCOPES} />)
 
     expect(screen.getByRole('group', { name: 'Let it ask for' })).toBeTruthy()
     expect(screen.queryByRole('checkbox', { name: /Not asked for/ })).toBeNull()
@@ -64,7 +64,7 @@ describe('ApprovalPanel', () => {
   })
 
   it('offers what was last approved once it has been answered', () => {
-    render(<ApprovalPanel application={application('approved', ['users:manage:user'])} scopes={SCOPES} />)
+    render(<ApprovalPanel application={application('approved', ['users:manage:user'])} etag={'"5"'} scopes={SCOPES} />)
 
     expect(box(/Grant/).checked).toBe(false)
     expect(box(/Manage people/).checked).toBe(true)
@@ -73,7 +73,7 @@ describe('ApprovalPanel', () => {
   it('approves for what is ticked and reads the page again', async () => {
     const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }))
     globalThis.fetch = fetchMock
-    render(<ApprovalPanel application={application('pending')} scopes={SCOPES} />)
+    render(<ApprovalPanel application={application('pending')} etag={'"5"'} scopes={SCOPES} />)
 
     await userEvent.click(box(/Grant/))
     await userEvent.click(screen.getByRole('button', { name: 'Approve' }))
@@ -82,6 +82,8 @@ describe('ApprovalPanel', () => {
     expect(request.method).toBe('POST')
     expect(new URL(request.url).pathname).toBe('/v0/oauth-application-reviews/7/approve/')
     expect(request.headers.get('Idempotency-Key')).toBeTruthy()
+    // Against what it asked for when this page loaded, which may have changed since.
+    expect(request.headers.get('If-Match')).toBe('"5"')
     expect(await request.json()).toEqual({ approved_scopes: ['users:manage:user'] })
     expect(toast.success).toHaveBeenCalledWith('Approved.')
     expect(refresh).toHaveBeenCalled()
@@ -91,7 +93,7 @@ describe('ApprovalPanel', () => {
     withoutRandomUUID()
     const fetchMock = answering(200)
     globalThis.fetch = fetchMock
-    render(<ApprovalPanel application={application('pending')} scopes={SCOPES} />)
+    render(<ApprovalPanel application={application('pending')} etag={'"5"'} scopes={SCOPES} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Approve' }))
 
@@ -102,7 +104,7 @@ describe('ApprovalPanel', () => {
   it('retries an approval under the same key, and makes a new one for other scopes or once it went through', async () => {
     const fetchMock = answering(500, 500, 200, 200)
     globalThis.fetch = fetchMock
-    render(<ApprovalPanel application={application('pending')} scopes={SCOPES} />)
+    render(<ApprovalPanel application={application('pending')} etag={'"5"'} scopes={SCOPES} />)
 
     const approve = () => userEvent.click(screen.getByRole('button', { name: 'Approve' }))
     await approve()
@@ -117,9 +119,26 @@ describe('ApprovalPanel', () => {
     expect(again).not.toBe(narrowed)
   })
 
+  it('shows what it asks for now, rather than approving, when that changed since the page loaded', async () => {
+    globalThis.fetch = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ detail: 'Changed.', code: 'precondition_failed', current: { id: 7 } }), {
+          status: 412,
+          headers: { 'Content-Type': 'application/json' },
+        })
+    )
+    render(<ApprovalPanel application={application('pending')} etag={'"5"'} scopes={SCOPES} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Approve' }))
+
+    expect(toast.error).toHaveBeenCalledWith('Someone else changed this since you opened it. Review their changes.')
+    expect(toast.success).not.toHaveBeenCalled()
+    expect(refresh).toHaveBeenCalled()
+  })
+
   it('says so when it could not approve', async () => {
     globalThis.fetch = vi.fn(async () => new Response(null, { status: 500 }))
-    render(<ApprovalPanel application={application('pending')} scopes={SCOPES} />)
+    render(<ApprovalPanel application={application('pending')} etag={'"5"'} scopes={SCOPES} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Approve' }))
 
@@ -130,7 +149,7 @@ describe('ApprovalPanel', () => {
   it('withdraws it and reads the page again', async () => {
     const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }))
     globalThis.fetch = fetchMock
-    render(<ApprovalPanel application={application('approved')} scopes={SCOPES} />)
+    render(<ApprovalPanel application={application('approved')} etag={'"5"'} scopes={SCOPES} />)
 
     expect(screen.getByText(/Withdrawing it signs everybody out of it/)).toBeTruthy()
     await userEvent.click(screen.getByRole('button', { name: 'Withdraw' }))
@@ -146,7 +165,7 @@ describe('ApprovalPanel', () => {
   it('retries a withdrawal under the same key, and makes a new one once it went through', async () => {
     const fetchMock = answering(500, 200, 200)
     globalThis.fetch = fetchMock
-    render(<ApprovalPanel application={application('approved')} scopes={SCOPES} />)
+    render(<ApprovalPanel application={application('approved')} etag={'"5"'} scopes={SCOPES} />)
 
     for (let attempt = 0; attempt < 3; attempt++) {
       await userEvent.click(screen.getByRole('button', { name: 'Withdraw' }))
@@ -159,7 +178,7 @@ describe('ApprovalPanel', () => {
 
   it('says so when it could not withdraw', async () => {
     globalThis.fetch = vi.fn(async () => new Response(null, { status: 500 }))
-    render(<ApprovalPanel application={application('approved')} scopes={SCOPES} />)
+    render(<ApprovalPanel application={application('approved')} etag={'"5"'} scopes={SCOPES} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Withdraw' }))
 
@@ -167,14 +186,14 @@ describe('ApprovalPanel', () => {
   })
 
   it('offers only approving one already withdrawn', () => {
-    render(<ApprovalPanel application={application('withdrawn')} scopes={SCOPES} />)
+    render(<ApprovalPanel application={application('withdrawn')} etag={'"5"'} scopes={SCOPES} />)
 
     expect(screen.getByRole('button', { name: 'Approve' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Withdraw' })).toBeNull()
   })
 
   it('offers only withdrawing one its owner switched off', () => {
-    render(<ApprovalPanel application={application('disabled')} scopes={SCOPES} />)
+    render(<ApprovalPanel application={application('disabled')} etag={'"5"'} scopes={SCOPES} />)
 
     expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull()
     expect(screen.queryAllByRole('checkbox')).toEqual([])
@@ -183,7 +202,7 @@ describe('ApprovalPanel', () => {
 
   it('holds both buttons while one is out', async () => {
     globalThis.fetch = vi.fn(() => new Promise<Response>(() => {}))
-    render(<ApprovalPanel application={application('approved')} scopes={SCOPES} />)
+    render(<ApprovalPanel application={application('approved')} etag={'"5"'} scopes={SCOPES} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Approve' }))
 

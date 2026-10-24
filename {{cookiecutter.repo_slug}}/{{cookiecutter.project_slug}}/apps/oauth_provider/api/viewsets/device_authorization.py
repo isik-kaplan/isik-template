@@ -3,6 +3,7 @@ from django.db.models.functions import Now
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from isik.django.apps.idempotency.drf import IdempotencyMixin
+from isik.django.drf.viewsets import NoPrecondition, PreconditionMixin
 from oauth2_provider.models import get_application_model, get_device_grant_model
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -10,6 +11,7 @@ from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 
 from apps.common.api.reauthentication import ProvesWhoTheyAre
+from apps.common.api.request_policies import NoReauthentication
 from apps.oauth_provider.api.permissions.may_answer_devices import MayAnswerDevices
 from apps.oauth_provider.api.serializers.device_authorization import DeviceAuthorizationSerializer
 from apps.oauth_provider.device_codes import as_stored
@@ -21,26 +23,31 @@ DeviceGrant = get_device_grant_model()
 USER_CODE = OpenApiParameter(
     "user_code", type=str, location=OpenApiParameter.PATH, description="The code the device shows, as typed."
 )
-# One answer for every way a code fails: which of them it was is nothing a guesser should learn.
+# One answer for every way a code fails, so a guesser learns nothing.
 UNKNOWN = _("That code is wrong, has expired or was already answered. Start again on the device.")
 
 
-class DeviceAuthorizationViewSet(ProvesWhoTheyAre, IdempotencyMixin, viewsets.ViewSet):
-    """A device asking to act for whoever enters the code it shows - see apps/oauth_provider/device_codes.py.
-    Whoever answers decides for their own account: allowed, the device's next poll gets a token for it."""
+class DeviceAuthorizationViewSet(ProvesWhoTheyAre, IdempotencyMixin, PreconditionMixin, viewsets.ViewSet):
+    """A device asking to act for whoever enters the code it shows; allowed, its next poll gets a token."""
 
     permission_classes = [MayAnswerDevices]
     throttle_scope = "device_codes"
     lookup_field = "user_code"
     lookup_value_regex = "[^/]+"
     reauthentication_exempt_actions = {
-        "retrieve": "reading what a device asks for takes nothing from anybody",
-        "approve": "the same consent the authorize page asks for, which nobody signs in again to give",
-        "deny": "turning a device away only refuses it",
+        "retrieve": NoReauthentication(reason="reading what a device asks for takes nothing from anybody"),
+        "approve": NoReauthentication(
+            reason="the same consent the authorize page asks for, which nobody signs in again to give"
+        ),
+        "deny": NoReauthentication(reason="turning a device away only refuses it access it never had"),
+    }
+    precondition_exempt_actions = {
+        "approve": NoPrecondition(reason="a code is answered once, and an answer to one already answered is refused"),
+        "deny": NoPrecondition(reason="a code is answered once, and an answer to one already answered is refused"),
     }
 
     def _waiting(self, user_code):
-        """The grant and its application, or 404 - locked, since an answer is written straight after."""
+        """Locked, since an answer is written straight after."""
         grant = (
             DeviceGrant.objects.select_for_update()
             .filter(

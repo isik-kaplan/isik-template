@@ -8,8 +8,7 @@ import pytest
 from conftest import load_context
 
 
-# Boots a self-mode bake's nginx and certbot against Pebble, Let's Encrypt's test ACME server: the one place the
-# certificate path runs for real. Only the server image is built, so no lockfile is needed.
+# The one place the certificate path runs for real, against Pebble (Let's Encrypt's test ACME server).
 pytestmark = [
     pytest.mark.skipif(shutil.which("docker") is None, reason="docker not available"),
     pytest.mark.usefixtures("skip_lockfile_generation"),
@@ -70,7 +69,7 @@ def test_self_tls_serves_a_pebble_issued_certificate_and_keeps_serving_one_after
             proc = _compose(project_path, env, *step)
             assert proc.returncode == 0, f"{step}: {proc.stderr}"
 
-        # Through the generated entrypoint's own polling, which picks up the first issuance within a minute.
+        # The entrypoint's polling picks up the first issuance within a minute.
         issued = _wait_for(lambda: "Pebble" in _served_certificate(project_path, env, domain), timeout=150)
         assert issued, f"served: {_served_certificate(project_path, env, domain)!r}\n{diagnostics()}"
         first = _served_certificate(project_path, env, domain)

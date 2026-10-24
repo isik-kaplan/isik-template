@@ -1,7 +1,7 @@
 # Environment
 .env
 !.env.example
-# Shared e2e setup, not a developer's own secrets - see that file's own header comment for why.
+# Shared e2e config, not secrets.
 !e2e/.env
 
 # Python

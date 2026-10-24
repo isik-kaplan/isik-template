@@ -52,8 +52,7 @@ describe('i18n', () => {
   })
 
   it('resolves the device locale to a real second language, not just always en', () => {
-    // Only meaningful once "languages" names more than one - with just "en", any working or
-    // broken deviceLanguage() lands on the exact same "en", so this proves nothing then.
+    // Only meaningful once more than one language ships.
     const { SUPPORTED_LANGUAGES } = loadWithLocales([{ languageCode: 'en' }])
     const other = SUPPORTED_LANGUAGES.find((code: string) => code !== 'en')
     if (!other) return
@@ -70,9 +69,7 @@ describe('i18n', () => {
 
     const { default: i18n } = loadWithLocales([{ languageCode: other }])
 
-    // Blank (not translated yet, see hooks/post_gen_project.py's own printout), not "Log in" -
-    // the latter would mean this language's own bundle was dropped and fallbackLng served English
-    // instead, which a real translation later filled in would hide just as effectively as passing.
+    // Blank (untranslated), not "Log in", which would mean fallbackLng served English instead.
     expect(i18n.t('loginHeading')).toBe('')
   })
 
@@ -84,15 +81,13 @@ describe('i18n', () => {
       setLanguage('en')
       await new Promise((resolve) => setTimeout(resolve, 0))
 
-      // Not just "i18n.language is still en" - changeLanguage('en') while already on "en" would
-      // leave that exact same value too, proving nothing about whether it was actually skipped.
+      // i18n.language alone can't tell: changeLanguage('en') would leave it "en" too.
       expect(changeLanguageSpy).not.toHaveBeenCalled()
       expect(i18n.language).toBe('en')
     })
 
     it('switches to a different supported language, when this app ships more than one', async () => {
-      // Only meaningful once "languages" names more than one - with just "en", there is no other
-      // supported language to prove an actual switch against, so this is a no-op assertion then.
+      // Only meaningful once more than one language ships.
       const { default: i18n, setLanguage, SUPPORTED_LANGUAGES } = loadWithLocales([{ languageCode: 'de' }])
       const other = SUPPORTED_LANGUAGES.find((code: string) => code !== i18n.language)
       if (!other) return

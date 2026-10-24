@@ -4,6 +4,7 @@ from pathlib import Path
 
 import sentry_sdk
 from corsheaders.defaults import default_headers
+from isik.django.apps.common.checks import Check, CheckOption
 from django.conf.locale import LANG_INFO
 
 from apps.common.logging.scrub import scrub_event
@@ -19,12 +20,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 DEBUG = config.DEBUG
 SECRET_KEY = config.SECRET_KEY
-# Its own key rather than SECRET_KEY, so rotating the signing key does not cost every stored secret.
-# Unset, an EncryptedField refuses to store one - see apps/common/fields/encrypted.py.
+# Not SECRET_KEY, so rotating the signing key does not cost every stored secret.
 CREDENTIAL_KEY = config.CREDENTIAL_KEY
 
-# "localhost" only covers the container-internal Docker healthcheck (curl http://localhost/health/)
-# - every real request arrives with one of the subdomains below, forwarded unmodified by nginx.
+# "localhost" is only for the container-internal Docker healthcheck.
 ALLOWED_HOSTS = [
     config.DOMAIN,
     f"api.{config.DOMAIN}",
@@ -34,7 +33,6 @@ ALLOWED_HOSTS = [
 ]
 
 
-# Read once, at startup - see apps/users/social_login.py for what it refuses.
 SOCIAL_LOGIN_PROVIDER_IDS = social_login_provider_ids(config.SOCIAL_LOGIN.PROVIDERS)
 
 INSTALLED_APPS = [
@@ -73,7 +71,6 @@ INSTALLED_APPS = [
     "django_celery_results",
 {%- endif %}
     "apps.common.apps.CommonConfig",
-    "apps.idempotency.apps.IdempotencyConfig",
     "apps.core.apps.CoreConfig",
     "apps.users.apps.UsersConfig",
     "apps.oauth_provider.apps.OAuthProviderConfig",
@@ -81,14 +78,10 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    # First, unconditionally - the container-internal Docker healthcheck sends Host: localhost,
-    # which matches no django-hosts pattern, so this must short-circuit before HostsRequestMiddleware
-    # ever gets a chance to reject it.
+    # First: the Docker healthcheck's Host: localhost matches no django-hosts pattern.
     "apps.common.middleware.health_check.HealthCheckMiddleware",
     "django_hosts.middleware.HostsRequestMiddleware",
-    # As high as possible - the frontend calls api./auth. from client-side JS running on the bare
-    # domain, a different origin, so this has to run before anything else might already have
-    # produced a response (CommonMiddleware in particular) for the CORS headers to be attached.
+    # Before anything that may answer early (CommonMiddleware), or the response lacks CORS headers.
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -97,55 +90,44 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "allauth.account.middleware.AccountMiddleware",
-    # After AuthenticationMiddleware, whose request.user it reads - the signed-in user's saved
-    # language wins over the browser's, so this can't just be Django's own LocaleMiddleware.
+    # After AuthenticationMiddleware, which decides whether a request that sent a session cookie is signed in.
+    "isik.django.apps.common.middleware.DeadSessionCookieMiddleware",
+    # After AuthenticationMiddleware: the user's saved language beats the browser's.
     "apps.common.middleware.language.UserLanguageMiddleware",
-    # After AuthenticationMiddleware/AccountMiddleware, whose request.user it reads - opens the
-    # pghistory context every tracked write in this request stamps its actor from, and what a
-    # Celery task dispatched from here reads via open_history_context() to carry that actor along.
-    "apps.common.middleware.history_context.HistoryContextMiddleware",
-    # Below the context it annotates its line with, so the actor is already on it.
+    # After AuthenticationMiddleware: stamps request.user as the pghistory actor.
+    "isik.django.apps.common.middleware.HistoryContextMiddleware",
+    # Below the history context, so the actor is already on its line.
     "apps.common.middleware.request_log.RequestLogMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    # Last, mirroring HostsRequestMiddleware - django-hosts' own required pairing.
     "django_hosts.middleware.HostsResponseMiddleware",
 ]
 
 LOGGING = {
     "version": 1,
-    # Nothing is silenced by existing: a library that took a logger before this ran still reaches
-    # the handler below, which is the whole reason for naming the noisy ones explicitly.
     "disable_existing_loggers": False,
     "formatters": {
         "console": {"()": "apps.common.logging.formatters.ConsoleFormatter"},
         "json": {"()": "apps.common.logging.formatters.JSONFormatter"},
     },
     "handlers": {
-        # stdout, because a container's log is its stdout - a file here would be a file nobody reads
-        # and a volume somebody has to remember.
         "stdout": {"class": "logging.StreamHandler", "stream": sys.stdout, "formatter": config.LOGGING.FORMAT},
     },
     "root": {"handlers": ["stdout"], "level": "WARNING"},
     "loggers": {
-        # Ours, at INFO: an event was declared because somebody wanted it written down.
         "{{ cookiecutter.project_slug }}": {"level": "INFO"},
-        # Its own handler and no propagation, which is the whole of "cannot be turned down": an
-        # audit record does not pass through the logger above and is not quietened by lowering it.
+        # No propagation: lowering the logger above cannot quieten an audit record.
         "{{ cookiecutter.project_slug }}.audit": {"level": "INFO", "handlers": ["stdout"], "propagate": False},
-        # A refused Host or a suspicious operation is a real signal, and nothing else reports it.
         "django.security": {"level": "INFO"},
-        # The request line carries the same failure with the actor on it. Left at ERROR rather than
-        # off, so a 500 raised outside that middleware still lands.
+        # ERROR, not off: a 500 raised outside the request-log middleware still lands.
         "django.request": {"level": "ERROR"},
-        # Every query, at DEBUG. Turning this up in production is a self-inflicted outage.
+        # Logs every query at DEBUG.
         "django.db.backends": {"level": "WARNING"},
         "celery": {"level": "WARNING"},
     },
 }
 
-# django-hosts dispatches by Host header via ROOT_HOSTCONF/host_patterns (see hosts.py) - this is
-# only the fallback used where no per-request host resolution applies (shell, management commands).
+# Only the fallback where no request picks a host (shell, management commands).
 ROOT_URLCONF = "{{ cookiecutter.project_slug }}.urls.api"
 ROOT_HOSTCONF = "{{ cookiecutter.project_slug }}.hosts"
 DEFAULT_HOST = "api"
@@ -165,8 +147,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
             ],
-            # allauth's account/email/** templates use the i18n blocktranslate tag without loading
-            # the i18n tag library themselves.
+            # allauth's email templates use blocktranslate without loading i18n.
             "builtins": ["django.templatetags.i18n"],
         },
     },
@@ -182,9 +163,7 @@ DATABASES = {
         "PASSWORD": config.DB.PASSWORD,
         "HOST": config.DB.HOST,
         "PORT": config.DB.PORT,
-        # A view that dies partway leaves nothing behind, and idempotency claims need a transaction to
-        # commit inside. Opt a view out with apps.common.transactions.not_atomic(reason); anything that
-        # cannot roll back (mail, task dispatch) waits for transaction.on_commit instead.
+        # Idempotency claims need a transaction to commit inside. Opt out with isik's not_atomic(reason).
         "ATOMIC_REQUESTS": True,
     }
 }
@@ -200,63 +179,47 @@ AUTH_PASSWORD_VALIDATORS = [
 
 AUTH_USER_MODEL = "users.User"
 
-# allauth's backend, subclassed so it answers to the login policy (apps/users/login_policy.py). It
-# signs in by username or email per ACCOUNT_LOGIN_METHODS, the admin's form included. Spelled by
-# defining module, not the package re-export: allauth records a social login under that path, and a
-# session whose path is not listed here is anonymous from its next request.
+# Spelled by defining module, not the package re-export: allauth records a social login under that
+# path, and a session whose path is not listed here is anonymous from its next request.
 AUTHENTICATION_BACKENDS = [
     "apps.users.backends.authentication.AuthenticationBackend",
-    # The only one answering permission questions - see apps/users/permissions.py for the vocabulary.
     "apps.users.backends.permissions.PermissionsBackend",
 ]
 
-# allauth - headless API only, no server-rendered account pages.
 ACCOUNT_LOGIN_METHODS = {"username", "email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*"]
 ACCOUNT_ADAPTER = "apps.users.adapters.account.AccountAdapter"
 SOCIALACCOUNT_ADAPTER = "apps.users.adapters.social_account.SocialAccountAdapter"
-# allauth's default (True) skips the signup form for a first social signup with a unique email,
-# committing a username taken verbatim from the provider. False routes every social signup through
-# the pending-signup flow, so the suggested username is always confirmable first.
+# True would commit the provider's username unconfirmed on a first social signup.
 SOCIALACCOUNT_AUTO_SIGNUP = False
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_EMAIL_NOTIFICATIONS = True
-# Literal False, not an empty dict - allauth builds its defaults and then .update()s this over
-# them, so {} would disable nothing at all. Only False short-circuits the whole thing. allauth
-# counts against the address nginx worked out, through AccountAdapter.get_client_ip.
+# False, not {}: allauth .update()s its defaults with this, so {} would disable nothing.
 if not config.RATE_LIMITS.ENABLED:  # see pyproject.toml's coverage exclude_lines for why
     ACCOUNT_RATE_LIMITS = False
 
-# Costs a write per authenticated request and needs UserSessionsMiddleware. Off means last_seen_at
-# never moves; listing and revoking work regardless.
+# On costs a write per request; off, last_seen_at never moves.
 USERSESSIONS_TRACK_ACTIVITY = False
 
-# Opt-in per user: nobody is made to enroll, but anyone who has a factor is challenged for it.
 MFA_SUPPORTED_TYPES = ["totp", "recovery_codes", "webauthn"]
 MFA_ADAPTER = "apps.users.adapters.mfa.MFAAdapter"
-# Otherwise the authenticator app shows the Site row's name, "example.com" until someone renames it.
+# Otherwise the authenticator app shows the Site row's name, "example.com".
 MFA_TOTP_ISSUER = {{ cookiecutter.project_name|tojson }}
-# A passkey is a second factor here, never a replacement for the password. Leaving this on would
-# mount a passwordless login route nothing calls and advertise it in the headless config.
+# A passkey is a second factor here, never a replacement for the password.
 MFA_PASSKEY_LOGIN_ENABLED = False
-# Shown once, at generation, so "write these down now" is true rather than advice.
 MFA_RECOVERY_CODES_SHOW_ONCE = True
 
 HEADLESS_ONLY = True
 HEADLESS_SERVE_SPECIFICATION = True
-# Adds "language" to the session/user payload the frontend already fetches on every page load -
-# see apps/users/headless.py for why this needs the adapter, not a plain serializer field.
+# Adds "language" to the session/user payload.
 HEADLESS_ADAPTER = "apps.users.headless.HeadlessAdapter"
 
 FRONTEND_SCHEME = "http" if DEBUG else "https"
 FRONTEND_ORIGIN = f"{FRONTEND_SCHEME}://{config.DOMAIN}"
-# A backstop for the proxy headers: outside DEBUG, every emailed link and OAuth redirect_uri allauth builds is https
-# even if a proxy in front drops X-Forwarded-Proto.
+# Backstop in case a proxy drops X-Forwarded-Proto: allauth's links stay https outside DEBUG.
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = FRONTEND_SCHEME
-# Absolute, not relative: the frontend lives on the bare domain, a different origin than these
-# headless endpoints (auth.<domain>) - a bare-path fallback here would resolve against auth.<domain>
-# instead of where the frontend actually serves these pages. Built via string concatenation, not an
-# f-string, so the literal "{key}" placeholder allauth substitutes later survives untouched.
+# Absolute: the frontend is a different origin from auth.<domain>. Concatenated, not an f-string,
+# so allauth's "{key}" placeholder survives.
 HEADLESS_FRONTEND_URLS = {
     "account_signup": FRONTEND_ORIGIN + "/auth/signup",
     "account_reset_password": FRONTEND_ORIGIN + "/auth/forgot-password",
@@ -266,8 +229,7 @@ HEADLESS_FRONTEND_URLS = {
 }
 
 
-# Read straight from the environment rather than through config.py: which providers exist is itself
-# configuration, so there is no fixed schema to declare their credentials in.
+# Read from the environment, not config.py: the set of providers has no fixed schema.
 _OAUTH_PREFIX = "{{ cookiecutter.config_prefix }}__OAUTH"
 
 
@@ -279,77 +241,57 @@ def _social_app_config(provider_id: str) -> dict:
         "key": "",
     }
     if provider_id == "openid_connect":
-        # openid_connect supports multiple distinct issuers side by side under one provider
-        # class - provider_id names *this* one and has to be a real, distinct value (not just
-        # "openid_connect" again - that's the provider *class*, not an instance), since the
-        # redirect/callback URLs are built from it: /v0/provider-callback/oidc/<provider_id>/
-        # login/callback/ ("oidc/" from allauth's own OPENID_CONNECT_URL_PREFIX default). This
-        # has to match whatever redirect_uri is registered on the IdP's side exactly. server_url
-        # is the one thing every other provider gets for free from allauth's own provider
-        # directory (a fixed, known IdP) but this provider has to be told explicitly.
+        # provider_id names this issuer and builds the callback URL, so it must match the IdP's
+        # registered redirect_uri.
         config["provider_id"] = os.environ.get(f"{prefix}__PROVIDER_ID", "openid_connect")
         config["name"] = "OpenID Connect"
         config["settings"] = {"server_url": os.environ.get(f"{prefix}__SERVER_URL", "")}
     return config
 
 
-# Settings-based, not DB-backed: each provider's client_id/secret come straight from its own env
-# var pair rather than an allauth SocialApp row, so there's nothing to configure through the admin
-# and nothing to seed in e2e - see OAUTH__<PROVIDER>__* in .env.example.
+# Settings, not SocialApp rows: nothing to configure in the admin or seed in e2e.
 SOCIALACCOUNT_PROVIDERS = {
     provider_id: {"APPS": [_social_app_config(provider_id)]} for provider_id in SOCIAL_LOGIN_PROVIDER_IDS
 }
 
-# Other apps signing their users in with this project, through django-oauth-toolkit on auth.<domain>/o/.
 # Its tables exist whatever the mode, so switching it on later is a restart, never a migration.
 OAUTH_PROVIDER_MODE = oauth_provider_mode(config.OAUTH_PROVIDER.MODE, config.OAUTH_PROVIDER.SIGNING_KEY)
 OAUTH_PROVIDER_APPLICATIONS_PER_USER = config.OAUTH_PROVIDER.APPLICATIONS_PER_USER
-# DOT's own row, swapped for one that carries its review state and the scopes it may ask for.
 OAUTH2_PROVIDER_APPLICATION_MODEL = "oauth_provider.Application"
 OAUTH2_PROVIDER = {
     "OIDC_ENABLED": True,
     "OIDC_RSA_PRIVATE_KEY": config.OAUTH_PROVIDER.SIGNING_KEY.replace("\\n", "\n"),
-    # The consent page words each scope itself, in the reader's language - these are for discovery.
+    # Only for discovery; the consent page words each scope itself.
     "SCOPES": {"openid": "Who you are", "profile": "Your name and username", "email": "Your email address"},
     "DEFAULT_SCOPES": ["openid"],
-    # The three above for every application, plus the permissions a superuser approved for this one.
     "SCOPES_BACKEND_CLASS": "apps.oauth_provider.token_scopes.TokenScopes",
-    # DOT's own advertises the profile and email claims and fills in neither - see the validator.
+    # DOT's own advertises the profile and email claims and fills in neither.
     "OAUTH2_VALIDATOR_CLASS": "apps.oauth_provider.validators.OAuth2Validator",
-    # Asked once per application and set of scopes, not on every sign-in: an unexpired grant covering
-    # what is asked for is reused. Nothing ever skips the question entirely.
     "REQUEST_APPROVAL_PROMPT": "auto",
     "PKCE_REQUIRED": True,
     "ALLOWED_REDIRECT_URI_SCHEMES": ["http", "https"] if DEBUG else ["https"],
-    # A replayed refresh token revokes its whole family: one of the two holders was not meant to have it.
     "REFRESH_TOKEN_REUSE_PROTECTION": True,
-    # RFC 9700, the OAuth security best current practice, adopted ahead of DOT 4.0 making it the default:
-    # no implicit or password grant, no "plain" PKCE, no token in a query string, `iss` on every
-    # authorization response, and tokens stored hashed.
+    # RFC 9700, ahead of DOT 4.0 making it the default.
     "COMPLIANT_BCP_RFC9700_IMPLICIT_GRANT": True,
     "COMPLIANT_BCP_RFC9700_PASSWORD_GRANT": True,
     "COMPLIANT_BCP_RFC9700_PKCE_METHOD": True,
     "COMPLIANT_BCP_RFC9700_ACCESS_TOKEN_TRANSPORT": True,
     "COMPLIANT_BCP_RFC9700_AUTHZ_RESPONSE_ISS": True,
     "COMPLIANT_BCP_RFC9700_TOKEN_STORAGE": True,
-    # ...and a configuration that falls short of it fails check --deploy rather than warning.
+    # These make a shortfall fail check --deploy rather than warn.
     "COMPLIANT_BCP_RFC9700_REFRESH_TOKEN": True,
     "COMPLIANT_BCP_RFC9700_REDIRECT_URI_SCHEME": True,
     "COMPLIANT_BCP_RFC9700_REDIRECT_URI_MATCHING": True,
     "COMPLIANT_BCP_RFC9700_PKCE_REQUIRED": True,
-    # A command line signing somebody in by showing them a code to enter on the frontend's /device page.
     "OAUTH_DEVICE_VERIFICATION_URI": FRONTEND_ORIGIN + "/device",
     "OAUTH_DEVICE_VERIFICATION_URI_COMPLETE": FRONTEND_ORIGIN + "/device?code={user_code}",
     "OAUTH_DEVICE_USER_CODE_GENERATOR": device_codes.user_code,
     "OAUTH_PRE_TOKEN_VALIDATION": [device_codes.spend_device_code],
 }
-# Where DOT's authorize endpoint sends somebody signed out: absolute, since it is answered on auth.<domain>
-# and the sign-in page is the frontend's. The frontend sends them back only to that one endpoint.
+# Absolute: DOT's authorize endpoint is on auth.<domain>, the sign-in page on the frontend.
 LOGIN_URL = FRONTEND_ORIGIN + "/auth/login"
 
 LANGUAGE_CODE = "en"
-# Names come from Django's own LANG_INFO, not hand-typed here, so this list can't drift from what
-# LocaleMiddleware/get_language_from_request actually recognize.
 LANGUAGES = [
     (code, LANG_INFO[code]["name"])
     for code in [
@@ -365,21 +307,16 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-# Compression only, not *Manifest*StaticFilesStorage: the manifest variant hashes every static
-# filename and requires collectstatic to have already run before a single static-file template tag
-# can resolve, including the Django admin's own templates - which breaks any test that renders an
-# admin page without a collectstatic step first. This still gets whitenoise's gzip/brotli
-# compression, just not content-hashed cache-busting.
+# Not the Manifest variant: it needs collectstatic before any admin page renders, tests included.
 STORAGES = {
 {%- if cookiecutter.storage == "disk" %}
-    # Uploads go to disk, on the `media` volume docker-compose.yml mounts here.
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
         "OPTIONS": {"location": "/media"},
     },
 {%- else %}
-    # Uploads go to S3 - {% if cookiecutter.storage == "garage" %}Garage{% else %}Garage locally{% endif %} (see docker-compose.yml's `storage`). Path-style
-    # addressing, because Garage serves buckets as paths unless it is given a domain for them.
+    # Uploads go to S3 - {% if cookiecutter.storage == "garage" %}Garage{% else %}Garage locally{% endif %}.
+    # Path-style, as Garage serves buckets as paths.
     "default": {
         "BACKEND": "storages.backends.s3.S3Storage",
         "OPTIONS": {
@@ -399,28 +336,23 @@ STORAGES = {
     },
 }
 
-# nginx terminates every client connection and always sets this header, whether it speaks plain
-# HTTP or sits behind a TLS-terminating load balancer.
+# nginx always sets this header.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_SERIALIZER = "django_msgspec.sessions.JSONSerializer"
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
-# A year, so a visitor's browser never starts over plain http where it can be downgraded. Preload stays
-# off: getting off the browsers' list again takes months, so it is the owner's call to make.
+# Preload stays off: leaving the browsers' list takes months, so it is the owner's call.
 SECURE_HSTS_SECONDS = 0 if DEBUG else 31_536_000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
-# What `check --deploy` (run in CI) is told to accept. W008: nginx or the load balancer in front of it
-# redirects http to https, before Django sees the request. W021: preload, as above.
+# W008: nginx or the load balancer redirects to https. W021: preload, as above.
 SILENCED_SYSTEM_CHECKS = ["security.W008", "security.W021"]
-# Shared across api./admin./auth.<domain> so one session/CSRF cookie pair covers all three -
-# without this, each subdomain would need its own login.
+# One session/CSRF cookie pair across every subdomain.
 SESSION_COOKIE_DOMAIN = f".{config.DOMAIN}"
 CSRF_COOKIE_DOMAIN = f".{config.DOMAIN}"
 
 
 def _origins(hosts: list[str], debug: bool) -> list[str]:
-    """Every scheme a browser may reach `hosts` on. Under DEBUG that is http and, once
-    scripts/dev-tls.sh has run (or in the e2e stack), https beside it; a real deployment is https only."""
+    """Under DEBUG https too, for scripts/dev-tls.sh and the e2e stack."""
     schemes = ["http", "https"] if debug else ["https"]
     return [f"{scheme}://{host}" for host in hosts for scheme in schemes]
 
@@ -428,24 +360,15 @@ def _origins(hosts: list[str], debug: bool) -> list[str]:
 CSRF_TRUSTED_ORIGINS = _origins(
     [config.DOMAIN, f"api.{config.DOMAIN}", f"admin.{config.DOMAIN}", f"auth.{config.DOMAIN}"], DEBUG
 )
-# The bare domain is where the frontend's own pages are served from, but its client-side JS calls
-# api./auth.<domain> directly (see apps/web/src/lib/authOrigin.ts) - a different origin from the
-# browser's point of view even though it's the same site for cookie purposes above. Without this,
-# the browser blocks those fetches before a response is ever read, regardless of what the response
-# actually contains.
+# The frontend's JS calls api./auth.<domain> directly - same site, but a different origin.
 CORS_ALLOWED_ORIGINS = _origins([config.DOMAIN], DEBUG)
 CORS_ALLOW_CREDENTIALS = True
-# A custom response header is invisible to cross-origin JS unless named here, and the frontend's
-# fetch wrapper (apiClients.ts) reads both: one sends somebody to prove it is them, the other to the
-# login page once their dead session's cookie was cleared.
-CORS_EXPOSE_HEADERS = ["X-Reauthentication-Required", "X-Session-Cleared"]
-# And a custom request header is refused at the preflight, before the request is ever sent: every
-# POST carries an Idempotency-Key (apps/idempotency), so the frontend's writes need it allowed.
-CORS_ALLOW_HEADERS = (*default_headers, "idempotency-key")
+# Response headers the frontend reads; cross-origin JS sees no custom header unless named here.
+CORS_EXPOSE_HEADERS = ["X-Reauthentication-Required", "X-Session-Cleared", "ETag"]
+# A custom request header not listed here is refused at the preflight.
+CORS_ALLOW_HEADERS = (*default_headers, "idempotency-key", "if-match", "if-none-match")
 
-# Where every rate limit keeps its counts (allauth's and the API's), so all of them have to be one
-# store every process and container shares: a cache of each process's own would let a caller make
-# the limit's worth of requests to every uwsgi process in turn.
+# Rate limits count here, so it must be shared: a per-process cache multiplies every limit.
 {%- if cookiecutter.cache == "redis" %}
 CACHES = {
     "default": {
@@ -458,14 +381,12 @@ CACHES = {
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.db.DatabaseCache",
-        # Made by `createcachetable` (entrypoint.sh), not by a migration: it is no model's table.
+        # Made by `createcachetable` (entrypoint.sh), not a migration.
         "LOCATION": "cache",
     },
 }
 {%- endif %}
 
-# Per address signed out, per account signed in, and a view's own `throttle_scope` for what has to be
-# stricter. Every one counts against the client nginx worked out - see apps/common/api/throttling.py.
 THROTTLE_CLASSES = [
     "apps.common.api.throttling.AnonymousRateThrottle",
     "apps.common.api.throttling.UserRateThrottle",
@@ -477,7 +398,7 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": config.RATE_LIMITS.ANONYMOUS,
         "user": config.RATE_LIMITS.USER,
-        # A device's user code is short enough to guess at: whoever enters one gets few tries.
+        # A device's user code is short enough to guess at.
         "device_codes": "10/minute",
     },
     "PAGE_SIZE": 100,
@@ -487,36 +408,44 @@ REST_FRAMEWORK = {
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ],
-    # isik's own AutoSchema, not drf-spectacular's - fixes HistoryMixin's own schema gaps (colliding
-    # operation ids between its two actions, both untyped as paginated lists otherwise).
+    # isik's own, for HistoryMixin's colliding operation ids and untyped paginated lists.
     "DEFAULT_SCHEMA_CLASS": "isik.django.drf.spectacular.AutoSchema",
     "DEFAULT_PERMISSION_CLASSES": [
         "isik.django.drf.permissions.ReadOnly",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
-        # Not a second, separate auth mechanism - the token *is* the session key
-        # (allauth.headless.tokens.strategies.sessions.SessionTokenStrategy, the default
-        # HEADLESS_TOKEN_STRATEGY), looked up in the same django_session table a cookie-based
-        # request hits. This is what lets a non-browser client (mobile app, CLI) authenticate with
-        # the X-Session-Token it got back from a headless login, without a second auth system to
-        # maintain.
+        # The token is the session key, for non-browser clients - not a second auth system.
         "allauth.headless.contrib.rest_framework.authentication.XSessionTokenAuthentication",
-        # A token somebody made for themselves, then an application acting for somebody who let it - both
-        # on the few views that say a token may. After the session ones, whose answer to nobody signed in
-        # (403) is the one DRF gives.
+        # After the session ones, whose answer to nobody signed in (403) is the one DRF gives.
         "apps.users.authentication.PersonalAccessTokenAuthentication",
         "apps.oauth_provider.authentication.ApplicationTokenAuthentication",
     ],
-    # Adds the refusal's code beside `detail` and logs every 403 - see apps/common/api/exception_handler.py.
     "EXCEPTION_HANDLER": "apps.common.api.exception_handler.exception_handler",
     "DEFAULT_RENDERER_CLASSES": ("apps.common.api.renderers.JSONRenderer",),
-    # DRF's own default list with only its JSON member replaced - JSON alone would answer 415 to multipart.
+    # JSON alone would answer 415 to multipart.
     "DEFAULT_PARSER_CLASSES": (
         "django_msgspec.rest_framework.JSONParser",
         "rest_framework.parsers.FormParser",
         "rest_framework.parsers.MultiPartParser",
     ),
+}
+
+# The web app watches for this header to sign a tab out once the backend has dropped a dead session cookie.
+DEAD_SESSION_HEADER = "X-Session-Cleared"
+# Each row says which build wrote it.
+HISTORY_CONTEXT_KEYS = ("version",)
+HISTORY_CONTEXT_VERSION = __version__
+# A task queued inside a request runs only once that request's rows are committed.
+HISTORY_TASK_DISPATCH_ON_COMMIT = True
+# Time-ordered ids: rows made later sort later, which keeps index pages filling in order.
+ISIK_PRIMARY_KEY_DEFAULT = "isik.django.apps.common.db.models.uuid7"
+ISIK_CHECKS = {
+    Check.DOCUMENTATION: {
+        CheckOption.EXEMPTION_TYPES: ["apps.common.schema_docs.NoHelpText", "apps.common.schema_docs.NoComment"],
+        # AbstractUser's and DOT's fields are described by their libraries, not redeclared here to say it again.
+        CheckOption.INHERITED_FROM_LIBRARIES: False,
+    },
 }
 
 SPECTACULAR_SETTINGS = {
@@ -526,35 +455,25 @@ SPECTACULAR_SETTINGS = {
     "COMPONENT_SPLIT_REQUEST": True,
     "POSTPROCESSING_HOOKS": [
         "drf_spectacular.hooks.postprocess_schema_enums",
-        # Every POST takes an Idempotency-Key, so the document says so once rather than per operation.
-        "apps.idempotency.schema.every_post_declares_the_key",
     ],
-    # The schema endpoint documenting itself is noise to every client generated from it.
     "SERVE_INCLUDE_SCHEMA": False,
-    # An enum component is a string union to whoever generates against it, so the suffix says
-    # nothing. Filled at startup by apps.common.enum_names.
+    # Filled at startup by apps.common.enum_names.
     "ENUM_SUFFIX": "",
     "ENUM_NAME_OVERRIDES": {},
-    # Labels come from settings.LANGUAGES and friends, which differ per project; the values are the contract.
+    # Labels differ per project; the values are the contract.
     "ENUM_GENERATE_CHOICE_DESCRIPTION": False,
 }
 
 {%- if cookiecutter.background_jobs == "inline" %}
-# No broker and no worker: a task runs in the process that dispatched it, once the transaction that
-# asked for it commits (celery_task.py). Its failure is logged and stays out of the response. A
-# countdown or eta is not waited for, and a retry runs at once.
+# No broker: a task runs in-process on commit (celery_task.py). Countdown/eta is not waited for.
 CELERY_TASK_ALWAYS_EAGER = True
 {%- else %}
-# RabbitMQ's default guest/guest user only accepts loopback connections, which worker/scheduler
-# aren't - real credentials are required even locally.
+# RabbitMQ's guest user is loopback-only, so real credentials are needed even locally.
 CELERY_BROKER_URL = f"amqp://{config.BROKER.USER}:{config.BROKER.PASSWORD}@{config.BROKER.HOST}:{config.BROKER.PORT}//"
 CELERY_RESULT_BACKEND = "django-db"
 {%- endif %}
 
-# Console under DEBUG - real SMTP creds aren't set up for local dev. EMAIL__BACKEND overrides this
-# independently of DEBUG - e2e needs smtp (routed to mailpit) while keeping DEBUG=true, since
-# DEBUG=false would also flip SESSION_COOKIE_SECURE/CSRF_COOKIE_SECURE on, and this stack has no
-# TLS termination to make that work.
+# EMAIL__BACKEND overrides DEBUG's choice: e2e needs smtp but DEBUG=false would force secure cookies.
 EMAIL_BACKEND = {
     "console": "django.core.mail.backends.console.EmailBackend",
     "smtp": "django.core.mail.backends.smtp.EmailBackend",
@@ -567,8 +486,7 @@ EMAIL_PORT = config.EMAIL.SMTP.PORT
 EMAIL_HOST_USER = config.EMAIL.SMTP.USER
 EMAIL_HOST_PASSWORD = config.EMAIL.SMTP.PASSWORD
 EMAIL_USE_TLS = config.EMAIL.SMTP.USE_TLS
-# Without one a mail host that drops packets holds the sending worker forever; with one it raises, and
-# the account-mail task retries.
+# Without one a mail host that drops packets holds the worker forever.
 EMAIL_TIMEOUT = 10
 DEFAULT_FROM_EMAIL = config.EMAIL.DEFAULT_FROM
 
@@ -577,8 +495,6 @@ if config.SENTRY.DSN:  # see pyproject.toml's coverage exclude_lines for why
         dsn=config.SENTRY.DSN,
         traces_sample_rate=float(config.SENTRY.TRACES_SAMPLE_RATE),
         debug=DEBUG,
-        # Named rather than left at the SDK's default: an exception report carries the request that
-        # caused it, and scrub_event narrows it by the same allowlist the request log uses.
         send_default_pii=False,
         before_send=scrub_event,
     )

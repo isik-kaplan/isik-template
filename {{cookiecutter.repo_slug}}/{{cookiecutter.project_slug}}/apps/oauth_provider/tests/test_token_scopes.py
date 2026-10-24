@@ -14,7 +14,6 @@ def test_every_scope_is_worded_for_the_consent_page():
 
 
 def test_with_no_application_only_signing_in_is_anybodys_to_ask_for():
-    """What discovery publishes: nothing else is anybody's until a superuser says so for one application."""
     assert TokenScopes().get_available_scopes() == ["openid", "profile", "email"]
 
 

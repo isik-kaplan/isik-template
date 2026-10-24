@@ -11,8 +11,7 @@ describe('SeparatorWithText', () => {
     expect(container.textContent).toBe('Or')
   })
 
-  // container.textContent, not getByText - getByText normalizes whitespace and would spuriously
-  // fail on whitespace-heavy fuzzed input.
+  // Not getByText, which normalizes whitespace and fails on fuzzed input.
   test.prop([fc.string()])('renders arbitrary text content unchanged', (text) => {
     const { container } = render(<SeparatorWithText>{text}</SeparatorWithText>)
     expect(container.textContent).toBe(text)

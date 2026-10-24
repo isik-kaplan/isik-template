@@ -57,8 +57,7 @@ describe('ForgotPassword', () => {
     let resolveRequest: (value: unknown) => void = () => undefined
     mockRequestPasswordReset.mockReturnValue(new Promise((resolve) => (resolveRequest = resolve)))
     await render(<ForgotPassword />)
-    // Not awaited: the promise above deliberately never resolves, and fireEvent's own act()
-    // wrapper waits for pending work to settle - awaiting it here would hang forever.
+    // Not awaited: fireEvent's act() would wait on the never-resolving promise.
     fireEvent.press(screen.getByTestId('forgot-password-submit'))
     await waitFor(() => expect(screen.getByText('Sending…')).toBeTruthy())
     resolveRequest({ data: undefined, error: undefined })

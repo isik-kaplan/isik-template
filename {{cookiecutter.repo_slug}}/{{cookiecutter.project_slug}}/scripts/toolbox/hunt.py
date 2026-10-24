@@ -1,23 +1,12 @@
-"""Find the survivors of ONE source file against the tests you name, in parallel and isolated.
+"""Find the survivors of ONE source file against the tests you name, in parallel, in a private copy.
 
-A full run pays for the whole-suite stats pass before testing anything. For one file whose own tests
-are fast this skips it: write the mutated file once, then select each mutant by `MUTANT_UNDER_TEST`,
-so the file never changes between mutants and they can all run at once.
-
-Every hunt works in a private copy of the project, so the real tree is never written to: a killed
-hunt leaves no mutated source behind, and hunts can run beside each other and beside a normal test
-run. The virtualenv is linked rather than copied.
-
-Scoped tests make this an *upper* bound on survivors - a mutant another test file kills reads as
-surviving here - which is the safe direction: it over-reports work and never hides a survivor.
-Survivors a registry already accounts for are listed apart, so they are not re-diagnosed.
+Skips the stats pass. Scoped tests make this an upper bound on survivors, never an under-report.
 
     python -m scripts.toolbox.hunt apps/users/adapters.py apps/users/tests/test_adapters.py
     python -m scripts.toolbox.hunt <source.py> <tests...> --only <mutant name>   # settle one mutant
     HUNT_JOBS=6 HUNT_DB_PREFIX=abc MUTMUT_DB_TEMPLATE=... python -m scripts.toolbox.hunt ...
 
-`MUTMUT_DB_TEMPLATE` (from `python scripts/mutation_template.py build`/`name`) makes each session
-clone a database rather than migrate one; without it every mutant pays for migrations.
+`MUTMUT_DB_TEMPLATE` (`python scripts/mutation_template.py name`) clones rather than migrates per mutant.
 """
 
 import argparse
@@ -34,8 +23,7 @@ from scripts.mutation_queue import ROOT
 from scripts.toolbox.generated import is_registered, mutated, names_in, registered
 
 
-# What a test session inside the copy reads. The registries are here because a test reads them, and
-# a test that raises scores every mutant as killed.
+# The registries too: a test reads them, and one that raises scores every mutant killed.
 COPIED = (
     "apps",
     "{{ cookiecutter.project_slug }}",
@@ -50,14 +38,12 @@ COPIED = (
 )
 LINKED = (".venv",)
 
-# pytest's exit codes are not a kill/survive bit: 1 is a failing test, which is a kill, but reading a
-# usage error or an empty collection as one scores every mutant killed having run nothing.
+# Not kills: these mean nothing ran.
 PYTEST_USAGE_ERROR = 4
 PYTEST_NOTHING_COLLECTED = 5
 
 
 def build_workdir(where):
-    """A private copy that imports as the real project."""
     shutil.rmtree(where, ignore_errors=True)
     where.mkdir(parents=True)
     for name in COPIED:
@@ -72,9 +58,7 @@ def build_workdir(where):
 
 
 def run_one(name, tests, slots, workdir, timeout):
-    """(name, killed) for one mutant against the named tests."""
-    # Taken when the work starts rather than derived from the submit index: two mutants running at
-    # once must never share a database, or one's broken session reads as the other's kill.
+    # Not the submit index: two concurrent mutants sharing a database would kill each other.
     slot = slots.get()
     try:
         environment = {
@@ -93,7 +77,6 @@ def run_one(name, tests, slots, workdir, timeout):
                 timeout=timeout,
             )
         except subprocess.TimeoutExpired:
-            # A mutant that hangs was not killed - nothing asserted anything about it.
             print(f"  timed out (reported as surviving): {name}", flush=True)
             return name, False
         if result.returncode in (PYTEST_USAGE_ERROR, PYTEST_NOTHING_COLLECTED):
@@ -117,8 +100,7 @@ def main(argv=None):
     timeout = float(os.environ.get("HUNT_TIMEOUT", "1500"))
     workdir = Path(tempfile.mkdtemp(prefix="hunt-"))
     build_workdir(workdir)
-    # pytest runs inside the copy, so a test path is only real if it resolves there - checked now
-    # rather than after a sweep that ran nothing.
+    # Checked in the copy, before a sweep that would run nothing.
     missing = [test for test in options.tests if not (workdir / test.partition("::")[0]).exists()]
     if missing:
         raise SystemExit(f"test paths that do not exist: {' '.join(missing)}")

@@ -20,8 +20,7 @@ function Row({ label, value }: { label: string; value?: string }) {
 
 function ProfileDetailsContent({ initialUser }: { initialUser: ProfileUser }) {
   const { t } = useClientTranslation(['auth'])
-  // Held here rather than re-fetched: the save answers with the saved user, and a refresh would
-  // re-render every server component on the page to show two names.
+  // Held here, not refreshed: the save answers with the saved user.
   const [user, setUser] = useState(initialUser)
   const unset = t('auth:profileDetailsUnset')
 
@@ -45,8 +44,7 @@ function ProfileDetailsContent({ initialUser }: { initialUser: ProfileUser }) {
   )
 }
 
-/** The account's own details, read first; only the names are editable - username and email are
- *  fixed past signup, and email has its own tab. */
+/** The account's details; only the names are editable here. */
 export function ProfileDetails({ user }: { user: ProfileUser }) {
   return (
     <EditModeProvider>

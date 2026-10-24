@@ -25,6 +25,5 @@ export type StorageItem = {
   purpose: keyof ReturnType<typeof storagePurposeLabels>
 }
 
-/** Every cookie and browser-storage key the site sets. The e2e suite fails on one a real sign-in sets that this
- * list leaves out, so the privacy policy's disclosure, rendered from it, stays true. */
+/** Every cookie and storage key the site sets; the e2e suite fails on one missing here. */
 export const STORAGE_ITEMS = disclosure.items as readonly StorageItem[]

@@ -9,9 +9,7 @@ export default async function PasswordResetPage({ params }: { params: Promise<{ 
 
   return (
     <AuthCard title={t('auth:resetPasswordTitle')}>
-      {/* See the same decode in verify-email/[key]/page.tsx - allauth's key contains ":", which
-          Next.js hands back exactly as it appeared in the URL (percent-encoded) rather than
-          decoding it itself. */}
+      {/* allauth's key contains ":", which Next hands back still percent-encoded. */}
       <ResetPasswordForm resetKey={decodeURIComponent(key)} />
     </AuthCard>
   )

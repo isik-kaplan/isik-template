@@ -4,10 +4,7 @@ import pytest
 from conftest import load_context
 
 
-# The one real (not skip_lockfile_generation'd) bake in the fast suite - proves
-# hooks/post_gen_project.py's generate_lock_files() still resolves and writes both lock files,
-# which is what lets both Dockerfiles use --frozen/npm ci instead of re-resolving dependencies on
-# every build. "minimal" over "default": no mobile workspace, fewer packages to resolve.
+# "minimal": no mobile workspace, fewer packages to resolve.
 pytestmark = pytest.mark.skipif(
     shutil.which("uv") is None or shutil.which("npm") is None,
     reason="uv or npm not available",

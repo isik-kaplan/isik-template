@@ -1,5 +1,4 @@
-"""The DRF half of the re-authentication gate, on a viewset made up for the purpose - the generated
-project has no DRF act of its own yet, and the first one it adds should find this already proven."""
+"""The DRF half of the re-authentication gate, on a made-up viewset: the project has no DRF act yet."""
 
 import time
 
@@ -12,14 +11,14 @@ from rest_framework.response import Response
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.common.api.reauthentication import ProvesWhoTheyAre
-from apps.common.api.request_policies import RecentlyProvedWhoTheyAre
+from apps.common.api.request_policies import NoReauthentication, RecentlyProvedWhoTheyAre
 from apps.users.models.user import User
 from apps.users.reauthentication.proof import SPENT_AT_SESSION_KEY
 
 
 class GatedViewSet(ProvesWhoTheyAre, viewsets.ViewSet):
     permission_classes = [AllowAny]
-    reauthentication_exempt_actions = {"list": "reading the list takes nothing from anybody"}
+    reauthentication_exempt_actions = {"list": NoReauthentication(reason="reading the list takes nothing from anybody")}
     reauthentication_fields = {"partial_update": {"is_active"}}
 
     def list(self, request):

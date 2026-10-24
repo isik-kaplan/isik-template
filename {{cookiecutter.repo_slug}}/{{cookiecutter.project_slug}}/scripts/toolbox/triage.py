@@ -1,11 +1,7 @@
-"""Turn a run's survivor list into the work it implies: netted, grouped by file, worst first.
+"""Turn a survivor list into work: registries subtracted, grouped by file, worst first.
 
-`unsettled.txt` (`<name>: <verdict>` lines) and `mutants/mutmut-confirmed.json` both list mutants
-flat and alphabetically, with the registries not subtracted and nothing saying which file a name
-belongs to. This reads either.
-
-    python -m scripts.toolbox.triage mutants/mutmut-confirmed.json
-    python -m scripts.toolbox.triage unsettled.txt --diffs
+python -m scripts.toolbox.triage mutants/mutmut-confirmed.json
+python -m scripts.toolbox.triage unsettled.txt --diffs
 """
 
 import argparse
@@ -17,7 +13,6 @@ from scripts.toolbox.generated import diff_of, is_registered, registered, source
 
 
 def survivors_in(path):
-    """Mutant names from a confirmed report (survivors only) or a `name: verdict` queue file."""
     text = Path(path).read_text()
     if path.endswith(".json"):
         return sorted(name for name, entry in json.loads(text).items() if entry.get("verdict") == "survived")

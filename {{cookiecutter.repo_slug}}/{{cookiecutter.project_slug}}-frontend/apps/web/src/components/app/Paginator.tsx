@@ -11,8 +11,7 @@ import { cn } from '@/lib/utils'
 
 type QueryParams = Record<string, string | number | boolean | undefined>
 
-// A step past either end is a span rather than a link: a link that goes nowhere is one more thing a
-// keyboard user tabs through for nothing.
+// Past either end a span, not a link a keyboard user tabs through for nothing.
 function Step({ href, label, children }: { href?: { query: QueryParams }; label: string; children: ReactNode }) {
   const look = cn(buttonVariants({ variant: 'outline', size: 'icon-sm' }))
   if (!href) {

@@ -16,13 +16,16 @@ import type { ApiType } from '@{{ cookiecutter.repo_slug }}/api'
 import { type Scope, ScopeChecklist } from './ScopeChecklist'
 import { useIdempotencyKey } from '@isikk/core/hooks'
 
-/** A superuser's answer to an application: approved for some or all of what it asked for, or taken down.
- *  One its owner switched off is theirs to switch back on, so there is only taking it down then. */
+/** A superuser approving some or all of what an application asks for, or taking it down. One its owner
+ *  switched off can only be taken down. */
 export function ApprovalPanel({
   application,
+  etag,
   scopes,
 }: {
   application: ApiType<'ReviewedApplication'>
+  // The read's ETag header, which approving names.
+  etag: string | null
   scopes: Scope[]
 }) {
   const { t } = useClientTranslation(['auth'])
@@ -52,14 +55,21 @@ export function ApprovalPanel({
             className="self-start"
             disabled={isSubmitting}
             onClick={() =>
-              submit(() => api().approveOAuthApplication(application.id, approved, approval.keyFor(approved)), {
-                success: t('auth:applicationReviewApproved'),
-                failure: t('auth:applicationReviewApproveError'),
-                onSuccess: () => {
-                  approval.used()
-                  router.refresh()
-                },
-              })
+              submit(
+                (headers) =>
+                  api().approveOAuthApplication(application.id, approved, approval.keyFor(approved), headers),
+                {
+                  success: t('auth:applicationReviewApproved'),
+                  failure: t('auth:applicationReviewApproveError'),
+                  // Against what it asked for when this page loaded, which may have changed since.
+                  etag,
+                  onStale: () => router.refresh(),
+                  onSuccess: () => {
+                    approval.used()
+                    router.refresh()
+                  },
+                }
+              )
             }
           >
             {t('auth:applicationReviewApprove')}

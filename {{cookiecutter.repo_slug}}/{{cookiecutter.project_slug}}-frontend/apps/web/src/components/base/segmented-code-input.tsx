@@ -4,13 +4,7 @@ import { useId, useRef } from 'react'
 
 import { cn } from '@/lib/utils'
 
-/**
- * A code typed one digit per box, grouped the way it is read: `groups="3-3"` is 123-456, `"4-4"` a
- * backup code, `"6"` one unbroken run. The boxes say how long the code is before anything is typed.
- *
- * Not for a field that also accepts something else - a recovery code has neither this length nor
- * this shape, so it gets a plain input.
- */
+/** One digit per box, grouped as read: `groups="3-3"` is 123-456. Not for a field that takes anything else. */
 export type SegmentedCodeInputProps = {
   value: string
   onChange: (value: string) => void
@@ -47,8 +41,7 @@ export function SegmentedCodeInput({
     boxes.current[Math.min(Math.max(index, 0), total - 1)]?.focus()
   }
 
-  // Held as a fixed-length string, so clearing a box in the middle leaves a hole rather than pulling
-  // the rest of the code left under the cursor.
+  // Fixed length, so clearing a middle box leaves a hole rather than shifting the rest.
   function write(at: number, characters: string) {
     const held = value.padEnd(total, ' ').slice(0, total).split('')
     const typed = characters.split('').filter((character) => DIGIT.test(character))
@@ -85,8 +78,7 @@ export function SegmentedCodeInput({
                       boxes.current[at] = box
                     }}
                     aria-label={digitLabel(at + 1, total)}
-                    // text rather than number: a spinner on a digit is nonsense, and number drops the
-                    // leading zero a code may open with.
+                    // Not number, which drops a leading zero.
                     type="text"
                     inputMode="numeric"
                     autoComplete="one-time-code"
@@ -98,8 +90,7 @@ export function SegmentedCodeInput({
                     onFocus={(event) => event.currentTarget.select()}
                     onChange={(event) => write(at, event.target.value.slice(-1))}
                     onKeyDown={(event) => {
-                      // Written from the key, not left to onChange: a full box is at maxLength, and
-                      // the browser drops the keystroke before any change event fires.
+                      // From the key: at maxLength the browser drops it before onChange.
                       if (DIGIT.test(event.key)) {
                         event.preventDefault()
                         write(at, event.key)

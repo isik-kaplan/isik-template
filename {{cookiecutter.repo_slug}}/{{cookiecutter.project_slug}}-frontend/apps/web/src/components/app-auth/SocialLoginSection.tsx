@@ -13,8 +13,7 @@ export type SocialLoginSectionProps = {
   dividerText: React.ReactNode
 }
 
-// Buttons and their "or" divider are one unit: no provider configured means neither renders,
-// not a bare divider sitting above an email-only form.
+// No providers means no divider either.
 export function SocialLoginSection({ action, callbackUrl, dividerText }: SocialLoginSectionProps) {
   if (socialProviders().length === 0) return null
 

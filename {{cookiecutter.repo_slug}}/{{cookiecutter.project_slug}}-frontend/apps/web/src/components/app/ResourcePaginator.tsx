@@ -3,11 +3,7 @@ import type { Asked, FilterSpec } from '@/components/app/Filters/filterSpec'
 import { pageFrom } from '@/components/app/Filters/paging'
 import { Paginator } from '@/components/app/Paginator'
 
-/**
- * The page control under a listing, carrying that listing's filters into every page link. Through
- * `queryFrom` rather than the raw search params, so paging keeps what was narrowed and drops what the
- * endpoint never offered - the same reading the listing itself did.
- */
+/** Page links carrying the listing's filters, read through `queryFrom` as the listing reads them. */
 export async function ResourcePaginator<Query>({
   specs,
   asked,

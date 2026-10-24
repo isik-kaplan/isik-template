@@ -1,5 +1,4 @@
-# Layered over a self-mode bake's docker-compose.yml by test_self_tls.py: Pebble stands in for Let's Encrypt,
-# and the challenge still goes through the generated nginx on :80, as in production.
+# Pebble stands in for Let's Encrypt; the challenge still goes through the generated nginx on :80.
 services:
   # Pebble's ACME endpoint is https, so certbot needs a certificate it can verify. The server image carries openssl.
   pebble-certs:

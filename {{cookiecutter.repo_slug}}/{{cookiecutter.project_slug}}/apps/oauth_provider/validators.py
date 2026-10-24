@@ -5,12 +5,10 @@ from apps.users.login_policy import admits_session
 
 
 class OAuth2Validator(_OAuth2Validator):
-    """Fills in the profile and email claims DOT advertises but never populates. DOT still drops each one
-    whose scope was not granted (`oidc_claim_scope`), so this can say everything it knows."""
+    """Fills in the claims DOT advertises but never populates; DOT drops those whose scope was not granted."""
 
     def validate_bearer_token(self, token, scopes, request):
-        """DOT's, refusing a token whose application has since stopped being approved or whose person may
-        no longer sign in: DOT reads neither, and a token outlives both decisions until it expires."""
+        """Also refuses a token whose application or person has since been shut out: DOT checks neither."""
         if not super().validate_bearer_token(token, scopes, request):
             return False
         access_token = request.access_token
@@ -31,15 +29,13 @@ class OAuth2Validator(_OAuth2Validator):
         if user.get_full_name():
             claims["name"] = user.get_full_name()
 
-        # The address allauth verified, not User.email, which nothing checks; createsuperuser writes no
-        # EmailAddress row, so such an account falls back to it, said to be unverified.
+        # allauth's verified address; createsuperuser writes none, so fall back to User.email, unverified.
         primary = EmailAddress.objects.filter(user=user, primary=True).first()
         email = primary.email if primary else user.email
         if email:
             claims["email"] = email
             claims["email_verified"] = bool(primary and primary.verified)
 
-        # When they last really signed in - see AuthorizationView.get for why that is `last_login`.
         if user.last_login:
             claims["auth_time"] = int(user.last_login.timestamp())
         return claims

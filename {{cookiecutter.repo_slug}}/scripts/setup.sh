@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
-# Writes .env, for either local development or a real deployment. Run automatically as
-# cookiecutter's own last generation step (see hooks/post_gen_project.py) - a plain
-# `cookiecutter gh:isik-kaplan/isik-template` leaves you with a working .env already, no second
-# command needed. Rerun it by hand later (`bash scripts/setup.sh`) to redo that choice, e.g. to
-# move the same checkout from dev to a real deployment.
+# Writes .env for local development or a real deployment. Generation already ran it once; rerun it
+# to switch a checkout to a deployment.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -19,8 +16,7 @@ if [ -f "$ENV_FILE" ]; then
       *) echo "Leaving $ENV_FILE as-is."; exit 0 ;;
     esac
   else
-    # Non-interactive and already has an .env (e.g. a second cookiecutter post-gen pass) - never
-    # clobber silently.
+    # Never overwrite silently.
     exit 0
   fi
 fi
@@ -28,9 +24,7 @@ fi
 cp "$EXAMPLE_FILE" "$ENV_FILE"
 
 if [ ! -t 0 ]; then
-  # No real terminal attached - a CI bake (tests/, bake-real-ci) or this script fed from a pipe.
-  # .env.example's own values already work for local development out of the box (see its own
-  # header comment), so there is nothing to prompt for.
+  # No terminal to prompt on; .env.example's values already work for local development.
   exit 0
 fi
 
@@ -51,10 +45,7 @@ if ! command -v openssl >/dev/null 2>&1; then
   exit 1
 fi
 
-# Replaces KEY=... (commented or not) in .env, appending it if the key isn't there at all. Python,
-# not sed - a generated secret or a typed-in value can contain characters sed would treat as
-# pattern/replacement syntax (&, /, newlines from a pasted multi-line value never happen here, but
-# the others do).
+# Sets KEY in .env, commented out or not, appending it if absent. Python, not sed: a value may hold & or /.
 set_var() {
   python3 - "$1" "$2" <<'PY'
 import re
@@ -94,7 +85,7 @@ echo
 echo "Generating secrets..."
 set_var "${PREFIX}__DEBUG" "false"
 set_var "${PREFIX}__SECRET_KEY" "$(random_hex 32)"
-# A Fernet key is 32 random bytes in url-safe base64, which plain base64 becomes by swapping two characters.
+# A Fernet key: 32 random bytes, url-safe base64.
 set_var "${PREFIX}__CREDENTIAL_KEY" "$(openssl rand -base64 32 | tr '+/' '-_')"
 set_var "${PREFIX}__DB__PASSWORD" "$(random_hex 24)"
 {%- if cookiecutter.background_jobs != "inline" %}
@@ -184,10 +175,7 @@ if [ -n "$social_login_providers" ]; then
   set_var "${PREFIX}__SOCIAL_LOGIN__PROVIDERS" "$social_login_providers"
   echo "Their credentials (leave blank to configure later - that provider's button just won't"
   echo "complete its flow until you do):"
-  # Reads the provider list from fd 3, not stdin (fd 0) - ask()/ask_secret() inside the loop body
-  # need stdin free to read the real answer, or each one would silently consume the next line of
-  # the list instead of prompting, and every answer after the first would shift onto the wrong
-  # provider/question.
+  # The list comes in on fd 3: the prompts inside the loop need stdin, or they would read the list.
   while IFS= read -r provider <&3; do
     [ -z "$provider" ] && continue
     key="$(echo "$provider" | tr '[:lower:]' '[:upper:]')"
@@ -207,7 +195,7 @@ echo
 oauth_provider_mode="$(ask "Let other apps sign their users in with this project? off, approval (a superuser approves each app) or auto" "off")"
 set_var "${PREFIX}__OAUTH_PROVIDER__MODE" "$oauth_provider_mode"
 if [ "$oauth_provider_mode" != "off" ]; then
-  # One line, each line break written \n, which the backend reads back - a .env value is one line.
+  # A .env value is one line, so line breaks are written \n, which the backend reads back.
   set_var "${PREFIX}__OAUTH_PROVIDER__SIGNING_KEY" \
     "$(openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 2>/dev/null | awk '{printf "%s\\n", $0}')"
 fi

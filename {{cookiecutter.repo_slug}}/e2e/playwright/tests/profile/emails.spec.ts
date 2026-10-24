@@ -9,13 +9,11 @@ test('adding, verifying, promoting, and removing a secondary email all work end 
   const secondaryEmail = `${username}-secondary@example.test`
   await signUpAndVerify(page, username, primaryEmail, 'correct-horse-battery-staple')
   await login(page, username, 'correct-horse-battery-staple')
-  // login() doesn't itself wait for the post-submit redirect - a goto() right after can otherwise
-  // race the session cookie actually being set and bounce off /profile/emails' own auth gate.
+  // login() doesn't wait for the redirect; a goto() right after would race the session cookie.
   await expect(page.getByText(`Signed in as ${username}.`)).toBeVisible()
 
   await page.goto('/profile/emails')
-  // The profile header above the list also shows the primary address, so scope to the list itself
-  // (there's exactly one <ul>) to keep this a single-element match.
+  // The profile header also shows the primary address, so scope to the list.
   const emailsList = page.getByRole('list')
   await expect(emailsList.getByText(primaryEmail)).toBeVisible()
 
@@ -36,16 +34,14 @@ test('adding, verifying, promoting, and removing a secondary email all work end 
   const verifyLink = await extractLinkFromEmail(secondaryEmail, '/auth/verify-email/')
   await page.goto(verifyLink)
   await page.getByRole('button', { name: 'Confirm email address' }).click()
-  // Already authenticated, so a valid key sends this straight home rather than to /auth/login.
+  // Already signed in, so home rather than /auth/login.
   await expect(page).toHaveURL('/')
 
   await page.goto('/profile/emails')
-  // exact: true - getByText matching is a case-insensitive substring by default, and "Verified"
-  // is a substring of "Unverified", so a loose match here could pass against either badge state.
+  // exact: "Verified" is a substring of "Unverified".
   await expect(secondaryRow.getByText('Verified', { exact: true })).toBeVisible()
 
-  // Adding the address spent its proof, so this act asks again - and comes back here to be done once
-  // it has the answer.
+  // Adding the address spent its proof, so this act asks again.
   await secondaryRow.getByRole('button', { name: 'Email actions' }).click()
   await page.getByText('Make primary').click()
   await proveWithPassword(page, 'correct-horse-battery-staple')
@@ -62,8 +58,6 @@ test('adding, verifying, promoting, and removing a secondary email all work end 
   await primaryRow.getByRole('button', { name: 'Email actions' }).click()
   await page.getByText('Remove').click()
   await expect(page.getByText('Email removed.')).toBeVisible()
-  // Scoped to the list, not the whole page - the profile header above it still shows whichever
-  // email was primary as of the last full navigation, which is stale by design (see the layout's
-  // own comment on getSession()) and would make a page-wide text search flaky here.
+  // Scoped to the list: the header still shows the stale primary until a full navigation.
   await expect(page.getByRole('listitem').filter({ hasText: primaryEmail })).toHaveCount(0)
 })

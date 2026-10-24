@@ -50,7 +50,7 @@ describe('ApplicationLifecycle', () => {
   it('switches an approved application off and reads the page again', async () => {
     const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }))
     globalThis.fetch = fetchMock
-    render(<ApplicationLifecycle application={application('approved')} />)
+    render(<ApplicationLifecycle application={application('approved')} etag={'"4"'} />)
 
     expect(screen.getByText(/Nobody can sign in with it while it is off/)).toBeTruthy()
     await userEvent.click(screen.getByRole('button', { name: 'Switch it off' }))
@@ -69,7 +69,7 @@ describe('ApplicationLifecycle', () => {
     withoutRandomUUID()
     const fetchMock = answering(200)
     globalThis.fetch = fetchMock
-    render(<ApplicationLifecycle application={application('approved')} />)
+    render(<ApplicationLifecycle application={application('approved')} etag={'"4"'} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Switch it off' }))
 
@@ -83,7 +83,7 @@ describe('ApplicationLifecycle', () => {
   ] as const)('retries one %s under the same key, and makes a new one once it went through', async (approval, name) => {
     const fetchMock = answering(500, 200, 200)
     globalThis.fetch = fetchMock
-    render(<ApplicationLifecycle application={application(approval)} />)
+    render(<ApplicationLifecycle application={application(approval)} etag={'"4"'} />)
 
     for (let attempt = 0; attempt < 3; attempt++) {
       await userEvent.click(screen.getByRole('button', { name }))
@@ -96,7 +96,7 @@ describe('ApplicationLifecycle', () => {
 
   it('says so when it could not be switched off', async () => {
     globalThis.fetch = vi.fn(async () => new Response(null, { status: 500 }))
-    render(<ApplicationLifecycle application={application('approved')} />)
+    render(<ApplicationLifecycle application={application('approved')} etag={'"4"'} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Switch it off' }))
 
@@ -107,7 +107,7 @@ describe('ApplicationLifecycle', () => {
   it('switches one that is off back on', async () => {
     const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }))
     globalThis.fetch = fetchMock
-    render(<ApplicationLifecycle application={application('disabled')} />)
+    render(<ApplicationLifecycle application={application('disabled')} etag={'"4"'} />)
 
     expect(screen.getByText(/It is off/)).toBeTruthy()
     await userEvent.click(screen.getByRole('button', { name: 'Switch it back on' }))
@@ -123,7 +123,7 @@ describe('ApplicationLifecycle', () => {
 
   it('says so when it could not be switched back on', async () => {
     globalThis.fetch = vi.fn(async () => new Response(null, { status: 500 }))
-    render(<ApplicationLifecycle application={application('disabled')} />)
+    render(<ApplicationLifecycle application={application('disabled')} etag={'"4"'} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Switch it back on' }))
 
@@ -133,19 +133,55 @@ describe('ApplicationLifecycle', () => {
   it('deletes one that is off and leaves for the list', async () => {
     const fetchMock = vi.fn(async () => new Response(null, { status: 204 }))
     globalThis.fetch = fetchMock
-    render(<ApplicationLifecycle application={application('disabled')} />)
+    render(<ApplicationLifecycle application={application('disabled')} etag={'"4"'} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Delete it' }))
 
-    expect(requested(fetchMock)).toEqual({ method: 'DELETE', path: '/v0/oauth-applications/7/', key: null })
+    expect(requested(fetchMock)).toEqual({
+      method: 'DELETE',
+      path: '/v0/oauth-applications/7/',
+      key: expect.any(String),
+    })
+    // Against the version this page showed: one changed since is shown again rather than deleted.
+    expect((fetchMock.mock.calls[0] as unknown as [Request])[0].headers.get('If-Match')).toBe('"4"')
     expect(toast.success).toHaveBeenCalledWith('App deleted.')
     expect(push).toHaveBeenCalledWith('/applications')
     expect(refresh).not.toHaveBeenCalled()
   })
 
+  it('retries a failed delete under the same key', async () => {
+    const fetchMock = answering(500, 200)
+    globalThis.fetch = fetchMock
+    render(<ApplicationLifecycle application={application('disabled')} etag={'"4"'} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Delete it' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Delete it' }))
+
+    const [first, retry] = keysSent(fetchMock)
+    expect(first).toEqual(expect.any(String))
+    expect(retry).toBe(first)
+  })
+
+  it('shows it as it is now, rather than deleting it, when it changed since the page loaded', async () => {
+    globalThis.fetch = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ detail: 'Changed.', code: 'precondition_failed', current: { id: 7 } }), {
+          status: 412,
+          headers: { 'Content-Type': 'application/json' },
+        })
+    )
+    render(<ApplicationLifecycle application={application('disabled')} etag={'"4"'} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Delete it' }))
+
+    expect(toast.error).toHaveBeenCalledWith('Someone else changed this since you opened it. Review their changes.')
+    expect(push).not.toHaveBeenCalled()
+    expect(refresh).toHaveBeenCalled()
+  })
+
   it('says so when it could not be deleted', async () => {
     globalThis.fetch = vi.fn(async () => new Response(null, { status: 500 }))
-    render(<ApplicationLifecycle application={application('disabled')} />)
+    render(<ApplicationLifecycle application={application('disabled')} etag={'"4"'} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Delete it' }))
 
@@ -155,7 +191,7 @@ describe('ApplicationLifecycle', () => {
 
   it('holds every button while one request is out', async () => {
     globalThis.fetch = vi.fn(() => new Promise<Response>(() => {}))
-    render(<ApplicationLifecycle application={application('disabled')} />)
+    render(<ApplicationLifecycle application={application('disabled')} etag={'"4"'} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Switch it back on' }))
 
@@ -164,7 +200,7 @@ describe('ApplicationLifecycle', () => {
 
   it('holds the off switch while it is out', async () => {
     globalThis.fetch = vi.fn(() => new Promise<Response>(() => {}))
-    render(<ApplicationLifecycle application={application('approved')} />)
+    render(<ApplicationLifecycle application={application('approved')} etag={'"4"'} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Switch it off' }))
 
@@ -175,7 +211,7 @@ describe('ApplicationLifecycle', () => {
     ['pending', 'A superuser has to approve it before it can sign anybody in.'],
     ['withdrawn', 'A superuser withdrew it. Only a superuser can approve it again.'],
   ] as const)('offers nothing but says why while it is %s', (approval, said) => {
-    render(<ApplicationLifecycle application={application(approval)} />)
+    render(<ApplicationLifecycle application={application(approval)} etag={'"4"'} />)
 
     expect(screen.getByText(said)).toBeTruthy()
     expect(screen.queryAllByRole('button')).toEqual([])

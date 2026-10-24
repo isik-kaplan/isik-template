@@ -4,8 +4,7 @@ import { networkInterfaces } from 'node:os'
 
 import { login, proveWithPassword, signUpAndVerify } from '../helpers'
 
-// This container's own address on the stack's network - what nginx sees as the caller, and so the
-// address a session must be recorded under.
+// What nginx sees as the caller, so the address a session must be recorded under.
 function ownAddress(): string {
   const addresses = Object.values(networkInterfaces()).flat()
   const external = addresses.find((address) => address && address.family === 'IPv4' && !address.internal)
@@ -18,12 +17,10 @@ test('revoking a single session and revoking the rest both end those sessions fo
   const password = 'correct-horse-battery-staple'
   await signUpAndVerify(page, username, `${username}@example.test`, password)
   await login(page, username, password)
-  // login() doesn't itself wait for the post-submit redirect - each of these needs to wait for
-  // its own since the very next thing either reads the session list (which would race the cookie
-  // actually being set) or is itself another login sharing the same "Signed in as" text.
+  // login() doesn't wait for the redirect; the next step would race the session cookie.
   await expect(page.getByText(`Signed in as ${username}.`)).toBeVisible()
 
-  // Two more logins as the same user, each its own cookie jar - three real sessions server-side.
+  // Two more cookie jars: three real sessions.
   const contextB = await browser.newContext()
   const pageB = await contextB.newPage()
   await login(pageB, username, password)
@@ -58,7 +55,7 @@ test('revoking a single session and revoking the rest both end those sessions fo
   await expect(rows).toHaveCount(1)
   await expect(page.getByRole('button', { name: /Sign out \d+ other device/ })).not.toBeVisible()
 
-  // The revoked sessions are gone server-side, not just hidden in this tab's view of the list.
+  // Gone server-side, not just hidden.
   await pageB.goto('/profile/details')
   await expect(pageB).toHaveURL(/\/auth\/login/)
   await pageC.goto('/profile/details')
@@ -75,8 +72,7 @@ test('a session is recorded under the visitor\'s address, whatever X-Forwarded-F
   const username = `sessions-xff-${Date.now()}`
   const password = 'correct-horse-battery-staple'
   await signUpAndVerify(page, username, `${username}@example.test`, password)
-  // On the login request alone, where the session is recorded - set for every request, the header
-  // would make each cross-subdomain fetch a CORS preflight the API never asked for.
+  // On the login request alone: on every request it would make cross-subdomain fetches preflight.
   await page.route('**/auth/login', (route) =>
     route.continue({ headers: { ...route.request().headers(), 'x-forwarded-for': spoofed } })
   )

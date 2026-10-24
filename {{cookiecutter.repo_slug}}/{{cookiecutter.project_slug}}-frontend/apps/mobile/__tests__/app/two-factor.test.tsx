@@ -90,7 +90,7 @@ describe('TwoFactor', () => {
 
     let resolve: (value: unknown) => void = () => undefined
     mockCompleteMfaChallenge.mockReturnValue(new Promise((done) => (resolve = done)))
-    // Not awaited: fireEvent's own act() would wait on the promise above, which is held open.
+    // Not awaited: fireEvent's act() would wait on the held-open promise.
     fireEvent.press(screen.getByTestId('two-factor-submit'))
     await waitFor(() => expect(screen.getByText('Verifying…')).toBeTruthy())
     expect(screen.queryByTestId('two-factor-error')).toBeNull()

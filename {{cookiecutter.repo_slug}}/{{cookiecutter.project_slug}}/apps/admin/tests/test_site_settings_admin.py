@@ -146,7 +146,6 @@ def test_saving_without_moving_the_ladder_signs_nobody_out(client, superuser):
 
 
 def test_saving_hands_the_admin_everything_it_was_given():
-    """BaseAdmin reads the request for its force-current-user fields, and Django's own the rest."""
     admin = site._registry[SiteSettings]
     request, obj, form = SimpleNamespace(user=None), SimpleNamespace(), SimpleNamespace()
 

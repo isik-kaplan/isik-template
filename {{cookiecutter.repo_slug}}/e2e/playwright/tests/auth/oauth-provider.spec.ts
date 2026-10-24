@@ -29,16 +29,11 @@ async function registerApplication(page: Page, name: string): Promise<{ clientId
   return { clientId: values[0], clientSecret: values[1] }
 }
 
-// The whole of "Sign in with" this project, from every end: somebody registers an application, a
-// superuser approves it and lets them manage people, a signed-out visitor is sent through sign-in and the
-// consent page, the application trades the code for tokens, reads who signed in and acts for them on the
-// API - and shutting it out from the profile leaves its token worth nothing.
 test('an application is approved, signs somebody in, acts for them, and is shut out again', async ({
   page,
   browser,
 }) => {
-  // Three people prove it is them along the way - registering, approving, granting - each a round trip
-  // through the prove page.
+  // Three round trips through the prove page.
   test.setTimeout(90_000)
   const username = `oauth-${Date.now()}`
   const email = `${username}@example.test`
@@ -84,7 +79,7 @@ test('an application is approved, signs somebody in, acts for them, and is shut 
     code_challenge_method: 'S256',
   }).toString()
 
-  // Somebody else's browser, signed out: sign-in first, then straight back to the question.
+  // A signed-out browser: sign-in first, then back to the consent page.
   const visitor = await (await browser.newContext({ ignoreHTTPSErrors: true })).newPage()
   await visitor.goto(authorize.href)
   await expect(visitor).toHaveURL(/\/auth\/login\?next=/)
@@ -97,8 +92,7 @@ test('an application is approved, signs somebody in, acts for them, and is shut 
   await expect(visitor.getByText('See your email address')).toBeVisible()
   await expect(visitor.getByText(MANAGE_PEOPLE)).toBeVisible()
   await expect(visitor.getByText(`Not ${username}?`)).toBeVisible()
-  // Read off the request the browser makes to it: nothing answers there, and whether the browser's own
-  // navigation can be intercepted after a form post's redirect depends on the scheme it came from.
+  // Read off the request: intercepting navigation after a form post's redirect depends on the scheme.
   const returning = visitor.waitForRequest((request) => request.url().startsWith(`${REDIRECT_URI}?`))
   await visitor.getByRole('button', { name: 'Allow' }).click()
 
@@ -118,17 +112,16 @@ test('an application is approved, signs somebody in, acts for them, and is shut 
   expect(tokens.status()).toBe(200)
   const { access_token: accessToken } = await tokens.json()
   const bearer = { headers: { Authorization: `Bearer ${accessToken}` } }
-  // From the application's own server: the token and nothing else, none of the browser's cookies.
+  // The token alone, none of the browser's cookies.
   const application = (await browser.newContext({ ignoreHTTPSErrors: true })).request
   const userinfo = () => application.get(`${authOrigin}/o/userinfo/`, bearer)
   const people = () => application.get(`${apiOrigin}/v0/users/`, bearer)
   expect(await (await userinfo()).json()).toMatchObject({ email, preferred_username: username })
   const listed = (await (await people()).json()).results.map((person: { username: string }) => person.username)
   expect(listed).toEqual(expect.arrayContaining([username, SUPERUSER]))
-  // Only what says an application may: its person's own account settings are not among them.
+  // Not the person's own account settings.
   expect((await application.get(`${apiOrigin}/v0/users/me/`, bearer)).status()).toBe(403)
 
-  // Back at the profile of the account it signed into: it is listed, and can be shut out.
   await page.goto('/profile/applications')
   await act(
     page,

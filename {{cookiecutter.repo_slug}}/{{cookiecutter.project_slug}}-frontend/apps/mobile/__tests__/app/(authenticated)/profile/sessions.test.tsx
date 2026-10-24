@@ -80,8 +80,7 @@ describe('ProfileSessions', () => {
     mockEndSessions.mockReturnValue(new Promise((resolve) => (resolveEnd = resolve)))
     await render(<ProfileSessions />)
     await waitFor(() => expect(screen.getByTestId('revoke-session-2')).toBeTruthy())
-    // Not awaited: the promise above deliberately never resolves, and fireEvent's own act()
-    // wrapper waits for pending work to settle - awaiting it here would hang forever.
+    // Not awaited: fireEvent's act() would wait on the never-resolving promise.
     fireEvent.press(screen.getByTestId('revoke-session-2'))
     await waitFor(() => expect(screen.getByText('Revoking…')).toBeTruthy())
     resolveEnd({ data: { data: twoSessions } })
@@ -104,8 +103,7 @@ describe('ProfileSessions', () => {
     await render(<ProfileSessions />)
     await waitFor(() => expect(screen.getByTestId('revoke-other-sessions')).toBeTruthy())
     expect(screen.getByTestId('revoke-other-sessions').props.accessibilityState.disabled).toBe(false)
-    // Not awaited: the promise above deliberately never resolves, and fireEvent's own act()
-    // wrapper waits for pending work to settle - awaiting it here would hang forever.
+    // Not awaited: fireEvent's act() would wait on the never-resolving promise.
     fireEvent.press(screen.getByTestId('revoke-session-2'))
     await waitFor(() =>
       expect(screen.getByTestId('revoke-other-sessions').props.accessibilityState.disabled).toBe(true)

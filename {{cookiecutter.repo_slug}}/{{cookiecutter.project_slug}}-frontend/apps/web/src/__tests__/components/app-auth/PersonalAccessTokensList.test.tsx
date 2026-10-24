@@ -115,9 +115,31 @@ describe('PersonalAccessTokensList', () => {
     const [request] = fetchMock.mock.calls[0] as unknown as [Request]
     expect(request.method).toBe('DELETE')
     expect(new URL(request.url).pathname).toBe('/v0/personal-access-tokens/a/')
+    expect(request.headers.get('Idempotency-Key')).toBeTruthy()
     expect(screen.queryByText('Deploys')).toBeNull()
     expect(screen.getByText('Cron')).toBeTruthy()
     expect(toast.success).toHaveBeenCalledWith('Token deleted.')
+  })
+
+  it('tries a failed delete again under the same key, so a lost answer is not acted on twice', async () => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 500 }))
+    globalThis.fetch = fetchMock
+    render(
+      <PersonalAccessTokensList
+        initialTokens={[token({ id: 'a', name: 'Deploys' }), token({ id: 'b', name: 'Cron' })]}
+        scopes={SCOPES}
+      />
+    )
+
+    await userEvent.click(within(rowOf('Deploys')).getByRole('button', { name: 'Delete' }))
+    await userEvent.click(within(rowOf('Deploys')).getByRole('button', { name: 'Delete' }))
+    await userEvent.click(within(rowOf('Cron')).getByRole('button', { name: 'Delete' }))
+
+    const [first, again, other] = fetchMock.mock.calls.map((call) =>
+      (call as unknown as [Request])[0].headers.get('Idempotency-Key')
+    )
+    expect(again).toBe(first)
+    expect(other).not.toBe(first)
   })
 
   it("keeps a token it could not delete, with the backend's word or its own", async () => {

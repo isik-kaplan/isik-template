@@ -29,8 +29,7 @@ export function ForgotPasswordForm() {
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     if (!validate()) return
-    // allauth intentionally never reveals whether the address is registered - always proceed, unless
-    // it refused to send anything for now, which "email sent" would misreport.
+    // allauth never reveals whether the address is registered; only a rate-limit refusal stops here.
     const { response } = await new AuthApi(authOrigin()).requestPasswordReset(formState.email)
     if (response.status === 429) {
       toast.error(tooManyRequestsMessage(retryAfterOf(response)))

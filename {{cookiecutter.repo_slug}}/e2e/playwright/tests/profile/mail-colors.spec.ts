@@ -6,8 +6,7 @@ import { waitForLatestEmailTo } from '../mailpit'
 // Mail is only ever drawn light, so the page it is held to has to be too.
 test.use({ colorScheme: 'light' })
 
-// MJML inlines the button's colors onto the anchor it builds - as `background`, not
-// `background-color` - so the first anchor carrying one is the button; the others are plain links.
+// MJML inlines the button's color as `background` on its anchor; the other anchors are plain links.
 function buttonColorsIn(html: string) {
   const styles = [...html.matchAll(/<a\b[^>]*style="([^"]*)"/gi)].map((match) => match[1])
   const button = styles.find((style) => /(?:^|[;\s])background\s*:/i.test(style))
@@ -24,8 +23,7 @@ function buttonColorsIn(html: string) {
   return { background: property('background'), ink: property('color') }
 }
 
-// Painted rather than compared as text: the page answers in whichever color space the token was
-// authored in and the mail answers in hex, so only the pixels are comparable.
+// Compared as pixels: the page answers in the token's color space, the mail in hex.
 async function asPixels(page: Page, values: string[]) {
   return page.evaluate((colors: string[]) => {
     const canvas = document.createElement('canvas')
@@ -54,8 +52,7 @@ test("a mail's button wears the same colors as the app's primary button", async 
 
   await page.goto('/auth/login')
   const onThePage = await page.evaluate(() => {
-    // Through real properties rather than the custom ones, which come back as the text they were
-    // authored as, oklch() and all.
+    // Custom properties come back as authored text, oklch() and all.
     const probe = document.createElement('span')
     probe.style.color = 'var(--primary)'
     probe.style.backgroundColor = 'var(--primary-foreground)'

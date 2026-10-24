@@ -36,9 +36,8 @@ export function EmailsList({ initialEmails }: EmailsListProps) {
     await submit(({ email }) => createAuthApi(authOrigin()).addEmail(email), {
       success: t('auth:profileEmailAdded'),
       failure: t('auth:profileEmailAddError'),
-      // data is defined here: onSuccess only runs once the default isSuccess (Boolean(data)) held.
       onSuccess: ({ data }) => {
-        setEmails(data!.data as EmailAddress[])
+        setEmails(data.data as EmailAddress[])
         resetFormState()
       },
     })
@@ -48,9 +47,7 @@ export function EmailsList({ initialEmails }: EmailsListProps) {
     <div className="flex flex-col gap-4">
       <ul className="divide-y divide-border">
         {emails.map((emailAddress) => {
-          // A primary, already-verified email has no available action (can't re-primary itself,
-          // can't resend a verification it already has, can't remove the account's primary email)
-          // - the "..." trigger stays visible for layout consistency but must not open an empty menu.
+          // A verified primary has no actions: the trigger stays for layout but must not open empty.
           const hasActions = !emailAddress.primary || !emailAddress.verified
 
           return (

@@ -1,6 +1,5 @@
 #!/bin/sh
-# Points nginx's certificate path at certbot's certificate once there is one, and at a throwaway self-signed one
-# until then. Run before nginx starts and before each of its periodic reloads (entrypoint.sh).
+# Points nginx at certbot's certificate once there is one, and at a throwaway self-signed one until then.
 set -e
 DOMAIN="{{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}"
 LIVE_DIR="/etc/letsencrypt/live/$DOMAIN"

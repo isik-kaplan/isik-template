@@ -6,9 +6,7 @@ export type ApiResponse<T extends keyof paths, TMethod extends keyof paths[T]> =
 export type ApiType<T extends keyof components['schemas']> = components['schemas'][T]
 export type Includes<T, K extends keyof T, F> = Omit<T, K> & { [P in K]: F }
 
-// openapi-typescript can't express that a DRF ?include= narrows a related field from a bare id to
-// a nested object at request time - these are type-assertion escape hatches for exactly that gap,
-// asserting what the caller already knows from which ?include= it actually sent.
+// openapi-typescript can't express that ?include= swaps an id for a nested object; the caller asserts it.
 export function includesType<
   T extends object,
   K extends keyof T,

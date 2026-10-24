@@ -16,8 +16,7 @@ def test_user_has_a_uuid7_primary_key():
 
 
 def _refused(queryset, **values):
-    """Whether the database itself refuses this write. `update()` runs no `full_clean()`, so only the
-    column's own CHECK stands in the way."""
+    """`update()` skips `full_clean()`, so only the database CHECK can refuse."""
     try:
         with transaction.atomic():
             queryset.update(**values)

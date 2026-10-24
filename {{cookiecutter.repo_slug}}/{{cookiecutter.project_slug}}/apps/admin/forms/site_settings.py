@@ -5,8 +5,7 @@ from apps.users.models.site_settings import SiteSettings
 
 
 class SiteSettingsForm(forms.ModelForm):
-    # An option on the change that raises the ladder rather than a stored setting: during a breach you
-    # do not want to mail the account you just cut off, and during planned maintenance you do.
+    # Per change, not stored: during a breach you do not want to mail the account you just cut off.
     mail_the_people_signed_out = forms.BooleanField(
         required=False,
         label=_("Email the people this signs out"),

@@ -9,9 +9,7 @@ from apps.users.permissions import VOCABULARY
 
 @extend_schema_field(OpenApiTypes.STR)
 class ScopeField(serializers.SlugRelatedField):
-    """A permission a token may act with, by its `where:action:what` name - the scope an application asks
-    people for, or one somebody gives a personal access token. Only a delegatable one: a name that could
-    widen a token's own access does not resolve, so nobody is invited to ask for what can never be given."""
+    """A delegatable permission, by its `where:action:what` name, that a token may act with."""
 
     def __init__(self, **kwargs):
         super().__init__(slug_field="codename", **kwargs)

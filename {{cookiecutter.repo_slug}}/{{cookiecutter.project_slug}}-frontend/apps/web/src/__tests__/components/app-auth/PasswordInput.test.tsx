@@ -7,9 +7,7 @@ import { describe, expect, it } from 'vitest'
 
 describe('PasswordInput', () => {
   test.prop([fc.string()])('holds an arbitrary value masked, and reveals it verbatim on toggle', (value) => {
-    // fast-check runs many iterations within this one test - vitest's own afterEach cleanup only
-    // fires between tests, not between property iterations, so a stale render from the previous
-    // iteration would otherwise still be mounted and make getByLabelText ambiguous.
+    // afterEach cleanup doesn't run between fast-check iterations.
     cleanup()
     render(<PasswordInput aria-label="password" value={value} onChange={() => {}} />)
     const input = screen.getByLabelText('password') as HTMLInputElement
@@ -19,10 +17,7 @@ describe('PasswordInput', () => {
     expect(input.value).toBe(value)
   })
 
-  // A plain example rather than folded into the property test above: Stryker's coverage tracking
-  // for a fast-check property test does not reliably credit or re-run it per mutant (confirmed by
-  // reproducing a mutation here directly with `vitest run` - the assertion does fail, just not
-  // under Stryker), so the type-attribute assertions live in their own ordinary test instead.
+  // Not in the property test above: Stryker doesn't reliably credit a fast-check property test per mutant.
   it('masks the value behind type="password", and reveals it as type="text" on toggle', () => {
     render(<PasswordInput aria-label="password" value="secret" onChange={() => {}} />)
     const input = screen.getByLabelText('password') as HTMLInputElement

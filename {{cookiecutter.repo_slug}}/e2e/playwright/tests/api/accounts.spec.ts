@@ -5,8 +5,6 @@ import { login, signUpAndVerify } from '../helpers'
 const PASSWORD = 'correct-horse-battery-staple'
 const API = 'http://api.{{ cookiecutter.domain }}'
 
-// Every account carries an email address - its owner's to read (and staff's), never a list anybody
-// can page through.
 test("an account is its owner's to read, hidden from anybody else and refused to nobody signed in", async ({
   page,
   browser,
@@ -48,7 +46,7 @@ test("a dead session's cookie is gone from the browser once the API says it clea
   const response = await context.request.get(`${API}/v0/users/me/`)
 
   expect(response.status()).toBe(403)
-  expect(response.headers()['x-session-cleared']).toBe('1')
+  expect(response.headers()['x-session-cleared']).toBe('true')
   expect((await context.cookies()).map((cookie) => cookie.name)).not.toContain('sessionid')
   await context.close()
 })

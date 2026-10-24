@@ -15,8 +15,7 @@ function Tabs({ className, orientation = 'horizontal', ...props }: TabsPrimitive
   )
 }
 
-// Wraps onto another row rather than overflowing: a strip with more triggers than its width holds keeps
-// every one reachable, and each row's flex-1 triggers still divide it evenly.
+// Wraps rather than overflows, so every trigger stays reachable.
 function TabsList({ className, ...props }: TabsPrimitive.List.Props) {
   return (
     <TabsPrimitive.List

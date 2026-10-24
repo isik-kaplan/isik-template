@@ -8,10 +8,7 @@ from apps.common.email import mjml_template, text_template
 from apps.users.models.user import User
 
 
-# Every account/email/<flow> directory this adapter knows how to render, regardless of whether
-# the current settings actually reach it (login_code/password_reset_code need
-# ACCOUNT_LOGIN_BY_CODE_ENABLED/ACCOUNT_PASSWORD_RESET_BY_CODE_ENABLED, both off by default) - a
-# template that only compiles when a flag happens to be on isn't really ported.
+# Every flow, including ones current settings never reach (login_code, password_reset_code).
 FLOWS = [
     "account_already_exists",
     "email_changed",
@@ -29,15 +26,12 @@ FLOWS = [
     "unknown_account",
 ]
 
-# SocialLogin.connect()/disconnect() send these unconditionally whenever ACCOUNT_EMAIL_NOTIFICATIONS
-# is on - unlike FLOWS above, allauth calls send_notification_mail with this prefix itself, so a
-# missing template here doesn't fail at render time in this test, it fails mid-request in production.
+# allauth sends these itself, so a missing one fails mid-request in production.
 SOCIAL_FLOWS = [
     "account_connected",
     "account_disconnected",
 ]
 
-# allauth.mfa sends these itself on every factor change, the same way SOCIAL_FLOWS are sent.
 MFA_FLOWS = [
     "recovery_codes_generated",
     "totp_activated",
@@ -46,8 +40,6 @@ MFA_FLOWS = [
     "webauthn_removed",
 ]
 
-# One dummy per placeholder any flow's message/subject templates reference - a superset, not
-# tailored per flow, since irrelevant keys in the context are harmless.
 DUMMY_CONTEXT = {
     "email": "someone@example.test",
     "password_reset_url": "https://example.test/reset",
@@ -67,9 +59,6 @@ DUMMY_CONTEXT = {
 @pytest.mark.django_db
 @pytest.mark.parametrize("flow", FLOWS)
 def test_every_ported_flow_renders(flow):
-    """Guards against a template syntax error in any flow, including the ones current settings
-    never actually trigger - a broken extends/block chain here would otherwise only surface the
-    day someone flips the setting that reaches it."""
     user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
     context = {**DUMMY_CONTEXT, "user": user}
 
@@ -114,8 +103,7 @@ def test_every_mfa_flow_renders(flow):
 
 @pytest.mark.django_db
 def test_signup_sends_a_real_confirmation_email(client):
-    """End-to-end through the real adapter, not a direct template call - this is what actually
-    proves send_mail's email_folder path-building matches allauth's own template_prefix shape."""
+    """Proves email_folder matches allauth's own template_prefix shape."""
     host = f"auth.{settings.PARENT_HOST}"
     client.get("/v0/browser/v1/auth/session", HTTP_HOST=host)
     client.post(
@@ -130,7 +118,6 @@ def test_signup_sends_a_real_confirmation_email(client):
     sent = mail.outbox[0]
     assert sent.to == ["newuser@example.test"]
     assert sent.subject
-    # html_message is set via send_mail(..., html_message=...), surfaced as the second alternative.
     assert sent.alternatives
     html_body = sent.alternatives[0][0]
     assert "<html" in html_body.lower() or "!doctype" in html_body.lower()

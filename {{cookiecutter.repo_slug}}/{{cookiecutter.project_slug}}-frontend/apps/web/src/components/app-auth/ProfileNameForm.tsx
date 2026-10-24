@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import type React from 'react'
 
+import { ConflictNotice } from '@/components/app/ConflictNotice'
 import { SaveActions, useEditMode } from '@/components/app/EditMode'
 import { Input } from '@/components/base/input'
 import { Label } from '@/components/base/label'
@@ -10,7 +11,7 @@ import { Label } from '@/components/base/label'
 import { useClientTranslation } from '@/i18n/client'
 import { createApi } from '@/lib/apiClients'
 import { apiOrigin } from '@/lib/apiOrigin'
-import { useValidatedFormState } from '@/lib/submit'
+import { useVersionedFormState } from '@/lib/submit'
 
 import type { ApiType } from '@{{ cookiecutter.repo_slug }}/api'
 
@@ -19,7 +20,10 @@ import { z } from 'zod'
 // Django's own max_length on both name columns.
 const NAME_MAX_LENGTH = 150
 
-export type ProfileUser = Pick<ApiType<'User'>, 'username' | 'email' | 'first_name' | 'last_name'>
+// The read's ETag; null for the session's fallback copy, so a save is refused (428).
+export type ProfileUser = Pick<ApiType<'User'>, 'username' | 'email' | 'first_name' | 'last_name'> & {
+  etag: string | null
+}
 
 export function ProfileNameForm({ user, onSaved }: { user: ProfileUser; onSaved: (user: ProfileUser) => void }) {
   const { t } = useClientTranslation(['auth'])
@@ -28,21 +32,22 @@ export function ProfileNameForm({ user, onSaved }: { user: ProfileUser; onSaved:
     const name = z.string().max(NAME_MAX_LENGTH, t('auth:validationNameTooLong'))
     return z.object({ first_name: name, last_name: name })
   }, [t])
-  const { formState, formErrors, handleFormStateEvent, isSubmitting, submit } = useValidatedFormState(
-    schema,
-    // Optional in the document because a write may leave them out; a read always carries both.
-    { first_name: user.first_name ?? '', last_name: user.last_name ?? '' }
-  )
+  const { formState, formErrors, handleFormStateEvent, isSubmitting, submit, conflict, takeTheirs, keepMine } =
+    useVersionedFormState(
+      schema,
+      // Optional in the document because a write may leave them out; a read always carries both.
+      { first_name: user.first_name ?? '', last_name: user.last_name ?? '' },
+      // So another tab's save is not overwritten.
+      { etag: user.etag }
+    )
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
-    await submit((names) => createApi(apiOrigin()).updateMe(names), {
+    await submit((names, headers) => createApi(apiOrigin()).updateMe(names, headers), {
       failure: t('auth:profileDetailsSaveError'),
-      // A PATCH, which sends no idempotency key.
-      idempotencyKey: false,
-      // data is defined here: onSuccess only runs once the default success check held.
-      onSuccess: ({ data }) => {
-        onSaved(data!)
+      // The save's ETag goes with it.
+      onSuccess: ({ data }, { etag }) => {
+        onSaved({ ...data, etag })
         stop()
       },
     })
@@ -73,6 +78,7 @@ export function ProfileNameForm({ user, onSaved }: { user: ProfileUser; onSaved:
         />
       </div>
       {formErrors?.non_field_errors && <p className="text-sm text-destructive">{formErrors.non_field_errors[0]}</p>}
+      <ConflictNotice conflict={conflict} takeTheirs={takeTheirs} keepMine={keepMine} disabled={isSubmitting} />
       <SaveActions isSubmitting={isSubmitting} />
     </form>
   )

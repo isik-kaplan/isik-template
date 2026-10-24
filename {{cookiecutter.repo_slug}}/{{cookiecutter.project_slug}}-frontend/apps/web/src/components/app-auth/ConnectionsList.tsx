@@ -25,37 +25,29 @@ type ProviderAccount = { id: number; provider: { id: string; name: string }; uid
 
 export type ConnectionsListProps = {
   initialProviders: ProviderAccount[]
-  // Both full absolute URLs, computed server-side by the page (getRequestOrigin) and passed down
-  // - see AutoFormButton's own comment on why this isn't built here from authOrigin().
+  // Absolute URLs, computed server-side by the page (see AutoFormButton).
   connectAction: string
   callbackUrl: string
-  // The connect flow's callback_url points straight back at this page (see page.tsx's own
-  // comment), so a failed attempt arrives as a query param rather than a thrown error - rendered
-  // inline (not a toast: unlike handleDisconnect below, this didn't just result from an action
-  // taken on this page, so a message that vanishes on its own would be easy to miss), then
-  // stripped from the URL so a refresh doesn't repeat it.
+  // A failed connect arrives as a query param: shown inline, not as a toast nobody was watching
+  // for, then stripped from the URL so a refresh doesn't repeat it.
   connectError?: string
 }
 
 export function ConnectionsList({ initialProviders, connectAction, callbackUrl, connectError }: ConnectionsListProps) {
   const { t } = useClientTranslation(['auth'])
   const [connected, setConnected] = useState(initialProviders)
-  // Captured once at mount, not read from the prop on every render - router.replace below causes
-  // page.tsx to re-fetch searchParams without `error`, which would otherwise make the banner
-  // disappear the instant it's stripped from the URL.
+  // Captured at mount: stripping it from the URL re-renders without `error`.
   const [connectErrorShown] = useState(connectError)
   const router = useRouter()
   const pathname = usePathname()
 
   useEffect(() => {
     if (!connectError) return
-    // The backend refused to connect until this person proves it is them - not a dead end: off to
-    // prove it, and back here to connect again.
+    // Refused until they prove it is them: off to prove it, then back here.
     router.replace(connectError === REAUTHENTICATION_REQUIRED_ERROR ? provePath(pathname) : pathname)
   }, [connectError, pathname, router])
 
-  // allauth's own codes for a failed connect attempt (do_connect, socialaccount/internal/flows/
-  // connect.py) - anything else (incl. `unknown`) falls through to a generic message.
+  // allauth's codes for a failed connect; anything else gets a generic message.
   function getErrorMessage() {
     switch (connectErrorShown) {
       case undefined:

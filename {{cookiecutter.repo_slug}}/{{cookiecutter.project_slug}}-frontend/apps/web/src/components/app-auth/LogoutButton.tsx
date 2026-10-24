@@ -20,8 +20,7 @@ export function LogoutButton({ children, ...props }: LogoutButtonProps) {
 
   async function handleLogout() {
     await new AuthApi(authOrigin()).logout()
-    // This tab is the only one that knows - the shared cookie is already gone, but a sibling tab
-    // sits on stale rendered content until it makes a request of its own.
+    // Only this tab knows; siblings show stale content until their next request.
     broadcastSessionCleared()
     router.push('/')
     router.refresh()

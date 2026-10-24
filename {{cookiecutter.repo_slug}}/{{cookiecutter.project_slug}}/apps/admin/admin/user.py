@@ -9,13 +9,12 @@ class UserAdmin(BaseAdmin):
     search_fields = ["username", "email"]
     list_display = ["username", "email", "is_staff", "is_active"]
     list_filter = ["is_staff", "is_superuser", "is_active"]
-    # Editing this field directly would store a new password as plaintext, not hash it - view-only
-    # here; use the "change password" admin action or `manage.py changepassword` to actually set one.
+    # Editing password here would store it as plaintext.
     global_readonly_fields = ["password", "terms_version", "terms_accepted_at"]
     object_fieldsets = [
         (("username", "password"), "Credentials"),
         (("first_name", "last_name", "email"), "Personal info"),
         (("is_active", "is_staff", "is_superuser", "groups", "user_permissions"), "Permissions"),
-        # What signup recorded; read-only, since an acceptance nobody made is worse than none.
+        # Read-only: an acceptance nobody made is worse than none.
         (("terms_version", "terms_accepted_at"), "Terms"),
     ]

@@ -1,6 +1,5 @@
 class AuthenticationOnlyMixin:
-    """Strips the permission half off a `ModelBackend` subclass. Django unions `get_all_permissions` across
-    every backend, so exactly one may answer - `PermissionsBackend`."""
+    """Django unions permissions across backends, so only `PermissionsBackend` may answer."""
 
     def get_user_permissions(self, user_obj, obj=None):
         return set()

@@ -146,7 +146,6 @@ def test_enabling_totp_mails_the_owner_through_the_projects_own_template(client,
     _reauthenticate(client)
     secret = client.get(TOTP_PATH, HTTP_HOST=AUTH_HOST).json()["meta"]["secret"]
 
-    # allauth mails from transaction.on_commit, which the test transaction never reaches by itself.
     with django_capture_on_commit_callbacks(execute=True):
         response = _post(client, "/v0/browser/v1/account/authenticators/totp", {"code": _current_code(secret)})
 
@@ -206,7 +205,7 @@ def test_an_app_that_cannot_be_turned_on_says_why_rather_than_asking_for_a_proof
 
 @pytest.mark.django_db
 def test_the_frontend_origin_is_cors_allowed_over_https_too(client):
-    """The e2e passkey specs reach this DEBUG backend over https, and passkeys exist only there."""
+    """Passkeys exist only over https, which the e2e specs use."""
     origin = f"https://{settings.PARENT_HOST}"
 
     response = client.get("/v0/browser/v1/auth/session", HTTP_HOST=AUTH_HOST, HTTP_ORIGIN=origin)

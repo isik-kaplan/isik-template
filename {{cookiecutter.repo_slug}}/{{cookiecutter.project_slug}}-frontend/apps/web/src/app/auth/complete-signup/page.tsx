@@ -6,28 +6,22 @@ import { CompleteSignupForm } from '@/components/app-auth/CompleteSignupForm'
 import { LegalConsentNotice } from '@/components/app-legal/LegalConsentNotice'
 
 import { sUseTranslation } from '@/i18n'
-import { isLocalDevHost } from '@/lib/isLocalDevHost'
+import { requestOrigin } from '@/lib/requestOrigin'
 import { visitorFetch } from '@/lib/visitor'
 
 import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
-import { getRequestOrigin } from '@isikk/core/next/request'
-
-// Landed on after a first-ever social signup - SOCIALACCOUNT_AUTO_SIGNUP is off, so the provider's
-// suggested username is always confirmable here first, not committed silently. Lives under
-// auth/, not profile/ - profile/layout.tsx requires an existing session, and by definition there
-// isn't one yet at this point (that's exactly what this page is for) - nesting it there created an
-// infinite redirect loop with /auth/login's own pending-signup check.
+// After a first-ever social signup. Under auth/, not profile/: profile/layout.tsx requires a session,
+// which looped with /auth/login's pending-signup check.
 export default async function CompleteSignupPage() {
   const requestHeaders = await headers()
-  const authOrigin = getRequestOrigin(requestHeaders, { isLocalDevHost }).replace('://', '://auth.')
+  const authOrigin = requestOrigin(requestHeaders).replace('://', '://auth.')
   const authApi = new AuthApi(authOrigin, {
     cookieHeader: requestHeaders.get('cookie') ?? undefined,
     baseFetch: visitorFetch(requestHeaders),
   })
 
-  // No pending signup (this page reached directly, or the flow already completed/expired) - there
-  // is nothing to finish here.
+  // No pending signup: nothing to finish.
   const { data } = await authApi.pendingProviderSignup()
   if (!data) redirect('/auth/login')
   const { t } = await sUseTranslation(['auth'])

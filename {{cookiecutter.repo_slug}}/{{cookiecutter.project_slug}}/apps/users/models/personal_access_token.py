@@ -12,14 +12,11 @@ class PersonalAccessTokenQuerySet(models.QuerySet):
         return self.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=Now()))
 
 
-# When it was last used is not part of its history: every request would write an event.
+# Every request would otherwise write an event.
 @track_events(exclude=["last_used_at", "updated_at"])
 class PersonalAccessToken(BaseModel):
-    """A token somebody made for themselves, for a script or a command line to call the API as them - with
-    only the scopes they gave it, and never more than they hold themselves when it is used.
-
-    Only a checksum is kept: the token is shown once, when it is made, and a lost one is replaced.
-    """
+    """A token somebody made to call the API as themselves, within its scopes and what they hold. Only a
+    checksum is kept."""
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

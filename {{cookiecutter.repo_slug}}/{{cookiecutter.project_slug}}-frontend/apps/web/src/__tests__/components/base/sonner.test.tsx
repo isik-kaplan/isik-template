@@ -29,9 +29,7 @@ describe('Toaster', () => {
     toast('Done')
     await waitFor(() => expect(document.body.textContent).toContain('Done'))
 
-    // sonner resolves "system" against prefers-color-scheme and mirrors the result onto this
-    // attribute - an empty string (an unrecognized theme, e.g. a missing default) is left as
-    // empty instead, so this still tells the two apart.
+    // An unrecognized theme leaves this empty, so "system" is told apart from a missing default.
     expect(document.querySelector('[data-sonner-toaster]')?.getAttribute('data-sonner-theme')).toBe('light')
   })
 

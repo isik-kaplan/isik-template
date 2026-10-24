@@ -1,9 +1,4 @@
-"""What the published documents must be true about, before anything is typed against them.
-
-`packages/api/src/schema.ts` is generated from the api document and `packages/auth-api` is written
-against the auth one, so a document that is wrong here fails much later, as a frontend call that
-cannot type-check or cannot reach its endpoint.
-"""
+"""The published documents the frontend is typed against; one wrong here fails much later, in a call."""
 
 import json
 from io import StringIO
@@ -35,10 +30,8 @@ def _refs(node):
 
 
 def test_the_api_generator_reports_nothing():
-    """Asked of the generator because the document cannot answer it: two components claiming one
-    name arrive as a dropped or hashed component rather than a duplicate key, so what is published
-    looks correct. Private, because the public surface is a bool and a failure that cannot name the
-    warning is one somebody silences."""
+    """A name collision publishes a hashed or dropped component that looks correct. The private caches,
+    because a bare bool cannot name the warning."""
     openapi.api_document()
 
     assert dict(GENERATOR_STATS._warn_cache) == {}

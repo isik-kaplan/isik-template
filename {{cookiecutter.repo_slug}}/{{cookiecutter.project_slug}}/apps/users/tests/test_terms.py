@@ -18,7 +18,6 @@ VERSION = "0123456789ab"
 
 @pytest.fixture
 def published(monkeypatch):
-    """The project as if its legal documents existed, whatever this checkout ships."""
     monkeypatch.setattr("apps.users.adapters.account.TERMS_VERSION", VERSION)
 
 
@@ -73,7 +72,6 @@ def test_a_social_signup_records_the_published_version_and_when(published):
 
 @pytest.mark.django_db
 def test_a_social_signup_finished_on_the_signup_form_keeps_what_the_form_chose(published):
-    """The provider's suggestion is only a default: the form's answers are what the account is made with."""
     form = SimpleNamespace(cleaned_data={"username": "chosen", "email": "chosen@example.test"})
 
     user = _social_sign_up("suggested", form=form)
@@ -84,7 +82,6 @@ def test_a_social_signup_finished_on_the_signup_form_keeps_what_the_form_chose(p
 
 @pytest.mark.django_db
 def test_a_signup_records_nothing_while_no_documents_are_published(client, unpublished):
-    """Nobody can have agreed to documents that did not exist yet."""
     for user in (_sign_up(client, "jane"), _social_sign_up("sam")):
         assert user.terms_version == ""
         assert user.terms_accepted_at is None
@@ -100,7 +97,7 @@ def test_an_account_made_outside_signup_records_no_acceptance(published):
 
 @pytest.mark.django_db
 def test_a_caller_that_saves_the_account_itself_gets_it_unsaved_with_the_acceptance_on_it(published):
-    """`commit=False` is how a signup that still has fields to add asks for the account: recorded, not saved."""
+    """`commit=False`: recorded, not saved."""
     form = SimpleNamespace(cleaned_data={"username": "later", "email": "later@example.test", "password1": PASSWORD})
 
     user = AccountAdapter().save_user(RequestFactory().get("/"), User(), form, commit=False)

@@ -74,9 +74,7 @@ describe('CompleteSignupForm', () => {
     await user.click(screen.getByRole('button', { name: 'Finish signing up' }))
 
     await vi.waitFor(() => expect(push).toHaveBeenCalled())
-    // openapi-fetch passes a real Request (body already attached) as the first arg, not a
-    // second-arg { body } option - the CSRF-priming GET is a plain URL string, so filtering
-    // on "first arg is a Request" finds only the actual submission.
+    // openapi-fetch passes the submission as a Request; the CSRF-priming GET is a plain URL string.
     const postCall = fetchMock.mock.calls.find(([request]) => request instanceof Request)
     const body = await (postCall?.[0] as Request).clone().json()
     expect(body).toEqual({ username: 'jane', password: 'correct-horse-battery', email: 'jane@example.com' })

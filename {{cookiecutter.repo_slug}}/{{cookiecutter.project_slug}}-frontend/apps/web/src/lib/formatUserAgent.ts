@@ -1,5 +1,4 @@
-// Token matching rather than a UA-parsing dependency: this only has to answer "is that me?", and
-// it degrades to the raw string when it cannot tell.
+// Token matching, no UA parser: it only answers "is that me?", falling back to the raw string.
 
 // Order matters throughout - Edge and Opera both carry "Chrome", and Chrome carries "Safari".
 const BROWSERS: [RegExp, string][] = [

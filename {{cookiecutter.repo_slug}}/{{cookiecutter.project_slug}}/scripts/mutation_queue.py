@@ -1,22 +1,9 @@
-"""The mutants phase one should actually run, and separately the ones it should not.
-
-Two registries name mutants phase one skips, because proving them again costs each its whole traced
-test set:
-
-  * `mutation-equivalents.toml` - single mutants no test can kill, keyed by the mutation itself.
-  * `mutation-exemptions.toml` - whole functions mutmut's tracing cannot attribute to any test, keyed
-    by function, so the entry covers every mutant of it.
+"""The mutants phase one should run, and the registered ones (equivalents, exemptions) it skips.
 
     python -m scripts.mutation_queue --run     # names phase one should run, less what is answered
     python -m scripts.mutation_queue --exempt  # names to re-check afterwards
 
-An equivalent entry carrying `verified_by` is left out of `--exempt`: the test it names asserts the
-library behavior the reason rests on, in milliseconds on every push, which is a stronger re-check
-than running the mutant to observe - again - that nothing killed it.
-
-There is one run rather than a shard's slice of one: nothing here is sharded yet (see the CI workflow
-for when that stops being true), so `--run` is every mutant minus the skipped set, not an
-intersection with a shard's own scope first.
+`--exempt` omits entries with `verified_by`: their test re-checks them more cheaply.
 """
 
 import fnmatch
@@ -34,8 +21,7 @@ from scripts.mutmut_decorators import install as install_mutmut_decorators
 ROOT = Path(__file__).resolve().parent.parent
 EQUIVALENTS = ROOT / "mutation-equivalents.toml"
 EXEMPTIONS = ROOT / "mutation-exemptions.toml"
-# Named rather than spelled inline so its case can be asserted: APFS opens `PYPROJECT.TOML` and ext4
-# does not, so a re-cased literal is a mutant that lives on this laptop and dies on the runners.
+# A constant so its case can be tested: APFS is case-insensitive, so a re-cased mutant survives on macOS.
 PYPROJECT_NAME = "pyproject.toml"
 
 
@@ -44,45 +30,27 @@ def _registry(path):
 
 
 def function_of(name):
-    """`module.xǁClassǁmethod__mutmut__1f0c3a9d4e7b` -> `module.xǁClassǁmethod`, the key
-    `mutation-exemptions.toml` uses."""
+    """`module.xǁClassǁmethod__mutmut__1f0c3a9d4e7b` -> `module.xǁClassǁmethod`."""
     return name.rpartition("__mutmut_")[0] or name
 
 
 def skipped(in_tree, equivalents, exemptions):
-    """Every mutant of `in_tree` either registry names."""
     return {name for name in in_tree if name in equivalents or function_of(name) in exemptions}
 
 
 def to_run(in_tree, equivalents, exemptions, answers):
-    """What phase one has to run: every mutant neither registry names and the tree has no answer for.
-
-    Answered ones are left out here because mutmut cannot leave them out itself. Its own skip is `if
-    not mutant_names`, a check on whether any name was passed at all, so naming one mutant turns reuse
-    off for every mutant in the run - and naming them is how the registries' mutants are left out.
-    `scripts/mutation_cache.py` has already cleared every answer a changed test could overturn, so
-    what remains here is what a restored cache can vouch for.
-    """
+    """Unregistered, unanswered mutants. mutmut stops reusing answers once any names are passed, so we filter."""
     answered = {name for name, code in answers.items() if code is not None}
-    # Every entry, whatever re-checks it: running a registered mutant settles nothing.
     return in_tree - skipped(in_tree, equivalents, exemptions) - answered
 
 
 def rechecked(in_tree, equivalents, exemptions):
-    """The skipped mutants a re-run is the only re-check for."""
     verified = {name for name, entry in equivalents.items() if entry.get("verified_by")}
     return skipped(in_tree, equivalents, exemptions) - verified
 
 
 def _in_tree():
-    """Every mutant this run holds, generated from the source rather than read from the tree.
-
-    Phase one computes this before mutmut has generated anything, so reading the tree returns an empty
-    queue on a cold run - which the caller reads as "everything here is exempt" and mutates nothing.
-    The names are generated here, so they have to be generated the way the tree will be: with the
-    decorator patch, and named by change. Without either, the queue names mutants the tree never
-    holds, mutmut reports them "not checked", and the unsettled list reads that as survived.
-    """
+    """Generated from source, not read from the tree (empty on a cold run), with the same patches the tree uses."""
     from mutmut.__main__ import mutate_file_contents
 
     install_mutmut_decorators()
@@ -114,8 +82,7 @@ def main(argv):
         wanted = sorted(to_run(in_tree, equivalents, exemptions, verdicts()))
     else:
         wanted = sorted(rechecked(in_tree, equivalents, exemptions))
-    # Nothing at all for an empty queue rather than a bare newline: the workflow tests the file for
-    # emptiness, and a newline passes that test as one nameless mutant.
+    # No bare newline: the workflow tests the file for emptiness.
     if wanted:
         print("\n".join(wanted))
     return 0

@@ -28,7 +28,7 @@ def valid_answers(**overrides: str) -> dict:
 
 
 def test_accepts_a_fully_valid_set_of_answers():
-    validate_answers(**valid_answers())  # does not raise
+    validate_answers(**valid_answers())
 
 
 @pytest.mark.parametrize("field_name", ["project_name", "description", "author_name", "author_email", "domain"])
@@ -44,7 +44,7 @@ def test_rejects_a_whitespace_only_required_field(field_name):
 
 
 def test_required_fields_accepts_non_blank_values():
-    validate_required_fields(project_name="x", description="y")  # does not raise
+    validate_required_fields(project_name="x", description="y")
 
 
 @pytest.mark.parametrize("domain", ["localhost", "127.0.0.1", "0.0.0.0", "admin.localhost", "LOCALHOST"])
@@ -67,7 +67,7 @@ def test_rejects_a_domain_with_no_dot():
 
 
 def test_accepts_a_real_domain():
-    validate_domain("my-app2.example.test")  # does not raise
+    validate_domain("my-app2.example.test")
 
 
 @pytest.mark.parametrize("domain", ['ex"ample.test', "example.test/path", "exa mple.test", "example_x.test"])
@@ -78,7 +78,7 @@ def test_rejects_a_domain_with_characters_a_hostname_cannot_have(domain):
 
 
 def test_accepts_an_uppercase_domain_as_its_lowercase_form():
-    validate_domain("Example.TEST")  # does not raise
+    validate_domain("Example.TEST")
 
 
 @pytest.mark.parametrize(
@@ -86,7 +86,7 @@ def test_accepts_an_uppercase_domain_as_its_lowercase_form():
     [("project_slug", "a"), ("project_slug", "my_app_2"), ("repo_slug", "a"), ("repo_slug", "my-app-2")],
 )
 def test_accepts_valid_slugs(slug_name, value):
-    validate_slugs(**{slug_name: value})  # does not raise
+    validate_slugs(**{slug_name: value})
 
 
 @pytest.mark.parametrize(
@@ -118,7 +118,7 @@ def test_rejects_invalid_slugs(slug_name, value, pattern):
     [("project_name", "My App-2_x"), ("description", "A team's $5 app"), ("author_email", "o'brien@example.test")],
 )
 def test_accepts_free_text_without_forbidden_characters(field_name, value):
-    validate_free_text(**{field_name: value})  # does not raise
+    validate_free_text(**{field_name: value})
 
 
 @pytest.mark.parametrize(
@@ -159,21 +159,20 @@ def test_validate_answers_checks_slugs_and_free_text_too(override, match):
 
 def test_author_name_may_carry_any_character():
     # It only lands in tojson-escaped hook literals, the LICENSE and .po comments.
-    validate_answers(**valid_answers(author_name='O\'Brien "Q" \\ `x` $y'))  # does not raise
+    validate_answers(**valid_answers(author_name='O\'Brien "Q" \\ `x` $y'))
 
 
 def test_validate_answers_rejects_an_unknown_language_too():
-    # Exercises the same check as test_rejects_an_unknown_language, through the top-level entry
-    # point - proving languages is actually parsed from the raw string and forwarded.
+    # Proves the raw string is parsed and forwarded.
     with pytest.raises(AnswersInvalid, match="Unknown languages"):
         validate_answers(**valid_answers(languages="en,not-a-real-language"))
 
 
 def test_validate_answers_accepts_the_default_english_only_languages():
-    # Left out rather than passed, so it is the parameter's own default being accepted.
+    # Left out, so the parameter's own default is what's accepted.
     answers = valid_answers()
     del answers["languages"]
-    validate_answers(**answers)  # does not raise
+    validate_answers(**answers)
 
 
 def test_parses_requested_languages_from_a_comma_separated_string():
@@ -187,11 +186,11 @@ def test_rejects_an_empty_language_list():
 
 
 def test_accepts_english_only():
-    validate_requested_languages(["en"])  # does not raise
+    validate_requested_languages(["en"])
 
 
 def test_accepts_english_plus_other_known_languages():
-    validate_requested_languages(["en", "tr", "fr"])  # does not raise
+    validate_requested_languages(["en", "tr", "fr"])
 
 
 def test_rejects_languages_not_starting_with_english():
@@ -217,8 +216,6 @@ def test_rejects_an_unknown_language():
 
 
 def test_rejects_multiple_unknown_languages_joined_with_a_real_separator():
-    # A single unknown language above doesn't exercise the "unknown" list's own join separator -
-    # nothing to join between one item.
     with pytest.raises(AnswersInvalid) as excinfo:
         validate_requested_languages(["en", "not-real", "also-not-real"])
     message = str(excinfo.value)

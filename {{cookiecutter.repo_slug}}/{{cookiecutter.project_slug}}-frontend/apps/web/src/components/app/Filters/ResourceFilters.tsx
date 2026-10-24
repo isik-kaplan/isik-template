@@ -6,10 +6,7 @@ import { FilterBar } from './FilterBar'
 import { SelectFilter } from './SelectFilter'
 import type { FilterSpec } from './filterSpec'
 
-/**
- * Every control a listing offers, from one declaration. `children` is the escape hatch for a filter
- * that is not a single API parameter, passed in beside the declared ones.
- */
+/** A listing's controls from one declaration; `children` for a filter that is not one API parameter. */
 export function ResourceFilters<Query>({ specs, children }: { specs: FilterSpec<Query>[]; children?: ReactNode }) {
   return (
     <FilterBar>

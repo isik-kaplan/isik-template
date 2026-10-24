@@ -1,10 +1,6 @@
-"""msgspec's encoder, taught the one shape DRF hands it that it refuses.
+"""msgspec refuses `str` subclasses such as DRF's `ErrorDetail`, which would render every error as a 500.
 
-msgspec encodes exact types, so a `str` subclass raises rather than encoding as a string. Every DRF
-error body is built from `ErrorDetail`, which is one - so without this a 401 renders as a 500.
-
-`obj[:]` rather than `str(obj)`: `str()` on a `str` subclass returns the subclass unchanged, which is
-the same TypeError one call later.
+`obj[:]`, not `str(obj)`: `str()` returns a `str` subclass unchanged.
 """
 
 from django_msgspec import enc_hook as encode_django_type

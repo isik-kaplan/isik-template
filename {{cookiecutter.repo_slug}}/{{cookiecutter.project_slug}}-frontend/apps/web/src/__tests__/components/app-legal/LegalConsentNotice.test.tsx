@@ -30,7 +30,7 @@ describe('LegalConsentNotice', () => {
   })
 
   it("joins the list the visitor's language's way", () => {
-    // Spanish joins two items with "y"; the sentence itself stays English, the only catalog guaranteed to have text.
+    // Spanish joins with "y"; the sentence stays English, the only catalog sure to have it.
     const { container } = render(
       <LanguageProvider language={'es' as never}>
         <LegalConsentNotice />

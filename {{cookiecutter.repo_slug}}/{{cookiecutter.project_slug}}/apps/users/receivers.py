@@ -1,9 +1,4 @@
-"""Account events, written where allauth and Django announce them.
-
-Signals rather than adapter overrides: every one of these is sent once per occurrence by whichever
-flow caused it - the headless API, the admin's own login, a password reset link - so no flow added
-later can forget to write its line.
-"""
+"""Account events. Signals rather than adapter overrides, so every flow (admin login included) is covered."""
 
 from allauth.account.signals import (
     email_changed,
@@ -44,13 +39,13 @@ def logged_in(sender, user, **kwargs):
 
 @receiver(user_login_failed)
 def login_failed(sender, credentials, **kwargs):
-    # `credentials` is deliberately unread: Django masks the password, not the identifier beside it.
+    # `credentials` unread: Django masks the password, not the identifier.
     log(LOGIN_FAILED)
 
 
 @receiver(user_logged_out)
 def logged_out(sender, user, **kwargs):
-    # None when the session had already expired - a logout of nobody is not worth a line.
+    # None when the session had already expired.
     if user is not None:
         log(LOGOUT_SUCCEEDED, user=str(user.pk))
 
@@ -72,7 +67,7 @@ def changed_password(sender, user, **kwargs):
 
 @receiver(password_set)
 def set_password(sender, user, **kwargs):
-    # An account that had none - a social signup - gaining one is a second way in, so the same event.
+    # A social account gaining a password is a new way in.
     audit(PASSWORD_CHANGED, user=str(user.pk), how="set")
 
 
@@ -88,7 +83,7 @@ def changed_email(sender, user, **kwargs):
 
 @receiver(authenticator_added)
 def added_authenticator(sender, user, authenticator, **kwargs):
-    # Recovery codes arrive with the first factor and are not a way in on their own, so no line.
+    # Recovery codes arrive with the first factor.
     if authenticator.type == Authenticator.Type.TOTP:
         audit(MFA_ENABLED, user=str(user.pk), method=authenticator.type)
     elif authenticator.type == Authenticator.Type.WEBAUTHN:
@@ -105,5 +100,5 @@ def removed_authenticator(sender, user, authenticator, **kwargs):
 
 @receiver(authenticator_reset)
 def reset_authenticator(sender, user, **kwargs):
-    # Only recovery codes are ever reset: a fresh set replaces whatever was written down before.
+    # Only recovery codes are ever reset.
     audit(RECOVERY_CODES_REGENERATED, user=str(user.pk))

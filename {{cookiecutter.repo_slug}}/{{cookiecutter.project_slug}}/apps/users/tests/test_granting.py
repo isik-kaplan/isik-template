@@ -1,8 +1,4 @@
-"""You may grant something only if you hold it yourself.
-
-A superuser holds every permission already, so they grant anything; anybody else grants from their own set,
-so nothing is created from nothing. Granting is its own right rather than something `is_staff` implies.
-"""
+"""You may grant something only if you hold it yourself."""
 
 import pytest
 from django.contrib.auth.models import AnonymousUser
@@ -29,7 +25,6 @@ def test_a_superuser_may_grant_without_holding_the_permission_explicitly():
 
 @pytest.mark.django_db
 def test_staff_alone_cannot_grant():
-    """Staff promoting staff widens the set of people who can change settings with nobody deciding to."""
     assert not may_grant(holding(is_staff=True))
 
 
@@ -50,7 +45,6 @@ def test_nobody_in_particular_may_not_grant():
 
 @pytest.mark.django_db
 def test_granting_nothing_is_not_a_grant():
-    """Lowering somebody's rights takes them away, so it is not this rule's business."""
     refuse_a_grant_beyond_the_giver(holding(), raising_is_staff=False, raising_is_superuser=False, permissions=())
     refuse_a_grant_beyond_the_giver(holding(username="nothing-asked"))
 
@@ -95,7 +89,7 @@ def test_a_permission_the_giver_does_not_hold_cannot_be_handed_on():
 
 @pytest.mark.django_db
 def test_a_permission_the_giver_holds_or_implies_may_be_handed_on():
-    """`users:grant:rights` requires `users:manage:user`, so holding the first is holding the second."""
+    """`users:grant:rights` requires `users:manage:user`."""
     granter = holding(Permission.USERS_GRANT_RIGHTS, is_staff=True)
 
     refuse_a_grant_beyond_the_giver(granter, permissions=[Permission.USERS_MANAGE_USER, Permission.USERS_GRANT_RIGHTS])

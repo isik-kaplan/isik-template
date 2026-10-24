@@ -10,9 +10,6 @@ type ButtonProps = {
   disabled?: boolean
 }
 
-/** The one filled-button shape every screen shares (submit, logout, ...). A separate labelTestID
- * lets a caller assert on the label's text/style independently of the pressable itself - the same
- * testID pair every screen already used before this component existed. */
 export function Button({ testID, labelTestID, label, onPress, disabled }: ButtonProps) {
   return (
     <Pressable testID={testID} disabled={disabled} onPress={onPress} style={styles.button}>

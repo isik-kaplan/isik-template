@@ -1,9 +1,6 @@
-"""allauth's own headless routes for the views that carry an act, pointed at the subclasses that gate
-them - included ahead of `allauth.headless.urls` (see urls.py), so these are the ones that resolve.
+"""allauth's headless routes pointed at the gated subclasses; included first so these resolve.
 
-Read off allauth's patterns rather than written out again, so a route allauth moves or a client it
-adds is followed here instead of silently left ungated. `test_reauthentication_gate.py` pins which
-routes end up gated.
+Read off allauth's patterns, so a moved or added route isn't silently left ungated.
 """
 
 from allauth.headless import urls as headless_urls
@@ -37,7 +34,7 @@ GATED_VIEWS = (
 
 
 def walk(patterns, prefix=""):
-    """(route, callback) for every view under `patterns`, its route spelled out from the top."""
+    """(full route, callback) for every view under `patterns`."""
     for pattern in patterns:
         route = prefix + str(pattern.pattern)
         if isinstance(pattern, URLResolver):
@@ -47,7 +44,7 @@ def walk(patterns, prefix=""):
 
 
 def gated_headless_urlpatterns():
-    # Each gated view's other base is the allauth view it stands in for; every headless route is one.
+    # Each gated view's other base is the allauth view it replaces.
     replacing = {next(base for base in view.__bases__ if base is not ProvesWhoTheyAre): view for view in GATED_VIEWS}
     return [
         path(route, replacing[callback.view_class].as_api_view(**callback.view_initkwargs))
