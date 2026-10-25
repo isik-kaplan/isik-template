@@ -11,6 +11,7 @@ from django.conf import settings as django_settings
 from django.core.cache import cache
 from django.db import connections, transaction
 from django.test import Client
+from hypothesis import settings as hypothesis_settings
 from isik.django.apps.common.db.concurrency import current_concurrency_etag
 from isik.django.apps.idempotency.drf import IdempotencyMixin
 
@@ -22,6 +23,10 @@ from {{ cookiecutter.project_slug }}.celery import app as celery_app
 from {{ cookiecutter.project_slug }}.config import CONFIG as config
 {%- endif %}
 
+
+# A busy machine runs one example past the 200 ms default and fails a test that found nothing.
+hypothesis_settings.register_profile("{{ cookiecutter.project_slug }}", deadline=None)
+hypothesis_settings.load_profile("{{ cookiecutter.project_slug }}")
 
 CONFIGURED_CACHES = django_settings.CACHES
 
