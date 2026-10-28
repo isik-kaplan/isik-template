@@ -103,7 +103,7 @@ def has_proven_who_they_are(request):
         is_a_challenge(record)
         and record["at"] > spent_at
         and now - record["at"] < account_settings.REAUTHENTICATION_TIMEOUT
-        for record in get_authentication_records(request)
+        for record in get_authentication_records(request, request.user)
     )
 
 

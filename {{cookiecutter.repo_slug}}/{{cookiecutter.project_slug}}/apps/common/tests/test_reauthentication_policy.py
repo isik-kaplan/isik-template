@@ -14,6 +14,7 @@ from apps.common.api.reauthentication import ProvesWhoTheyAre
 from apps.common.api.request_policies import NoReauthentication, RecentlyProvedWhoTheyAre
 from apps.users.models.user import User
 from apps.users.reauthentication.proof import SPENT_AT_SESSION_KEY
+from conftest import give_authentication_records
 
 
 class GatedViewSet(ProvesWhoTheyAre, viewsets.ViewSet):
@@ -62,8 +63,8 @@ def call(session):
     return call
 
 
-def _prove(session):
-    session[AUTHENTICATION_METHODS_SESSION_KEY] = [{"method": "password", "at": time.time(), "reauthenticated": True}]
+def _prove(session, user):
+    give_authentication_records(session, user, [{"method": "password", "at": time.time(), "reauthenticated": True}])
 
 
 def _refused(response):
@@ -82,7 +83,7 @@ def test_demanding_a_proof_is_written_down_against_the_act_that_asked(call, logg
 
 
 def test_spending_a_proof_is_written_down_against_the_act_it_bought(call, session, logged):
-    _prove(session)
+    _prove(session, call.user)
 
     call("patch", "partial_update", {"is_active": False}, pk="1")
 
@@ -98,7 +99,7 @@ def test_an_act_is_refused_without_a_proof_and_says_which_gate_stopped_it(call):
 
 
 def test_a_proof_buys_one_act_and_the_next_one_asks_again(call, session):
-    _prove(session)
+    _prove(session, call.user)
 
     first = call("post", "create")
     second = call("post", "create")
@@ -108,7 +109,7 @@ def test_a_proof_buys_one_act_and_the_next_one_asks_again(call, session):
 
 
 def test_an_exempt_action_neither_asks_for_a_proof_nor_spends_one(call, session):
-    _prove(session)
+    _prove(session, call.user)
 
     assert call("get", "list").status_code == 200
     assert SPENT_AT_SESSION_KEY not in session
@@ -116,7 +117,7 @@ def test_an_exempt_action_neither_asks_for_a_proof_nor_spends_one(call, session)
 
 
 def test_an_ordinary_field_is_not_an_act_but_a_serious_one_is(call, session):
-    _prove(session)
+    _prove(session, call.user)
 
     rename = call("patch", "partial_update", {"name": "Renamed"}, pk="1")
     spent_by_renaming = SPENT_AT_SESSION_KEY in session
@@ -138,7 +139,7 @@ def test_an_act_that_would_be_refused_anyway_says_so_without_asking_for_a_proof(
 
 
 def test_an_act_refused_for_another_reason_keeps_the_proof(call, session):
-    _prove(session)
+    _prove(session, call.user)
 
     refused = call("delete", "destroy", pk="missing")
     spent_by_the_refusal = SPENT_AT_SESSION_KEY in session
@@ -149,7 +150,7 @@ def test_an_act_refused_for_another_reason_keeps_the_proof(call, session):
 
 
 def test_an_act_with_nothing_to_refuse_early_is_proved_as_usual(call, session):
-    _prove(session)
+    _prove(session, call.user)
 
     assert call("delete", "destroy", pk="there").status_code == 204
 

@@ -4,7 +4,6 @@ from types import SimpleNamespace
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
-from allauth.account.internal.flows.login import AUTHENTICATION_METHODS_SESSION_KEY
 from allauth.account.models import EmailAddress
 from allauth.headless.socialaccount.views import RedirectToProviderView as _RedirectToProviderView
 from allauth.socialaccount.models import SocialAccount
@@ -21,6 +20,7 @@ from apps.users.reauthentication.proof import SPENT_AT_SESSION_KEY
 from apps.users.reauthentication.views.provider_token import ProviderTokenView
 from apps.users.reauthentication.views.redirect_to_provider import RedirectToProviderView
 from apps.users.tests.conftest import AUTH_URLCONF, AUTHORIZATION_ENDPOINT, OIDC_PROVIDER_ID, PASSWORD, Headless
+from conftest import give_authentication_records
 
 
 def _refused(response):
@@ -138,11 +138,10 @@ def test_changing_a_password_is_proved_by_the_current_one_it_demands(headless, s
     assert response.status_code == 200
 
 
-def _record_a_social_proof(headless):
+def _record_a_social_proof(headless, user):
     session = headless.client.session
-    session[AUTHENTICATION_METHODS_SESSION_KEY] = [
-        {"method": "socialaccount", "at": time.time(), "reauthenticated": True}
-    ]
+    proof = {"method": "socialaccount", "at": time.time(), "reauthenticated": True}
+    give_authentication_records(session, user, [proof])
     session.save()
 
 
@@ -155,7 +154,7 @@ def test_setting_a_first_password_is_an_act_and_spends_the_proof(headless, clien
 
     refused = headless.call("POST", "account:change_password", password)
     # No password to type, so a provider round trip's record stands in.
-    _record_a_social_proof(headless)
+    _record_a_social_proof(headless, alice)
     accepted = headless.call("POST", "account:change_password", password)
 
     assert _refused(refused)

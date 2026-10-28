@@ -7,6 +7,11 @@ import uuid
 from pathlib import Path
 
 import pytest
+from allauth.account.internal.flows.login import (
+    _AUTHENTICATION_METHODS_USER_SESSION_KEY,
+    AUTHENTICATION_METHODS_SESSION_KEY,
+)
+from allauth.account.internal.userkit import user_id_to_str
 from django.conf import settings as django_settings
 from django.core.cache import cache
 from django.db import connections, transaction
@@ -60,8 +65,8 @@ def _commit_callbacks_run_where_a_request_would_commit(request, monkeypatch):
 
 @pytest.fixture(autouse=True)
 def _tasks_run_in_process(monkeypatch):
-    monkeypatch.setattr(celery_app.conf, "task_always_eager", True)
-    monkeypatch.setattr(celery_app.conf, "task_eager_propagates", True)
+    monkeypatch.setitem(celery_app.conf, "task_always_eager", True)
+    monkeypatch.setitem(celery_app.conf, "task_eager_propagates", True)
 
 
 @pytest.fixture(autouse=True)
@@ -77,6 +82,14 @@ def _keyed(send):
         return send(self, path, *args, headers=headers, **kwargs)
 
     return write
+
+
+def give_authentication_records(session, user, records):
+    """allauth reads back only records bound to the user they're for. Bound by its own key rather than
+    record_authentication(), which would also send authentication_step_completed."""
+    if user.pk is not None:
+        session[_AUTHENTICATION_METHODS_USER_SESSION_KEY] = user_id_to_str(user)
+    session[AUTHENTICATION_METHODS_SESSION_KEY] = list(records)
 
 
 def versioned(instance):

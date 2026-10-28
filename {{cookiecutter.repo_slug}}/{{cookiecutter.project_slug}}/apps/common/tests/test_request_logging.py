@@ -58,7 +58,7 @@ class TestWhichRequestsEarnALine:
         assert worth_logging(200, elapsed_ms=999) is False
 
     def test_slowness_can_be_turned_off_without_turning_the_line_off(self, monkeypatch):
-        monkeypatch.setattr(CONFIG.LOGGING, "SLOW_REQUEST_MS", 0)
+        monkeypatch.setitem(CONFIG.LOGGING, "SLOW_REQUEST_MS", 0)
 
         assert worth_logging(200, elapsed_ms=10_000) is False
         assert worth_logging(500, elapsed_ms=1) is True
@@ -72,18 +72,18 @@ class TestWhichRequestsEarnALine:
 
     def test_as_slow_as_asked_is_slow_enough(self, monkeypatch):
         """At least, not more than."""
-        monkeypatch.setattr(CONFIG.LOGGING, "SLOW_REQUEST_MS", 1)
+        monkeypatch.setitem(CONFIG.LOGGING, "SLOW_REQUEST_MS", 1)
 
         assert worth_logging(200, elapsed_ms=1) is True
         assert worth_logging(200, elapsed_ms=0) is False
 
     def test_everything_is_written_when_asked(self, monkeypatch):
-        monkeypatch.setattr(CONFIG.LOGGING, "REQUESTS", "all")
+        monkeypatch.setitem(CONFIG.LOGGING, "REQUESTS", "all")
 
         assert worth_logging(200, elapsed_ms=0) is True
 
     def test_nothing_is_written_when_asked(self, monkeypatch):
-        monkeypatch.setattr(CONFIG.LOGGING, "REQUESTS", "none")
+        monkeypatch.setitem(CONFIG.LOGGING, "REQUESTS", "none")
 
         assert worth_logging(500, elapsed_ms=10_000) is False
 

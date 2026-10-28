@@ -17,6 +17,7 @@ from hypothesis import strategies as st
 from apps.users.models.user import User
 from apps.users.reauthentication import proof
 from apps.users.tests.conftest import OIDC_PROVIDER_ID
+from conftest import give_authentication_records
 
 
 NOW = 1_800_000_000.5
@@ -33,7 +34,7 @@ def _request(user, records=(), **session):
     request = RequestFactory().get("/")
     request.user = user
     request.session = SessionStore()
-    request.session[AUTHENTICATION_METHODS_SESSION_KEY] = list(records)
+    give_authentication_records(request.session, user, records)
     request.session.update(session)
     return request
 

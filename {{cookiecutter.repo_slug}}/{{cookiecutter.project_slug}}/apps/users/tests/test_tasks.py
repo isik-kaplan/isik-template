@@ -89,7 +89,7 @@ def test_the_mail_says_why_they_were_signed_out():
 @pytest.fixture
 def retries_run_in_process(monkeypatch):
     """With propagation on, an eager task raises its retry instead of running it."""
-    monkeypatch.setattr(celery_app.conf, "task_eager_propagates", False)
+    monkeypatch.setitem(celery_app.conf, "task_eager_propagates", False)
 
 
 @pytest.mark.django_db
