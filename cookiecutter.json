@@ -16,6 +16,7 @@
   "background_jobs": ["celery-with-beat", "celery", "inline"],
   "storage": ["garage", "s3", "disk"],
   "cache": ["redis", "database"],
+  "webhooks": ["none", "staff", "users"],
   "isik_version": "0.37.0",
   "isikk_core_version": "0.20.0",
   "_copy_without_render": [
@@ -39,6 +40,12 @@
       "__prompt__": "Cache, where rate limits keep their counts",
       "redis": "Redis, bundled",
       "database": "A table in Postgres: no service of its own, slower under load"
+    },
+    "webhooks": {
+      "__prompt__": "Webhooks, which POST notifications to endpoints",
+      "none": "None: notifications reach the inbox and email only",
+      "staff": "Endpoints staff register for the whole deployment",
+      "users": "Endpoints each user registers for their own notifications"
     }
   }
 }

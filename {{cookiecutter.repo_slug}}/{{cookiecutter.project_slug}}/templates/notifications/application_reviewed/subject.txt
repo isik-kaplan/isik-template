@@ -1,0 +1,3 @@
+{% raw -%}
+{% load i18n %}{% if notice.variant == "approved" %}{% blocktrans %}Your application was approved{% endblocktrans %}{% else %}{% blocktrans %}Your application was withdrawn{% endblocktrans %}{% endif %}
+{%- endraw %}

@@ -1,0 +1,9 @@
+{% raw -%}
+{% extends "account/email/base/base.html" %}
+{% load i18n %}
+
+{% block content %}
+        <mj-text>{% blocktrans with name=data.name %}A personal access token named "{{ name }}" was created for your account on {{ site_name }}.{% endblocktrans %}</mj-text>
+        <mj-text>{% blocktrans %}If you didn't create it, revoke it from your profile and change your password.{% endblocktrans %}</mj-text>
+{% endblock content %}
+{%- endraw %}

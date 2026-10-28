@@ -97,6 +97,13 @@ describe('ProfileTabsList', () => {
     expect(screen.getByRole('tab', { name: 'Tokens' }).getAttribute('aria-selected')).toBe('true')
   })
 
+  it('selects and reaches the notifications tab by its own segment', async () => {
+    pathname = '/profile/notifications'
+    render(<ProfileTabsList />)
+
+    expect(screen.getByRole('tab', { name: 'Notifications' }).getAttribute('aria-selected')).toBe('true')
+  })
+
   it('selects and reaches the two-factor tab by its own segment', async () => {
     pathname = '/profile/two-factor'
     const user = userEvent.setup()

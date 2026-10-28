@@ -36,6 +36,10 @@ GATED = {
     "UserViewSet": {"partial_update"},
     # A token that acts as you is as good as a password.
     "PersonalAccessTokenViewSet": {"create"},
+{%- if cookiecutter.webhooks != "none" %}
+    # Where notices go, and the secret that proves they came from here.
+    "EndpointViewSet": {"create", "update", "partial_update", "rotate_secret"},
+{%- endif %}
 }
 
 # Together with GATED, the whole write surface.
@@ -69,6 +73,28 @@ NOT_AN_ACT = {
     ("DeviceAuthorizationViewSet", "deny"): NoReauthentication(
         reason="turning a device away only refuses it access it never had"
     ),
+    ("InboxViewSet", "read"): NoReauthentication(
+        reason="marking your own notification read, which tells nobody anything"
+    ),
+    ("InboxViewSet", "read_all"): NoReauthentication(
+        reason="marking your own notifications read, which tells nobody anything"
+    ),
+    ("SubscriptionViewSet", "create"): NoReauthentication(
+        reason="which notifications you get, and a mandatory one can't be turned off"
+    ),
+    ("SubscriptionViewSet", "destroy"): NoReauthentication(
+        reason="forgetting a choice, so the kind's own default decides again"
+    ),
+{%- if cookiecutter.webhooks != "none" %}
+    ("DeliveryViewSet", "retry"): NoReauthentication(
+        reason="sends a notice again to the endpoint it was already sent to"
+    ),
+    ("EndpointViewSet", "destroy"): NoReauthentication(reason="deleting an endpoint only stops what it was being sent"),
+    ("EndpointViewSet", "finish_rotation"): NoReauthentication(
+        reason="dropping the old secret only takes a signing key away"
+    ),
+    ("EndpointViewSet", "unpark"): NoReauthentication(reason="sends again to the address it was already registered at"),
+{%- endif %}
     ("PersonalAccessTokenViewSet", "destroy"): NoReauthentication(
         reason="deleting a token only takes away the access it gave"
     ),

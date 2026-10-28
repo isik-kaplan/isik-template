@@ -16,6 +16,7 @@ INCLUDE_MOBILE = {{ cookiecutter.include_mobile }}
 TLS_TERMINATION = {{ cookiecutter.tls_termination|tojson }}
 BACKGROUND_JOBS = {{ cookiecutter.background_jobs|tojson }}
 STORAGE = {{ cookiecutter.storage|tojson }}
+WEBHOOKS = {{ cookiecutter.webhooks|tojson }}
 AUTHOR_NAME = {{ cookiecutter.author_name|tojson }}
 AUTHOR_EMAIL = {{ cookiecutter.author_email|tojson }}
 # "en" first, always (validated in _validate.py).
@@ -261,6 +262,14 @@ def main() -> None:
         shutil.rmtree("broker")
     if STORAGE == "disk":
         shutil.rmtree("storage")
+    notification_api = f"{PROJECT_SLUG}/apps/notifications/api"
+    if WEBHOOKS == "none":
+        for module in ("viewsets/endpoint.py", "viewsets/delivery.py"):
+            os.remove(f"{notification_api}/{module}")
+        os.remove(f"{PROJECT_SLUG}/apps/notifications/tests/test_webhooks.py")
+    if WEBHOOKS != "staff":
+        os.remove(f"{notification_api}/deployment.py")
+        shutil.rmtree(f"{notification_api}/permissions")
 
     translation_files, web_namespaces = scaffold_translation_files()
     if EXTRA_LANGUAGES:

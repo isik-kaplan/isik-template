@@ -1,0 +1,10 @@
+{% raw -%}
+{% extends "account/email/base/base.txt" %}
+{% load i18n %}
+
+{% block content %}
+        {% blocktrans with name=data.name %}The personal access token named "{{ name }}" was revoked and no longer works.{% endblocktrans %}
+
+        {% blocktrans %}If you didn't revoke it, check your profile for other changes and change your password.{% endblocktrans %}
+{% endblock content %}
+{%- endraw %}

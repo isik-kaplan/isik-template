@@ -83,6 +83,349 @@ export interface paths {
         put?: never;
         /** @description Turn the device away: its next poll is told no. */
         post: operations["device_authorizations_deny_create"];
+{%- if cookiecutter.webhooks != "none" %}
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/notifications/deliveries/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+{%- if cookiecutter.webhooks == "staff" %}
+         * @description What the deployment's webhook endpoints were sent, for staff, each with its attempts. retry/ sends an abandoned
+         *     one again.
+{%- endif %}
+{%- if cookiecutter.webhooks == "users" %}
+         * @description What the signed-in person's webhook endpoints were sent, each with its attempts. retry/ sends an abandoned one
+         *     again.
+{%- endif %}
+         */
+        get: operations["notifications_deliveries_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/notifications/deliveries/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+{%- if cookiecutter.webhooks == "staff" %}
+         * @description What the deployment's webhook endpoints were sent, for staff, each with its attempts. retry/ sends an abandoned
+         *     one again.
+{%- endif %}
+{%- if cookiecutter.webhooks == "users" %}
+         * @description What the signed-in person's webhook endpoints were sent, each with its attempts. retry/ sends an abandoned one
+         *     again.
+{%- endif %}
+         */
+        get: operations["notifications_deliveries_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/notifications/deliveries/{id}/retry/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Sends a delivery that was given up on again. Refused, saying why, while its endpoint is parked or gone. */
+        post: operations["notifications_deliveries_retry_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/notifications/endpoints/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+{%- if cookiecutter.webhooks == "staff" %}
+         * @description The deployment's webhook endpoints, for staff: each is sent the notices of the kinds it wants, signed with its
+{%- endif %}
+{%- if cookiecutter.webhooks == "users" %}
+         * @description The signed-in person's webhook endpoints: each is sent their notices of the kinds it wants, signed with its
+{%- endif %}
+         *     secret, which is shown once.
+         */
+        get: operations["notifications_endpoints_list"];
+        put?: never;
+        /**
+{%- if cookiecutter.webhooks == "staff" %}
+         * @description The deployment's webhook endpoints, for staff: each is sent the notices of the kinds it wants, signed with its
+{%- endif %}
+{%- if cookiecutter.webhooks == "users" %}
+         * @description The signed-in person's webhook endpoints: each is sent their notices of the kinds it wants, signed with its
+{%- endif %}
+         *     secret, which is shown once.
+         */
+        post: operations["notifications_endpoints_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/notifications/endpoints/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+{%- if cookiecutter.webhooks == "staff" %}
+         * @description The deployment's webhook endpoints, for staff: each is sent the notices of the kinds it wants, signed with its
+{%- endif %}
+{%- if cookiecutter.webhooks == "users" %}
+         * @description The signed-in person's webhook endpoints: each is sent their notices of the kinds it wants, signed with its
+{%- endif %}
+         *     secret, which is shown once.
+         */
+        get: operations["notifications_endpoints_retrieve"];
+        /**
+{%- if cookiecutter.webhooks == "staff" %}
+         * @description The deployment's webhook endpoints, for staff: each is sent the notices of the kinds it wants, signed with its
+{%- endif %}
+{%- if cookiecutter.webhooks == "users" %}
+         * @description The signed-in person's webhook endpoints: each is sent their notices of the kinds it wants, signed with its
+{%- endif %}
+         *     secret, which is shown once.
+         */
+        put: operations["notifications_endpoints_update"];
+        post?: never;
+        /**
+{%- if cookiecutter.webhooks == "staff" %}
+         * @description The deployment's webhook endpoints, for staff: each is sent the notices of the kinds it wants, signed with its
+{%- endif %}
+{%- if cookiecutter.webhooks == "users" %}
+         * @description The signed-in person's webhook endpoints: each is sent their notices of the kinds it wants, signed with its
+{%- endif %}
+         *     secret, which is shown once.
+         */
+        delete: operations["notifications_endpoints_destroy"];
+        options?: never;
+        head?: never;
+        /**
+{%- if cookiecutter.webhooks == "staff" %}
+         * @description The deployment's webhook endpoints, for staff: each is sent the notices of the kinds it wants, signed with its
+{%- endif %}
+{%- if cookiecutter.webhooks == "users" %}
+         * @description The signed-in person's webhook endpoints: each is sent their notices of the kinds it wants, signed with its
+{%- endif %}
+         *     secret, which is shown once.
+         */
+        patch: operations["notifications_endpoints_partial_update"];
+        trace?: never;
+    };
+    "/v0/notifications/endpoints/{id}/finish-rotation/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Stops signing with the endpoint's old secret. */
+        post: operations["notifications_endpoints_finish_rotation_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/notifications/endpoints/{id}/rotate-secret/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Gives the endpoint a new secret, shown here once. Requests are signed with both, the old and the new,
+         *     until the rotation is finished.
+         */
+        post: operations["notifications_endpoints_rotate_secret_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/notifications/endpoints/{id}/unpark/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Sends to an endpoint again after it was parked for failing too often. */
+        post: operations["notifications_endpoints_unpark_create"];
+{%- endif %}
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/notifications/inbox/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The signed-in person's notifications, newest first: ?unread=true for the unread, marked read one at a time
+         *     or all at once.
+         */
+        get: operations["notifications_inbox_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/notifications/inbox/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The signed-in person's notifications, newest first: ?unread=true for the unread, marked read one at a time
+         *     or all at once.
+         */
+        get: operations["notifications_inbox_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/notifications/inbox/{id}/read/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Marks this notification read. */
+        post: operations["notifications_inbox_read_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/notifications/inbox/read-all/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Marks all your notifications read, and says how many were unread. */
+        post: operations["notifications_inbox_read_all_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/notifications/subscriptions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Which notifications the signed-in person gets: each a choice against a kind's default. kinds/ lists the ones
+         *     they may choose about; a mandatory kind is not among them.
+         */
+        get: operations["notifications_subscriptions_list"];
+        put?: never;
+        /** @description Sets your preference for a kind of notification, or one variant of it - made, or replacing the one before. */
+        post: operations["notifications_subscriptions_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/notifications/subscriptions/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * @description Which notifications the signed-in person gets: each a choice against a kind's default. kinds/ lists the ones
+         *     they may choose about; a mandatory kind is not among them.
+         */
+        delete: operations["notifications_subscriptions_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/notifications/subscriptions/kinds/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The kinds of notification you can choose about, each with its default and its variants. */
+        get: operations["notifications_subscriptions_kinds_list"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -474,6 +817,8 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @enum {string} */
+        Actor: "self" | "staff" | "other";
         /**
          * @description An application somebody registered, as its owner sees it. It reaches nobody's account until it is
          *     approved and that person consents.
@@ -556,6 +901,11 @@ export interface components {
         };
         /** @enum {unknown} */
         Blank: "";
+        ChoosableKind: {
+            kind: string;
+            policy: components["schemas"]["NoticeKindPolicyPolicy"];
+            variants: string[];
+        };
         /** @description A scope a token may be given, and what it lets the token do. */
         DelegatableScope: {
             /** @description The scope, as a token is given it. */
@@ -563,6 +913,64 @@ export interface components {
             /** @description What it lets the token do. */
             readonly label: string;
         };
+{%- if cookiecutter.webhooks != "none" %}
+        Delivery: {
+            /**
+             * Format: uuid
+             * @description Identifies this record. A UUIDv7, so ids sort roughly by when they were created.
+             */
+            readonly id: string;
+            readonly kind: string;
+            readonly variant: string;
+            /** @description The channel it goes out on. */
+            readonly channel: string;
+            /** @description Its target, as one key - what keeps a notice from reaching one target twice. */
+            readonly target_key: string;
+            /** @description pending, sending, sent or abandoned. */
+            readonly state: components["schemas"]["DeliveryState"];
+            /** @description How many times it's been tried. */
+            readonly attempt_count: number;
+            /**
+             * Format: date-time
+             * @description When it's next due.
+             */
+            readonly next_attempt_at: string;
+            /**
+             * Format: date-time
+             * @description When it was sent.
+             */
+            readonly sent_at: string | null;
+            /**
+             * Format: date-time
+             * @description When it was written.
+             */
+            readonly created_at: string;
+            readonly attempts: components["schemas"]["DeliveryAttempt"][];
+        };
+        DeliveryAttempt: {
+            /** @description Which try it was, from 1. */
+            readonly attempt_no: number;
+            /** @description The HTTP status that came back, or none. */
+            readonly status_code: number | null;
+            /** @description Whether it went through. */
+            readonly succeeded: boolean;
+            /** @description Why it failed, or nothing. */
+            readonly error: string;
+            /** @description What came back, redacted and cut short. */
+            readonly response: unknown;
+            /**
+             * Format: date-time
+             * @description When it began.
+             */
+            readonly started_at: string;
+            /** @description How long it took, in milliseconds. */
+            readonly duration_ms: number;
+            /** @description What started it - the send task, the reaper, or someone by hand. */
+            readonly triggered_by: string;
+        };
+        /** @enum {string} */
+        DeliveryState: "pending" | "sending" | "sent" | "abandoned";
+{%- endif %}
         /** @description A device waiting for somebody to let it in, as the page asking them shows it. */
         DeviceAuthorization: {
             /** @description The code the device shows, as stored. */
@@ -573,6 +981,61 @@ export interface components {
             readonly application_description: string;
             /** @description What it asks for, as OAuth scopes - the sign-in ones and permissions it may act with. */
             readonly scopes: string[];
+{%- if cookiecutter.webhooks != "none" %}
+        };
+        Endpoint: {
+            /**
+             * Format: uuid
+             * @description Identifies this record. A UUIDv7, so ids sort roughly by when they were created.
+             */
+            readonly id: string;
+            /**
+             * Format: uri
+             * @description Where deliveries are POSTed.
+             */
+            url: string;
+            /** @description Whether deliveries are sent to it. */
+            is_active?: boolean;
+            kinds?: components["schemas"]["EndpointKind"][];
+            /** @description How many deliveries in a row have failed. */
+            readonly consecutive_failures: number;
+            /**
+             * Format: date-time
+             * @description When it was parked for failing - nothing is sent to it until it's unparked.
+             */
+            readonly parked_at: string | null;
+            readonly secret: string | null;
+            /**
+             * Format: date-time
+             * @description When the row last changed, by the database's clock.
+             */
+            readonly updated_at: string;
+        };
+        EndpointKind: {
+            kind: string;
+            variant?: string | null;
+        };
+        EndpointKindRequest: {
+            kind: string;
+            variant?: string | null;
+        };
+        /** @description A 412's body: the object as it is now, in `current`. */
+        EndpointPreconditionFailed: {
+            detail: string;
+            /** @description Always precondition_failed. */
+            code: string;
+            current: components["schemas"]["Endpoint"];
+        };
+        EndpointRequest: {
+            /**
+             * Format: uri
+             * @description Where deliveries are POSTed.
+             */
+            url: string;
+            /** @description Whether deliveries are sent to it. */
+            is_active?: boolean;
+            kinds?: components["schemas"]["EndpointKindRequest"][];
+{%- endif %}
         };
         IdempotencyKeyConflict: {
             detail: string;
@@ -588,6 +1051,34 @@ export interface components {
             detail: string;
             /** @description Always idempotency_key_reused. */
             code: string;
+        };
+        /** @description Who acted, as one of ACTORS - never their id or name, which a staff member's would give away. */
+        InboxItem: {
+            /**
+             * Format: uuid
+             * @description Identifies this record. A UUIDv7, so ids sort roughly by when they were created.
+             */
+            readonly id: string;
+            readonly kind: string;
+            /** @description The kind's one variant this is for, or none for every one. */
+            readonly variant: string | null;
+            /** @description The model label of the row it's about, or none. */
+            readonly subject_label: string | null;
+            /** @description The primary key of the row it's about, or none. */
+            readonly subject_id: string | null;
+            /** @description What the notice carried. */
+            readonly payload: unknown;
+            /**
+             * Format: date-time
+             * @description When the user read it.
+             */
+            readonly read_at: string | null;
+            /**
+             * Format: date-time
+             * @description When it landed.
+             */
+            readonly created_at: string;
+            readonly actor: (components["schemas"]["Actor"] | components["schemas"]["Null"]) | null;
         };
         /** @description Somebody's account as an account manager sees it: identity read-only, access editable. */
         ManagedUser: {
@@ -642,6 +1133,13 @@ export interface components {
             code: string;
             current: components["schemas"]["ManagedUser"];
         };
+        Marked: {
+            marked: number;
+        };
+        /** @enum {string} */
+        NoticeKindPolicyPolicy: "mandatory" | "default_on" | "default_off";
+        /** @enum {unknown} */
+        Null: null;
         PaginatedApplicationList: {
             /**
              * @description Total number of items available.
@@ -659,6 +1157,62 @@ export interface components {
              */
             total_pages: number;
             results: components["schemas"]["Application"][];
+{%- if cookiecutter.webhooks != "none" %}
+        };
+        PaginatedDeliveryList: {
+            /**
+             * @description Total number of items available.
+             * @example 1102
+             */
+            count: number;
+            /**
+             * @description Number of results to return per page.
+             * @example 100
+             */
+            page_size: number;
+            /**
+             * @description Total number of pages.
+             * @example 17
+             */
+            total_pages: number;
+            results: components["schemas"]["Delivery"][];
+        };
+        PaginatedEndpointList: {
+            /**
+             * @description Total number of items available.
+             * @example 1102
+             */
+            count: number;
+            /**
+             * @description Number of results to return per page.
+             * @example 100
+             */
+            page_size: number;
+            /**
+             * @description Total number of pages.
+             * @example 17
+             */
+            total_pages: number;
+            results: components["schemas"]["Endpoint"][];
+{%- endif %}
+        };
+        PaginatedInboxItemList: {
+            /**
+             * @description Total number of items available.
+             * @example 1102
+             */
+            count: number;
+            /**
+             * @description Number of results to return per page.
+             * @example 100
+             */
+            page_size: number;
+            /**
+             * @description Total number of pages.
+             * @example 17
+             */
+            total_pages: number;
+            results: components["schemas"]["InboxItem"][];
         };
         PaginatedManagedUserList: {
             /**
@@ -714,6 +1268,24 @@ export interface components {
             total_pages: number;
             results: components["schemas"]["ReviewedApplication"][];
         };
+        PaginatedSubscriptionList: {
+            /**
+             * @description Total number of items available.
+             * @example 1102
+             */
+            count: number;
+            /**
+             * @description Number of results to return per page.
+             * @example 100
+             */
+            page_size: number;
+            /**
+             * @description Total number of pages.
+             * @example 17
+             */
+            total_pages: number;
+            results: components["schemas"]["Subscription"][];
+        };
         PaginatedUserHistoryList: {
             /**
              * @description Total number of items available.
@@ -749,6 +1321,18 @@ export interface components {
             redirect_uris?: string[];
             /** @description What it asks to do on somebody's behalf, beyond signing them in. Each person it signs in is asked again, and a token can only ever do what that person can. */
             requested_scopes?: string[];
+{%- if cookiecutter.webhooks != "none" %}
+        };
+        PatchedEndpointRequest: {
+            /**
+             * Format: uri
+             * @description Where deliveries are POSTed.
+             */
+            url?: string;
+            /** @description Whether deliveries are sent to it. */
+            is_active?: boolean;
+            kinds?: components["schemas"]["EndpointKindRequest"][];
+{%- endif %}
         };
         /** @description Somebody's account as an account manager sees it: identity read-only, access editable. */
         PatchedManagedUserRequest: {
@@ -903,6 +1487,25 @@ export interface components {
         RotatedSecret: {
             /** @description Shown once, here. It is stored hashed, so this is the only copy. */
             readonly client_secret: string;
+        };
+        Subscription: {
+            /**
+             * Format: uuid
+             * @description Identifies this record. A UUIDv7, so ids sort roughly by when they were created.
+             */
+            readonly id: string;
+            kind: string;
+            /** @description The kind's one variant this is for, or none for every one. */
+            variant?: string | null;
+            /** @description Whether the user gets the kind. */
+            enabled?: boolean;
+        };
+        SubscriptionRequest: {
+            kind: string;
+            /** @description The kind's one variant this is for, or none for every one. */
+            variant?: string | null;
+            /** @description Whether the user gets the kind. */
+            enabled?: boolean;
         };
         /** @description The signed-in person, as they see and edit themselves; nobody changes their own rank or permissions. */
         User: {
@@ -1159,6 +1762,775 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IdempotencyKeyReused"];
+{%- if cookiecutter.webhooks != "none" %}
+                };
+            };
+        };
+    };
+    notifications_deliveries_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedDeliveryList"];
+                };
+            };
+        };
+    };
+    notifications_deliveries_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Delivery"];
+                };
+            };
+        };
+    };
+    notifications_deliveries_retry_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Delivery"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+        };
+    };
+    notifications_endpoints_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedEndpointList"];
+                };
+            };
+        };
+    };
+    notifications_endpoints_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EndpointRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EndpointRequest"];
+                "multipart/form-data": components["schemas"]["EndpointRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Endpoint"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyConflict"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+        };
+    };
+    notifications_endpoints_retrieve: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The ETag of the version already held - a 304 with no body if it's still current. */
+                "If-None-Match"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Endpoint"];
+                };
+            };
+            /** @description The version If-None-Match named is still current. */
+            304: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    notifications_endpoints_update: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+                /** @description The ETag of the version this request was made against, or * for whatever is current. */
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EndpointRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EndpointRequest"];
+                "multipart/form-data": components["schemas"]["EndpointRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Endpoint"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            412: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EndpointPreconditionFailed"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreconditionRequired"];
+                };
+            };
+        };
+    };
+    notifications_endpoints_destroy: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+                /** @description The ETag of the version this request was made against, or * for whatever is current. */
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            412: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EndpointPreconditionFailed"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreconditionRequired"];
+                };
+            };
+        };
+    };
+    notifications_endpoints_partial_update: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+                /** @description The ETag of the version this request was made against, or * for whatever is current. */
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedEndpointRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedEndpointRequest"];
+                "multipart/form-data": components["schemas"]["PatchedEndpointRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Endpoint"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            412: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EndpointPreconditionFailed"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreconditionRequired"];
+                };
+            };
+        };
+    };
+    notifications_endpoints_finish_rotation_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+                /** @description The ETag of the version this request was made against, or * for whatever is current. */
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Endpoint"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            412: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EndpointPreconditionFailed"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreconditionRequired"];
+                };
+            };
+        };
+    };
+    notifications_endpoints_rotate_secret_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+                /** @description The ETag of the version this request was made against, or * for whatever is current. */
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Endpoint"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyConflict"];
+                };
+            };
+            412: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EndpointPreconditionFailed"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreconditionRequired"];
+                };
+            };
+        };
+    };
+    notifications_endpoints_unpark_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+                /** @description The ETag of the version this request was made against, or * for whatever is current. */
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Endpoint"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            412: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EndpointPreconditionFailed"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreconditionRequired"];
+{%- endif %}
+                };
+            };
+        };
+    };
+    notifications_inbox_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
+                /** @description A search term. */
+                search?: string;
+                /** @description Only the unread notifications. */
+                unread?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedInboxItemList"];
+                };
+            };
+        };
+    };
+    notifications_inbox_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxItem"];
+                };
+            };
+        };
+    };
+    notifications_inbox_read_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxItem"];
+                };
+            };
+        };
+    };
+    notifications_inbox_read_all_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Marked"];
+                };
+            };
+        };
+    };
+    notifications_subscriptions_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedSubscriptionList"];
+                };
+            };
+        };
+    };
+    notifications_subscriptions_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubscriptionRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SubscriptionRequest"];
+                "multipart/form-data": components["schemas"]["SubscriptionRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Subscription"];
+                };
+            };
+        };
+    };
+    notifications_subscriptions_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    notifications_subscriptions_kinds_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChoosableKind"][];
                 };
             };
         };

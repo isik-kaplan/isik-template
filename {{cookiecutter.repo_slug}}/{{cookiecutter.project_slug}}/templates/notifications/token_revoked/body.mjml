@@ -1,0 +1,9 @@
+{% raw -%}
+{% extends "account/email/base/base.html" %}
+{% load i18n %}
+
+{% block content %}
+        <mj-text>{% blocktrans with name=data.name %}The personal access token named "{{ name }}" was revoked and no longer works.{% endblocktrans %}</mj-text>
+        <mj-text>{% blocktrans %}If you didn't revoke it, check your profile for other changes and change your password.{% endblocktrans %}</mj-text>
+{% endblock content %}
+{%- endraw %}

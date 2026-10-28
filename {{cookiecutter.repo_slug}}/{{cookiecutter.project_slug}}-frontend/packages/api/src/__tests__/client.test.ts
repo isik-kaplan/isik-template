@@ -131,12 +131,42 @@ describe('Api', () => {
       'GET',
       '/v0/personal-access-tokens/scopes/',
     ],
+    ['notifications', (api: Api) => api.notifications(), 'GET', '/v0/notifications/inbox/'],
+    [
+      'notifications, unread only',
+      (api: Api) => api.notifications({ unread: true }),
+      'GET',
+      '/v0/notifications/inbox/?unread=true',
+    ],
+    ['markNotificationRead', (api: Api) => api.markNotificationRead('n1'), 'POST', '/v0/notifications/inbox/n1/read/'],
+    [
+      'markAllNotificationsRead',
+      (api: Api) => api.markAllNotificationsRead(),
+      'POST',
+      '/v0/notifications/inbox/read-all/',
+    ],
+    ['notificationChoices', (api: Api) => api.notificationChoices(), 'GET', '/v0/notifications/subscriptions/'],
+    [
+      'choosableNotificationKinds',
+      (api: Api) => api.choosableNotificationKinds(),
+      'GET',
+      '/v0/notifications/subscriptions/kinds/',
+    ],
   ])('%s calls %s %s', async (_name, call, method, path) => {
     const baseFetch = vi.fn<typeof fetch>(async () => new Response('{}', { status: 200 }))
     await call(new Api('https://api.example.test', { baseFetch }))
     const [request] = baseFetch.mock.calls[0]
     expect(request instanceof Request ? request.method : undefined).toBe(method)
     expect(String(request instanceof Request ? request.url : request)).toBe(`https://api.example.test${path}`)
+  })
+
+  it('sends the choice about a kind as its body', async () => {
+    const baseFetch = vi.fn<typeof fetch>(async () => new Response('{}', { status: 200 }))
+    await new Api('https://api.example.test', { baseFetch }).chooseNotifications('account_changed', false)
+    const [request] = baseFetch.mock.calls[0]
+    expect((request as Request).method).toBe('POST')
+    expect(String((request as Request).url)).toBe('https://api.example.test/v0/notifications/subscriptions/')
+    expect(await (request as Request).json()).toEqual({ kind: 'account_changed', enabled: false })
   })
 
   it('sends the application to register as its body, under the idempotency key it was given', async () => {

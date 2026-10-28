@@ -1,10 +1,15 @@
+import pgtrigger
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
 from django.db.models.functions import Now
 from isik.django.apps.common.db import track_events
+from isik.django.apps.notifications.audiences import Field
+from isik.django.apps.notifications.choices import Policy
+from isik.django.apps.notifications.kinds import notifies
 
 from apps.common.models.base import BaseModel
+from apps.notifications.kinds import OWNER_CHANNELS, TOKEN_CREATED, TOKEN_REVOKED
 
 
 class PersonalAccessTokenQuerySet(models.QuerySet):
@@ -14,6 +19,23 @@ class PersonalAccessTokenQuerySet(models.QuerySet):
 
 # Every request would otherwise write an event.
 @track_events(exclude=["last_used_at", "updated_at"])
+@notifies(
+    TOKEN_CREATED,
+    on=pgtrigger.Insert,
+    snapshot=["user", "name"],
+    audience=Field("user"),
+    policy=Policy.MANDATORY,
+    channels=OWNER_CHANNELS,
+)
+# A revoked token is deleted, so the notice carries what it was.
+@notifies(
+    TOKEN_REVOKED,
+    on=pgtrigger.Delete,
+    snapshot=["user", "name"],
+    audience=Field("user"),
+    policy=Policy.MANDATORY,
+    channels=OWNER_CHANNELS,
+)
 class PersonalAccessToken(BaseModel):
     """A token somebody made to call the API as themselves, within its scopes and what they hold. Only a
     checksum is kept."""

@@ -18,10 +18,15 @@ from django.db import connections, transaction
 from django.test import Client
 from hypothesis import settings as hypothesis_settings
 from isik.django.apps.common.db.concurrency import current_concurrency_etag
+from isik.django.apps.common.db.constraints import lifted_constraint
 from isik.django.apps.idempotency.drf import IdempotencyMixin
+from isik.django.apps.notifications import pipeline
+from isik.django.apps.notifications.choices import DeliveryState
+from isik.django.apps.notifications.swapping import get_delivery_model
 
 from apps.common.logging.emit import AUDIT_LOGGER, LOGGER
 from apps.common.logging.events import PAYLOAD
+from apps.users.models.user import User
 
 from {{ cookiecutter.project_slug }}.celery import app as celery_app
 {%- if cookiecutter.storage != "disk" %}
@@ -69,6 +74,12 @@ def _tasks_run_in_process(monkeypatch):
     monkeypatch.setitem(celery_app.conf, "task_eager_propagates", True)
 
 
+@pytest.fixture
+def retries_run_in_process(monkeypatch):
+    """With propagation on, an eager task raises its retry instead of running it."""
+    monkeypatch.setitem(celery_app.conf, "task_eager_propagates", False)
+
+
 @pytest.fixture(autouse=True)
 def _every_write_carries_an_idempotency_key(monkeypatch):
     """Real clients always send one. A test about the header passes its own, or uses `generic`."""
@@ -90,6 +101,21 @@ def give_authentication_records(session, user, records):
     if user.pk is not None:
         session[_AUTHENTICATION_METHODS_USER_SESSION_KEY] = user_id_to_str(user)
     session[AUTHENTICATION_METHODS_SESSION_KEY] = list(records)
+
+
+@pytest.fixture
+def a_second_language(settings, db):
+    """The project as if it also shipped Turkish, with the language CHECK lifted."""
+    settings.LANGUAGES = [("en", "English"), ("tr", "Turkish")]
+    with lifted_constraint(User, "users_user_language_choices"):
+        yield
+
+
+def deliver_waiting_notices():
+    """What the workers would do: fan out every waiting notice, then send each delivery that's due."""
+    pipeline.fan_out()
+    for pk in get_delivery_model()._default_manager.filter(state=DeliveryState.PENDING).values_list("pk", flat=True):
+        pipeline.send(pk)
 
 
 def versioned(instance):

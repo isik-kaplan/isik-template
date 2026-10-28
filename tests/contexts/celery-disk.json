@@ -7,5 +7,6 @@
   "license": "GPL-3.0",
   "background_jobs": "celery",
   "storage": "disk",
-  "cache": "redis"
+  "cache": "redis",
+  "webhooks": "none"
 }

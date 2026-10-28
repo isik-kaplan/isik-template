@@ -8,5 +8,6 @@
   "license": "BSD-3-Clause",
   "background_jobs": "celery-with-beat",
   "storage": "disk",
-  "cache": "database"
+  "cache": "database",
+  "webhooks": "staff"
 }

@@ -17,7 +17,6 @@ FLOWS = [
     "email_confirmation",
     "email_deleted",
     "login_code",
-    "logins_closed",
     "password_changed",
     "password_reset_key",
     "password_reset_code",

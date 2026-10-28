@@ -6,6 +6,9 @@ import sentry_sdk
 from corsheaders.defaults import default_headers
 from django.conf.locale import LANG_INFO
 from isik.django.apps.common.checks import Check, CheckOption
+{%- if cookiecutter.background_jobs == "inline" and cookiecutter.webhooks != "none" %}
+from isik.django.apps.notifications.exemptions import SendsInline
+{%- endif %}
 
 from apps.common.logging.scrub import scrub_event
 from apps.oauth_provider import device_codes
@@ -51,6 +54,9 @@ INSTALLED_APPS = [
     "pghistory",
     "isik.django.apps.common",
     "isik.django.apps.idempotency.by_reference",
+    # isik's mechanism; the tables are apps.notifications'.
+    "isik.django.apps.notifications",
+    "isik.django.apps.notifications.audience",
     "django_object_actions",
     "dalf",
     "django_filters",
@@ -75,6 +81,7 @@ INSTALLED_APPS = [
     "apps.users.apps.UsersConfig",
     "apps.oauth_provider.apps.OAuthProviderConfig",
     "apps.admin.apps.AdminConfig",
+    "apps.notifications.apps.NotificationsConfig",
 ]
 
 MIDDLEWARE = [
@@ -101,6 +108,10 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_hosts.middleware.HostsResponseMiddleware",
+{%- if cookiecutter.background_jobs != "celery-with-beat" %}
+    # No beat runs fan-out here: a write that left a notice waiting starts one once it has committed.
+    "isik.django.apps.notifications.hooks.FanOutAfterWritesMiddleware",
+{%- endif %}
 ]
 
 LOGGING = {
@@ -440,6 +451,43 @@ HISTORY_CONTEXT_VERSION = __version__
 HISTORY_TASK_DISPATCH_ON_COMMIT = True
 # Time-ordered ids: rows made later sort later, which keeps index pages filling in order.
 ISIK_PRIMARY_KEY_DEFAULT = "isik.django.apps.common.db.models.uuid7"
+ISIK_NOTIFICATIONS_KIND_POLICY_MODEL = "notifications.NoticeKindPolicy"
+ISIK_NOTIFICATIONS_NOTICE_MODEL = "notifications.Notice"
+ISIK_NOTIFICATIONS_FAN_OUT_SHARD_MODEL = "notifications.FanOutShard"
+ISIK_NOTIFICATIONS_DELIVERY_MODEL = "notifications.Delivery"
+ISIK_NOTIFICATIONS_WEBHOOK_DELIVERY_MODEL = "notifications.WebhookDelivery"
+ISIK_NOTIFICATIONS_EMAIL_DELIVERY_MODEL = "notifications.EmailDelivery"
+ISIK_NOTIFICATIONS_INBOX_DELIVERY_MODEL = "notifications.InboxDelivery"
+ISIK_NOTIFICATIONS_DELIVERY_ATTEMPT_MODEL = "notifications.DeliveryAttempt"
+ISIK_NOTIFICATIONS_SUBSCRIPTION_MODEL = "notifications.Subscription"
+ISIK_NOTIFICATIONS_INBOX_ITEM_MODEL = "notifications.InboxItem"
+ISIK_NOTIFICATIONS_ENDPOINT_MODEL = "notifications.Endpoint"
+ISIK_NOTIFICATIONS_ENDPOINT_KIND_MODEL = "notifications.EndpointKind"
+ISIK_NOTIFICATIONS = {
+    # Every kind is declared in apps/notifications/kinds.py, so a name can't be invented at a call site.
+    "REQUIRE_DECLARED_KINDS": True,
+{%- if cookiecutter.webhooks == "none" %}
+    "CHANNELS": ("inbox", "email"),
+{%- else %}
+    "CHANNELS": ("inbox", "email", "webhook"),
+    # Names the signature header receivers verify, so it's the slug: renaming the product mustn't move it.
+    "PROJECT_NAME": {{ cookiecutter.project_slug.replace("_", "-")|tojson }},
+{%- endif %}
+{%- if cookiecutter.webhooks == "users" %}
+    # A user's endpoint is sent only notices meant for them.
+    "ENDPOINT_OWNER_FIELD": "owner",
+{%- endif %}
+    "EMAIL_SENDER": "isik.django.apps.notifications.channels.email.send_from_mjml_templates",
+    "RECIPIENT_LANGUAGE": "apps.common.language.saved_language",
+{%- if cookiecutter.background_jobs != "celery-with-beat" %}
+    "FAN_OUT_AFTER_TASKS": True,
+{%- endif %}
+{%- if cookiecutter.background_jobs == "inline" and cookiecutter.webhooks != "none" %}
+    "SENDS_INLINE": SendsInline(
+        reason="Inline means a task runs in the request that asked for it, and a webhook is one such task."
+    ),
+{%- endif %}
+}
 ISIK_CHECKS = {
     Check.DOCUMENTATION: {
         CheckOption.EXEMPTION_TYPES: ["apps.common.schema_docs.NoHelpText", "apps.common.schema_docs.NoComment"],

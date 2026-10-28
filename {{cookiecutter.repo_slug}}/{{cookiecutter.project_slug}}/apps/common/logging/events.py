@@ -73,3 +73,6 @@ REAUTHENTICATION_SPENT = declare("reauthentication.spent", logging.INFO, ("user"
 # reads as `login.failed`'s wrong password.
 LOGIN_REFUSED_BY_POLICY = declare("login.refused_by_policy", logging.WARNING, ("user", "policy"))
 LOGIN_POLICY_SWEPT = declare("login_policy.swept", logging.WARNING, ("policy", "sessions"), audited=True)
+
+# A mail allauth added since apps/notifications/kinds.py was written: sent, but kept nowhere.
+ACCOUNT_MAIL_UNRECORDED = declare("account_mail.unrecorded", logging.WARNING, ("template",))

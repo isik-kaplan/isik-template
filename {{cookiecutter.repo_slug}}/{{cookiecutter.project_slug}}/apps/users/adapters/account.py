@@ -2,10 +2,12 @@ from allauth.account.adapter import DefaultAccountAdapter
 from allauth.core import context as allauth_context
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone, translation
+from isik.django.apps.notifications.kinds import raise_notice
 
 from apps.common.client_ip import client_ip
 from apps.common.email import mjml_template, text_template
 from apps.common.language import saved_language
+from apps.notifications.kinds import ACCOUNT_CHANGED
 from apps.users.login_policy import admits
 from apps.users.models.site_settings import SiteSettings
 from apps.users.tasks.account_mail import send_account_mail
@@ -51,5 +53,11 @@ class AccountAdapter(DefaultAccountAdapter):
             html_content = mjml_template(f"{prefix}/message.html", context, request)
             text_content = text_template(f"{prefix}/message.txt", context, request)
             subject = text_template(f"{prefix}/subject.txt", context, request).strip()
+        user = context.get("user")
         # Rendered here, where the request is; sent by the worker so a hung SMTP host can't block the request.
-        send_account_mail.delay(subject, text_content, html_content, email)
+        send_account_mail.delay(
+            subject, text_content, html_content, email, prefix, str(user.pk) if user and user.pk else None
+        )
+        variant = prefix.rsplit("/", 1)[-1]
+        if user is not None and user.pk and variant in ACCOUNT_CHANGED.variants:
+            raise_notice(ACCOUNT_CHANGED, variant=variant, snapshot={"user": str(user.pk)})

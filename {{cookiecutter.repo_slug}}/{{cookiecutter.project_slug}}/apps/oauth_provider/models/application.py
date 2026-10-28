@@ -2,10 +2,27 @@ import pgtrigger
 from django.db import models
 from django.db.models import Q
 from isik.django.apps.common.db import VersionedModel, track_events
+from isik.django.apps.notifications.audiences import Field
+from isik.django.apps.notifications.choices import Policy
+from isik.django.apps.notifications.kinds import notifies
 from oauth2_provider.models import AbstractApplication
+
+from apps.notifications.kinds import APPLICATION_REVIEWED, OWNER_CHANNELS
 
 
 @track_events()
+@notifies(
+    APPLICATION_REVIEWED,
+    on=pgtrigger.Update,
+    variants={
+        "approved": pgtrigger.Q(new__approval="approved") & ~pgtrigger.Q(old__approval="approved"),
+        "withdrawn": pgtrigger.Q(new__approval="withdrawn") & ~pgtrigger.Q(old__approval="withdrawn"),
+    },
+    snapshot=["user", "name", "approval"],
+    audience=Field("user"),
+    policy=Policy.DEFAULT_ON,
+    channels=OWNER_CHANNELS,
+)
 class Application(VersionedModel, AbstractApplication):
     """`user` is its owner, never whose account it acts in. Versioned, since DOT's `updated` is `auto_now`,
     which a QuerySet.update() never touches."""

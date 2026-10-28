@@ -58,9 +58,10 @@ called with `.delay()`), but `CELERY_TASK_ALWAYS_EAGER` runs each one in the pro
 it, once that request's transaction commits. A failing task is logged with its traceback and never
 fails the response. What that costs:
 
-- The request waits for the task. `tell_the_people_a_rung_signed_out` mails everyone inline.
+- The request waits for the task, and for the notifications its writes fanned out - mail and webhooks
+  included.
 - A `countdown` or `eta` is not waited for, and a retry runs at once rather than later.
-- Nothing runs on a schedule.
+- Nothing runs on a schedule but uWSGI's minute cron, `manage.py notices --work` (see Notifications).
 
 To move to a worker, regenerate with `background_jobs` set to `celery` or `celery-with-beat` and
 carry over the `broker` and `worker` services, the `BROKER__*` settings and
@@ -407,6 +408,38 @@ until it is deleted. Making one asks the person to prove it is them, the token i
 its SHA-256 is stored (`apps/users/personal_access_tokens.py`); a token of somebody deactivated or
 shut out by the sign-in ladder is refused.
 
+## Notifications
+
+Built on isik's notifications app; every one of its tables is this project's own, in
+`apps/notifications/models/`. A kind is declared in `apps/notifications/kinds.py`, and nothing raises a
+kind that isn't there (`REQUIRE_DECLARED_KINDS`). Most are written by the database: `@notifies(...)` on a
+model compiles to a trigger that inserts the notice in the same transaction as the change, so a raw
+`UPDATE` notifies too. Fan-out then turns each notice into deliveries - the inbox (the profile's
+Notifications tab), email (`templates/notifications/<kind>/`, in the recipient's language){% if cookiecutter.webhooks != "none" %} and webhooks{% endif %}.
+
+- **The owner's own:** a personal access token made or revoked, an application approved or withdrawn.
+- **Signed out by the sign-in ladder:** one notice per person shut out, by inbox and email.
+- **Account changes:** allauth mails these itself; `account_changed` copies them into the inbox, which
+  somebody may turn off on the Notifications tab. Security notices can't be turned off.
+- **allauth's mail is recorded, not queued:** a reset link has to go out now, so the account adapter
+  sends it as before and `record_email` writes it to the ledger afterwards, keyed by its task so its
+  retries are attempts at one delivery. Nothing of the message is kept. A mail allauth adds later has
+  no kind in `RECORDED_MAIL` and goes out unrecorded; a test fails until it gets one.
+{% if cookiecutter.background_jobs == "celery-with-beat" %}
+Fan-out, the reaper (retries due, stranded deliveries) and pruning run from `scheduler`'s beat
+(`merge_beat_schedule(app)` in `celery.py`).
+{% else %}
+There is no beat, so a write that left a notice waiting starts its fan-out once it commits
+(`FanOutAfterWritesMiddleware`, and `FAN_OUT_AFTER_TASKS` for tasks), and uWSGI runs
+`manage.py notices --work` every minute for the rest: retries that fell due, notices written outside a
+request (psql, a script) and pruning.
+{% endif %}{% if cookiecutter.webhooks != "none" %}
+**Webhooks** ({% if cookiecutter.webhooks == "staff" %}the deployment's, registered by staff{% else %}each user's own, sent only that user's notices{% endif %}): `/v0/notifications/endpoints/`.
+Registering or editing one asks somebody to prove it is them, and its secret is shown once. Each delivery
+is signed in `X-{{ cookiecutter.project_slug.replace("_", "-") }}-Signature` - the slug, not the display
+name, since receivers verify by it - and carries an `Idempotency-Key`. An endpoint resolving to a private,
+loopback or link-local address, this deployment's own services included, is refused when it's sent to.
+{% endif %}
 ## Permissions
 
 `apps/users/permissions.py` declares every permission there is, as `where:action:what` - written into

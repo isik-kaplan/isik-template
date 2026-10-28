@@ -8,5 +8,6 @@
   "license": "MIT",
   "background_jobs": "celery",
   "storage": "s3",
-  "cache": "database"
+  "cache": "database",
+  "webhooks": "users"
 }

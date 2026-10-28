@@ -10,6 +10,7 @@ from django.core import mail
 from django.test import RequestFactory
 from django.utils import translation
 
+from apps.notifications.models import Notice
 from apps.users.adapters.account import AccountAdapter
 from apps.users.adapters.social_account import SocialAccountAdapter
 
@@ -35,7 +36,34 @@ def test_send_mail_renders_with_the_request_bound_by_allauth_and_leaves_the_send
         (("account/email/email_confirmation/message.txt", {"key": "abc", "email": "jane@example.test"}, request),),
         (("account/email/email_confirmation/subject.txt", {"key": "abc", "email": "jane@example.test"}, request),),
     ]
-    task.delay.assert_called_once_with("Subject line", "text body", "<html>body</html>", "jane@example.test")
+    task.delay.assert_called_once_with(
+        "Subject line", "text body", "<html>body</html>", "jane@example.test", "account/email/email_confirmation", None
+    )
+
+
+@pytest.mark.django_db
+def test_a_change_to_the_account_lands_in_its_owners_inbox_beside_the_mail(alice):
+    with (
+        request_context(RequestFactory().get("/")),
+        patch("apps.users.adapters.account.send_account_mail") as task,
+    ):
+        AccountAdapter().send_mail("account/email/password_changed", alice.email, {"user": alice})
+
+    assert task.delay.call_args.args[4:] == ("account/email/password_changed", str(alice.pk))
+    (notice,) = Notice.objects.all()
+    assert (notice.kind_id, notice.variant, notice.snapshot) == (
+        "account_changed",
+        "password_changed",
+        {"user": str(alice.pk)},
+    )
+
+
+@pytest.mark.django_db
+def test_a_mail_that_changes_nothing_raises_no_notice(alice):
+    with request_context(RequestFactory().get("/")), patch("apps.users.adapters.account.send_account_mail"):
+        AccountAdapter().send_mail("account/email/password_reset_key", alice.email, {"user": alice, "key": "abc"})
+
+    assert not Notice.objects.exists()
 
 
 def _languages_a_mail_renders_in(user):
@@ -60,7 +88,7 @@ def test_send_mail_renders_in_the_recipients_own_language(settings):
     settings.LANGUAGES = [("en", "English"), ("tr", "Turkish")]
 
     with translation.override("en"):
-        assert _languages_a_mail_renders_in(SimpleNamespace(language="tr")) == {"tr"}
+        assert _languages_a_mail_renders_in(SimpleNamespace(pk=None, language="tr")) == {"tr"}
         assert translation.get_language() == "en", "the sender's language has to come back afterwards"
 
 
@@ -70,7 +98,7 @@ def test_send_mail_to_someone_with_no_choice_keeps_the_active_language(settings)
     settings.LANGUAGES = [("en", "English"), ("tr", "Turkish")]
 
     with translation.override("tr"):
-        assert _languages_a_mail_renders_in(SimpleNamespace(language="")) == {"tr"}
+        assert _languages_a_mail_renders_in(SimpleNamespace(pk=None, language="")) == {"tr"}
 
 
 @pytest.mark.django_db

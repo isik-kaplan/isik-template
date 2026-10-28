@@ -9,5 +9,6 @@
   "languages": "en,tr",
   "background_jobs": "celery-with-beat",
   "storage": "garage",
-  "cache": "redis"
+  "cache": "redis",
+  "webhooks": "users"
 }

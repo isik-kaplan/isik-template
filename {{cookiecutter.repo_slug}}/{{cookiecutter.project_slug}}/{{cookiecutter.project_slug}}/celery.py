@@ -1,6 +1,9 @@
 import os
 
 from celery import Celery
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+from isik.django.apps.notifications.schedule import merge_beat_schedule
+{%- endif %}
 
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "{{ cookiecutter.project_slug }}.settings")
@@ -13,3 +16,7 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
 app.conf.task_time_limit = 240
 app.conf.task_soft_time_limit = 120
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+# django-celery-beat copies the schedule into its table when beat starts.
+merge_beat_schedule(app)
+{%- endif %}

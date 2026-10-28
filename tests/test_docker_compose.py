@@ -173,12 +173,13 @@ def test_pairwise_meets_every_answer_with_every_other():
         {"garage", "s3", "disk"},
         {"external", "self"},
         {"redis", "database"},
+        {"none", "staff", "users"},
     ]
 
 
-@pytest.mark.parametrize(("background_jobs", "storage", "tls_termination", "cache"), PAIRWISE)
+@pytest.mark.parametrize(("background_jobs", "storage", "tls_termination", "cache", "webhooks"), PAIRWISE)
 def test_every_pair_of_answers_bakes_a_stack_that_holds_together(
-    cookies, background_jobs, storage, tls_termination, cache
+    cookies, background_jobs, storage, tls_termination, cache, webhooks
 ):
     """Config only: the answers that run code are tested for real by test_backend.py's contexts."""
     answers = {
@@ -186,6 +187,7 @@ def test_every_pair_of_answers_bakes_a_stack_that_holds_together(
         "storage": storage,
         "tls_termination": tls_termination,
         "cache": cache,
+        "webhooks": webhooks,
     }
     result = cookies.bake(extra_context={**load_context("default"), **answers})
     assert result.exit_code == 0

@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation'
 
 import {
   AppWindowIcon,
+  BellIcon,
   KeyRoundIcon,
   Link2Icon,
   MailIcon,
@@ -20,6 +21,7 @@ import { useClientTranslation } from '@/i18n/client'
 
 const TABS = [
   { segment: 'details', icon: UserIcon },
+  { segment: 'notifications', icon: BellIcon },
   { segment: 'password', icon: KeyRoundIcon },
   { segment: 'emails', icon: MailIcon },
   { segment: 'connections', icon: Link2Icon },
@@ -40,6 +42,7 @@ export function ProfileTabsList() {
   // Spelled out: i18next-parser only detects literal keys, and collects them from comments too.
   const labels: Record<(typeof TABS)[number]['segment'], string> = {
     details: t('auth:profileDetailsTab'),
+    notifications: t('auth:profileNotificationsTab'),
     password: t('auth:profilePasswordTab'),
     emails: t('auth:profileEmailsTab'),
     connections: t('auth:profileConnectionsTab'),

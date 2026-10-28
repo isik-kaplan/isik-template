@@ -8,7 +8,6 @@ from allauth.socialaccount.providers.openid_connect.provider import OpenIDConnec
 from allauth.socialaccount.providers.openid_connect.views import OpenIDConnectOAuth2Adapter
 from django.conf import settings
 from django.urls import reverse
-from isik.django.apps.common.db.constraints import lifted_constraint
 
 from apps.users.models.user import User
 
@@ -47,14 +46,6 @@ class Headless:
         response = self.call("POST", "account:reauthenticate", {"password": password})
         assert response.status_code == 200
         return response
-
-
-@pytest.fixture
-def a_second_language(settings, db):
-    """The project as if it also shipped Turkish, with the language CHECK lifted."""
-    settings.LANGUAGES = [("en", "English"), ("tr", "Turkish")]
-    with lifted_constraint(User, "users_user_language_choices"):
-        yield
 
 
 @pytest.fixture

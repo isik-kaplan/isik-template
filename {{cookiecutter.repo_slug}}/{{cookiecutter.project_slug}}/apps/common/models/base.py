@@ -4,9 +4,10 @@ from isik.django.apps.common.db import BaseModel as _BaseModel
 from isik.django.apps.common.db.models import new_primary_key
 
 
-class BaseModel(_BaseModel):
-    # Redeclared only for its description: ISIK_PRIMARY_KEY_DEFAULT makes it a UUIDv7, which isik's calls random.
-    id = models.UUIDField(
+def primary_key(**kwargs):
+    """The key every table here has: a UUIDv7, which ISIK_PRIMARY_KEY_DEFAULT makes and isik's describes as random."""
+    return models.UUIDField(
+        **kwargs,
         primary_key=True,
         db_index=True,
         editable=False,
@@ -15,6 +16,10 @@ class BaseModel(_BaseModel):
         help_text="Identifies this record. A UUIDv7, so ids sort roughly by when they were created.",
         db_comment="Primary key: a UUIDv7 the application generates, so ids sort roughly by creation time.",
     )
+
+
+class BaseModel(_BaseModel):
+    id = primary_key()
 
     class Meta:
         abstract = True

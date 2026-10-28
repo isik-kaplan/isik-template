@@ -5,110 +5,13 @@ import pytest
 from django.conf import settings
 from django.core import mail
 from django.core.mail import get_connection
-from django.utils import translation
 
-from apps.users.models.site_settings import SiteSettings
-from apps.users.models.user import User
 from apps.users.tasks.account_mail import send_account_mail
 from apps.users.tasks.health_check import ping
-from apps.users.tasks.logins_closed import tell_one_person_a_rung_signed_out, tell_the_people_a_rung_signed_out
-
-from {{ cookiecutter.project_slug }}.celery import app as celery_app
 
 
 def test_ping_task_returns_pong():
     assert ping() == "pong"
-
-
-@pytest.mark.django_db
-def test_the_people_a_rung_shuts_out_get_one_task_each():
-    SiteSettings.objects.create(login_policy=SiteSettings.LoginPolicy.STAFF)
-    # Skipped ones first, so skipping one isn't mistaken for being done.
-    User.objects.create_user(username="gone", email="gone@example.test", is_active=False)
-    User.objects.create_user(username="no-address", email="")
-    User.objects.create_user(username="staff", email="staff@example.test", is_staff=True)
-    members = [User.objects.create_user(username=f"member-{n}", email=f"member-{n}@example.test") for n in range(3)]
-
-    with patch("apps.users.tasks.logins_closed.tell_one_person_a_rung_signed_out.delay") as delay:
-        tell_the_people_a_rung_signed_out()
-
-    assert sorted(call.args for call in delay.call_args_list) == sorted((str(member.pk),) for member in members)
-
-
-@pytest.mark.django_db
-def test_each_one_is_mailed_in_their_own_language(a_second_language):
-    """The worker has no request language to fall back on."""
-    member = User.objects.create_user(username="member", email="member@example.test", language="tr")
-    seen = []
-    templates = []
-
-    def render(name, *args):
-        seen.append(translation.get_language())
-        templates.append(name)
-        return "rendered"
-
-    with (
-        translation.override("en"),
-        patch("apps.users.adapters.account.mjml_template", side_effect=render),
-        patch("apps.users.adapters.account.text_template", side_effect=render),
-    ):
-        tell_one_person_a_rung_signed_out(str(member.pk))
-
-    assert set(seen) == {"tr"}
-    # Exact names: a case-insensitive filesystem would find any spelling.
-    prefix = "account/email/logins_closed"
-    assert sorted(templates) == [f"{prefix}/message.html", f"{prefix}/message.txt", f"{prefix}/subject.txt"]
-    (sent,) = mail.outbox
-    assert sent.to == ["member@example.test"]
-
-
-@pytest.mark.django_db
-def test_somebody_deleted_since_the_fan_out_is_nobody_to_tell():
-    member = User.objects.create_user(username="member", email="member@example.test")
-    pk = str(member.pk)
-    member.delete()
-
-    tell_one_person_a_rung_signed_out(pk)
-
-    assert mail.outbox == []
-
-
-@pytest.mark.django_db
-def test_the_mail_says_why_they_were_signed_out():
-    SiteSettings.objects.create(login_policy=SiteSettings.LoginPolicy.STAFF)
-    User.objects.create_user(username="member", email="member@example.test")
-
-    tell_the_people_a_rung_signed_out()
-
-    (sent,) = mail.outbox
-    assert sent.to == ["member@example.test"]
-    assert sent.subject == "You have been signed out"
-    assert "restricted" in sent.body
-
-
-@pytest.fixture
-def retries_run_in_process(monkeypatch):
-    """With propagation on, an eager task raises its retry instead of running it."""
-    monkeypatch.setitem(celery_app.conf, "task_eager_propagates", False)
-
-
-@pytest.mark.django_db
-@pytest.mark.usefixtures("retries_run_in_process")
-def test_one_recipients_failure_retries_that_recipient_alone():
-    SiteSettings.objects.create(login_policy=SiteSettings.LoginPolicy.STAFF)
-    for name in ("fine", "flaky"):
-        User.objects.create_user(username=name, email=f"{name}@example.test")
-    attempts = []
-
-    def deliver(subject, text, sender, recipients, **kwargs):
-        attempts.append(recipients[0])
-        if recipients == ["flaky@example.test"] and attempts.count("flaky@example.test") == 1:
-            raise SMTPServerDisconnected("gone")
-
-    with patch("apps.users.tasks.account_mail.send_mail", side_effect=deliver):
-        tell_the_people_a_rung_signed_out()
-
-    assert sorted(attempts) == ["fine@example.test", "flaky@example.test", "flaky@example.test"]
 
 
 def test_a_mail_host_that_hangs_times_out_rather_than_holding_the_worker():

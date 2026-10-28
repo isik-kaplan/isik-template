@@ -8,5 +8,6 @@
   "license": "Unlicense",
   "background_jobs": "inline",
   "storage": "garage",
-  "cache": "redis"
+  "cache": "redis",
+  "webhooks": "staff"
 }

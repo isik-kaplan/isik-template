@@ -211,4 +211,28 @@ export class Api {
   async personalAccessTokenScopes() {
     return this.client.GET('/v0/personal-access-tokens/scopes/')
   }
+
+  async notifications(query: { unread?: boolean; page?: number } = {}) {
+    return this.client.GET('/v0/notifications/inbox/', { params: { query } })
+  }
+
+  async markNotificationRead(id: string) {
+    return this.client.POST('/v0/notifications/inbox/{id}/read/', { params: { path: { id } } })
+  }
+
+  async markAllNotificationsRead() {
+    return this.client.POST('/v0/notifications/inbox/read-all/')
+  }
+
+  async notificationChoices() {
+    return this.client.GET('/v0/notifications/subscriptions/')
+  }
+
+  async choosableNotificationKinds() {
+    return this.client.GET('/v0/notifications/subscriptions/kinds/')
+  }
+
+  async chooseNotifications(kind: string, enabled: boolean) {
+    return this.client.POST('/v0/notifications/subscriptions/', { body: { kind, enabled } })
+  }
 }
