@@ -9,8 +9,9 @@ import pytest
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from celery.local import Proxy
+from django.apps import apps
 from django.contrib.auth import get_user_model
-from django.db import connection, transaction
+from django.db import connection, models, transaction
 from django.http import HttpResponse
 
 
@@ -106,3 +107,12 @@ def test_postgres_truncates_a_long_identifier_rather_than_refusing_it():
 
     assert same is True
     assert length == 63
+
+
+def test_a_model_reference_is_case_insensitive():
+    """kind_key() points at "notifications.NoticeKindPolicy"; any spelling of it is the same model and field."""
+    spellings = ("notifications.NoticeKindPolicy", "notifications.noticekindpolicy")
+
+    assert apps.get_model(spellings[0]) is apps.get_model(spellings[1])
+    first, second = (models.ForeignKey(name, on_delete=models.PROTECT).deconstruct() for name in spellings)
+    assert first == second

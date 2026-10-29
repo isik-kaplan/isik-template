@@ -1,3 +1,5 @@
+import posixpath
+
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.core import context as allauth_context
 from django.core.exceptions import PermissionDenied
@@ -58,6 +60,6 @@ class AccountAdapter(DefaultAccountAdapter):
         send_account_mail.delay(
             subject, text_content, html_content, email, prefix, str(user.pk) if user and user.pk else None
         )
-        variant = prefix.rsplit("/", 1)[-1]
+        variant = posixpath.basename(prefix)
         if user is not None and user.pk and variant in ACCOUNT_CHANGED.variants:
             raise_notice(ACCOUNT_CHANGED, variant=variant, snapshot={"user": str(user.pk)})

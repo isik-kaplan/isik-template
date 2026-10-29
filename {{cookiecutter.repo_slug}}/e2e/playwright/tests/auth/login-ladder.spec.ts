@@ -46,6 +46,8 @@ test('raising the ladder signs out and shuts out whoever it excludes, on both do
   // Signed out at once, not at the session's natural end.
   await page.goto('/profile/details')
   await expect(page).toHaveURL(/\/auth\/login/)
+  // The URL changes before the redirect settles; navigating again any sooner gets aborted.
+  await expect(page.getByLabel('Username or email')).toBeVisible()
 
   await login(page, username, password)
   await expect(page).toHaveURL(/\/auth\/login/)

@@ -25,10 +25,13 @@ test('a token somebody makes reaches their inbox, says they made it, and stays r
     issued.getByText('Copy your token now')
   )
 
-  // The trigger wrote the notice with the token; nothing in the app asked for it.
-  await page.goto('/profile/notifications')
+  // The trigger wrote the notice with the token; nothing in the app asked for it. With beat it reaches
+  // the inbox on the next fan-out tick, and the page reads the inbox once.
   const notice = page.getByRole('listitem').filter({ hasText: 'A personal access token named "Deploys" was created.' })
-  await expect(notice).toContainText('By you')
+  await expect(async () => {
+    await page.goto('/profile/notifications')
+    await expect(notice).toContainText('By you', { timeout: 1_000 })
+  }).toPass({ timeout: 30_000 })
   await notice.getByRole('button', { name: 'Mark read' }).click()
   await expect(notice.getByRole('button', { name: 'Mark read' })).toHaveCount(0)
 
