@@ -387,7 +387,10 @@ export interface paths {
          */
         get: operations["notifications_subscriptions_list"];
         put?: never;
-        /** @description Sets your preference for a kind of notification, or one variant of it - made, or replacing the one before. */
+        /**
+         * @description Which notifications the signed-in person gets: each a choice against a kind's default. kinds/ lists the ones
+         *     they may choose about; a mandatory kind is not among them.
+         */
         post: operations["notifications_subscriptions_create"];
         delete?: never;
         options?: never;

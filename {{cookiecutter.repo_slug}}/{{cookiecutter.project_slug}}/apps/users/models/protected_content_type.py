@@ -1,5 +1,6 @@
 import pgtrigger
 from django.contrib.contenttypes.models import ContentType
+from isik.django.apps.common.db import ProtectTruncate
 
 
 class ProtectedContentType(ContentType):
@@ -8,4 +9,7 @@ class ProtectedContentType(ContentType):
 
     class Meta:
         proxy = True
-        triggers = [pgtrigger.Protect(name="protect_content_type_delete", operation=pgtrigger.Delete)]
+        triggers = [
+            pgtrigger.Protect(name="protect_content_type_delete", operation=pgtrigger.Delete),
+            ProtectTruncate(name="protect_content_type_truncate"),
+        ]

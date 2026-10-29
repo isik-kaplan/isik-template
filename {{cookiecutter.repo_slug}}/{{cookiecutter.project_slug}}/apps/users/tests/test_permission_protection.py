@@ -87,6 +87,18 @@ def test_a_raw_delete_of_a_content_type_is_refused():
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("table", [PERMISSION, CONTENT_TYPE])
+def test_emptying_either_table_at_once_is_refused(table):
+    """A TRUNCATE fires no row's DELETE trigger, so it has its own."""
+    rows = Permission.objects.count(), ContentType.objects.count()
+
+    with pytest.raises(ProgrammingError, match="Cannot truncate"):
+        _execute(f"TRUNCATE {table} CASCADE", [])
+
+    assert (Permission.objects.count(), ContentType.objects.count()) == rows
+
+
+@pytest.mark.django_db
 def test_a_content_type_can_still_be_renamed():
     """Updates stay open for `RenameContentType`."""
     # Its own row: get_for_model's cache would leak the rename into later tests.
