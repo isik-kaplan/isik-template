@@ -57,7 +57,8 @@ def test_the_token_is_answered_once_and_only_its_checksum_kept(client, manager):
     assert token.token_checksum == checksum(body["token"])
     assert body["token"] not in token.token_checksum
     assert body["scopes"] == [MANAGE]
-    assert body["expires_at"] is None
+    # Never "never": with no expiry given, it lasts the owner's token lifetime.
+    assert body["expires_at"] is not None
     assert client.get(_detail(token)).json()["token"] is None
 
 

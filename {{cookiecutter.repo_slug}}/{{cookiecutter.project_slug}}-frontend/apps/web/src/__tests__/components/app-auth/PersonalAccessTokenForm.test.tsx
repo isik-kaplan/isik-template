@@ -27,8 +27,8 @@ describe('expiresAt', () => {
     expect(expiresAt(choice, 1_000)).toBe(new Date(1_000 + days * DAY).toISOString())
   })
 
-  it('is nothing for a token that never expires', () => {
-    expect(expiresAt('never', 1_000)).toBeNull()
+  it('is nothing for a token that lasts the lifetime, which the backend fills in', () => {
+    expect(expiresAt('lifetime', 1_000)).toBeUndefined()
   })
 
   it('counts from the moment it is asked, unless told otherwise', () => {
@@ -63,22 +63,22 @@ describe('PersonalAccessTokenForm', () => {
       ['30', 'In 30 days'],
       ['90', 'In 90 days'],
       ['365', 'In a year'],
-      ['never', 'Never'],
+      ['lifetime', 'As long as my token lifetime allows'],
     ])
     expect(screen.getByRole('group', { name: 'What it may do' })).toBeTruthy()
-    expect(screen.queryByText(/never expires works until you delete it/)).toBeNull()
   })
 
-  it('warns about a token that never expires', async () => {
+  it("says how long the backend lets a token last when it's asked for longer", async () => {
+    globalThis.fetch = vi.fn(async () =>
+      jsonResponse(400, { expires_at: ['A token of yours can work for at most 90 days.'] })
+    )
     render(<PersonalAccessTokenForm scopes={SCOPES} onMade={onMade} onCancel={onCancel} />)
 
-    await userEvent.selectOptions(expiry(), 'never')
+    await userEvent.type(name(), 'CI')
+    await userEvent.selectOptions(expiry(), '365')
+    await userEvent.click(screen.getByRole('button', { name: 'Make token' }))
 
-    expect(
-      screen.getByText(
-        'A token that never expires works until you delete it. Pick an expiry unless you have a reason not to.'
-      )
-    ).toBeTruthy()
+    expect(await screen.findByText('A token of yours can work for at most 90 days.')).toBeTruthy()
   })
 
   it('asks for a name before sending anything', async () => {
@@ -117,17 +117,17 @@ describe('PersonalAccessTokenForm', () => {
     expect(onMade).toHaveBeenCalledWith(made)
   })
 
-  it('sends no end for a token that never expires', async () => {
+  it('leaves the end out for a token that lasts the lifetime', async () => {
     const fetchMock = vi.fn(async () => jsonResponse(201, { id: 't1' }))
     globalThis.fetch = fetchMock
     render(<PersonalAccessTokenForm scopes={SCOPES} onMade={onMade} onCancel={onCancel} />)
 
     await userEvent.type(name(), 'CI')
-    await userEvent.selectOptions(expiry(), 'never')
+    await userEvent.selectOptions(expiry(), 'lifetime')
     await userEvent.click(screen.getByRole('button', { name: 'Make token' }))
 
     const [request] = fetchMock.mock.calls[0] as unknown as [Request]
-    expect(await request.json()).toEqual({ name: 'CI', scopes: [], expires_at: null })
+    expect(await request.json()).toEqual({ name: 'CI', scopes: [] })
   })
 
   it("shows the backend's word on what it could not do", async () => {

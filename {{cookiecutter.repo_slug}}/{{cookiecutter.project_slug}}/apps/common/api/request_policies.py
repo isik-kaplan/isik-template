@@ -30,14 +30,15 @@ class RecentlyProvedWhoTheyAre(RequestPolicy):
     @staticmethod
     def names_a_serious_field(request, view):
         """Whether this body is an act: renaming something in a PATCH should not ask for a password."""
-        fields = view.reauthentication_fields.get(view.action)
+        # A setting's own policy runs on isik's SettingViewSet, which names no fields: every change is an act.
+        fields = getattr(view, "reauthentication_fields", {}).get(view.action)
         return True if fields is None else bool(fields & set(request.data))
 
     def allows(self, request, view):
         if not self.names_a_serious_field(request, view):
             return True
         # Only ever a second chance to say no, never a way through.
-        refusal = view.refuse_before_proving(request)
+        refusal = view.refuse_before_proving(request) if hasattr(view, "refuse_before_proving") else None
         if refusal is not None:
             raise ValidationError(refusal)
         return has_proven_who_they_are(request)

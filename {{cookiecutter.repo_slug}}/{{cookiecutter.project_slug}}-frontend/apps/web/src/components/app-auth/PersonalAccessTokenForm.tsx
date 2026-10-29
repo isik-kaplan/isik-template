@@ -20,13 +20,13 @@ import { z } from 'zod'
 
 const DAY = 24 * 60 * 60 * 1000
 
-// Days from now, or never - the choice GitHub offers, without its custom date.
-const EXPIRIES = ['7', '30', '90', '365', 'never'] as const
+// Days from now, or as long as the person's token lifetime allows - which the backend fills in when left out.
+const EXPIRIES = ['7', '30', '90', '365', 'lifetime'] as const
 type Expiry = (typeof EXPIRIES)[number]
 
-/** When a token chosen to last `expiry` stops working, counted from `now`. */
-export function expiresAt(expiry: Expiry, now: number = Date.now()): string | null {
-  return expiry === 'never' ? null : new Date(now + Number(expiry) * DAY).toISOString()
+/** When a token chosen to last `expiry` stops working, counted from `now`; none for the lifetime. */
+export function expiresAt(expiry: Expiry, now: number = Date.now()): string | undefined {
+  return expiry === 'lifetime' ? undefined : new Date(now + Number(expiry) * DAY).toISOString()
 }
 
 /** Making a token; the backend first sends them off to prove it is them. */
@@ -48,6 +48,7 @@ export function PersonalAccessTokenForm({
           scopes: z.array(z.string()),
           expiry: z.enum(EXPIRIES),
         })
+        // An undefined expires_at is left out of the body, which is what lasting the lifetime asks for.
         .transform(({ expiry, ...token }) => ({ ...token, expires_at: expiresAt(expiry) })),
     [t]
   )
@@ -60,7 +61,7 @@ export function PersonalAccessTokenForm({
     '30': t('auth:profileTokensExpiryMonth'),
     '90': t('auth:profileTokensExpiryQuarter'),
     '365': t('auth:profileTokensExpiryYear'),
-    never: t('auth:profileTokensExpiryNever'),
+    lifetime: t('auth:profileTokensExpiryLifetime'),
   }
 
   async function handleSubmit(event: React.FormEvent) {
@@ -104,9 +105,6 @@ export function PersonalAccessTokenForm({
             </option>
           ))}
         </select>
-        {formState.expiry === 'never' && (
-          <p className="text-sm text-muted-foreground">{t('auth:profileTokensNeverWarning')}</p>
-        )}
       </div>
       {formErrors?.non_field_errors && <p className="text-sm text-destructive">{formErrors.non_field_errors[0]}</p>}
       <div className="flex gap-2">

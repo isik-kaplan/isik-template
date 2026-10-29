@@ -1,5 +1,5 @@
 import { createOpenApiClient } from './httpClient'
-import type { paths } from './schema'
+import type { components, paths } from './schema'
 import type { ApiQuery } from './typeHelpers'
 import { type IdempotencyKey, type Keyed, type Versioned, createDjangoFetch } from '@isikk/core'
 
@@ -224,15 +224,29 @@ export class Api {
     return this.client.POST('/v0/notifications/inbox/read-all/')
   }
 
-  async notificationChoices() {
-    return this.client.GET('/v0/notifications/subscriptions/')
-  }
-
-  async choosableNotificationKinds() {
-    return this.client.GET('/v0/notifications/subscriptions/kinds/')
+  /** Every kind there is: `may_change` says which a person chooses, `forced` which staff chose for them. */
+  async notificationKinds() {
+    return this.client.GET('/v0/notifications/kinds/')
   }
 
   async chooseNotifications(kind: string, enabled: boolean) {
     return this.client.POST('/v0/notifications/subscriptions/', { body: { kind, enabled } })
+  }
+
+  async features() {
+    return this.client.GET('/v0/features/')
+  }
+
+  /** The response's ETag is the version every change names. */
+  async settings() {
+    return this.client.GET('/v0/settings/')
+  }
+
+  async changeSetting(
+    name: string,
+    body: components['schemas']['PatchedSettingValueRequest'],
+    headers: VersionedHeaders
+  ) {
+    return this.client.PATCH('/v0/settings/{name}/', { params: { path: { name }, header: versioned(headers) }, body })
   }
 }

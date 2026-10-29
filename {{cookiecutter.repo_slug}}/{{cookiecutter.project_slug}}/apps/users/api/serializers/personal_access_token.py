@@ -1,5 +1,8 @@
+from datetime import timedelta
+
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from isik.django.apps.features.resolution import effective
 from rest_framework import serializers
 
 from apps.common.api.serializers import BaseModelSerializer
@@ -30,7 +33,12 @@ class PersonalAccessTokenSerializer(BaseModelSerializer):
         read_only_fields = ["last_used_at", "created_at", "updated_at"]
         extra_kwargs = {
             "name": {"allow_blank": False},
-            "expires_at": {"help_text": "When it stops working - leave it out for a token that never does."},
+            # Every token ends: leaving it out gives the lifetime, so null would only mean the same less clearly.
+            "expires_at": {
+                "allow_null": False,
+                "help_text": "When it stops working: no later than your token lifetime allows, which is also when one "
+                "you leave it out for stops.",
+            },
         }
 
     def get_token(self, personal_access_token) -> str | None:
@@ -45,9 +53,18 @@ class PersonalAccessTokenSerializer(BaseModelSerializer):
             )
         return scopes
 
+    def lifetime_days(self):
+        return effective(self.context["request"].user, "token_lifetime_days").value
+
     def validate_expires_at(self, expires_at):
-        if expires_at is not None and expires_at <= timezone.now():
+        now = timezone.now()
+        if expires_at <= now:
             raise serializers.ValidationError(_("Pick a moment still to come."))
+        days = self.lifetime_days()
+        if expires_at > now + timedelta(days=days):
+            raise serializers.ValidationError(
+                _("A token of yours can work for at most %(days)d days.") % {"days": days}
+            )
         return expires_at
 
     def validate(self, attrs):
@@ -59,4 +76,5 @@ class PersonalAccessTokenSerializer(BaseModelSerializer):
         return attrs
 
     def create(self, validated_data):
+        validated_data.setdefault("expires_at", timezone.now() + timedelta(days=self.lifetime_days()))
         return make_token(user=self.context["request"].user, scopes=validated_data.pop("scopes", []), **validated_data)

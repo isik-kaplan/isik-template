@@ -4,26 +4,22 @@ import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const notifications = vi.fn()
-const choosableNotificationKinds = vi.fn()
-const notificationChoices = vi.fn()
+const notificationKinds = vi.fn()
 vi.mock('@/lib/serverApi', () => ({
-  serverApi: async () => ({ notifications, choosableNotificationKinds, notificationChoices }),
+  serverApi: async () => ({ notifications, notificationKinds }),
 }))
 vi.mock('@/components/app-auth/NotificationsList', () => ({
   NotificationsList: ({
     initialItems,
-    kinds,
-    initialChoices,
+    initialKinds,
   }: {
     initialItems: { id: string }[]
-    kinds: { kind: string }[]
-    initialChoices: { kind: string }[]
+    initialKinds: { kind: string }[]
   }) => (
     <>
       <p>items: {initialItems.map((item) => item.id).join(',')}</p>
-      <p>kinds: {kinds.map((kind) => kind.kind).join(',')}</p>
-      <p>choices: {initialChoices.map((choice) => choice.kind).join(',')}</p>
-      <p>{initialItems.length + kinds.length + initialChoices.length} in all</p>
+      <p>kinds: {initialKinds.map((kind) => kind.kind).join(',')}</p>
+      <p>{initialItems.length + initialKinds.length} in all</p>
     </>
   ),
 }))
@@ -31,28 +27,24 @@ vi.mock('@/components/app-auth/NotificationsList', () => ({
 describe('ProfileNotificationsPage', () => {
   beforeEach(() => {
     notifications.mockResolvedValue({ data: { results: [{ id: 'a' }, { id: 'b' }] } })
-    choosableNotificationKinds.mockResolvedValue({ data: [{ kind: 'account_changed' }] })
-    notificationChoices.mockResolvedValue({ data: { results: [{ kind: 'application_reviewed' }] } })
+    notificationKinds.mockResolvedValue({ data: [{ kind: 'account_changed' }] })
   })
 
-  it('shows their notifications with the kinds they may choose about and what they chose', async () => {
+  it('shows their notifications with every kind and what they get of each', async () => {
     render(await ProfileNotificationsPage())
 
     expect(screen.getByText('items: a,b')).toBeTruthy()
     expect(screen.getByText('kinds: account_changed')).toBeTruthy()
-    expect(screen.getByText('choices: application_reviewed')).toBeTruthy()
   })
 
   it('still renders when nothing could be read', async () => {
     notifications.mockResolvedValue({ data: undefined })
-    choosableNotificationKinds.mockResolvedValue({ data: undefined })
-    notificationChoices.mockResolvedValue({ data: undefined })
+    notificationKinds.mockResolvedValue({ data: undefined })
 
     render(await ProfileNotificationsPage())
 
     expect(screen.getByText('items:')).toBeTruthy()
     expect(screen.getByText('kinds:')).toBeTruthy()
-    expect(screen.getByText('choices:')).toBeTruthy()
     expect(screen.getByText('0 in all')).toBeTruthy()
   })
 })

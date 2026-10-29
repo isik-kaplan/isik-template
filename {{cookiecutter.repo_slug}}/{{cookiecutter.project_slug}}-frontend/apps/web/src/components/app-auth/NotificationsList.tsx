@@ -14,49 +14,11 @@ import type { ApiType } from '@{{ cookiecutter.repo_slug }}/api'
 import { toast } from 'sonner'
 
 type Item = ApiType<'InboxItem'>
-type Kind = ApiType<'ChoosableKind'>
-type Choice = ApiType<'Subscription'>
+type Kind = ApiType<'NoticeKind'>
 
-/** What a notification says, from its kind and what its notice carried. */
+/** What a notification says: the backend renders it, in the request's language, from what its notice carried. */
 export function messageOf(item: Item, t: Translate): string {
-  const name = String((item.payload as { data?: { name?: unknown } } | null)?.data?.name ?? '')
-  // Spelled out: i18next-parser only detects literal keys.
-  switch (`${item.kind}:${item.variant ?? ''}`) {
-    case 'token_created:':
-      return t('auth:notificationTokenCreated', { name })
-    case 'token_revoked:':
-      return t('auth:notificationTokenRevoked', { name })
-    case 'application_reviewed:approved':
-      return t('auth:notificationApplicationApproved', { name })
-    case 'application_reviewed:withdrawn':
-      return t('auth:notificationApplicationWithdrawn', { name })
-    case 'signed_out_by_policy:':
-      return t('auth:notificationSignedOutByPolicy')
-    case 'account_changed:password_changed':
-      return t('auth:notificationPasswordChanged')
-    case 'account_changed:password_set':
-      return t('auth:notificationPasswordSet')
-    case 'account_changed:email_changed':
-      return t('auth:notificationEmailChanged')
-    case 'account_changed:email_deleted':
-      return t('auth:notificationEmailDeleted')
-    case 'account_changed:totp_activated':
-      return t('auth:notificationTotpActivated')
-    case 'account_changed:totp_deactivated':
-      return t('auth:notificationTotpDeactivated')
-    case 'account_changed:recovery_codes_generated':
-      return t('auth:notificationRecoveryCodesGenerated')
-    case 'account_changed:webauthn_added':
-      return t('auth:notificationWebauthnAdded')
-    case 'account_changed:webauthn_removed':
-      return t('auth:notificationWebauthnRemoved')
-    case 'account_changed:account_connected':
-      return t('auth:notificationAccountConnected')
-    case 'account_changed:account_disconnected':
-      return t('auth:notificationAccountDisconnected')
-    default:
-      return t('auth:notificationSomethingChanged')
-  }
+  return item.message ?? t('auth:notificationSomethingChanged')
 }
 
 function actorOf(item: Item, t: Translate): string | null {
@@ -66,29 +28,15 @@ function actorOf(item: Item, t: Translate): string | null {
   return null
 }
 
-function kindLabel(kind: string, t: Translate): string {
-  return kind === 'account_changed'
-    ? t('auth:notificationKindAccountChanged')
-    : t('auth:notificationKindApplicationReviewed')
-}
-
 function moment(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 }
 
 /** This person's notifications, unread first marked as such, and the kinds they may turn off. */
-export function NotificationsList({
-  initialItems,
-  kinds,
-  initialChoices,
-}: {
-  initialItems: Item[]
-  kinds: Kind[]
-  initialChoices: Choice[]
-}) {
+export function NotificationsList({ initialItems, initialKinds }: { initialItems: Item[]; initialKinds: Kind[] }) {
   const { t } = useClientTranslation(['auth'])
   const [items, setItems] = useState(initialItems)
-  const [choices, setChoices] = useState(initialChoices)
+  const [kinds, setKinds] = useState(initialKinds)
   const [pending, setPending] = useState<string | null>(null)
 
   // `null` is every item: when one already read was read shows nowhere, so it may as well move.
@@ -119,17 +67,13 @@ export function NotificationsList({
     toast.error(t('auth:profileNotificationsMarkError'))
   }
 
-  function enabled(kind: Kind): boolean {
-    const choice = choices.find((current) => current.kind === kind.kind && current.variant === null)
-    return choice ? choice.enabled !== false : kind.policy === 'default_on'
-  }
-
   async function choose(kind: Kind, on: boolean) {
     setPending(kind.kind)
     const { data } = await createApi(apiOrigin()).chooseNotifications(kind.kind, on)
     setPending(null)
     if (data) {
-      setChoices((current) => [...current.filter((choice) => choice.kind !== kind.kind), data])
+      // What they get now is what they chose: a kind they may change isn't forced.
+      setKinds((current) => current.map((each) => (each.kind === kind.kind ? { ...each, enabled: on } : each)))
       toast.success(t('auth:profileNotificationsSaved'))
       return
     }
@@ -137,6 +81,8 @@ export function NotificationsList({
   }
 
   const unread = items.some((item) => !item.read_at)
+  // What a person decides, and what staff decided for them; the rest are neither theirs nor shown.
+  const offered = kinds.filter((kind) => kind.may_change || kind.forced)
 
   return (
     <section className="flex flex-col gap-3">
@@ -172,20 +118,29 @@ export function NotificationsList({
           })}
         </ul>
       )}
-      {kinds.length > 0 && (
+      {offered.length > 0 && (
         <div className="flex flex-col gap-2 border-t border-border pt-4">
           <h3 className="text-sm font-semibold">{t('auth:profileNotificationsSettingsTitle')}</h3>
           <p className="text-sm text-muted-foreground">{t('auth:profileNotificationsSettingsHint')}</p>
-          {kinds.map((kind) => (
-            <label key={kind.kind} className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={enabled(kind)}
-                disabled={pending === kind.kind}
-                onChange={(event) => choose(kind, event.target.checked)}
-              />
-              {kindLabel(kind.kind, t)}
-            </label>
+          {offered.map((kind) => (
+            <div key={kind.kind} className="flex flex-col gap-0.5">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={kind.enabled}
+                  disabled={kind.forced || pending === kind.kind}
+                  onChange={(event) => choose(kind, event.target.checked)}
+                />
+                {kind.label ?? kind.kind}
+              </label>
+              {kind.forced && (
+                <span className="text-sm text-muted-foreground">
+                  {kind.forced_reason
+                    ? t('auth:profileNotificationsForcedBecause', { reason: kind.forced_reason })
+                    : t('auth:profileNotificationsForced')}
+                </span>
+              )}
+            </div>
           ))}
         </div>
       )}

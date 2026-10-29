@@ -98,7 +98,10 @@ test('a recovery code gets in once, a new set replaces the old, and turning TOTP
     () => page.getByRole('button', { name: 'Turn off' }).click(),
     page.getByText('Authenticator app removed.')
   )
-  await expect(page.getByRole('button', { name: 'Turn on' })).toBeVisible()
+  // A button while the proof still holds, a link to prove it again once removing it spent the proof.
+  await expect(
+    page.getByRole('region', { name: 'Authenticator app' }).getByText('Turn on', { exact: true })
+  ).toBeVisible()
   // With no factor left, recovery codes go too - there is nothing for them to recover.
   await expect(page.getByText(/codes left/)).toBeHidden()
 

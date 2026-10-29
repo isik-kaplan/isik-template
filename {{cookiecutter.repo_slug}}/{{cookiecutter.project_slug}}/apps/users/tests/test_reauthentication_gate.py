@@ -73,6 +73,9 @@ NOT_AN_ACT = {
     ("DeviceAuthorizationViewSet", "deny"): NoReauthentication(
         reason="turning a device away only refuses it access it never had"
     ),
+    ("SettingViewSet", "partial_update"): NoReauthentication(
+        reason="a setting guarding the account asks for proof itself, through its own request policies"
+    ),
     ("InboxViewSet", "read"): NoReauthentication(
         reason="marking your own notification read, which tells nobody anything"
     ),

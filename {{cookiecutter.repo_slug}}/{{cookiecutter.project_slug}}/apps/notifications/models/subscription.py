@@ -1,10 +1,13 @@
+from isik.django.apps.common.db.history import track_events
 from isik.django.apps.notifications.audience import bases
 
 from apps.common.models.base import primary_key
 from apps.notifications.keys import kind_key, user_key
 
 
-class Subscription(bases.AbstractSubscription):
+# Tracked: who forced a person's choice, when and why is its history.
+@track_events()
+class Subscription(bases.AbstractForceableSubscription):
     id = primary_key()
     user = user_key("whose choice this is")
     kind = kind_key()

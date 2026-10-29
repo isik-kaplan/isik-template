@@ -15,7 +15,7 @@ from conftest import deliver_waiting_notices
 INBOX = reverse("notification-inbox-list")
 READ_ALL = reverse("notification-inbox-read-all")
 SUBSCRIPTIONS = reverse("notification-subscriptions-list")
-CHOOSABLE = reverse("notification-subscriptions-kinds")
+KINDS = reverse("notification-kinds-list")
 
 
 def _token_for(user, actor=None):
@@ -78,10 +78,26 @@ def test_somebody_else_cannot_mark_an_item_read(client, signed_in):
 
 
 @pytest.mark.django_db
-def test_only_kinds_a_person_may_turn_off_are_offered(client, signed_in):
-    offered = {entry["kind"] for entry in client.get(CHOOSABLE).json()}
+def test_an_item_reads_as_a_sentence_from_its_own_data(client, signed_in):
+    _token_for(signed_in)
+    raise_notice(ACCOUNT_CHANGED, variant="password_changed", snapshot={"user": str(signed_in.pk)})
+    deliver_waiting_notices()
 
-    assert offered == {"account_changed", "application_reviewed"}
+    messages = {item["kind"]: item["message"] for item in client.get(INBOX).json()["results"]}
+
+    assert messages == {
+        "token_created": 'A personal access token named "CI" was created.',
+        "account_changed": "Your password was changed.",
+    }
+
+
+@pytest.mark.django_db
+def test_every_kind_but_allauths_own_mail_is_listed_and_only_some_may_be_turned_off(client, signed_in):
+    kinds = {entry["kind"]: entry["may_change"] for entry in client.get(KINDS).json()}
+
+    assert {kind for kind, may_change in kinds.items() if may_change} == {"account_changed", "application_reviewed"}
+    assert not any(kind.startswith("mail_") for kind in kinds)
+    assert "notification_settings_forced" in kinds
 
 
 @pytest.mark.django_db
@@ -100,4 +116,4 @@ def test_turning_a_kind_off_keeps_it_out_of_the_inbox(client, signed_in):
 def test_a_mandatory_kind_cannot_be_turned_off(client, signed_in):
     response = client.post(SUBSCRIPTIONS, {"kind": "token_created", "enabled": False}, content_type="application/json")
 
-    assert response.status_code == 400
+    assert (response.status_code, response.json()["code"]) == (409, "kind_mandatory")

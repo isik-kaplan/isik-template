@@ -83,6 +83,23 @@ export interface paths {
         put?: never;
         /** @description Turn the device away: its next poll is told no. */
         post: operations["device_authorizations_deny_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/features/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The features you have, and until when. */
+        get: operations["features_list"];
+        put?: never;
+        post?: never;
 {%- if cookiecutter.webhooks != "none" %}
         delete?: never;
         options?: never;
@@ -374,6 +391,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v0/notifications/kinds/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Every kind of notification there is, with what it is, whether you may turn it off, and whether staff decided it
+         *     for you.
+         */
+        get: operations["notifications_kinds_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/notifications/kinds/{kind}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description One kind of notification, by its name. */
+        get: operations["notifications_kinds_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v0/notifications/subscriptions/": {
         parameters: {
             query?: never;
@@ -387,10 +441,7 @@ export interface paths {
          */
         get: operations["notifications_subscriptions_list"];
         put?: never;
-        /**
-         * @description Which notifications the signed-in person gets: each a choice against a kind's default. kinds/ lists the ones
-         *     they may choose about; a mandatory kind is not among them.
-         */
+        /** @description Sets your preference for a kind of notification, or one variant of it - made, or replacing the one before. */
         post: operations["notifications_subscriptions_create"];
         delete?: never;
         options?: never;
@@ -413,23 +464,6 @@ export interface paths {
          *     they may choose about; a mandatory kind is not among them.
          */
         delete: operations["notifications_subscriptions_destroy"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v0/notifications/subscriptions/kinds/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description The kinds of notification you can choose about, each with its default and its variants. */
-        get: operations["notifications_subscriptions_kinds_list"];
-        put?: never;
-        post?: never;
-        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -679,6 +713,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v0/settings/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Your settings: what each is, why it's that value, and whether you may change it. Changing one that guards your
+         *     account asks you to prove it's you first.
+         */
+        get: operations["settings_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/settings/{name}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Sets your own value of one setting. Name the settings' version you read, in If-Match. */
+        patch: operations["settings_partial_update"];
+        trace?: never;
+    };
     "/v0/users/": {
         parameters: {
             query?: never;
@@ -902,12 +973,100 @@ export interface components {
              */
             readonly granted_at: string;
         };
-        /** @enum {unknown} */
-        Blank: "";
-        ChoosableKind: {
-            kind: string;
-            policy: components["schemas"]["NoticeKindPolicyPolicy"];
-            variants: string[];
+        /** @description A setting holding a bool value. */
+        BoolSetting: {
+            /** @description The setting's name - the key it's changed by. */
+            name: string;
+            /**
+             * @description What kind of value it holds. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "bool";
+            /** @description Its name, as a person reads it. */
+            label: string | null;
+            /** @description What it does. */
+            description: string | null;
+            /** @description Why it's this value: forced, for want of a feature, limited, yours, or the default. */
+            origin: components["schemas"]["Origin"];
+            /** @description Why it was forced, if you may read it. */
+            forced_reason: string | null;
+            /** @description Whether you may change it. */
+            may_change: boolean;
+            /** @description The feature it needs, where you may see it - else none. */
+            requires_feature: string | null;
+            value: boolean;
+            default: boolean;
+            /** @description Your own choice, or none yet. */
+            chosen: boolean | null;
+        };
+        Choice: {
+            /** @description What's stored. */
+            value: unknown;
+            /** @description What a person reads. */
+            label: string;
+        };
+        /** @description A setting holding a choice value. */
+        ChoiceSetting: {
+            /** @description The setting's name - the key it's changed by. */
+            name: string;
+            /**
+             * @description What kind of value it holds. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "choice";
+            /** @description Its name, as a person reads it. */
+            label: string | null;
+            /** @description What it does. */
+            description: string | null;
+            /** @description Why it's this value: forced, for want of a feature, limited, yours, or the default. */
+            origin: components["schemas"]["Origin"];
+            /** @description Why it was forced, if you may read it. */
+            forced_reason: string | null;
+            /** @description Whether you may change it. */
+            may_change: boolean;
+            /** @description The feature it needs, where you may see it - else none. */
+            requires_feature: string | null;
+            value: unknown;
+            default: unknown;
+            /** @description Your own choice, or none yet. */
+            chosen: unknown;
+            /** @description What it may be. */
+            choices: components["schemas"]["Choice"][];
+        };
+        /** @description A setting holding a decimal value. */
+        DecimalSetting: {
+            /** @description The setting's name - the key it's changed by. */
+            name: string;
+            /**
+             * @description What kind of value it holds. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "decimal";
+            /** @description Its name, as a person reads it. */
+            label: string | null;
+            /** @description What it does. */
+            description: string | null;
+            /** @description Why it's this value: forced, for want of a feature, limited, yours, or the default. */
+            origin: components["schemas"]["Origin"];
+            /** @description Why it was forced, if you may read it. */
+            forced_reason: string | null;
+            /** @description Whether you may change it. */
+            may_change: boolean;
+            /** @description The feature it needs, where you may see it - else none. */
+            requires_feature: string | null;
+            /** Format: decimal */
+            value: string;
+            /** Format: decimal */
+            default: string;
+            /**
+             * Format: decimal
+             * @description Your own choice, or none yet.
+             */
+            chosen: string | null;
+            /** Format: decimal */
+            minimum: string | null;
+            /** Format: decimal */
+            maximum: string | null;
         };
         /** @description A scope a token may be given, and what it lets the token do. */
         DelegatableScope: {
@@ -984,6 +1143,32 @@ export interface components {
             readonly application_description: string;
             /** @description What it asks for, as OAuth scopes - the sign-in ones and permissions it may act with. */
             readonly scopes: string[];
+        };
+        /** @description A setting holding a duration value. */
+        DurationSetting: {
+            /** @description The setting's name - the key it's changed by. */
+            name: string;
+            /**
+             * @description What kind of value it holds. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "duration";
+            /** @description Its name, as a person reads it. */
+            label: string | null;
+            /** @description What it does. */
+            description: string | null;
+            /** @description Why it's this value: forced, for want of a feature, limited, yours, or the default. */
+            origin: components["schemas"]["Origin"];
+            /** @description Why it was forced, if you may read it. */
+            forced_reason: string | null;
+            /** @description Whether you may change it. */
+            may_change: boolean;
+            /** @description The feature it needs, where you may see it - else none. */
+            requires_feature: string | null;
+            value: string;
+            default: string;
+            /** @description Your own choice, or none yet. */
+            chosen: string | null;
 {%- if cookiecutter.webhooks != "none" %}
         };
         Endpoint: {
@@ -1040,6 +1225,69 @@ export interface components {
             kinds?: components["schemas"]["EndpointKindRequest"][];
 {%- endif %}
         };
+        Feature: {
+            /** @description The feature's name - the key everything names it by. */
+            name: string;
+            /** @description Its name, as a person reads it. */
+            label: string | null;
+            /** @description What it gives. */
+            description: string | null;
+            /** @description Whether it's in force for you now. */
+            held: boolean;
+            /** @description Its grants in force now or to come. */
+            grants: components["schemas"]["Grant"][];
+        };
+        /** @description A setting holding a float value. */
+        FloatSetting: {
+            /** @description The setting's name - the key it's changed by. */
+            name: string;
+            /**
+             * @description What kind of value it holds. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "float";
+            /** @description Its name, as a person reads it. */
+            label: string | null;
+            /** @description What it does. */
+            description: string | null;
+            /** @description Why it's this value: forced, for want of a feature, limited, yours, or the default. */
+            origin: components["schemas"]["Origin"];
+            /** @description Why it was forced, if you may read it. */
+            forced_reason: string | null;
+            /** @description Whether you may change it. */
+            may_change: boolean;
+            /** @description The feature it needs, where you may see it - else none. */
+            requires_feature: string | null;
+            /** Format: double */
+            value: number;
+            /** Format: double */
+            default: number;
+            /**
+             * Format: double
+             * @description Your own choice, or none yet.
+             */
+            chosen: number | null;
+            /** Format: double */
+            minimum: number | null;
+            /** Format: double */
+            maximum: number | null;
+        };
+        Grant: {
+            /**
+             * Format: date-time
+             * @description When it comes into force.
+             */
+            starts_at: string;
+            /**
+             * Format: date-time
+             * @description When it ends, or none for never.
+             */
+            expires_at: string | null;
+            /** @description Where it came from, where that's shown. */
+            source: string | null;
+            /** @description The source's reference, where shown. */
+            reference: string | null;
+        };
         IdempotencyKeyConflict: {
             detail: string;
             /** @description One of idempotency_key_in_flight, idempotency_key_not_replayable. */
@@ -1065,6 +1313,10 @@ export interface components {
             readonly kind: string;
             /** @description The kind's one variant this is for, or none for every one. */
             readonly variant: string | null;
+            /** @description The item's heading, in the request's language - its kind's `title` filled from its data. */
+            readonly title: string | null;
+            /** @description The item as a sentence, in the request's language - its kind's `message` filled from its data. */
+            readonly message: string | null;
             /** @description The model label of the row it's about, or none. */
             readonly subject_label: string | null;
             /** @description The primary key of the row it's about, or none. */
@@ -1081,7 +1333,35 @@ export interface components {
              * @description When it landed.
              */
             readonly created_at: string;
-            readonly actor: (components["schemas"]["Actor"] | components["schemas"]["Null"]) | null;
+            readonly actor: components["schemas"]["Actor"] | null;
+        };
+        /** @description A setting holding a int value. */
+        IntSetting: {
+            /** @description The setting's name - the key it's changed by. */
+            name: string;
+            /**
+             * @description What kind of value it holds. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "int";
+            /** @description Its name, as a person reads it. */
+            label: string | null;
+            /** @description What it does. */
+            description: string | null;
+            /** @description Why it's this value: forced, for want of a feature, limited, yours, or the default. */
+            origin: components["schemas"]["Origin"];
+            /** @description Why it was forced, if you may read it. */
+            forced_reason: string | null;
+            /** @description Whether you may change it. */
+            may_change: boolean;
+            /** @description The feature it needs, where you may see it - else none. */
+            requires_feature: string | null;
+            value: number;
+            default: number;
+            /** @description Your own choice, or none yet. */
+            chosen: number | null;
+            minimum: number | null;
+            maximum: number | null;
         };
         /** @description Somebody's account as an account manager sees it: identity read-only, access editable. */
         ManagedUser: {
@@ -1139,10 +1419,41 @@ export interface components {
         Marked: {
             marked: number;
         };
+        /** @description A kind of notification as a person sees it: what it is, what it's sent on, and what they may do about it. */
+        NoticeKind: {
+            /** @description The kind's name - the key everything else names it by. */
+            kind: string;
+            /** @description Its name, as a person reads it. */
+            label: string | null;
+            /** @description What it's about. */
+            description: string | null;
+            /** @description What a person gets by default. */
+            policy: components["schemas"]["NoticeKindPolicyPolicy"];
+            /** @description Its variants, if any. */
+            variants: string[];
+            /** @description What it's sent on. */
+            channels: string[];
+            /** @description Whether you may turn it on or off. */
+            may_change: boolean;
+            /** @description Whether you get it now, every variant - forced, your own choice, or its policy. */
+            enabled: boolean;
+            /** @description Whether you get each variant of it now. */
+            enabled_variants: {
+                [key: string]: boolean;
+            };
+            /** @description Whether staff forced it for you, every variant. */
+            forced: boolean;
+            /** @description What staff forced it to for you, every variant - else none. */
+            forced_enabled: boolean | null;
+            /** @description The variants staff forced for you, one by one. */
+            forced_variants: string[];
+            /** @description Why it was forced, if you may read it. */
+            forced_reason: string | null;
+        };
         /** @enum {string} */
         NoticeKindPolicyPolicy: "mandatory" | "default_on" | "default_off";
-        /** @enum {unknown} */
-        Null: null;
+        /** @enum {string} */
+        Origin: "forced" | "feature_missing" | "limited" | "own" | "default";
         PaginatedApplicationList: {
             /**
              * @description Total number of items available.
@@ -1160,8 +1471,8 @@ export interface components {
              */
             total_pages: number;
             results: components["schemas"]["Application"][];
-{%- if cookiecutter.webhooks != "none" %}
         };
+{%- if cookiecutter.webhooks != "none" %}
         PaginatedDeliveryList: {
             /**
              * @description Total number of items available.
@@ -1197,8 +1508,8 @@ export interface components {
              */
             total_pages: number;
             results: components["schemas"]["Endpoint"][];
-{%- endif %}
         };
+{%- endif %}
         PaginatedInboxItemList: {
             /**
              * @description Total number of items available.
@@ -1324,6 +1635,43 @@ export interface components {
             redirect_uris?: string[];
             /** @description What it asks to do on somebody's behalf, beyond signing them in. Each person it signs in is asked again, and a token can only ever do what that person can. */
             requested_scopes?: string[];
+        };
+        /** @description What a PATCH names, whatever the setting's type - each type's own serializer adds its typed value. */
+        PatchedBoolSettingValueRequest: {
+            /**
+             * @description The setting's type, as listed. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "bool";
+            value?: boolean;
+        };
+        /** @description What a PATCH names, whatever the setting's type - each type's own serializer adds its typed value. */
+        PatchedChoiceSettingValueRequest: {
+            /**
+             * @description The setting's type, as listed. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "choice";
+            value?: unknown;
+        };
+        /** @description What a PATCH names, whatever the setting's type - each type's own serializer adds its typed value. */
+        PatchedDecimalSettingValueRequest: {
+            /**
+             * @description The setting's type, as listed. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "decimal";
+            /** Format: decimal */
+            value?: string;
+        };
+        /** @description What a PATCH names, whatever the setting's type - each type's own serializer adds its typed value. */
+        PatchedDurationSettingValueRequest: {
+            /**
+             * @description The setting's type, as listed. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "duration";
+            value?: string;
 {%- if cookiecutter.webhooks != "none" %}
         };
         PatchedEndpointRequest: {
@@ -1336,6 +1684,25 @@ export interface components {
             is_active?: boolean;
             kinds?: components["schemas"]["EndpointKindRequest"][];
 {%- endif %}
+        };
+        /** @description What a PATCH names, whatever the setting's type - each type's own serializer adds its typed value. */
+        PatchedFloatSettingValueRequest: {
+            /**
+             * @description The setting's type, as listed. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "float";
+            /** Format: double */
+            value?: number;
+        };
+        /** @description What a PATCH names, whatever the setting's type - each type's own serializer adds its typed value. */
+        PatchedIntSettingValueRequest: {
+            /**
+             * @description The setting's type, as listed. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "int";
+            value?: number;
         };
         /** @description Somebody's account as an account manager sees it: identity read-only, access editable. */
         PatchedManagedUserRequest: {
@@ -1357,6 +1724,16 @@ export interface components {
             /** @description What they were granted, as permission names - not what that implies. */
             permissions?: components["schemas"]["Permissions"][];
         };
+        PatchedSettingValueRequest: components["schemas"]["PatchedBoolSettingValueRequest"] | components["schemas"]["PatchedIntSettingValueRequest"] | components["schemas"]["PatchedDecimalSettingValueRequest"] | components["schemas"]["PatchedFloatSettingValueRequest"] | components["schemas"]["PatchedDurationSettingValueRequest"] | components["schemas"]["PatchedTextSettingValueRequest"] | components["schemas"]["PatchedChoiceSettingValueRequest"];
+        /** @description What a PATCH names, whatever the setting's type - each type's own serializer adds its typed value. */
+        PatchedTextSettingValueRequest: {
+            /**
+             * @description The setting's type, as listed. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "text";
+            value?: string;
+        };
         /** @description The signed-in person, as they see and edit themselves; nobody changes their own rank or permissions. */
         PatchedUserRequest: {
             /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
@@ -1366,7 +1743,7 @@ export interface components {
             first_name?: string;
             last_name?: string;
             /** @description The language this user chose for the interface, or blank to follow their browser's. */
-            language?: components["schemas"]["UserLanguage"] | components["schemas"]["Blank"];
+            language?: components["schemas"]["UserLanguage"];
         };
         /** @description A permission this project declares. */
         PermissionDeclaration: {
@@ -1394,9 +1771,9 @@ export interface components {
             scopes?: string[];
             /**
              * Format: date-time
-             * @description When it stops working - leave it out for a token that never does.
+             * @description When it stops working: no later than your token lifetime allows, which is also when one you leave it out for stops.
              */
-            expires_at?: string | null;
+            expires_at?: string;
             /**
              * Format: date-time
              * @description When a request last presented it, or empty if none has.
@@ -1423,9 +1800,9 @@ export interface components {
             scopes?: string[];
             /**
              * Format: date-time
-             * @description When it stops working - leave it out for a token that never does.
+             * @description When it stops working: no later than your token lifetime allows, which is also when one you leave it out for stops.
              */
-            expires_at?: string | null;
+            expires_at?: string;
         };
         PreconditionRequired: {
             detail: string;
@@ -1491,6 +1868,31 @@ export interface components {
             /** @description Shown once, here. It is stored hashed, so this is the only copy. */
             readonly client_secret: string;
         };
+        Setting: components["schemas"]["BoolSetting"] | components["schemas"]["IntSetting"] | components["schemas"]["DecimalSetting"] | components["schemas"]["FloatSetting"] | components["schemas"]["DurationSetting"] | components["schemas"]["TextSetting"] | components["schemas"]["ChoiceSetting"];
+        /** @description A 400's body: the type named isn't the setting's, or the value isn't one it takes. */
+        SettingInvalidValue: {
+            type?: string[];
+            value?: string[];
+        };
+        /**
+         * @description A refused change: why, and its code - setting_forced or setting_locked on a 409, a request policy's own on
+         *     a 403.
+         */
+        SettingRefusal: {
+            /** @description Why, in the request's language. */
+            detail: string;
+            /** @description What refused it, for a client to tell refusals apart. */
+            code: string;
+        };
+        /** @description A 412's body: the settings changed since the version If-Match named - read them again. */
+        SettingsChanged: {
+            /** @description Why, in the request's language. */
+            detail: string;
+            /** @description Always precondition_failed. */
+            code: string;
+            /** @description Always null: read the settings again. */
+            current: unknown;
+        };
         Subscription: {
             /**
              * Format: uuid
@@ -1502,6 +1904,12 @@ export interface components {
             variant?: string | null;
             /** @description Whether the user gets the kind. */
             enabled?: boolean;
+            /** @description Whether staff forced it, so it can't be changed - always False on a model that can't be forced. */
+            readonly forced: boolean;
+            /** @description What staff forced it to - on or off - while it's forced; `enabled` stays your own choice. */
+            readonly forced_enabled: boolean | null;
+            /** @description Why it was forced - where its source lets the person read it, else none. */
+            readonly forced_reason: string | null;
         };
         SubscriptionRequest: {
             kind: string;
@@ -1509,6 +1917,32 @@ export interface components {
             variant?: string | null;
             /** @description Whether the user gets the kind. */
             enabled?: boolean;
+        };
+        /** @description A setting holding a text value. */
+        TextSetting: {
+            /** @description The setting's name - the key it's changed by. */
+            name: string;
+            /**
+             * @description What kind of value it holds. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "text";
+            /** @description Its name, as a person reads it. */
+            label: string | null;
+            /** @description What it does. */
+            description: string | null;
+            /** @description Why it's this value: forced, for want of a feature, limited, yours, or the default. */
+            origin: components["schemas"]["Origin"];
+            /** @description Why it was forced, if you may read it. */
+            forced_reason: string | null;
+            /** @description Whether you may change it. */
+            may_change: boolean;
+            /** @description The feature it needs, where you may see it - else none. */
+            requires_feature: string | null;
+            value: string;
+            default: string;
+            /** @description Your own choice, or none yet. */
+            chosen: string | null;
         };
         /** @description The signed-in person, as they see and edit themselves; nobody changes their own rank or permissions. */
         User: {
@@ -1524,7 +1958,7 @@ export interface components {
             first_name?: string;
             last_name?: string;
             /** @description The language this user chose for the interface, or blank to follow their browser's. */
-            language?: components["schemas"]["UserLanguage"] | components["schemas"]["Blank"];
+            language?: components["schemas"]["UserLanguage"];
             /**
              * Staff status
              * @description Designates whether the user can log into this admin site.
@@ -1765,6 +2199,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+        };
+    };
+    features_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Feature"][];
 {%- if cookiecutter.webhooks != "none" %}
                 };
             };
@@ -2441,6 +2899,51 @@ export interface operations {
             };
         };
     };
+    notifications_kinds_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoticeKind"][];
+                };
+            };
+        };
+    };
+    notifications_kinds_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoticeKind"];
+                };
+            };
+        };
+    };
     notifications_subscriptions_list: {
         parameters: {
             query?: {
@@ -2511,30 +3014,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-        };
-    };
-    notifications_subscriptions_kinds_list: {
-        parameters: {
-            query?: {
-                /** @description Which field to use when ordering the results. */
-                ordering?: string;
-                /** @description A search term. */
-                search?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChoosableKind"][];
-                };
             };
         };
     };
@@ -3359,6 +3838,113 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DelegatableScope"][];
+                };
+            };
+        };
+    };
+    settings_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    /** @description The version of all your settings - send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Setting"][];
+                };
+            };
+        };
+    };
+    settings_partial_update: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The ETag of your settings as you read them - a "defaults" one until your first change - or *. */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The setting's name. */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedSettingValueRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedSettingValueRequest"];
+                "multipart/form-data": components["schemas"]["PatchedSettingValueRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    /** @description The version of all your settings - send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Setting"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingInvalidValue"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingRefusal"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingRefusal"];
+                };
+            };
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsChanged"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingRefusal"];
                 };
             };
         };

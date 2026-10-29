@@ -57,6 +57,8 @@ INSTALLED_APPS = [
     # isik's mechanism; the tables are apps.notifications'.
     "isik.django.apps.notifications",
     "isik.django.apps.notifications.audience",
+    # isik's mechanism again; the tables are apps.features'.
+    "isik.django.apps.features",
     "django_object_actions",
     "dalf",
     "django_filters",
@@ -82,6 +84,7 @@ INSTALLED_APPS = [
     "apps.oauth_provider.apps.OAuthProviderConfig",
     "apps.admin.apps.AdminConfig",
     "apps.notifications.apps.NotificationsConfig",
+    "apps.features.apps.FeaturesConfig",
 ]
 
 MIDDLEWARE = [
@@ -479,6 +482,8 @@ ISIK_NOTIFICATIONS = {
 {%- endif %}
     "EMAIL_SENDER": "isik.django.apps.notifications.channels.email.send_from_mjml_templates",
     "RECIPIENT_LANGUAGE": "apps.common.language.saved_language",
+    "SUBSCRIPTION_FORCED_KIND": "notification_settings_forced",
+    "KINDS_VISIBLE": "apps.notifications.visible_kinds.visible_kinds",
 {%- if cookiecutter.background_jobs != "celery-with-beat" %}
     "FAN_OUT_AFTER_TASKS": True,
 {%- endif %}
@@ -487,6 +492,14 @@ ISIK_NOTIFICATIONS = {
         reason="Inline means a task runs in the request that asked for it, and a webhook is one such task."
     ),
 {%- endif %}
+}
+ISIK_FEATURES_FEATURE_MODEL = "features.Feature"
+ISIK_FEATURES_GRANT_MODEL = "features.FeatureGrant"
+ISIK_FEATURES_SWEEP_MODEL = "features.SweepCursor"
+ISIK_FEATURES_OVERRIDES_MODEL = "features.UserOverrides"
+ISIK_FEATURES = {
+    "SETTINGS": "apps.features.declarations",
+    "GRANT_SOURCES": ("staff", "trial"),
 }
 ISIK_CHECKS = {
     Check.DOCUMENTATION: {
@@ -501,6 +514,8 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": {{ cookiecutter.description|tojson }},
     "VERSION": __version__,
     "COMPONENT_SPLIT_REQUEST": True,
+    # A nullable choice is its enum or null, not a separate NullEnum every client has to name.
+    "ENUM_ADD_EXPLICIT_BLANK_NULL_CHOICE": False,
     "POSTPROCESSING_HOOKS": [
         "drf_spectacular.hooks.postprocess_schema_enums",
     ],

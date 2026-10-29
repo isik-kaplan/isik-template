@@ -145,13 +145,9 @@ describe('Api', () => {
       'POST',
       '/v0/notifications/inbox/read-all/',
     ],
-    ['notificationChoices', (api: Api) => api.notificationChoices(), 'GET', '/v0/notifications/subscriptions/'],
-    [
-      'choosableNotificationKinds',
-      (api: Api) => api.choosableNotificationKinds(),
-      'GET',
-      '/v0/notifications/subscriptions/kinds/',
-    ],
+    ['notificationKinds', (api: Api) => api.notificationKinds(), 'GET', '/v0/notifications/kinds/'],
+    ['features', (api: Api) => api.features(), 'GET', '/v0/features/'],
+    ['settings', (api: Api) => api.settings(), 'GET', '/v0/settings/'],
   ])('%s calls %s %s', async (_name, call, method, path) => {
     const baseFetch = vi.fn<typeof fetch>(async () => new Response('{}', { status: 200 }))
     await call(new Api('https://api.example.test', { baseFetch }))
@@ -169,6 +165,19 @@ describe('Api', () => {
     expect(await (request as Request).json()).toEqual({ kind: 'account_changed', enabled: false })
   })
 
+  it('sends a setting as its name in the path and its typed value as the body', async () => {
+    const baseFetch = vi.fn<typeof fetch>(async () => new Response('{}', { status: 200 }))
+    await new Api('https://api.example.test', { baseFetch }).changeSetting(
+      'token_lifetime_days',
+      { type: 'int', value: 60 },
+      READ
+    )
+    const [request] = baseFetch.mock.calls[0]
+    expect((request as Request).method).toBe('PATCH')
+    expect(String((request as Request).url)).toBe('https://api.example.test/v0/settings/token_lifetime_days/')
+    expect(await (request as Request).json()).toEqual({ type: 'int', value: 60 })
+  })
+
   it('sends the application to register as its body, under the idempotency key it was given', async () => {
     const baseFetch = vi.fn<typeof fetch>(async () => new Response('{}', { status: 201 }))
     const data = { name: 'Acme', client_type: 'confidential' as const, redirect_uris: ['https://a.test/cb'] }
@@ -180,7 +189,7 @@ describe('Api', () => {
 
   it('sends the token to make as its body, under the idempotency key it was given', async () => {
     const baseFetch = vi.fn<typeof fetch>(async () => new Response('{}', { status: 201 }))
-    const data = { name: 'CI', scopes: ['users:manage:user'], expires_at: null }
+    const data = { name: 'CI', scopes: ['users:manage:user'], expires_at: '2026-12-01T00:00:00Z' }
     await new Api('https://api.example.test', { baseFetch }).makePersonalAccessToken(data, KEY)
     const [request, init] = baseFetch.mock.calls[0]
     expect((request as Request).method).toBe('POST')
@@ -211,6 +220,7 @@ describe('Api', () => {
     ['updateOAuthApplication', (api: Api) => api.updateOAuthApplication(7, { name: 'Acme' }, WRITE)],
     ['deleteOAuthApplication', (api: Api) => api.deleteOAuthApplication(7, WRITE)],
     ['approveOAuthApplication', (api: Api) => api.approveOAuthApplication(7, [], KEY, READ)],
+    ['changeSetting', (api: Api) => api.changeSetting('theme', { type: 'bool', value: true }, READ)],
   ])('%s names the version it was made against', async (_name, call) => {
     const baseFetch = vi.fn<typeof fetch>(async () => new Response('{}', { status: 200 }))
     await call(new Api('https://api.example.test', { baseFetch }))

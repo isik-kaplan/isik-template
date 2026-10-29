@@ -1908,6 +1908,24 @@
       ]
     }
   ],
+  "src/components/app-auth/SettingsList.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
   "src/components/app-auth/NotificationsList.tsx": [
     {
       "mutator": "ArrayDeclaration",

@@ -10,6 +10,7 @@ import {
   MailIcon,
   MonitorSmartphoneIcon,
   ShieldCheckIcon,
+  SlidersHorizontalIcon,
   TerminalIcon,
   UserIcon,
 } from 'lucide-react'
@@ -22,6 +23,7 @@ import { useClientTranslation } from '@/i18n/client'
 const TABS = [
   { segment: 'details', icon: UserIcon },
   { segment: 'notifications', icon: BellIcon },
+  { segment: 'settings', icon: SlidersHorizontalIcon },
   { segment: 'password', icon: KeyRoundIcon },
   { segment: 'emails', icon: MailIcon },
   { segment: 'connections', icon: Link2Icon },
@@ -43,6 +45,7 @@ export function ProfileTabsList() {
   const labels: Record<(typeof TABS)[number]['segment'], string> = {
     details: t('auth:profileDetailsTab'),
     notifications: t('auth:profileNotificationsTab'),
+    settings: t('auth:profileSettingsTab'),
     password: t('auth:profilePasswordTab'),
     emails: t('auth:profileEmailsTab'),
     connections: t('auth:profileConnectionsTab'),

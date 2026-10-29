@@ -175,3 +175,8 @@ reason = """Spells the reference "notifications.noticekindpolicy" instead of "no
 Django looks a model reference up case-insensitively and lowercases it when the field is deconstructed, so
 both spellings name the same model, make the same migration, and no test can observe which one was written."""
 verified_by = "apps/common/tests/test_library_assumptions.py::test_a_model_reference_is_case_insensitive"
+
+["apps.users.api.serializers.personal_access_token.xǁPersonalAccessTokenSerializerǁvalidate_expires_at__mutmut__d2ce5e3adb81"]
+reason = """Refuses an expiry exactly at the lifetime's end instead of only one past it. `now` is read on the
+server as the request is validated, after any client chose its expiry, so no request can name that very
+microsecond: the two comparisons answer every request the same."""

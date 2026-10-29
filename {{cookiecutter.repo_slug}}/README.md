@@ -336,6 +336,13 @@ Notifications tab), email (`templates/notifications/<kind>/`, in the recipient's
   sends it as before and `record_email` writes it to the ledger afterwards, keyed by its task so its
   retries are attempts at one delivery. Nothing of the message is kept. A mail allauth adds later has
   no kind in `RECORDED_MAIL` and goes out unrecorded; a test fails until it gets one.
+- **Staff can decide one person's notification for them:** `force_subscription(user, kind, enabled=...,
+  source=STAFF, reason=...)` locks it on or off; the person sees it locked, and why, and is told by the
+  mandatory `notification_settings_forced`. `release_subscription(...)` gives them their own choice back.
+
+Each kind declares its `label`, `description` and `message` in `kinds.py`, rendered in the request's
+language: `/v0/notifications/kinds/` lists every kind with what the caller gets of it and whether they may
+change it, and every inbox item carries its sentence, so a client needs no text of its own for either.
 {% if cookiecutter.background_jobs == "celery-with-beat" %}
 Fan-out, the reaper (retries due, stranded deliveries) and pruning run from `scheduler`'s beat
 (`merge_beat_schedule(app)` in `celery.py`).
@@ -351,6 +358,28 @@ is signed in `X-{{ cookiecutter.project_slug.replace("_", "-") }}-Signature` - t
 name, since receivers verify by it - and carries an `Idempotency-Key`. An endpoint resolving to a private,
 loopback or link-local address, this deployment's own services included, is refused when it's sent to.
 {% endif %}
+## Features and settings
+
+Built on isik's features app, its tables this project's own in `apps/features/models/`. Everything is
+declared in `apps/features/declarations.py`:
+
+- **Features** a person is granted - by staff, or as a trial that ends (`grant(user, LONG_LIVED_TOKENS,
+  source="trial", expires_at=...)`). Grants are a ledger: revoked, never edited or deleted.
+- **Settings** a person chooses within them, each a column on `UserOverrides`, so adding one is a
+  migration. `token_lifetime_days` bounds every new personal access token (at most 90 days without
+  `long_lived_tokens`); `two_factor_required` keeps the last second factor from being removed, and changing
+  it asks for a fresh proof{% if cookiecutter.webhooks == "users" %}; `max_endpoints`, which staff set and
+  the person only reads, is 0 without `webhooks`{% endif %}.
+- **Staff force a setting** with `force_setting(user, name, value, source=STAFF, reason=...)`; the
+  person's own value is kept for `release_setting(...)`. Who forced what, when and why is
+  `UserOverrides`' history.
+
+`/v0/settings/` lists each setting with its value and why it is that value, and takes a change under the
+version it read (If-Match); `/v0/features/` lists what a person has. The profile's Settings tab is one
+component reading both. A grant ending changes things with no write, so a sweep says so: {% if cookiecutter.background_jobs == "celery-with-beat" %}beat runs it
+every minute{% else %}uWSGI runs `manage.py features --sweep` every minute{% endif %}. Deleting a person erases their grants and settings, with
+their history, in the same transaction.
+
 ## Permissions
 
 `apps/users/permissions.py` declares every permission there is, as `where:action:what` - written into

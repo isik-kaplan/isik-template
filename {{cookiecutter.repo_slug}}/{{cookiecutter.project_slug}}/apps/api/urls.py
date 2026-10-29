@@ -2,11 +2,14 @@ from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
 
+from apps.features.api.viewsets.feature import FeatureViewSet
+from apps.features.api.viewsets.setting import SettingViewSet
 {% if cookiecutter.webhooks != "none" -%}
 from apps.notifications.api.viewsets.delivery import DeliveryViewSet
 from apps.notifications.api.viewsets.endpoint import EndpointViewSet
 {% endif -%}
 from apps.notifications.api.viewsets.inbox import InboxViewSet
+from apps.notifications.api.viewsets.notice_kind import NoticeKindViewSet
 from apps.notifications.api.viewsets.subscription import SubscriptionViewSet
 from apps.oauth_provider.api.viewsets.application import ApplicationViewSet
 from apps.oauth_provider.api.viewsets.authorized_application import AuthorizedApplicationViewSet
@@ -27,6 +30,9 @@ router.register("authorized-applications", AuthorizedApplicationViewSet, basenam
 router.register("device-authorizations", DeviceAuthorizationViewSet, basename="device-authorizations")
 router.register("notifications/inbox", InboxViewSet, basename=InboxViewSet.endpoint)
 router.register("notifications/subscriptions", SubscriptionViewSet, basename=SubscriptionViewSet.endpoint)
+router.register("notifications/kinds", NoticeKindViewSet, basename=NoticeKindViewSet.endpoint)
+router.register("features", FeatureViewSet, basename=FeatureViewSet.endpoint)
+router.register("settings", SettingViewSet, basename=SettingViewSet.endpoint)
 {%- if cookiecutter.webhooks != "none" %}
 router.register("notifications/endpoints", EndpointViewSet, basename=EndpointViewSet.endpoint)
 router.register("notifications/deliveries", DeliveryViewSet, basename=DeliveryViewSet.endpoint)
