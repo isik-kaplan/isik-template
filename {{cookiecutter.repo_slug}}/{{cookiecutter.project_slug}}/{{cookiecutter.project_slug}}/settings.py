@@ -54,7 +54,6 @@ INSTALLED_APPS = [
     "pgtrigger",
     "pghistory",
     "isik.django.apps.common",
-    "isik.django.apps.idempotency.by_reference",
     # isik's mechanism; the tables are apps.notifications'.
     "isik.django.apps.notifications",
     "isik.django.apps.notifications.audience",
@@ -455,6 +454,7 @@ HISTORY_CONTEXT_VERSION = __version__
 HISTORY_TASK_DISPATCH_ON_COMMIT = True
 # Time-ordered ids: rows made later sort later, which keeps index pages filling in order.
 ISIK_PRIMARY_KEY_DEFAULT = "isik.django.apps.common.db.models.uuid7"
+IDEMPOTENCY_CLAIM_MODEL = "common.IdempotencyClaim"
 ISIK_NOTIFICATIONS_KIND_POLICY_MODEL = "notifications.NoticeKindPolicy"
 ISIK_NOTIFICATIONS_NOTICE_MODEL = "notifications.Notice"
 ISIK_NOTIFICATIONS_FAN_OUT_SHARD_MODEL = "notifications.FanOutShard"

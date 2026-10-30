@@ -6,9 +6,9 @@ import uuid
 
 import pytest
 from django.urls import reverse
-from isik.django.apps.idempotency.by_reference.models import IdempotencyClaim
 from isik.django.apps.idempotency.drf import IdempotencyMixin
 
+from apps.common.models import IdempotencyClaim
 from apps.users.models import User
 
 
