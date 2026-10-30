@@ -100,13 +100,13 @@ export interface paths {
         get: operations["features_list"];
         put?: never;
         post?: never;
-{%- if cookiecutter.webhooks != "none" %}
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
+{%- if cookiecutter.webhooks != "none" %}
     "/v0/notifications/deliveries/": {
         parameters: {
             query?: never;
@@ -171,6 +171,49 @@ export interface paths {
         /** @description Sends a delivery that was given up on again. Refused, saying why, while its endpoint is parked or gone. */
         post: operations["notifications_deliveries_retry_create"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+{%- endif %}
+    "/v0/notifications/devices/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The phones your notifications are pushed to. The app registers its install when you sign in, and forgets it
+         *     when you sign out there.
+         */
+        get: operations["notifications_devices_list"];
+        put?: never;
+        /** @description Registers this app install's push token as yours - made, or, registered before by anyone, made yours and active again. Send it whenever the app starts or its token changes. */
+        post: operations["notifications_devices_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/notifications/devices/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * @description The phones your notifications are pushed to. The app registers its install when you sign in, and forgets it
+         *     when you sign out there.
+         */
+        delete: operations["notifications_devices_destroy"];
+{%- if cookiecutter.webhooks != "none" %}
         options?: never;
         head?: never;
         patch?: never;
@@ -310,8 +353,8 @@ export interface paths {
         put?: never;
         /** @description Sends to an endpoint again after it was parked for failing too often. */
         post: operations["notifications_endpoints_unpark_create"];
-{%- endif %}
         delete?: never;
+{%- endif %}
         options?: never;
         head?: never;
         patch?: never;
@@ -1133,6 +1176,28 @@ export interface components {
         /** @enum {string} */
         DeliveryState: "pending" | "sending" | "sent" | "abandoned";
 {%- endif %}
+        Device: {
+            /**
+             * Format: uuid
+             * @description Identifies this record. A UUIDv7, so ids sort roughly by when they were created.
+             */
+            readonly id: string;
+            /** @description The service its pushes go through - apns or fcm. */
+            platform: components["schemas"]["DevicePlatform"];
+            /** @description The token its push service gave the app on it. */
+            token: string;
+            /** @description Which APNs issued its token - sandbox for a development build. */
+            environment?: components["schemas"]["DeviceEnvironment"];
+            /** @description The app's bundle identifier, where it isn't the project's one. */
+            app_id?: string;
+            /** @description Whether pushes are sent to it. */
+            readonly is_active: boolean;
+            /**
+             * Format: date-time
+             * @description When the app on it last registered.
+             */
+            readonly last_seen_at: string | null;
+        };
         /** @description A device waiting for somebody to let it in, as the page asking them shows it. */
         DeviceAuthorization: {
             /** @description The code the device shows, as stored. */
@@ -1143,6 +1208,20 @@ export interface components {
             readonly application_description: string;
             /** @description What it asks for, as OAuth scopes - the sign-in ones and permissions it may act with. */
             readonly scopes: string[];
+        };
+        /** @enum {string} */
+        DeviceEnvironment: "production" | "sandbox";
+        /** @enum {string} */
+        DevicePlatform: "apns" | "fcm";
+        DeviceRequest: {
+            /** @description The service its pushes go through - apns or fcm. */
+            platform: components["schemas"]["DevicePlatform"];
+            /** @description The token its push service gave the app on it. */
+            token: string;
+            /** @description Which APNs issued its token - sandbox for a development build. */
+            environment?: components["schemas"]["DeviceEnvironment"];
+            /** @description The app's bundle identifier, where it isn't the project's one. */
+            app_id?: string;
         };
         /** @description A setting holding a duration value. */
         DurationSetting: {
@@ -1491,6 +1570,26 @@ export interface components {
             total_pages: number;
             results: components["schemas"]["Delivery"][];
         };
+{%- endif %}
+        PaginatedDeviceList: {
+            /**
+             * @description Total number of items available.
+             * @example 1102
+             */
+            count: number;
+            /**
+             * @description Number of results to return per page.
+             * @example 100
+             */
+            page_size: number;
+            /**
+             * @description Total number of pages.
+             * @example 17
+             */
+            total_pages: number;
+            results: components["schemas"]["Device"][];
+{%- if cookiecutter.webhooks != "none" %}
+        };
         PaginatedEndpointList: {
             /**
              * @description Total number of items available.
@@ -1508,8 +1607,8 @@ export interface components {
              */
             total_pages: number;
             results: components["schemas"]["Endpoint"][];
-        };
 {%- endif %}
+        };
         PaginatedInboxItemList: {
             /**
              * @description Total number of items available.
@@ -2223,11 +2322,11 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Feature"][];
-{%- if cookiecutter.webhooks != "none" %}
                 };
             };
         };
     };
+{%- if cookiecutter.webhooks != "none" %}
     notifications_deliveries_list: {
         parameters: {
             query?: {
@@ -2314,6 +2413,83 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["IdempotencyKeyReused"];
                 };
+            };
+        };
+    };
+{%- endif %}
+    notifications_devices_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedDeviceList"];
+                };
+            };
+        };
+    };
+    notifications_devices_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeviceRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DeviceRequest"];
+                "multipart/form-data": components["schemas"]["DeviceRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Device"];
+                };
+            };
+        };
+    };
+    notifications_devices_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+{%- if cookiecutter.webhooks != "none" %}
             };
         };
     };
@@ -2803,8 +2979,8 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PreconditionRequired"];
-{%- endif %}
                 };
+{%- endif %}
             };
         };
     };

@@ -14,11 +14,14 @@ const config: ExpoConfig = {
   },
   android: {
     package: '{{ cookiecutter.domain.split(".") | reverse | join(".") }}.mobile',
+    // Firebase's google-services.json, which an Android build needs for a push token.
+    googleServicesFile: process.env.GOOGLE_SERVICES_FILE,
   },
   plugins: [
     'expo-router',
     'expo-secure-store',
     'expo-apple-authentication',
+    'expo-notifications',
     // iOS needs iosUrlScheme (from a real Google iOS client ID) added once credentials exist.
     '@react-native-google-signin/google-signin',
   ],

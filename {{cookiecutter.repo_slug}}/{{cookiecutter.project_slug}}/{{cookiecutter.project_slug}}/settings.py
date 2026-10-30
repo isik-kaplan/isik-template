@@ -11,6 +11,7 @@ from isik.django.apps.notifications.exemptions import SendsInline
 {%- endif %}
 
 from apps.common.logging.scrub import scrub_event
+from apps.notifications.push import push_credentials
 from apps.oauth_provider import device_codes
 from apps.oauth_provider.mode import oauth_provider_mode
 from apps.users.social_login import social_login_provider_ids
@@ -466,13 +467,22 @@ ISIK_NOTIFICATIONS_SUBSCRIPTION_MODEL = "notifications.Subscription"
 ISIK_NOTIFICATIONS_INBOX_ITEM_MODEL = "notifications.InboxItem"
 ISIK_NOTIFICATIONS_ENDPOINT_MODEL = "notifications.Endpoint"
 ISIK_NOTIFICATIONS_ENDPOINT_KIND_MODEL = "notifications.EndpointKind"
+ISIK_NOTIFICATIONS_DEVICE_MODEL = "notifications.Device"
+ISIK_NOTIFICATIONS_PUSH_DELIVERY_MODEL = "notifications.PushDelivery"
+PUSH_CREDENTIALS = push_credentials(
+    apns_team_id=config.PUSH.APNS.TEAM_ID,
+    apns_key_id=config.PUSH.APNS.KEY_ID,
+    apns_key=config.PUSH.APNS.KEY,
+    apns_topic=config.PUSH.APNS.TOPIC,
+    fcm_credentials=config.PUSH.FCM.CREDENTIALS,
+)
 ISIK_NOTIFICATIONS = {
     # Every kind is declared in apps/notifications/kinds.py, so a name can't be invented at a call site.
     "REQUIRE_DECLARED_KINDS": True,
 {%- if cookiecutter.webhooks == "none" %}
-    "CHANNELS": ("inbox", "email"),
+    "CHANNELS": ("inbox", "email", *(("push",) if PUSH_CREDENTIALS else ())),
 {%- else %}
-    "CHANNELS": ("inbox", "email", "webhook"),
+    "CHANNELS": ("inbox", "email", "webhook", *(("push",) if PUSH_CREDENTIALS else ())),
     # Names the signature header receivers verify, so it's the slug: renaming the product mustn't move it.
     "PROJECT_NAME": {{ cookiecutter.project_slug.replace("_", "-")|tojson }},
 {%- endif %}
@@ -482,6 +492,7 @@ ISIK_NOTIFICATIONS = {
 {%- endif %}
     "EMAIL_SENDER": "isik.django.apps.notifications.channels.email.send_from_mjml_templates",
     "RECIPIENT_LANGUAGE": "apps.common.language.saved_language",
+    "PUSH": PUSH_CREDENTIALS,
     "SUBSCRIPTION_FORCED_KIND": "notification_settings_forced",
     "KINDS_VISIBLE": "apps.notifications.visible_kinds.visible_kinds",
 {%- if cookiecutter.background_jobs != "celery-with-beat" %}

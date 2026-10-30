@@ -16,6 +16,16 @@ async function reauthenticatingFetch(input: RequestInfo | URL, init?: RequestIni
   return response
 }
 
+const SESSION_TOKEN_HEADER = 'X-Session-Token'
+
+/** The backend's own API takes the session token allauth's app API gives out, in the same header. */
+export async function signedInFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const headers = new Headers(init?.headers)
+  const token = await SecureStore.getItemAsync(TOKEN_KEY)
+  if (token) headers.set(SESSION_TOKEN_HEADER, token)
+  return reauthenticatingFetch(input, { ...init, headers })
+}
+
 /** expo-secure-store, not AsyncStorage, because it is encrypted. */
 export function createAuthApi(baseUrl: string): AppAuthApi {
   return new AppAuthApi(baseUrl, {

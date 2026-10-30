@@ -6,6 +6,9 @@ const mockSession = jest.fn()
 const mockLogout = jest.fn()
 jest.mock('@/lib/session', () => ({ getAuthApi: () => ({ session: () => mockSession(), logout: () => mockLogout() }) }))
 
+const mockForgetPush = jest.fn()
+jest.mock('@/lib/push', () => ({ forgetPush: () => mockForgetPush() }))
+
 const mockReplace = jest.fn()
 const mockPush = jest.fn()
 jest.mock('expo-router', () => ({
@@ -13,7 +16,10 @@ jest.mock('expo-router', () => ({
 }))
 
 describe('Home', () => {
-  beforeEach(() => jest.clearAllMocks())
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockForgetPush.mockResolvedValue(undefined)
+  })
 
   it("shows the logged-in user's email once the session loads", async () => {
     mockSession.mockResolvedValue({ data: { data: { user: { email: 'jane@test.test' } } } })
@@ -78,6 +84,35 @@ describe('Home', () => {
     await fireEvent.press(screen.getByTestId('logout-button'))
     await waitFor(() => expect(mockLogout).toHaveBeenCalled())
     expect(mockReplace).toHaveBeenCalledWith('/login')
+  })
+
+  it('forgets this phone for pushes before logging out, while still signed in', async () => {
+    mockSession.mockResolvedValue({ data: undefined })
+    const order: string[] = []
+    mockForgetPush.mockImplementation(async () => order.push('forget'))
+    mockLogout.mockImplementation(async () => order.push('logout'))
+    await render(<Home />)
+    await fireEvent.press(screen.getByTestId('logout-button'))
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/login'))
+    expect(order).toEqual(['forget', 'logout'])
+  })
+
+  it('logs out even when the phone could not be forgotten', async () => {
+    mockSession.mockResolvedValue({ data: undefined })
+    mockForgetPush.mockRejectedValue(new Error('offline'))
+    mockLogout.mockResolvedValue(undefined)
+    await render(<Home />)
+    await fireEvent.press(screen.getByTestId('logout-button'))
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/login'))
+    expect(mockLogout).toHaveBeenCalled()
+  })
+
+  it('navigates to the notifications', async () => {
+    mockSession.mockResolvedValue({ data: undefined })
+    await render(<Home />)
+    await fireEvent.press(screen.getByTestId('notifications-link'))
+    expect(mockPush).toHaveBeenCalledWith('/notifications')
+    expect(screen.getByTestId('notifications-link-label').props.children).toBe('Notifications')
   })
 
   it('navigates to the profile screen', async () => {

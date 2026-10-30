@@ -3,13 +3,21 @@ named here rather than invented where it's raised. Each says what it is, in the 
 renders it from the API alone."""
 
 from django.utils.translation import gettext_lazy as _
+from isik.django.apps.notifications import conf
 from isik.django.apps.notifications.audiences import Field
 from isik.django.apps.notifications.choices import Policy
-from isik.django.apps.notifications.kinds import Source, declare_kind
+from isik.django.apps.notifications.kinds import PushContent, Source, declare_kind
 
+
+# On once a push service has credentials ({{ cookiecutter.project_slug }}.settings.PUSH_CREDENTIALS): a kind
+# sent on push without them won't start.
+PUSH = ("push",) if "push" in conf.setting("CHANNELS") else ()
+# Names people typed stay off lock screens and Apple's and Google's servers: a push says what kind of thing
+# happened, and the app shows the rest.
+PRIVATE_PUSH = PushContent(private=True, badge=True)
 
 # What an owner hears of their own tokens and applications{% if cookiecutter.webhooks != "none" %}, which an endpoint may also be sent{% endif %}.
-OWNER_CHANNELS = ("inbox", "email"{% if cookiecutter.webhooks != "none" %}, "webhook"{% endif %})
+OWNER_CHANNELS = ("inbox", "email"{% if cookiecutter.webhooks != "none" %}, "webhook"{% endif %}, *PUSH)
 
 # Trigger-sourced: the database writes these, on the models that declare them.
 TOKEN_CREATED = declare_kind(
@@ -42,7 +50,8 @@ SIGNED_OUT_BY_POLICY = declare_kind(
     "signed_out_by_policy",
     audience=Field("user"),
     policy=Policy.MANDATORY,
-    channels=("inbox", "email"),
+    channels=("inbox", "email", *PUSH),
+    push=PushContent(badge=True),
     label=_("Signed out by policy"),
     description=_("When signing in is restricted and you are signed out."),
     message=_("Signing in is restricted for the moment, so you were signed out."),
@@ -75,7 +84,8 @@ ACCOUNT_CHANGED = declare_kind(
     variants=tuple(ACCOUNT_CHANGES),
     audience=Field("user"),
     policy=Policy.DEFAULT_ON,
-    channels=("inbox",),
+    channels=("inbox", *PUSH),
+    push=PushContent(badge=True),
     label=_("Changes to your account, in your inbox"),
     description=_("Password, email, two-factor and sign-in provider changes."),
     message=lambda data, variant: ACCOUNT_CHANGES.get(variant, _("Something changed on your account.")),

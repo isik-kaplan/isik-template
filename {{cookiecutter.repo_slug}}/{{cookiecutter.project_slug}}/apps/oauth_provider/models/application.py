@@ -7,7 +7,7 @@ from isik.django.apps.notifications.choices import Policy
 from isik.django.apps.notifications.kinds import notifies
 from oauth2_provider.models import AbstractApplication
 
-from apps.notifications.kinds import APPLICATION_REVIEWED, OWNER_CHANNELS
+from apps.notifications.kinds import APPLICATION_REVIEWED, OWNER_CHANNELS, PRIVATE_PUSH
 
 
 @track_events()
@@ -22,6 +22,7 @@ from apps.notifications.kinds import APPLICATION_REVIEWED, OWNER_CHANNELS
     audience=Field("user"),
     policy=Policy.DEFAULT_ON,
     channels=OWNER_CHANNELS,
+    push=PRIVATE_PUSH,
 )
 class Application(VersionedModel, AbstractApplication):
     """`user` is its owner, never whose account it acts in. Versioned, since DOT's `updated` is `auto_now`,

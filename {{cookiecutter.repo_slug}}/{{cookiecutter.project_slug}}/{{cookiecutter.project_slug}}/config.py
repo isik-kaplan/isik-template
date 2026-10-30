@@ -89,6 +89,18 @@ CONFIG = config(
             },
             "DEFAULT_FROM": string(),
         },
+        # Push is off until a service has credentials: see .env.example.
+        "PUSH": {
+            "APNS": {
+                "TEAM_ID": string(missing_default=""),
+                "KEY_ID": string(missing_default=""),
+                "KEY": string(missing_default=""),
+                "TOPIC": string(missing_default={{ (cookiecutter.domain.split(".") | reverse | join(".") ~ ".mobile") | tojson }}),
+            },
+            "FCM": {
+                "CREDENTIALS": string(missing_default=""),
+            },
+        },
     },
     prefix="{{ cookiecutter.config_prefix }}",
 )

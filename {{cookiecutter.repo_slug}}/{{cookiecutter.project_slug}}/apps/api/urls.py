@@ -6,6 +6,9 @@ from apps.features.api.viewsets.feature import FeatureViewSet
 from apps.features.api.viewsets.setting import SettingViewSet
 {% if cookiecutter.webhooks != "none" -%}
 from apps.notifications.api.viewsets.delivery import DeliveryViewSet
+{% endif -%}
+from apps.notifications.api.viewsets.device import DeviceViewSet
+{% if cookiecutter.webhooks != "none" -%}
 from apps.notifications.api.viewsets.endpoint import EndpointViewSet
 {% endif -%}
 from apps.notifications.api.viewsets.inbox import InboxViewSet
@@ -31,6 +34,7 @@ router.register("device-authorizations", DeviceAuthorizationViewSet, basename="d
 router.register("notifications/inbox", InboxViewSet, basename=InboxViewSet.endpoint)
 router.register("notifications/subscriptions", SubscriptionViewSet, basename=SubscriptionViewSet.endpoint)
 router.register("notifications/kinds", NoticeKindViewSet, basename=NoticeKindViewSet.endpoint)
+router.register("notifications/devices", DeviceViewSet, basename=DeviceViewSet.endpoint)
 router.register("features", FeatureViewSet, basename=FeatureViewSet.endpoint)
 router.register("settings", SettingViewSet, basename=SettingViewSet.endpoint)
 {%- if cookiecutter.webhooks != "none" %}

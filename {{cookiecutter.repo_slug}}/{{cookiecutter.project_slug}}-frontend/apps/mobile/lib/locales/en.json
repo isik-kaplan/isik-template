@@ -45,6 +45,7 @@
   "homeHeading": "You're logged in",
   "homeHeadingWithEmail": "You're logged in as {{email}}",
   "homeProfileLink": "Profile",
+  "homeNotificationsLink": "Notifications",
   "homeLogout": "Log out",
 
   "socialLoginGoogle": "Continue with Google",
@@ -88,6 +89,11 @@
   "profileSessionsRevoke": "Revoke",
   "profileSessionsRevoking": "Revoking…",
   "profileSessionsRevokeOthers": "Log out other sessions",
+
+  "notificationsHeading": "Notifications",
+  "notificationsEmpty": "Nothing yet.",
+  "notificationsMarkAllRead": "Mark all as read",
+  "notificationsUnread": "New",
 
   "profileConnectionsHeading": "Connected accounts",
   "profileConnectionsEmpty": "No connected accounts yet.",

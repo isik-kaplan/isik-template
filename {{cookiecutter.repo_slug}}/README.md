@@ -246,6 +246,12 @@ your own real credentials: a Google OAuth iOS client ID (its reversed form as `i
 `app.config.ts`'s `@react-native-google-signin/google-signin` plugin entry) and, for Apple, a
 provisioning profile with the Sign in with Apple capability enabled. Until those exist, the
 buttons render but the native pickers will fail to open.
+
+Push needs a development build too. The app asks to notify once signed in, registers the phone's own APNs or
+FCM token with the backend (not an Expo push token) and forgets it at logout; a tapped push opens the
+Notifications screen. iOS needs the Push Notifications capability on its provisioning profile; Android needs
+Firebase's `google-services.json`, named by `GOOGLE_SERVICES_FILE` at build time. A development build's APNs
+token is the sandbox's, so it registers as such.
 {% endif %}
 {% if cookiecutter.languages.split(',')|length > 1 %}
 ## Translations
@@ -326,7 +332,8 @@ Built on isik's notifications app; every one of its tables is this project's own
 kind that isn't there (`REQUIRE_DECLARED_KINDS`). Most are written by the database: `@notifies(...)` on a
 model compiles to a trigger that inserts the notice in the same transaction as the change, so a raw
 `UPDATE` notifies too. Fan-out then turns each notice into deliveries - the inbox (the profile's
-Notifications tab), email (`templates/notifications/<kind>/`, in the recipient's language){% if cookiecutter.webhooks != "none" %} and webhooks{% endif %}.
+Notifications tab), email (`templates/notifications/<kind>/`, in the recipient's language){% if cookiecutter.webhooks != "none" %}, webhooks{% endif %}
+and push to phones, once it has credentials.
 
 - **The owner's own:** a personal access token made or revoked, an application approved or withdrawn.
 - **Signed out by the sign-in ladder:** one notice per person shut out, by inbox and email.
@@ -339,6 +346,14 @@ Notifications tab), email (`templates/notifications/<kind>/`, in the recipient's
 - **Staff can decide one person's notification for them:** `force_subscription(user, kind, enabled=...,
   source=STAFF, reason=...)` locks it on or off; the person sees it locked, and why, and is told by the
   mandatory `notification_settings_forced`. `release_subscription(...)` gives them their own choice back.
+
+**Push to phones** goes straight to APNs and FCM over HTTP/2, with no SDK or middleman: set
+`{{ cookiecutter.config_prefix }}__PUSH__*` (`.env.example`) and push is on for every kind sent on it. Each of a
+person's phones is a `Device`, which the app registers at `/v0/notifications/devices/` with the phone's own
+token at every start and forgets at logout; a token Apple or Google says is dead turns its device off. A
+push says the kind's label and message; one about a token or an application says its label alone
+(`PRIVATE_PUSH`), so what somebody named them stays off lock screens. Every push sets the app's badge to the
+unread inbox count.
 
 Each kind declares its `label`, `description` and `message` in `kinds.py`, rendered in the request's
 language: `/v0/notifications/kinds/` lists every kind with what the caller gets of it and whether they may

@@ -146,6 +146,14 @@ describe('Api', () => {
       '/v0/notifications/inbox/read-all/',
     ],
     ['notificationKinds', (api: Api) => api.notificationKinds(), 'GET', '/v0/notifications/kinds/'],
+    ['devices', (api: Api) => api.devices(), 'GET', '/v0/notifications/devices/'],
+    [
+      'registerDevice',
+      (api: Api) => api.registerDevice({ platform: 'apns', token: 'a1b2' }),
+      'POST',
+      '/v0/notifications/devices/',
+    ],
+    ['forgetDevice', (api: Api) => api.forgetDevice('d1'), 'DELETE', '/v0/notifications/devices/d1/'],
     ['features', (api: Api) => api.features(), 'GET', '/v0/features/'],
     ['settings', (api: Api) => api.settings(), 'GET', '/v0/settings/'],
   ])('%s calls %s %s', async (_name, call, method, path) => {
@@ -154,6 +162,14 @@ describe('Api', () => {
     const [request] = baseFetch.mock.calls[0]
     expect(request instanceof Request ? request.method : undefined).toBe(method)
     expect(String(request instanceof Request ? request.url : request)).toBe(`https://api.example.test${path}`)
+  })
+
+  it("sends the phone's token as its body", async () => {
+    const baseFetch = vi.fn<typeof fetch>(async () => new Response('{}', { status: 201 }))
+    const device = { platform: 'fcm', token: 'a1b2', environment: 'production', app_id: '' } as const
+    await new Api('https://api.example.test', { baseFetch }).registerDevice(device)
+    const [request] = baseFetch.mock.calls[0]
+    expect(await (request as Request).json()).toEqual(device)
   })
 
   it('sends the choice about a kind as its body', async () => {

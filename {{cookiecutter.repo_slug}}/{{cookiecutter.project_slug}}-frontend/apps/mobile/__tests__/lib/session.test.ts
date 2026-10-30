@@ -1,4 +1,4 @@
-import { createAuthApi, getAuthApi } from '@/lib/session'
+import { createAuthApi, getAuthApi, signedInFetch } from '@/lib/session'
 
 import { AppAuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
@@ -54,6 +54,34 @@ describe('session', () => {
     mockFetch({ status: 200, data: {}, meta: {} })
     await createAuthApi('http://auth.example.test').session()
     expect(mockPush).not.toHaveBeenCalled()
+  })
+
+  it("signs the backend's own API calls with the stored session token", async () => {
+    ;(SecureStore.getItemAsync as jest.Mock).mockResolvedValue('stored-token')
+    mockFetch({})
+    await signedInFetch('http://api.example.test/v0/users/me/', { headers: { Accept: 'application/json' } })
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0]
+    expect(Object.fromEntries(init.headers)).toEqual({
+      accept: 'application/json',
+      'x-session-token': 'stored-token',
+    })
+  })
+
+  it('sends no session token while signed out', async () => {
+    ;(SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null)
+    mockFetch({})
+    await signedInFetch('http://api.example.test/v0/users/me/')
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0]
+    expect(Object.fromEntries(init.headers)).toEqual({})
+  })
+
+  it("sends the app to prove it is them when the backend's own API asks", async () => {
+    ;(SecureStore.getItemAsync as jest.Mock).mockResolvedValue('stored-token')
+    global.fetch = jest.fn(
+      async () => new Response('{}', { status: 401, headers: { 'X-Reauthentication-Required': '1' } })
+    ) as unknown as typeof fetch
+    await signedInFetch('http://api.example.test/v0/users/me/')
+    expect(mockPush).toHaveBeenCalledWith('/prove')
   })
 
   it('getAuthApi() returns the same real AppAuthApi instance on repeated calls', () => {

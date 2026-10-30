@@ -76,6 +76,11 @@ NOT_AN_ACT = {
     ("SettingViewSet", "partial_update"): NoReauthentication(
         reason="a setting guarding the account asks for proof itself, through its own request policies"
     ),
+    ("DeviceViewSet", "create"): NoReauthentication(
+        reason="the app registering the phone it's signed in on, at every start - it sends that phone the "
+        "notices it already shows"
+    ),
+    ("DeviceViewSet", "destroy"): NoReauthentication(reason="forgetting a phone only stops pushes to it"),
     ("InboxViewSet", "read"): NoReauthentication(
         reason="marking your own notification read, which tells nobody anything"
     ),

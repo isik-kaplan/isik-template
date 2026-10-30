@@ -9,7 +9,7 @@ from isik.django.apps.notifications.choices import Policy
 from isik.django.apps.notifications.kinds import notifies
 
 from apps.common.models.base import BaseModel
-from apps.notifications.kinds import OWNER_CHANNELS, TOKEN_CREATED, TOKEN_REVOKED
+from apps.notifications.kinds import OWNER_CHANNELS, PRIVATE_PUSH, TOKEN_CREATED, TOKEN_REVOKED
 
 
 class PersonalAccessTokenQuerySet(models.QuerySet):
@@ -26,6 +26,7 @@ class PersonalAccessTokenQuerySet(models.QuerySet):
     audience=Field("user"),
     policy=Policy.MANDATORY,
     channels=OWNER_CHANNELS,
+    push=PRIVATE_PUSH,
 )
 # A revoked token is deleted, so the notice carries what it was.
 @notifies(
@@ -35,6 +36,7 @@ class PersonalAccessTokenQuerySet(models.QuerySet):
     audience=Field("user"),
     policy=Policy.MANDATORY,
     channels=OWNER_CHANNELS,
+    push=PRIVATE_PUSH,
 )
 class PersonalAccessToken(BaseModel):
     """A token somebody made to call the API as themselves, within its scopes and what they hold. Only a

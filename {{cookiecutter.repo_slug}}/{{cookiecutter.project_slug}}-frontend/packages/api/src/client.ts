@@ -233,6 +233,20 @@ export class Api {
     return this.client.POST('/v0/notifications/subscriptions/', { body: { kind, enabled } })
   }
 
+  /** The phones this person's notifications are pushed to. */
+  async devices() {
+    return this.client.GET('/v0/notifications/devices/')
+  }
+
+  /** Needs no key: registering a token again moves it to the caller, so an app sends it at every start. */
+  async registerDevice(body: components['schemas']['DeviceRequest']) {
+    return this.client.POST('/v0/notifications/devices/', { body })
+  }
+
+  async forgetDevice(id: string) {
+    return this.client.DELETE('/v0/notifications/devices/{id}/', { params: { path: { id } } })
+  }
+
   async features() {
     return this.client.GET('/v0/features/')
   }

@@ -203,4 +203,8 @@ document translations. The README's "Translations" section has the commands.
 `EXPO_PUBLIC_API_ORIGIN` and `EXPO_PUBLIC_AUTH_ORIGIN`; its signup screens link to the web app's legal pages, on the
 auth origin's parent domain. The README's mobile section covers running it on a simulator or device and the native
 Google and Apple sign-in credentials it needs.
+
+For push, create an APNs key (Apple Developer, Keys) and a Firebase project with a service account, and set
+`{{ cookiecutter.config_prefix }}__PUSH__*` as `.env.example` describes. Without them the app runs and the
+inbox works; nothing is pushed.
 {%- endif %}
