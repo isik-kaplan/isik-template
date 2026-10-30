@@ -10,7 +10,7 @@ from isik.django.apps.notifications import conf{% if cookiecutter.webhooks == "u
 {% if cookiecutter.webhooks == "users" -%}
 from apps.features.declarations import STAFF, WEBHOOKS
 {% endif -%}
-from apps.notifications.models import Delivery, Endpoint, EndpointKind
+from apps.notifications.models import Delivery, Endpoint, EndpointKind, NoticeKindPolicy
 from apps.users.models.user import User
 from apps.users.personal_access_tokens import make_token
 from conftest import deliver_waiting_notices
@@ -21,7 +21,7 @@ ENDPOINTS = reverse("notification-endpoints-list")
 
 def _endpoint(url, **fields):
     endpoint = Endpoint.objects.create(url=url, secret="s3cret", **fields)
-    EndpointKind.objects.create(endpoint=endpoint, kind_id="token_created")
+    EndpointKind.objects.create(endpoint=endpoint, kind=NoticeKindPolicy.objects.get(name="token_created"))
     return endpoint
 
 

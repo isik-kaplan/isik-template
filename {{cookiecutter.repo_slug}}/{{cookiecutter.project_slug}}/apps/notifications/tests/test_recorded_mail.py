@@ -36,7 +36,7 @@ def test_a_sent_mail_is_recorded_as_sent_without_what_it_said(alice):
     )
 
     delivery = Delivery.objects.get()
-    assert (delivery.notice.kind_id, delivery.state, delivery.email.address, delivery.email.user_id) == (
+    assert (delivery.notice.kind.name, delivery.state, delivery.email.address, delivery.email.user_id) == (
         "mail_password_reset_key",
         "sent",
         alice.email,

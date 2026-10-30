@@ -453,7 +453,7 @@ HISTORY_CONTEXT_VERSION = __version__
 # A task queued inside a request runs only once that request's rows are committed.
 HISTORY_TASK_DISPATCH_ON_COMMIT = True
 # Time-ordered ids: rows made later sort later, which keeps index pages filling in order.
-ISIK_PRIMARY_KEY_DEFAULT = "isik.django.apps.common.db.models.uuid7"
+ISIK_PRIMARY_KEY = "isik.django.apps.common.db.models.uuid7"
 IDEMPOTENCY_CLAIM_MODEL = "common.IdempotencyClaim"
 ISIK_NOTIFICATIONS_KIND_POLICY_MODEL = "notifications.NoticeKindPolicy"
 ISIK_NOTIFICATIONS_NOTICE_MODEL = "notifications.Notice"

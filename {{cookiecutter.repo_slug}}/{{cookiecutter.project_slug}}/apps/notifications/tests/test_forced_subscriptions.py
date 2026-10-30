@@ -23,7 +23,7 @@ def _account_changed(user):
 
 
 def _kinds_in_inbox(user):
-    return sorted(InboxItem.objects.filter(user=user).values_list("kind_id", flat=True))
+    return sorted(InboxItem.objects.filter(user=user).values_list("kind__name", flat=True))
 
 
 @pytest.mark.django_db

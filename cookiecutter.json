@@ -17,7 +17,7 @@
   "storage": ["garage", "s3", "disk"],
   "cache": ["redis", "database"],
   "webhooks": ["none", "staff", "users"],
-  "isik_version": "0.43.0",
+  "isik_version": "0.44.0",
   "isikk_core_version": "0.20.0",
   "_copy_without_render": [
     "*/e2e/authentik-blueprints/*"

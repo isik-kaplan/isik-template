@@ -51,7 +51,7 @@ def test_a_change_to_the_account_lands_in_its_owners_inbox_beside_the_mail(alice
 
     assert task.delay.call_args.args[4:] == ("account/email/password_changed", str(alice.pk))
     (notice,) = Notice.objects.all()
-    assert (notice.kind_id, notice.variant, notice.snapshot) == (
+    assert (notice.kind.name, notice.variant, notice.snapshot) == (
         "account_changed",
         "password_changed",
         {"user": str(alice.pk)},

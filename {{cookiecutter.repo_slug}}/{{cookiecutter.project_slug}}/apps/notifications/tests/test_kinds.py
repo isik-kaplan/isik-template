@@ -17,7 +17,7 @@ Application = get_application_model()
 
 @pytest.mark.django_db
 def test_every_declared_kind_has_its_row():
-    assert set(NoticeKindPolicy.objects.values_list("kind", flat=True)) == set(kinds())
+    assert set(NoticeKindPolicy.objects.values_list("name", flat=True)) == set(kinds())
 
 
 @pytest.mark.django_db
@@ -27,7 +27,7 @@ def test_a_new_token_is_told_to_its_owner_in_the_inbox_and_by_mail(alice):
     deliver_waiting_notices()
 
     (item,) = InboxItem.objects.filter(user=alice)
-    assert (item.kind_id, item.payload["data"]["name"]) == ("token_created", "Bob's CI & <deploy>")
+    assert (item.kind.name, item.payload["data"]["name"]) == ("token_created", "Bob's CI & <deploy>")
     (sent,) = mail.outbox
     assert (sent.to, sent.subject) == ([alice.email], "A personal access token was created")
     assert 'named "Bob\'s CI & <deploy>"' in sent.body
@@ -38,7 +38,7 @@ def test_a_revoked_token_is_told_by_what_it_was_since_its_row_is_gone(alice):
     token = make_token(user=alice, scopes=[], name="CI")
     token.delete()
 
-    notice = Notice.objects.get(kind="token_revoked")
+    notice = Notice.objects.get(kind__name="token_revoked")
 
     assert notice.snapshot == {"user": str(alice.pk), "name": "CI"}
     assert not PersonalAccessToken.objects.exists()
@@ -56,7 +56,7 @@ def test_an_owner_hears_their_application_was_approved_and_then_withdrawn(applic
     approve_application(application, [])
     withdraw_application(application)
 
-    notices = Notice.objects.filter(kind="application_reviewed").order_by("occurred_at")
+    notices = Notice.objects.filter(kind__name="application_reviewed").order_by("occurred_at")
 
     assert [(notice.variant, notice.snapshot["user"]) for notice in notices] == [
         ("approved", str(application.user_id)),
@@ -68,4 +68,4 @@ def test_an_owner_hears_their_application_was_approved_and_then_withdrawn(applic
 def test_an_edit_that_leaves_the_approval_alone_tells_nobody(application):
     Application.objects.filter(pk=application.pk).update(name="Notes 2")
 
-    assert not Notice.objects.filter(kind="application_reviewed").exists()
+    assert not Notice.objects.filter(kind__name="application_reviewed").exists()

@@ -28,9 +28,8 @@ def test_everybody_the_rung_shuts_out_gets_a_notice_and_nobody_else(staff_only):
 
     tell_the_people_a_rung_signed_out()
 
-    assert sorted(notice.snapshot["user"] for notice in Notice.objects.filter(kind="signed_out_by_policy")) == sorted(
-        str(member.pk) for member in members
-    )
+    notices = Notice.objects.filter(kind__name="signed_out_by_policy")
+    assert sorted(notice.snapshot["user"] for notice in notices) == sorted(str(member.pk) for member in members)
 
 
 @pytest.mark.django_db
@@ -44,7 +43,7 @@ def test_the_mail_says_why_they_were_signed_out_and_the_inbox_keeps_it(staff_onl
     assert sent.to == ["member@example.test"]
     assert sent.subject == "You have been signed out"
     assert "restricted" in sent.body
-    assert InboxItem.objects.filter(user=member, kind="signed_out_by_policy").count() == 1
+    assert InboxItem.objects.filter(user=member, kind__name="signed_out_by_policy").count() == 1
 
 
 @pytest.mark.django_db
