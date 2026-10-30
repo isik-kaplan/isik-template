@@ -5,4 +5,4 @@ class IdempotencyClaim(AbstractIdempotencyClaim):
     """A spent Idempotency-Key, replayed by re-serializing the row its request named."""
 
     class Meta(AbstractIdempotencyClaim.Meta):
-        pass
+        db_table = "common_idempotency_claim"

@@ -39,6 +39,12 @@ is and how to run it; [SETUP.md](../SETUP.md) what to do before launch.
   given an `etag` (or a deliberate `null`), `ifMatch()` or `anyVersion()` makes - forgetting the version,
   or passing one that may be undefined, does not compile. The `PRECONDITION_*` settings change the defaults - see isik's
   `docs/django/drf/viewsets/preconditions.md`.
+- **Every model names its table** in `Meta.db_table`, as its app and its name in snake case
+  (`notifications_inbox_item`), and every `Meta.indexes` entry its index; isik's check `isik.E019` refuses
+  one left to Django.
+- **A migration is what `makemigrations` writes, and nothing else** - no `RunPython`, no `RunSQL`, nothing
+  elidable - so the migrations can always be regenerated from the models. Rows the schema needs are written
+  on `post_migrate`, the way `apps/users/sync.py` writes the permission catalog.
 - **Raw SQL never spells a table or column name.** Resolve them with `apps.common.db.model_db_name` /
   `model_db_column`, building trigger bodies in a `BuiltTrigger(build=...)`; `test_raw_sql_names.py`
   sweeps the tree for literals.

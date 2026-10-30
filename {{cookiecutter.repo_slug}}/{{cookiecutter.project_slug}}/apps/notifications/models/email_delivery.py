@@ -2,4 +2,5 @@ from isik.django.apps.notifications import bases
 
 
 class EmailDelivery(bases.AbstractEmailDelivery):
-    pass
+    class Meta(bases.AbstractEmailDelivery.Meta):
+        db_table = "notifications_email_delivery"

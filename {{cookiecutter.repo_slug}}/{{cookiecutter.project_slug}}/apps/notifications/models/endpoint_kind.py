@@ -16,3 +16,6 @@ class EndpointKind(bases.AbstractEndpointKind):
         db_comment="The endpoint wanting the kind.",
     )
     kind = kind_key()
+
+    class Meta(bases.AbstractEndpointKind.Meta):
+        db_table = "notifications_endpoint_kind"

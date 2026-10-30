@@ -42,6 +42,7 @@ class User(AbstractUser, BaseModel):
 
     class Meta(AbstractUser.Meta):
         swappable = "AUTH_USER_MODEL"
+        db_table = "users_user"
 
     @property
     def acting_through_a_token(self):

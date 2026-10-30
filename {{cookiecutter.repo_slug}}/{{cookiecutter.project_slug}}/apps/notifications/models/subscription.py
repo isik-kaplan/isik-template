@@ -11,3 +11,6 @@ class Subscription(bases.AbstractForceableSubscription):
     id = primary_key()
     user = user_key("whose choice this is")
     kind = kind_key()
+
+    class Meta(bases.AbstractForceableSubscription.Meta):
+        db_table = "notifications_subscription"

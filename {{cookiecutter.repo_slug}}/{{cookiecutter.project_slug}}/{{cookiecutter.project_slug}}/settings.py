@@ -518,6 +518,8 @@ ISIK_CHECKS = {
         # AbstractUser's and DOT's fields are described by their libraries, not redeclared here to say it again.
         CheckOption.INHERITED_FROM_LIBRARIES: False,
     },
+    # So the next model added names its own table and indexes too.
+    Check.DECLARED_NAMES: {CheckOption.ENABLED: True},
 }
 
 SPECTACULAR_SETTINGS = {

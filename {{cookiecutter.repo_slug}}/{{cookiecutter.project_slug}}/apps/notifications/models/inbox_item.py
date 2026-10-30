@@ -8,3 +8,6 @@ class InboxItem(bases.AbstractInboxItem):
     id = primary_key()
     user = user_key("whose inbox it's in")
     kind = kind_key()
+
+    class Meta(bases.AbstractInboxItem.Meta):
+        db_table = "notifications_inbox_item"

@@ -63,6 +63,7 @@ class Application(VersionedModel, AbstractApplication):
 
     class Meta(AbstractApplication.Meta):
         swappable = "OAUTH2_PROVIDER_APPLICATION_MODEL"
+        db_table = "oauth_provider_application"
         triggers = [
             # A state machine constrains UPDATE only, so a row's birth state needs its own guard.
             pgtrigger.FSM(

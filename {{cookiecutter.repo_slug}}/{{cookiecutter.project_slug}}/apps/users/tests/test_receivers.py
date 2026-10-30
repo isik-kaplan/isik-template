@@ -1,6 +1,9 @@
+import time
+
 import pytest
 from allauth.account.models import EmailAddress
 from allauth.account.signals import email_changed, email_confirmed, password_reset
+from allauth.mfa import app_settings as mfa_settings
 from allauth.mfa.models import Authenticator
 from allauth.mfa.signals import authenticator_added, authenticator_removed
 from allauth.mfa.totp.internal.auth import format_hotp_value, hotp_value, yield_hotp_counters_from_time
@@ -137,6 +140,9 @@ def test_changing_the_primary_address_is_audited(alice, audited):
 
 
 def _current_code(secret):
+    # A code read in its window's last moments can expire before allauth checks it.
+    left = mfa_settings.TOTP_PERIOD - time.time() % mfa_settings.TOTP_PERIOD
+    time.sleep(left if left < 2 else 0)
     return format_hotp_value(hotp_value(secret, next(yield_hotp_counters_from_time())))
 
 

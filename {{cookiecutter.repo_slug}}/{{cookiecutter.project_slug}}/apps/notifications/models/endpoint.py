@@ -11,3 +11,6 @@ class Endpoint(bases.AbstractEndpoint):
 {%- if cookiecutter.webhooks == "users" %}
     owner = user_key("who registered it, and whose notices it receives")
 {%- endif %}
+
+    class Meta(bases.AbstractEndpoint.Meta):
+        db_table = "notifications_endpoint"

@@ -47,6 +47,7 @@ class SiteSettings(BaseModel):
     )
 
     class Meta:
+        db_table = "users_site_settings"
         verbose_name = _("site settings")
         verbose_name_plural = _("site settings")
         constraints = [models.CheckConstraint(condition=models.Q(singleton=True), name="site_settings_singleton")]

@@ -80,3 +80,6 @@ class PersonalAccessToken(BaseModel):
     )
 
     objects = PersonalAccessTokenQuerySet.as_manager()
+
+    class Meta:
+        db_table = "users_personal_access_token"

@@ -1,5 +1,8 @@
+import time
+
 import pytest
 from allauth.core import context as allauth_context
+from allauth.mfa import app_settings as mfa_settings
 from allauth.mfa.adapter import get_adapter
 from allauth.mfa.models import Authenticator
 from allauth.mfa.recovery_codes.internal.auth import RecoveryCodes
@@ -24,6 +27,9 @@ TOTP_PATH = "/v0/browser/v1/account/authenticators/totp"
 
 
 def _current_code(secret):
+    # A code read in its window's last moments can expire before allauth checks it.
+    left = mfa_settings.TOTP_PERIOD - time.time() % mfa_settings.TOTP_PERIOD
+    time.sleep(left if left < 2 else 0)
     return format_hotp_value(hotp_value(secret, next(yield_hotp_counters_from_time())))
 
 
