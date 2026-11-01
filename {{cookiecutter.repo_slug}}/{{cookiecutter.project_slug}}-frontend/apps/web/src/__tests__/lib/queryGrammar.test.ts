@@ -28,6 +28,15 @@ describe('queryGrammar', () => {
     expect(parseQuery('users', '1:2 :x a-b:c')).toEqual({ terms: '1:2 :x a-b:c', chips: [] })
   })
 
+  it('searches an address as words, rather than reading its scheme as a field', () => {
+    expect(parseQuery('users', 'https://a.test/hook is_staff:true')).toEqual({
+      terms: 'https://a.test/hook',
+      chips: [{ field: 'is_staff', value: 'true' }],
+    })
+    expect(parseQuery('users', 'http://a.test').problem).toBeUndefined()
+    expect(parseQuery('users', 'https:/a.test').problem?.field).toBe('https')
+  })
+
   it('refuses a field inherited from no declaration at all', () => {
     expect(parseQuery('users', 'constructor:x').problem?.field).toBe('constructor')
   })

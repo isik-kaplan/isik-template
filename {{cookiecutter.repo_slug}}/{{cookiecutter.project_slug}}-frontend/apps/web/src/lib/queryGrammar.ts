@@ -12,7 +12,8 @@ export type ParsedQuery = {
   problem?: { field: string; declared: string[] }
 }
 
-const PAIR = /^([A-Za-z_]\w*):(.*)/
+// Not before `//`: `https://a.test/hook` is an address to search for, not an unknown `https` field.
+const PAIR = /^([A-Za-z_]\w*):(?!\/\/)(.*)/
 
 export function fieldsOf(resource: string): Readonly<Record<string, { values?: readonly string[] }>> {
   return QUERY_GRAMMAR[resource] ?? {}
