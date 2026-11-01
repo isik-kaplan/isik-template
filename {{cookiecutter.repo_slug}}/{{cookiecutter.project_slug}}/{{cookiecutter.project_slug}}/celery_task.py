@@ -6,7 +6,7 @@ from {{ cookiecutter.project_slug }} import __version__
 
 
 class OnCommitTask(HistoryContextTask):
-    """Dispatched on commit (HISTORY_TASK_DISPATCH_ON_COMMIT), or a worker may read a row not there yet."""
+    """Dispatched on commit (isik's default), or a worker may read a row not there yet."""
 
     def worker_history_context(self):
         """This process's version, not the dispatcher's: the build running the task wrote the rows."""

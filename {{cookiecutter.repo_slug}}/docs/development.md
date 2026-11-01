@@ -8,7 +8,7 @@ is and how to run it; [SETUP.md](../SETUP.md) what to do before launch.
 - **Every request is a transaction** (`ATOMIC_REQUESTS`). A view opts out only through isik's
   `not_atomic(reason)`; isik's check `isik.E011` refuses one that used Django's `non_atomic_requests`
   directly. Anything that cannot roll back waits for the commit: Celery tasks are dispatched on commit
-  (`HISTORY_TASK_DISPATCH_ON_COMMIT`), and `AccountAdapter.send_mail` uses `transaction.on_commit`. Account mail
+  (isik's `HistoryContextTask` default), and `AccountAdapter.send_mail` uses `transaction.on_commit`. Account mail
 {%- if cookiecutter.background_jobs == "inline" %}
   is rendered and sent by a task, which retries an SMTP outage - inline, once the request commits.
 {%- else %}

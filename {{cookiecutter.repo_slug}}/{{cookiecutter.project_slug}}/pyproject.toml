@@ -19,6 +19,8 @@ dependencies = [
     "pyjwt[crypto]>=2.13.0",
     "django-cors-headers>=4.4.0",
     "django-oauth-toolkit>=3.4.1",
+    # 4.0.1 dropped the scope argument django-oauth-toolkit 3.4.1 passes to DeviceCodeResponse.
+    "oauthlib<4.0.1",
     "django-msgspec>=1.0.1",
     "cryptography>=49.0.0",
     "requests>=2.32.0",
