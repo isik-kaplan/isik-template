@@ -1969,5 +1969,67 @@
         "unprefixed lookup - none of them are."
       ]
     }
-  ]
+  ],
+  "src/components/app-auth/NotificationBell.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ]{% if cookiecutter.webhooks != "none" %},
+  "src/app/webhooks/page.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "8abfebfaf906",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "8abfebfaf906",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
+  "src/components/app-webhooks/WebhookEndpoints.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "2b9f6a4a6bdb",
+      "reason": [
+        "equivalent mutant. t's reference never changes across renders in this single-language app, so this",
+        "memo never actually recomputes either way."
+      ]
+    }
+  ]{% endif %}
 }

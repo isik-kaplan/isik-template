@@ -1,4 +1,4 @@
-import { applicationsAreOn, mayReviewApplications, maySeePeople } from '@/lib/access'
+import { applicationsAreOn, {% if cookiecutter.webhooks != "none" %}mayManageWebhooks, {% endif %}mayReviewApplications, maySeePeople } from '@/lib/access'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -39,4 +39,17 @@ describe('access', () => {
     CONFIG.OAUTH_PROVIDER.MODE = 'off'
     expect(mayReviewApplications(me({ is_superuser: true }))).toBe(false)
   })
+{%- if cookiecutter.webhooks == "staff" %}
+
+  it("has staff alone manage the webhooks, which are the whole deployment's", () => {
+    expect(mayManageWebhooks(me({ is_staff: true }))).toBe(true)
+    expect(mayManageWebhooks(me({ is_superuser: true }))).toBe(false)
+    expect(mayManageWebhooks(me())).toBe(false)
+  })
+{%- elif cookiecutter.webhooks == "users" %}
+
+  it('has everybody manage their own webhooks', () => {
+    expect(mayManageWebhooks(me())).toBe(true)
+  })
+{%- endif %}
 })

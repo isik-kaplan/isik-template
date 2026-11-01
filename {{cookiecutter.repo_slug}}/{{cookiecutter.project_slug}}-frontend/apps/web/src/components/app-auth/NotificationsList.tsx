@@ -11,6 +11,7 @@ import { apiOrigin } from '@/lib/apiOrigin'
 
 import type { ApiType } from '@{{ cookiecutter.repo_slug }}/api'
 
+import { NOTIFICATIONS_READ } from './NotificationBell'
 import { toast } from 'sonner'
 
 type Item = ApiType<'InboxItem'>
@@ -42,6 +43,7 @@ export function NotificationsList({ initialItems, initialKinds }: { initialItems
   // `null` is every item: when one already read was read shows nowhere, so it may as well move.
   function marked(id: string | null, at: string) {
     setItems((current) => current.map((item) => (id === null || item.id === id ? { ...item, read_at: at } : item)))
+    window.dispatchEvent(new Event(NOTIFICATIONS_READ))
   }
 
   async function markRead(id: string) {

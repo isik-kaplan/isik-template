@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 const getSession = vi.fn()
 vi.mock('@/config/public', () => ({ CONFIG: { OAUTH_PROVIDER: { MODE: 'off' } } }))
 vi.mock('@/lib/getSession', () => ({ getSession: () => getSession(), getLanguage: async () => 'en' }))
+vi.mock('@/components/app-auth/NotificationBell', () => ({ NotificationBell: () => <p>bell</p> }))
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
   usePathname: () => '/profile/details',
@@ -32,6 +33,7 @@ describe('ProfileTabsLayout', () => {
     expect(screen.getByText('content')).toBeTruthy()
     expect(screen.getByText('JA')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Back to home' }).getAttribute('href')).toBe('/')
+    expect(screen.getByText('bell')).toBeTruthy()
   })
 
   it('omits the email line when the session has none', async () => {

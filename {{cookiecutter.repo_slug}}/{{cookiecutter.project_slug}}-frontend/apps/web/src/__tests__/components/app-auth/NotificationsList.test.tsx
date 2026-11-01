@@ -127,9 +127,15 @@ describe('NotificationsList', () => {
   it('marks one read with the time the server gave', async () => {
     const fetchMock = vi.fn(async () => jsonResponse(200, item({ read_at: AT })))
     globalThis.fetch = fetchMock as never
+    const told = vi.fn()
+    window.addEventListener('notifications-read', told)
     render(<NotificationsList initialItems={[item({})]} initialKinds={[]} />)
 
     await userEvent.click(screen.getByText('Mark read'))
+    window.removeEventListener('notifications-read', told)
+
+    // So a bell on the page counts again.
+    expect(told).toHaveBeenCalledOnce()
 
     expect(screen.queryByText('Mark read')).toBeNull()
     expect(screen.queryByText('Mark all read')).toBeNull()
@@ -148,9 +154,14 @@ describe('NotificationsList', () => {
 
   it('says so when marking one read fails, and leaves it unread', async () => {
     globalThis.fetch = vi.fn(async () => jsonResponse(500, {})) as never
+    const told = vi.fn()
+    window.addEventListener('notifications-read', told)
     render(<NotificationsList initialItems={[item({})]} initialKinds={[]} />)
 
     await userEvent.click(screen.getByText('Mark read'))
+    window.removeEventListener('notifications-read', told)
+
+    expect(told).not.toHaveBeenCalled()
 
     expect(toast.error).toHaveBeenCalledWith("Couldn't mark it read. Try again.")
     expect(screen.getByText('Mark read')).toBeTruthy()

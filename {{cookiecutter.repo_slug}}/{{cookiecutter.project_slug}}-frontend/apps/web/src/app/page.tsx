@@ -4,7 +4,7 @@ import { LogoutButton } from '@/components/app-auth/LogoutButton'
 import { Button } from '@/components/base/button'
 
 import { sUseTranslation } from '@/i18n'
-import { applicationsAreOn, mayReviewApplications, maySeePeople } from '@/lib/access'
+import { applicationsAreOn, {% if cookiecutter.webhooks != "none" %}mayManageWebhooks, {% endif %}mayReviewApplications, maySeePeople } from '@/lib/access'
 import { getSession } from '@/lib/getSession'
 import { serverApi } from '@/lib/serverApi'
 
@@ -39,6 +39,13 @@ export default async function HomePage() {
                 {t('auth:homeApplicationReviewsLink')}
               </Button>
             )}
+{%- if cookiecutter.webhooks != "none" %}
+            {me && mayManageWebhooks(me) && (
+              <Button variant="outline" render={<Link href="/webhooks" />}>
+                {t('auth:homeWebhooksLink')}
+              </Button>
+            )}
+{%- endif %}
           </nav>
           <LogoutButton />
         </>

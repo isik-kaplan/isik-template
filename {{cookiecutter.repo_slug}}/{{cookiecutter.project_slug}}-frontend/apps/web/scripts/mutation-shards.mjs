@@ -104,6 +104,7 @@ export const SHARDS = {
     'src/components/app-auth/ConnectionsList.tsx',
     'src/components/app-auth/EmailsList.tsx',
     'src/components/app-auth/LogoutButton.tsx',
+    'src/components/app-auth/NotificationBell.tsx',
     'src/components/app-auth/NotificationsList.tsx',
     'src/components/app-auth/PersonalAccessTokenForm.tsx',
     'src/components/app-auth/PersonalAccessTokensList.tsx',
@@ -115,6 +116,11 @@ export const SHARDS = {
     'src/lib/formatUserAgent.ts',
     'src/lib/historyLabels.ts',
     'src/lib/useEmailRowActions.ts',
+{%- if cookiecutter.webhooks != "none" %}
+    'src/app/webhooks/layout.tsx',
+    'src/app/webhooks/page.tsx',
+    'src/components/app-webhooks/WebhookEndpoints.tsx',
+{%- endif %}
   ],
   // The OAuth provider: registering applications, the consent pages and approvals.
   oauth: [

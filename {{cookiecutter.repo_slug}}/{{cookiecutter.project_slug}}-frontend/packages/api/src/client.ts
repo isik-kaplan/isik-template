@@ -212,7 +212,7 @@ export class Api {
     return this.client.GET('/v0/personal-access-tokens/scopes/')
   }
 
-  async notifications(query: { unread?: boolean; page?: number } = {}) {
+  async notifications(query: ApiQuery<'/v0/notifications/inbox/'> = {}) {
     return this.client.GET('/v0/notifications/inbox/', { params: { query } })
   }
 
@@ -246,6 +246,56 @@ export class Api {
   async forgetDevice(id: string) {
     return this.client.DELETE('/v0/notifications/devices/{id}/', { params: { path: { id } } })
   }
+{%- if cookiecutter.webhooks != "none" %}
+
+  /** Where notifications are POSTed. A row's `secret` is only ever set in the answer that made it. */
+  async notificationEndpoints(query?: ApiQuery<'/v0/notifications/endpoints/'>) {
+    return this.client.GET('/v0/notifications/endpoints/', { params: { query } })
+  }
+
+  async registerNotificationEndpoint(body: components['schemas']['EndpointRequest'], idempotencyKey: IdempotencyKey) {
+    return this.client.POST('/v0/notifications/endpoints/', {
+      body,
+      params: { header: { 'Idempotency-Key': idempotencyKey } },
+    })
+  }
+
+  async updateNotificationEndpoint(
+    id: string,
+    body: components['schemas']['PatchedEndpointRequest'],
+    headers: VersionedKeyedHeaders
+  ) {
+    return this.client.PATCH('/v0/notifications/endpoints/{id}/', {
+      params: { path: { id }, header: versionedKeyed(headers) },
+      body,
+    })
+  }
+
+  async deleteNotificationEndpoint(id: string, headers: VersionedKeyedHeaders) {
+    return this.client.DELETE('/v0/notifications/endpoints/{id}/', {
+      params: { path: { id }, header: versionedKeyed(headers) },
+    })
+  }
+
+  /** Signs with the old secret and the new one until finishNotificationEndpointRotation. */
+  async rotateNotificationEndpointSecret(id: string, headers: VersionedKeyedHeaders) {
+    return this.client.POST('/v0/notifications/endpoints/{id}/rotate-secret/', {
+      params: { path: { id }, header: versionedKeyed(headers) },
+    })
+  }
+
+  async finishNotificationEndpointRotation(id: string, headers: VersionedKeyedHeaders) {
+    return this.client.POST('/v0/notifications/endpoints/{id}/finish-rotation/', {
+      params: { path: { id }, header: versionedKeyed(headers) },
+    })
+  }
+
+  async unparkNotificationEndpoint(id: string, headers: VersionedKeyedHeaders) {
+    return this.client.POST('/v0/notifications/endpoints/{id}/unpark/', {
+      params: { path: { id }, header: versionedKeyed(headers) },
+    })
+  }
+{%- endif %}
 
   async features() {
     return this.client.GET('/v0/features/')

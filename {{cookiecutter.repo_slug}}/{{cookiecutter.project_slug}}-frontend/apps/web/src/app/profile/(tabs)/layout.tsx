@@ -4,6 +4,7 @@ import type React from 'react'
 
 import { LanguageSwitcher } from '@/components/app-auth/LanguageSwitcher'
 import { LogoutButton } from '@/components/app-auth/LogoutButton'
+import { NotificationBell } from '@/components/app-auth/NotificationBell'
 import { ProfileTabsList } from '@/components/app-auth/ProfileTabsList'
 import { ThemeToggle } from '@/components/app/ThemeToggle'
 import { Avatar, AvatarFallback } from '@/components/base/avatar'
@@ -27,6 +28,7 @@ export default async function ProfileTabsLayout({ children }: { children: React.
     // shrink to each tab's content and change size per tab.
     <div className="flex w-full max-w-sm flex-col items-center gap-6">
       <div className="fixed top-4 right-4 flex items-center gap-2">
+        <NotificationBell />
         <LanguageSwitcher />
         <ThemeToggle />
       </div>

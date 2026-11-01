@@ -48,6 +48,9 @@ describe('HomePage', () => {
     expect(links()).toEqual([
       ['Your profile', '/profile'],
       ['Your apps', '/applications'],
+{%- if cookiecutter.webhooks == "users" %}
+      ['Webhooks', '/webhooks'],
+{%- endif %}
     ])
   })
 
@@ -61,6 +64,9 @@ describe('HomePage', () => {
     expect(links()).toEqual([
       ['Your profile', '/profile'],
       ['People', '/staff/people'],
+{%- if cookiecutter.webhooks != "none" %}
+      ['Webhooks', '/webhooks'],
+{%- endif %}
     ])
   })
 
@@ -75,6 +81,9 @@ describe('HomePage', () => {
       ['Your apps', '/applications'],
       ['People', '/staff/people'],
       ['App approvals', '/staff/applications'],
+{%- if cookiecutter.webhooks == "users" %}
+      ['Webhooks', '/webhooks'],
+{%- endif %}
     ])
   })
 

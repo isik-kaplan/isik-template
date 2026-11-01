@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/components/app-auth/LanguageSwitcher', () => ({ LanguageSwitcher: () => <p>languages</p> }))
 vi.mock('@/components/app/ThemeToggle', () => ({ ThemeToggle: () => <p>theme</p> }))
+vi.mock('@/components/app-auth/NotificationBell', () => ({ NotificationBell: () => <p>bell</p> }))
 
 describe('PageShell', () => {
   it('titles the page, says what it is for and leads back', () => {
@@ -20,6 +21,7 @@ describe('PageShell', () => {
     expect(screen.getByText('the content')).toBeTruthy()
     expect(screen.getByText('languages')).toBeTruthy()
     expect(screen.getByText('theme')).toBeTruthy()
+    expect(screen.getByText('bell')).toBeTruthy()
   })
 
   it('leaves the description out when there is none', () => {

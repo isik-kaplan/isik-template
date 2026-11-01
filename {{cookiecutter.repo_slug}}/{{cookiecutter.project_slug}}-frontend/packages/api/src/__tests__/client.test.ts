@@ -138,6 +138,12 @@ describe('Api', () => {
       'GET',
       '/v0/notifications/inbox/?unread=true',
     ],
+    [
+      'notifications, one unread to count them',
+      (api: Api) => api.notifications({ unread: true, page_size: 1 }),
+      'GET',
+      '/v0/notifications/inbox/?unread=true&page_size=1',
+    ],
     ['markNotificationRead', (api: Api) => api.markNotificationRead('n1'), 'POST', '/v0/notifications/inbox/n1/read/'],
     [
       'markAllNotificationsRead',
@@ -154,6 +160,45 @@ describe('Api', () => {
       '/v0/notifications/devices/',
     ],
     ['forgetDevice', (api: Api) => api.forgetDevice('d1'), 'DELETE', '/v0/notifications/devices/d1/'],
+{%- if cookiecutter.webhooks != "none" %}
+    ['notificationEndpoints', (api: Api) => api.notificationEndpoints(), 'GET', '/v0/notifications/endpoints/'],
+    [
+      'registerNotificationEndpoint',
+      (api: Api) => api.registerNotificationEndpoint({ url: 'https://a.test/hook' }, KEY),
+      'POST',
+      '/v0/notifications/endpoints/',
+    ],
+    [
+      'updateNotificationEndpoint',
+      (api: Api) => api.updateNotificationEndpoint('e1', { is_active: false }, WRITE),
+      'PATCH',
+      '/v0/notifications/endpoints/e1/',
+    ],
+    [
+      'deleteNotificationEndpoint',
+      (api: Api) => api.deleteNotificationEndpoint('e1', WRITE),
+      'DELETE',
+      '/v0/notifications/endpoints/e1/',
+    ],
+    [
+      'rotateNotificationEndpointSecret',
+      (api: Api) => api.rotateNotificationEndpointSecret('e1', WRITE),
+      'POST',
+      '/v0/notifications/endpoints/e1/rotate-secret/',
+    ],
+    [
+      'finishNotificationEndpointRotation',
+      (api: Api) => api.finishNotificationEndpointRotation('e1', WRITE),
+      'POST',
+      '/v0/notifications/endpoints/e1/finish-rotation/',
+    ],
+    [
+      'unparkNotificationEndpoint',
+      (api: Api) => api.unparkNotificationEndpoint('e1', WRITE),
+      'POST',
+      '/v0/notifications/endpoints/e1/unpark/',
+    ],
+{%- endif %}
     ['features', (api: Api) => api.features(), 'GET', '/v0/features/'],
     ['settings', (api: Api) => api.settings(), 'GET', '/v0/settings/'],
   ])('%s calls %s %s', async (_name, call, method, path) => {
@@ -203,6 +248,19 @@ describe('Api', () => {
     expect(new Headers(init?.headers).get('Idempotency-Key')).toBe('the-key')
   })
 
+{%- if cookiecutter.webhooks != "none" %}
+
+  it('sends the endpoint to register, and a change to one, as the body', async () => {
+    const baseFetch = vi.fn<typeof fetch>(async () => new Response('{}', { status: 201 }))
+    const api = new Api('https://api.example.test', { baseFetch })
+    const endpoint = { url: 'https://a.test/hook', kinds: [{ kind: 'account_changed' }] }
+    await api.registerNotificationEndpoint(endpoint, KEY)
+    await api.updateNotificationEndpoint('e1', { is_active: false }, WRITE)
+    expect(await (baseFetch.mock.calls[0][0] as Request).json()).toEqual(endpoint)
+    expect(await (baseFetch.mock.calls[1][0] as Request).json()).toEqual({ is_active: false })
+  })
+{%- endif %}
+
   it('sends the token to make as its body, under the idempotency key it was given', async () => {
     const baseFetch = vi.fn<typeof fetch>(async () => new Response('{}', { status: 201 }))
     const data = { name: 'CI', scopes: ['users:manage:user'], expires_at: '2026-12-01T00:00:00Z' }
@@ -223,6 +281,14 @@ describe('Api', () => {
     ['updateUser', (api: Api) => api.updateUser('u1', { is_active: false }, WRITE)],
     ['updateOAuthApplication', (api: Api) => api.updateOAuthApplication(7, { name: 'Acme' }, WRITE)],
     ['deleteOAuthApplication', (api: Api) => api.deleteOAuthApplication(7, WRITE)],
+{%- if cookiecutter.webhooks != "none" %}
+    ['registerNotificationEndpoint', (api: Api) => api.registerNotificationEndpoint({ url: 'https://a.test' }, KEY)],
+    ['updateNotificationEndpoint', (api: Api) => api.updateNotificationEndpoint('e1', { is_active: false }, WRITE)],
+    ['deleteNotificationEndpoint', (api: Api) => api.deleteNotificationEndpoint('e1', WRITE)],
+    ['rotateNotificationEndpointSecret', (api: Api) => api.rotateNotificationEndpointSecret('e1', WRITE)],
+    ['finishNotificationEndpointRotation', (api: Api) => api.finishNotificationEndpointRotation('e1', WRITE)],
+    ['unparkNotificationEndpoint', (api: Api) => api.unparkNotificationEndpoint('e1', WRITE)],
+{%- endif %}
   ])('%s answers under the idempotency key it was given', async (_name, call) => {
     const baseFetch = vi.fn<typeof fetch>(async () => new Response(null, { status: 204 }))
     await call(new Api('https://api.example.test', { baseFetch }))
@@ -237,6 +303,13 @@ describe('Api', () => {
     ['deleteOAuthApplication', (api: Api) => api.deleteOAuthApplication(7, WRITE)],
     ['approveOAuthApplication', (api: Api) => api.approveOAuthApplication(7, [], KEY, READ)],
     ['changeSetting', (api: Api) => api.changeSetting('theme', { type: 'bool', value: true }, READ)],
+{%- if cookiecutter.webhooks != "none" %}
+    ['updateNotificationEndpoint', (api: Api) => api.updateNotificationEndpoint('e1', { is_active: false }, WRITE)],
+    ['deleteNotificationEndpoint', (api: Api) => api.deleteNotificationEndpoint('e1', WRITE)],
+    ['rotateNotificationEndpointSecret', (api: Api) => api.rotateNotificationEndpointSecret('e1', WRITE)],
+    ['finishNotificationEndpointRotation', (api: Api) => api.finishNotificationEndpointRotation('e1', WRITE)],
+    ['unparkNotificationEndpoint', (api: Api) => api.unparkNotificationEndpoint('e1', WRITE)],
+{%- endif %}
   ])('%s names the version it was made against', async (_name, call) => {
     const baseFetch = vi.fn<typeof fetch>(async () => new Response('{}', { status: 200 }))
     await call(new Api('https://api.example.test', { baseFetch }))

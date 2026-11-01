@@ -18,3 +18,16 @@ export function maySeePeople(me: Me): boolean {
 export function mayReviewApplications(me: Me): boolean {
   return me.is_superuser && applicationsAreOn()
 }
+{%- if cookiecutter.webhooks == "staff" %}
+
+/** Staff: the endpoints are the deployment's, and receive everybody's notices - the backend's MayManageEndpoints. */
+export function mayManageWebhooks(me: Me): boolean {
+  return me.is_staff
+}
+{%- elif cookiecutter.webhooks == "users" %}
+
+/** Anybody signed in: each person's endpoints receive only their own notices. */
+export function mayManageWebhooks(_me: Me): boolean {
+  return true
+}
+{%- endif %}

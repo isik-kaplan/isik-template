@@ -267,6 +267,10 @@ def main() -> None:
         for module in ("viewsets/endpoint.py", "viewsets/delivery.py"):
             os.remove(f"{notification_api}/{module}")
         os.remove(f"{PROJECT_SLUG}/apps/notifications/tests/test_webhooks.py")
+        web = f"{PROJECT_SLUG}-frontend/apps/web/src"
+        for screen in ("app/webhooks", "components/app-webhooks"):
+            shutil.rmtree(f"{web}/{screen}")
+            shutil.rmtree(f"{web}/__tests__/{screen}")
     if WEBHOOKS != "staff":
         os.remove(f"{notification_api}/deployment.py")
         shutil.rmtree(f"{notification_api}/permissions")
