@@ -1,11 +1,11 @@
-import { SERVER_CONFIG } from '@/config/server'
+import { serverConfig } from '@/config/server'
 
 // nginx's $client_ip, overriding whatever the client sent.
 const CLIENT_IP_HEADER = 'x-client-ip'
 
 /** A fetch nginx rate-limits against this render's visitor, not the frontend; plain without a key. */
 export function visitorFetch(requestHeaders: Headers, baseFetch: typeof fetch = fetch.bind(globalThis)): typeof fetch {
-  const key = SERVER_CONFIG.FRONTEND_KEY
+  const key = serverConfig().FRONTEND_KEY
   const visitor = requestHeaders.get(CLIENT_IP_HEADER)
   if (!key || !visitor) return baseFetch
   return (input, init) => {

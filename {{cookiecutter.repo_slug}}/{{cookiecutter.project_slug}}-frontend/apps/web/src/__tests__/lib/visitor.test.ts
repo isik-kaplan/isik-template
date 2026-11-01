@@ -2,8 +2,8 @@ import { visitorFetch } from '@/lib/visitor'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const serverConfig = vi.hoisted(() => ({ FRONTEND_KEY: 'the-key' }))
-vi.mock('@/config/server', () => ({ SERVER_CONFIG: serverConfig }))
+const config = vi.hoisted(() => ({ FRONTEND_KEY: 'the-key' }))
+vi.mock('@/config/server', () => ({ serverConfig: () => config }))
 
 const baseFetch = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response('{}'))
 
@@ -14,7 +14,7 @@ function sent() {
 describe('visitorFetch', () => {
   beforeEach(() => {
     baseFetch.mockClear()
-    serverConfig.FRONTEND_KEY = 'the-key'
+    config.FRONTEND_KEY = 'the-key'
   })
 
   it('names the visitor nginx said the page is for, with the key that proves it is the frontend asking', async () => {
@@ -29,7 +29,7 @@ describe('visitorFetch', () => {
   })
 
   it('is the plain fetch without a key to prove it with', () => {
-    serverConfig.FRONTEND_KEY = ''
+    config.FRONTEND_KEY = ''
 
     expect(visitorFetch(new Headers({ 'x-client-ip': '203.0.113.7' }), baseFetch)).toBe(baseFetch)
   })
