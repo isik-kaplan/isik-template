@@ -16,7 +16,8 @@
     "!**/*.d.ts",
     "!**/__tests__/**"
   ],
-  "reporters": ["progress", "clear-text", "html", "json"],
+  "reporters": ["progress", "html", "json", "accounted"],
+  "appendPlugins": ["../../packages/mutation-check/stryker-accounted-reporter.mjs"],
   "thresholds": { "high": 100, "low": 90, "break": null },
   "timeoutMS": 15000,
   "timeoutFactor": 3,
