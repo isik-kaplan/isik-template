@@ -146,7 +146,10 @@ def test_frontend_ci_runs_the_suites_in_the_dockerfile_tester_image(cookies):
     # One job per shard, each mutating its own files and gated by check-mutants rather than Stryker's break.
     assert "fromJSON(needs.frontend-mutation-shards.outputs.list)" in jobs["frontend-mutation"]
     assert "node scripts/mutation-shards.mjs ${{ matrix.shard }}" in jobs["frontend-mutation"]
-    assert "node ../../packages/mutation-check/check-mutants.mjs ." in jobs["frontend-mutation"]
+    assert (
+        "node ../../packages/mutation-check/check-mutants.mjs . --shard ${{ matrix.shard }}"
+        in jobs["frontend-mutation"]
+    )
 
 
 def test_extra_languages_keep_translation_keys_typed(cookies):

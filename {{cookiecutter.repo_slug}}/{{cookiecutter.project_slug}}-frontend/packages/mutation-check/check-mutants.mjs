@@ -2,12 +2,33 @@
 // Fails unless every surviving mutant is exempted, with a reason, in the app's mutation-exemptions.json -
 // never by inline directives. Entries are keyed by a hash of the mutant's source text, not a line number.
 // Exempt mutants still run, so an entry no survivor matches any more fails as stale.
-import { inlineDirectives, judgeMutants, weakReasons } from './judge-mutants.mjs'
+//
+//     node check-mutants.mjs <app> --shard <name|all>
+//
+// Every count is taken over the files the report holds, so `--shard` also refuses a report missing a
+// file that shard owes - without it, a run of one file agrees with itself and passes as a sweep.
+import { inlineDirectives, judgeMutants, owedFiles, weakReasons } from './judge-mutants.mjs'
 import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 
-function main() {
-  const appRoot = path.resolve(process.argv[2] ?? '.')
+/** The source files `shard` mutates, from the app's scripts/mutation-shards.mjs; null for the whole tree. */
+async function shardFiles(appRoot, shard) {
+  if (shard === 'all') return null
+  const shardsPath = path.join(appRoot, 'scripts/mutation-shards.mjs')
+  const { SHARDS } = existsSync(shardsPath) ? await import(pathToFileURL(shardsPath).href) : { SHARDS: {} }
+  if (!Object.hasOwn(SHARDS, shard)) {
+    console.error(`unknown shard ${JSON.stringify(shard)}. one of: all, ${Object.keys(SHARDS).join(', ')}`)
+    return undefined
+  }
+  return SHARDS[shard]
+}
+
+async function main() {
+  const args = process.argv.slice(2)
+  const at = args.indexOf('--shard')
+  const shard = at === -1 ? undefined : args[at + 1]
+  const appRoot = path.resolve(args.filter((_, index) => at === -1 || (index !== at && index !== at + 1))[0] ?? '.')
   const reportPath = path.join(appRoot, 'reports/mutation/mutation.json')
   const catalogPath = path.join(appRoot, 'mutation-exemptions.json')
 
@@ -19,6 +40,23 @@ function main() {
 
   const report = JSON.parse(readFileSync(reportPath, 'utf8'))
   const catalog = existsSync(catalogPath) ? JSON.parse(readFileSync(catalogPath, 'utf8')) : {}
+
+  if (shard !== undefined) {
+    const files = await shardFiles(appRoot, shard)
+    if (files === undefined) {
+      process.exitCode = 1
+      return
+    }
+    const unmeasured = owedFiles(catalog, files).filter((file) => !(file in report.files))
+    if (unmeasured.length > 0) {
+      const whose = shard === 'all' ? 'the whole tree owes' : `the ${shard} shard owes`
+      console.log(`${unmeasured.length} file(s) ${whose} an answer for are not in the report:\n`)
+      for (const file of unmeasured) console.log(`  ${file}`)
+      console.log('\nThe run measured less than it names, so nothing it says is a result over the shard.\n')
+      process.exitCode = 1
+      return
+    }
+  }
   const { total, alive, unexplained, stale, plural, broken, orphaned } = judgeMutants(report, catalog, {
     readLines: (file) => readFileSync(path.join(appRoot, file), 'utf8').split('\n'),
     exists: (file) => existsSync(path.join(appRoot, file)),
@@ -98,4 +136,4 @@ function main() {
   console.log(`no unexplained survivors or stale exemptions (${total} mutants total, ${alive} alive and all exempt)`)
 }
 
-main()
+await main()

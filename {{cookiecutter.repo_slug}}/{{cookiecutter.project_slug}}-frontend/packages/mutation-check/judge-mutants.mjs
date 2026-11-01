@@ -57,6 +57,16 @@ export function judgeMutants(report, catalog, { readLines, exists }) {
   return { total, alive, unexplained, stale, plural, broken, orphaned }
 }
 
+/**
+ * The files a run of `shard` has to have measured: every one the catalog holds an exemption for. An
+ * exemption means the file held a mutant, while a shard file without one may legitimately hold none.
+ * `shardFiles` is null for the whole tree.
+ */
+export function owedFiles(catalog, shardFiles) {
+  const owned = shardFiles && new Set(shardFiles)
+  return Object.keys(catalog).filter((file) => !owned || owned.has(file))
+}
+
 /** An exemption claims no test CAN kill the mutant, so "no test yet" excuses are weak. */
 export function weakReasons(catalog) {
   return Object.entries(catalog).flatMap(([file, entries]) =>

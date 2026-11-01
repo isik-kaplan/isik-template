@@ -8,7 +8,7 @@
     "start": "next start",
     "lint:types": "tsc --noEmit",
     "test": "vitest run --coverage && node ../../packages/mutation-check/check-coverage.mjs .",
-    "test:mutation": "stryker run && node ../../packages/mutation-check/check-mutants.mjs .",
+    "test:mutation": "stryker run && node ../../packages/mutation-check/check-mutants.mjs . --shard all",
     "test:server-candidates": "node scripts/server-test-candidates.mjs"
   },
   "dependencies": {

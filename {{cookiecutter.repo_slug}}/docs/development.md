@@ -205,8 +205,9 @@ mutants got different verdicts - one of each pair is wrong, and CI prints the sa
 The web app is held to the same bar by Stryker, sharded by what a file is for
 (`apps/web/scripts/mutation-shards.mjs`, one CI job per shard). Run one shard locally with
 `npx stryker run --mutate "$(node scripts/mutation-shards.mjs auth)"` from `apps/web`, then
-`node ../../packages/mutation-check/check-mutants.mjs .`, which fails on any survivor that
-`mutation-exemptions.json` does not name, and on any entry that no survivor matches.
+`node ../../packages/mutation-check/check-mutants.mjs . --shard auth`, which fails on any survivor that
+`mutation-exemptions.json` does not name, on any entry that no survivor matches, and on a report missing
+a file the shard owes (`--shard all` after a whole-tree run).
 
 ## Conventions the build enforces
 

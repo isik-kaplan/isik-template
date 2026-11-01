@@ -36,9 +36,13 @@ function arrange(mutants: ReturnType<typeof mutant>[] | null, catalog?: object) 
   if (catalog) writeFileSync(join(app, 'mutation-exemptions.json'), JSON.stringify(catalog))
 }
 
-function check() {
+function check(...flags: string[]) {
+  return run(app, ...flags)
+}
+
+function run(...args: string[]) {
   try {
-    return { out: execFileSync('node', [SCRIPT, app], { encoding: 'utf8', stdio: 'pipe' }), code: 0 }
+    return { out: execFileSync('node', [SCRIPT, ...args], { encoding: 'utf8', stdio: 'pipe' }), code: 0 }
   } catch (error) {
     const failure = error as { stdout: string; stderr: string; status: number }
     return { out: failure.stdout + failure.stderr, code: failure.status }
@@ -149,5 +153,69 @@ describe('check-mutants', () => {
     expect(code).toBe(1)
     expect(out).toContain('1 inline Stryker directive(s) - exemptions belong in mutation-exemptions.json')
     expect(out).toContain('  src/a.ts:3\n')
+  })
+
+  describe('--shard', () => {
+    // src/a.ts is the auth shard's, src/b.ts the ui shard's; both carry an exemption.
+    beforeEach(() => {
+      mkdirSync(join(app, 'scripts'))
+      writeFileSync(
+        join(app, 'scripts/mutation-shards.mjs'),
+        "export const SHARDS = { auth: ['src/a.ts', 'src/quiet.ts'], ui: ['src/b.ts'] }\n"
+      )
+      writeFileSync(join(app, 'src/b.ts'), SOURCE.join('\n'))
+    })
+
+    it('fails a report missing a file the shard owes an answer for, naming it', () => {
+      arrange([mutant(1, 'Killed')], { 'src/b.ts': [entry(2)] })
+      writeFileSync(
+        join(app, 'scripts/mutation-shards.mjs'),
+        "export const SHARDS = { auth: ['src/a.ts', 'src/b.ts'] }\n"
+      )
+
+      const { out, code } = check('--shard', 'auth')
+
+      expect(code).toBe(1)
+      expect(out).toContain('1 file(s) the auth shard owes an answer for are not in the report:\n\n  src/b.ts\n')
+      expect(out).not.toContain('excuse no surviving mutant')
+    })
+
+    it("passes a report holding every file the shard's exemptions name, whatever other shards owe", () => {
+      arrange([mutant(1, 'Killed'), mutant(2, 'Survived')], { 'src/a.ts': [entry(2)], 'src/b.ts': [entry(2)] })
+
+      expect(check('--shard', 'auth')).toMatchObject({ code: 0, out: expect.stringContaining('2 mutants total') })
+    })
+
+    it('owes every exempted file for the whole tree, without reading the shards', () => {
+      rmSync(join(app, 'scripts'), { recursive: true })
+      arrange([mutant(1, 'Killed'), mutant(2, 'Survived')], { 'src/a.ts': [entry(2)], 'src/b.ts': [entry(2)] })
+
+      const { out, code } = check('--shard', 'all')
+
+      expect(code).toBe(1)
+      expect(out).toContain('1 file(s) the whole tree owes an answer for are not in the report:\n\n  src/b.ts\n')
+    })
+
+    it('fails a shard it does not know, naming the ones it does', () => {
+      arrange([mutant(1, 'Killed')])
+
+      const { out, code } = check('--shard', 'nope')
+
+      expect(code).toBe(1)
+      expect(out).toContain('unknown shard "nope". one of: all, auth, ui')
+    })
+
+    it('knows no shard at all in an app with no shard list', () => {
+      rmSync(join(app, 'scripts'), { recursive: true })
+      arrange([mutant(1, 'Killed')])
+
+      expect(check('--shard', 'auth')).toMatchObject({ code: 1, out: 'unknown shard "auth". one of: all, \n' })
+    })
+
+    it('reads the app from before the flag as well as after it', () => {
+      arrange([mutant(1, 'Killed')])
+
+      expect(run('--shard', 'all', app)).toMatchObject({ code: 0 })
+    })
   })
 })

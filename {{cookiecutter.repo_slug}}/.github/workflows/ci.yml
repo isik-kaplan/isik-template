@@ -316,7 +316,8 @@ jobs:
         working-directory: {{ cookiecutter.project_slug }}-frontend/apps/web
         run: echo "list=$(node scripts/mutation-shards.mjs --json)" >> "$GITHUB_OUTPUT"
 
-  # Stryker's thresholds.break is null: check-mutants.mjs is the gate.
+  # Stryker's thresholds.break is null: check-mutants.mjs is the gate. Named the shard, so a run
+  # that measured fewer files than the shard owes fails rather than agreeing with itself.
   frontend-mutation:
     needs: frontend-mutation-shards
     name: frontend mutation ({{ '${{' }} matrix.shard {{ '}}' }})
@@ -357,7 +358,7 @@ jobs:
             {{ cookiecutter.repo_slug }}-frontend-test sh -c '
               npx stryker run --incremental --incrementalFile reports/mutation/stryker-incremental.json \
                 --mutate "$(node scripts/mutation-shards.mjs {{ '${{' }} matrix.shard {{ '}}' }})" &&
-              node ../../packages/mutation-check/check-mutants.mjs .'
+              node ../../packages/mutation-check/check-mutants.mjs . --shard {{ '${{' }} matrix.shard {{ '}}' }}'
       - name: Save what this run settled
         if: always()
         continue-on-error: true

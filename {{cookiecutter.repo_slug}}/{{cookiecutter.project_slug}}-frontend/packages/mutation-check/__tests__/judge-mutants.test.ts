@@ -1,4 +1,11 @@
-import { SHORTEST_USEFUL_REASON, fingerprint, inlineDirectives, judgeMutants, weakReasons } from '../judge-mutants.mjs'
+import {
+  SHORTEST_USEFUL_REASON,
+  fingerprint,
+  inlineDirectives,
+  judgeMutants,
+  owedFiles,
+  weakReasons,
+} from '../judge-mutants.mjs'
 import { describe, expect, it } from 'vitest'
 
 const SOURCE = ['const a = 1 + 2', 'const b = a > 0', "const c = 'x' + 'y'"]
@@ -165,5 +172,17 @@ describe('what the gate refuses besides survivors', () => {
 
     expect(inlineDirectives(sources)).toEqual([{ file: 'src/a.ts', line: 2 }])
     expect(inlineDirectives({ 'src/c.ts': '// Stryker restore all' })).toEqual([{ file: 'src/c.ts', line: 1 }])
+  })
+})
+
+describe('owedFiles', () => {
+  const catalog = { 'src/a.ts': [entry(1)], 'src/b.ts': [entry(2)] }
+
+  it("owes the shard's files that hold an exemption, and not its quiet ones", () => {
+    expect(owedFiles(catalog, ['src/b.ts', 'src/quiet.ts'])).toEqual(['src/b.ts'])
+  })
+
+  it('owes every exempted file for the whole tree', () => {
+    expect(owedFiles(catalog, null)).toEqual(['src/a.ts', 'src/b.ts'])
   })
 })
