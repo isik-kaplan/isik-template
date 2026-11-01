@@ -2,7 +2,10 @@ import { VerifyEmailButton } from '@/components/app-auth/VerifyEmailButton'
 
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 const push = vi.fn()
 
@@ -18,7 +21,9 @@ describe('VerifyEmailButton', () => {
   const originalFetch = globalThis.fetch
 
   beforeEach(() => {
-    push.mockClear()
+    vi.clearAllMocks()
+    // A token already set skips the CSRF prime, so the one fetch held open is the write itself.
+    document.cookie = 'csrftoken=token'
   })
 
   afterEach(() => {
@@ -42,6 +47,23 @@ describe('VerifyEmailButton', () => {
     await user.click(screen.getByRole('button', { name: 'Confirm email address' }))
 
     expect(push).toHaveBeenCalledWith('/')
+    // The screen is leaving, so the button stays shut rather than spending the key twice.
+    expect(screen.getByRole('button', { name: 'Confirm email address' })).toHaveProperty('disabled', true)
+  })
+
+  it('keeps the button shut while the confirmation is in flight', async () => {
+    let answer: (response: Response) => void = () => {}
+    globalThis.fetch = vi.fn(() => new Promise<Response>((resolve) => (answer = resolve)))
+    const user = userEvent.setup()
+    render(<VerifyEmailButton verificationKey="abc:def" />)
+
+    await user.click(screen.getByRole('button', { name: 'Confirm email address' }))
+    await user.click(screen.getByRole('button', { name: 'Confirm email address' }))
+
+    expect(screen.getByRole('button', { name: 'Confirm email address' })).toHaveProperty('disabled', true)
+    expect(globalThis.fetch).toHaveBeenCalledOnce()
+    answer(jsonResponse(200, { status: 200, data: { user: {} }, meta: { is_authenticated: true } }))
+    await vi.waitFor(() => expect(push).toHaveBeenCalledWith('/'))
   })
 
   it('redirects to login on a 401 with no errors array (valid key, separate login required)', async () => {
@@ -67,6 +89,8 @@ describe('VerifyEmailButton', () => {
 
     expect(await screen.findByText('That verification link is no longer valid.')).toBeTruthy()
     expect(push).not.toHaveBeenCalled()
+    expect(toast.error).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Confirm email address' })).toHaveProperty('disabled', false)
   })
 
   it('says to wait rather than going on as if confirmed, when refused for coming too often', async () => {
@@ -79,5 +103,16 @@ describe('VerifyEmailButton', () => {
 
     expect(await screen.findByText('Too many requests. Wait a moment, then try again.')).toBeTruthy()
     expect(push).not.toHaveBeenCalled()
+    expect(toast.error).not.toHaveBeenCalled()
+  })
+
+  it('names the wait when the refusal says how long', async () => {
+    globalThis.fetch = vi.fn(async () => new Response(null, { status: 429, headers: { 'Retry-After': '30' } }))
+    const user = userEvent.setup()
+    render(<VerifyEmailButton verificationKey="abc:def" />)
+
+    await user.click(screen.getByRole('button'))
+
+    expect(await screen.findByText('Too many requests. Try again in 30 seconds.')).toBeTruthy()
   })
 })

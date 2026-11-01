@@ -64,6 +64,8 @@ describe('RegisterApplicationForm', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Register app' }))
 
     expect(fetchMock).toHaveBeenCalledOnce()
+    // The form is on its way out, so the button stays shut rather than offering a second app.
+    expect(screen.getByRole('button', { name: 'Register app' })).toHaveProperty('disabled', true)
   })
 
   it('asks a device for neither a kind nor redirect URIs, and registers it public and sent back nowhere', async () => {
@@ -151,6 +153,7 @@ describe('RegisterApplicationForm', () => {
 
     expect(screen.getByText('Enter a valid URL.')).toBeTruthy()
     expect(onRegistered).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Register app' })).toHaveProperty('disabled', false)
     expect(name().value).toBe('Acme')
   })
 

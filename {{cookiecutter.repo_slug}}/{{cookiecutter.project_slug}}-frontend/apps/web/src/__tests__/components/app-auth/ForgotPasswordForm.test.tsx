@@ -21,7 +21,9 @@ describe('ForgotPasswordForm', () => {
   const originalFetch = globalThis.fetch
 
   beforeEach(() => {
-    push.mockClear()
+    vi.clearAllMocks()
+    // A token already set skips the CSRF prime, so the one fetch held open is the write itself.
+    document.cookie = 'csrftoken=token'
   })
 
   afterEach(() => {
@@ -36,6 +38,7 @@ describe('ForgotPasswordForm', () => {
 
     expect(await screen.findByText('Enter a valid email address.')).toBeTruthy()
     expect(push).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Send reset link' })).toHaveProperty('disabled', false)
   })
 
   it('always redirects to the confirmation page, regardless of whether the account exists', async () => {
@@ -52,6 +55,35 @@ describe('ForgotPasswordForm', () => {
     expect(push).toHaveBeenCalledWith('/auth/password-reset-email-sent')
     expect(consoleError).not.toHaveBeenCalled()
     consoleError.mockRestore()
+    // The screen is leaving, so the button stays shut rather than sending a second email.
+    expect(screen.getByRole('button', { name: 'Send reset link' })).toHaveProperty('disabled', true)
+  })
+
+  it('keeps the button shut while the request is in flight', async () => {
+    let answer: (response: Response) => void = () => {}
+    globalThis.fetch = vi.fn(() => new Promise<Response>((resolve) => (answer = resolve)))
+    const user = userEvent.setup()
+    render(<ForgotPasswordForm />)
+
+    await user.type(screen.getByLabelText('Email'), 'someone@example.com')
+    await user.click(screen.getByRole('button', { name: 'Send reset link' }))
+
+    expect(screen.getByRole('button', { name: 'Send reset link' })).toHaveProperty('disabled', true)
+    answer(jsonResponse(200, {}))
+    await vi.waitFor(() => expect(push).toHaveBeenCalledOnce())
+  })
+
+  it('says the link was not sent, and stays put, when the server fails', async () => {
+    globalThis.fetch = vi.fn(async () => jsonResponse(500, {}))
+    const user = userEvent.setup()
+    render(<ForgotPasswordForm />)
+
+    await user.type(screen.getByLabelText('Email'), 'someone@example.com')
+    await user.click(screen.getByRole('button', { name: 'Send reset link' }))
+
+    expect(toast.error).toHaveBeenCalledWith('Could not send the reset link.')
+    expect(push).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Send reset link' })).toHaveProperty('disabled', false)
   })
 
   it('says to wait rather than that an email was sent, when the reset was refused for coming too often', async () => {

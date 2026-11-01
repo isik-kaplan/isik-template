@@ -71,7 +71,12 @@ export function RegisterApplicationForm({
     event.preventDefault()
     await submit(
       (application, idempotencyKey) => createApi(apiOrigin()).registerOAuthApplication(application, idempotencyKey),
-      { failure: t('auth:registerApplicationError'), onSuccess: ({ data }) => onRegistered(data) }
+      {
+        failure: t('auth:registerApplicationError'),
+        // Either way the form goes: to the issued secret, or to the app's own page.
+        leavesOnSuccess: true,
+        onSuccess: ({ data }) => onRegistered(data),
+      }
     )
   }
 

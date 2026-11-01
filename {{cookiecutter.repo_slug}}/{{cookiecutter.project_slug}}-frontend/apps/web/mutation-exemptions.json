@@ -1126,6 +1126,14 @@
         "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
         "unprefixed lookup - none of them are."
       ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "669b911bcfa8",
+      "reason": [
+        "equivalent mutant. onRefusal answers every refusal itself and returns true, so the submit tail never",
+        "reports `failure`; the type asks for one all the same."
+      ]
     }
   ],
   "src/components/base/badge.tsx": [
