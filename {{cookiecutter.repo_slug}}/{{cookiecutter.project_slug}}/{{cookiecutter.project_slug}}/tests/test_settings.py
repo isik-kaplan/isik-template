@@ -6,6 +6,7 @@ import pytest
 from allauth.utils import build_absolute_uri
 from django.conf import settings
 from django.test import RequestFactory, override_settings
+from isik.django.apps.common.checks import Check, CheckOption, Severity
 
 from {{ cookiecutter.project_slug }}.config import CONFIG as config
 from {{ cookiecutter.project_slug }}.settings import _origins, _social_app_config
@@ -156,3 +157,33 @@ def test_absolute_uris_are_https_outside_debug_even_without_the_forwarded_scheme
     request = RequestFactory().get("/", HTTP_HOST=f"auth.{config.DOMAIN}")
 
     assert build_absolute_uri(request, "/callback/") == f"https://auth.{config.DOMAIN}/callback/"
+
+
+def test_the_served_api_document_is_in_the_language_the_clients_were_generated_in():
+    assert settings.ISIK_SCHEMA_LANGUAGE == settings.LANGUAGE_CODE
+
+
+def test_a_view_outside_the_transaction_fails_startup_rather_than_warning():
+    """Idempotency keys and version checks count on ATOMIC_REQUESTS."""
+    assert settings.ISIK_CHECKS[Check.NOT_ATOMIC] == {CheckOption.SEVERITY: Severity.ERROR}
+
+
+def test_a_model_tracked_with_pghistory_directly_is_append_only_too():
+    assert settings.PGHISTORY_APPEND_ONLY is True
+{%- if cookiecutter.storage == "s3" %}
+
+
+def test_the_providers_addressing_style_reaches_the_storage_backend():
+    """Fresh interpreters: settings are built once, at import. Path unless told: the bundled Garage takes no other."""
+    name = "{{ cookiecutter.config_prefix }}__STORAGE__ADDRESSING_STYLE"
+    style = "settings.STORAGES['default']['OPTIONS']['addressing_style']"
+    script = f"from {{ cookiecutter.project_slug }} import settings; print({style})"
+    unset = {key: value for key, value in os.environ.items() if key != name}
+    runs = [
+        subprocess.run([sys.executable, "-c", script], env=env, capture_output=True, text=True, check=True)
+        for env in (unset, {**unset, name: "virtual"})
+    ]
+    styles = [run.stdout.split()[-1] for run in runs]
+
+    assert styles == ["path", "virtual"]
+{%- endif %}

@@ -1,5 +1,6 @@
 from django.urls import include, path
-from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+from drf_spectacular.views import SpectacularRedocView, SpectacularSwaggerView
+from isik.django.drf.schema_views import SpectacularAPIView
 from rest_framework.routers import DefaultRouter
 
 from apps.features.api.viewsets.feature import FeatureViewSet

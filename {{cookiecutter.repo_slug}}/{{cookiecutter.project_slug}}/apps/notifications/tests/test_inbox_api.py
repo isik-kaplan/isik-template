@@ -98,6 +98,7 @@ def test_every_kind_but_allauths_own_mail_is_listed_and_only_some_may_be_turned_
     assert {kind for kind, may_change in kinds.items() if may_change} == {"account_changed", "application_reviewed"}
     assert not any(kind.startswith("mail_") for kind in kinds)
     assert "notification_settings_forced" in kinds
+    assert "application_taken_down" not in kinds
 
 
 @pytest.mark.django_db
@@ -117,3 +118,13 @@ def test_a_mandatory_kind_cannot_be_turned_off(client, signed_in):
     response = client.post(SUBSCRIPTIONS, {"kind": "token_created", "enabled": False}, content_type="application/json")
 
     assert (response.status_code, response.json()["code"]) == (409, "kind_mandatory")
+
+
+@pytest.mark.django_db
+def test_a_reviewer_may_choose_whether_to_hear_of_applications_taken_down(client, signed_in):
+    signed_in.is_superuser = True
+    signed_in.save()
+
+    kinds = {entry["kind"]: entry["may_change"] for entry in client.get(KINDS).json()}
+
+    assert kinds["application_taken_down"] is True

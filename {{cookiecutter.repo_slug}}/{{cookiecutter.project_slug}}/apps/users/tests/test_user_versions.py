@@ -142,3 +142,22 @@ def test_deleting_a_token_needs_no_version(client, signed_in, headless):
     response = client.delete(reverse("personal-access-tokens-detail", args=[token.pk]))
 
     assert response.status_code == 204
+
+
+@pytest.mark.django_db
+def test_an_empty_version_is_a_stale_one_not_a_missing_one(client, manager, bob):
+    """`If-Match: ""` names a version, just one that never existed."""
+    response = _patch(client, reverse("users-detail", args=[bob.pk]), {"is_active": False}, {"If-Match": '""'})
+
+    assert response.status_code == 412
+    bob.refresh_from_db()
+    assert bob.is_active is True
+
+
+@pytest.mark.django_db
+def test_an_unchanged_read_of_yourself_is_not_cached_across_people(client, signed_in):
+    """The 304 says who it was for: a shared cache keying on the URL alone would hand one person's 304 to another."""
+    response = client.get(reverse("users-me"), headers={"If-None-Match": versioned(signed_in)["If-Match"]})
+
+    assert response.status_code == 304
+    assert "Cookie" in response["Vary"]

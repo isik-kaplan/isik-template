@@ -5,7 +5,7 @@ from pathlib import Path
 import sentry_sdk
 from corsheaders.defaults import default_headers
 from django.conf.locale import LANG_INFO
-from isik.django.apps.common.checks import Check, CheckOption
+from isik.django.apps.common.checks import Check, CheckOption, Severity
 {%- if cookiecutter.background_jobs == "inline" and cookiecutter.webhooks != "none" %}
 from isik.django.apps.notifications.exemptions import SendsInline
 {%- endif %}
@@ -330,7 +330,6 @@ STORAGES = {
     },
 {%- else %}
     # Uploads go to S3 - {% if cookiecutter.storage == "garage" %}Garage{% else %}Garage locally{% endif %}.
-    # Path-style, as Garage serves buckets as paths.
     "default": {
         "BACKEND": "storages.backends.s3.S3Storage",
         "OPTIONS": {
@@ -339,7 +338,12 @@ STORAGES = {
             "access_key": config.STORAGE.ACCESS_KEY_ID,
             "secret_key": config.STORAGE.SECRET_ACCESS_KEY,
             "region_name": config.STORAGE.REGION_NAME,
+{%- if cookiecutter.storage == "s3" %}
+            "addressing_style": config.STORAGE.ADDRESSING_STYLE,
+{%- else %}
+            # Garage serves buckets as paths.
             "addressing_style": "path",
+{%- endif %}
             # boto3 still presigns with SigV2 in us-east-1, which Garage refuses.
             "signature_version": "s3v4",
         },
@@ -448,8 +452,11 @@ REST_FRAMEWORK = {
 # The web app watches for this header to sign a tab out once the backend has dropped a dead session cookie.
 DEAD_SESSION_HEADER = "X-Session-Cleared"
 # Each row says which build wrote it.
-HISTORY_CONTEXT_KEYS = ("version",)
+HISTORY_CONTEXT_KEYS = ("version", "build", "request_id")
 HISTORY_CONTEXT_VERSION = __version__
+HISTORY_CONTEXT_BUILD = config.BUILD
+# isik's track_events already defaults to it; stated so a model tracked with pghistory.track() gets it too.
+PGHISTORY_APPEND_ONLY = True
 # Time-ordered ids: rows made later sort later, which keeps index pages filling in order.
 ISIK_PRIMARY_KEY = "isik.django.apps.common.db.models.uuid7"
 IDEMPOTENCY_CLAIM_MODEL = "common.IdempotencyClaim"
@@ -509,6 +516,10 @@ ISIK_FEATURES_OVERRIDES_MODEL = "features.UserOverrides"
 ISIK_FEATURES = {
     "SETTINGS": "apps.features.declarations",
     "GRANT_SOURCES": ("staff", "trial"),
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+    # One run at the next boundary, rather than a minute's tick that almost always finds nothing.
+    "SWEEP": "next_boundary",
+{%- endif %}
 }
 ISIK_CHECKS = {
     Check.DOCUMENTATION: {
@@ -518,6 +529,8 @@ ISIK_CHECKS = {
     },
     # So the next model added names its own table and indexes too.
     Check.DECLARED_NAMES: {CheckOption.ENABLED: True},
+    # A warning in isik, since a project may mean it; here ATOMIC_REQUESTS is what idempotency counts on.
+    Check.NOT_ATOMIC: {CheckOption.SEVERITY: Severity.ERROR},
 }
 
 SPECTACULAR_SETTINGS = {
@@ -537,6 +550,9 @@ SPECTACULAR_SETTINGS = {
     # Labels differ per project; the values are the contract.
     "ENUM_GENERATE_CHOICE_DESCRIPTION": False,
 }
+# The served document in one language, like the generated one: a caller's Accept-Language would otherwise
+# get it a document the committed clients do not match.
+ISIK_SCHEMA_LANGUAGE = LANGUAGE_CODE
 
 {%- if cookiecutter.background_jobs == "inline" %}
 # No broker: a task runs in-process on commit (celery_task.py). Countdown/eta is not waited for.
@@ -570,5 +586,7 @@ if config.SENTRY.DSN:  # see pyproject.toml's coverage exclude_lines for why
         traces_sample_rate=float(config.SENTRY.TRACES_SAMPLE_RATE),
         debug=DEBUG,
         send_default_pii=False,
+        # Both halves: many commits share a version.
+        release=f"{__version__}+{config.BUILD}",
         before_send=scrub_event,
     )

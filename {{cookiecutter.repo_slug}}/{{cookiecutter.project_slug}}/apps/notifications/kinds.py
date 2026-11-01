@@ -44,6 +44,20 @@ APPLICATION_REVIEWED = declare_kind(
     )
     % data,
 )
+# Kept from everybody but the reviewers (apps.notifications.visible_kinds): nobody else is ever sent it.
+APPLICATION_TAKEN_DOWN = declare_kind(
+    "application_taken_down",
+    variants=("withdrawn", "disabled"),
+    label=_("Applications taken down"),
+    description=_("When any application here is withdrawn, or switched off by whoever registered it."),
+    message=lambda data, variant: (
+        _('The application "%(name)s" was withdrawn.')
+        if variant == "withdrawn"
+        else _('The application "%(name)s" was switched off by whoever registered it.')
+    )
+    % data,
+)
+REVIEWER_KINDS = {APPLICATION_TAKEN_DOWN}
 
 # Raised by the application, for changes no row of ours shows.
 SIGNED_OUT_BY_POLICY = declare_kind(

@@ -1,5 +1,6 @@
 import pytest
 
+from apps.oauth_provider import checks, urls
 from apps.oauth_provider.tests.conftest import auth_host, o
 
 
@@ -60,3 +61,33 @@ def test_the_flows_this_provider_does_not_offer_are_not_routed(name):
 
     with pytest.raises(NoReverseMatch):
         o(name)
+
+
+def test_every_route_the_toolkit_ships_is_decided_about_once():
+    sets = (urls.SERVED, urls.OVERRIDDEN, urls.NOT_SERVED)
+
+    assert urls.shipped_route_names() == set().union(*sets)
+    assert sum(map(len, sets)) == len(set().union(*sets))
+    assert checks.every_toolkit_route_is_decided(None) == []
+
+
+def _decided():
+    return {*urls.SERVED, *urls.OVERRIDDEN, *urls.NOT_SERVED}
+
+
+def test_a_route_the_toolkit_adds_is_reported(monkeypatch):
+    monkeypatch.setattr(urls, "shipped_route_names", lambda: {*_decided(), "new"})
+
+    (error,) = checks.every_toolkit_route_is_decided(None)
+
+    assert error.id == "oauth_provider.E002"
+    assert error.msg == "django-oauth-toolkit ships routes nobody decided about: new."
+
+
+def test_a_name_the_toolkit_stopped_shipping_is_reported(monkeypatch):
+    monkeypatch.setattr(urls, "shipped_route_names", lambda: _decided() - {"device"})
+
+    (error,) = checks.every_toolkit_route_is_decided(None)
+
+    assert error.id == "oauth_provider.E003"
+    assert error.msg.endswith("no longer ships: device.")

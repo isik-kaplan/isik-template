@@ -11,15 +11,18 @@ from pathlib import Path
 
 import tomllib
 
+from scripts.mutation_cache import verdicts
+
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_STATS = ROOT / "mutants" / "mutmut-cicd-stats.json"
 DEFAULT_TREE = ROOT / "mutants"
 DEFAULT_PYPROJECT = ROOT / "pyproject.toml"
 
-# `suspicious` and `timeout` were given up on, not killed.
+# `suspicious` and `timeout` were given up on, not killed. `unending` is settled: no test can finish
+# against a mutant that never ends, so none can object to it.
 ALIVE = ("survived", "suspicious", "timeout", "no_tests", "segfault")
-BUCKETS = ("total", "killed", "skipped", *ALIVE)
+BUCKETS = ("total", "killed", "skipped", "unending", *ALIVE)
 
 
 def alive_in(stats):
@@ -79,10 +82,28 @@ def tree_problems(tree=DEFAULT_TREE, pyproject=DEFAULT_PYPROJECT):
     return problems
 
 
+def verdicts_in(stats):
+    """How many of a run's mutants were answered about."""
+    settled = ("killed", "skipped", "unending", "caught_by_type_check")
+    return sum(stats.get(key, 0) for key in settled) + alive_in(stats)
+
+
 def unrun(stats):
     """Mutants but no verdicts: "nothing ran" otherwise looks exactly like "nothing survived"."""
-    accounted = stats.get("killed", 0) + stats.get("skipped", 0) + alive_in(stats)
-    return bool(stats.get("total", 0)) and not accounted
+    return bool(stats.get("total", 0)) and not verdicts_in(stats)
+
+
+def unfinished(stats):
+    """How many mutants a run produced and never answered about; `unrun` only catches all of them."""
+    total = stats.get("total", 0)
+    missing = total - verdicts_in(stats)
+    return missing if total and missing > 0 else 0
+
+
+def unanswered(tree, equivalents, exemptions, settled_elsewhere=()):
+    """Mutants the tree holds no verdict for, less the registry's, which phase one skips by design."""
+    names = {name for name, code in verdicts(tree).items() if code is None} - set(settled_elsewhere)
+    return sorted(names - exempt(equivalents, exemptions, names))
 
 
 def killed_by_one_test(path):
@@ -215,6 +236,8 @@ def main(argv=None):
     if one_test:
         problems.append(one_test)
 
+    # With the tree on disk the missing are named from it, less the registry's, which no totals can tell apart.
+    names_them_itself = len(rows) == 1 and Path(options.tree).exists()
     for label, stats in rows:
         if stats.get("check_was_interrupted_by_user"):
             problems.append(f"{label}: the run was interrupted, so the results are incomplete")
@@ -222,6 +245,20 @@ def main(argv=None):
             problems.append(
                 f"{label}: none of the {stats['total']:,} mutants have a verdict - nothing was tested."
                 " Check that the suite collects inside mutants/ before trusting these numbers."
+            )
+        elif (short := unfinished(stats)) and not names_them_itself:
+            problems.append(
+                f"{label}: checked {verdicts_in(stats):,} of {stats['total']:,} mutants - "
+                f"{short:,} were never answered about, so this run's silence is not a pass."
+            )
+
+    if names_them_itself and not unrun(rows[0][1]):
+        settled = (confirmed(options.confirmed) or {}) if options.confirmed else {}
+        missing = unanswered(options.tree, options.equivalents, options.exemptions, settled)
+        if missing:
+            problems.append(
+                f"{len(missing):,} mutant(s) were never answered about, so this run's silence is not a pass: "
+                + ", ".join(missing[:20])
             )
 
     rendered = table(rows) if rows else "(no results)"

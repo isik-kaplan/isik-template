@@ -7,7 +7,14 @@ from isik.django.apps.notifications.choices import Policy
 from isik.django.apps.notifications.kinds import notifies
 from oauth2_provider.models import AbstractApplication
 
-from apps.notifications.kinds import APPLICATION_REVIEWED, OWNER_CHANNELS, PRIVATE_PUSH
+from apps.notifications.audiences import Reviewers
+from apps.notifications.kinds import (
+    APPLICATION_REVIEWED,
+    APPLICATION_TAKEN_DOWN,
+    OWNER_CHANNELS,
+    PRIVATE_PUSH,
+    PUSH,
+)
 
 
 @track_events()
@@ -22,6 +29,21 @@ from apps.notifications.kinds import APPLICATION_REVIEWED, OWNER_CHANNELS, PRIVA
     audience=Field("user"),
     policy=Policy.DEFAULT_ON,
     channels=OWNER_CHANNELS,
+    push=PRIVATE_PUSH,
+)
+# The other reviewers, so a withdrawal is known beyond whoever made it. DEFAULT_ON: watching every application is a
+# job somebody may mute, unlike being told about your own.
+@notifies(
+    APPLICATION_TAKEN_DOWN,
+    on=pgtrigger.Update,
+    variants={
+        "withdrawn": pgtrigger.Q(new__approval="withdrawn") & ~pgtrigger.Q(old__approval="withdrawn"),
+        "disabled": pgtrigger.Q(new__approval="disabled") & ~pgtrigger.Q(old__approval="disabled"),
+    },
+    snapshot=["name", "approval"],
+    audience=Reviewers(),
+    policy=Policy.DEFAULT_ON,
+    channels=("inbox", "email", *PUSH),
     push=PRIVATE_PUSH,
 )
 class Application(VersionedModel, AbstractApplication):

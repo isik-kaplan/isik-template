@@ -242,6 +242,14 @@ def _refuse_a_drifted_template(template):
         )
 
 
+def pytest_collection_modifyitems(items):
+    """The Docker bind mount sometimes lists a directory entry twice under many xdist workers, so pytest collects
+    that file twice: the run aborts when workers disagree, or runs those tests twice. No id is legitimately
+    collected twice."""
+    seen = set()
+    items[:] = [item for item in items if not (item.nodeid in seen or seen.add(item.nodeid))]
+
+
 def pytest_configure(config):
     """A run may only reuse a database it cloned itself. Here, not in a fixture: a fixture error fails
     every test, which a mutation run scores as a kill."""

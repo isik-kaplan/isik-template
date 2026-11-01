@@ -10,3 +10,4 @@ class OAuthProviderConfig(AppConfig):
     def ready(self):
         # Registers the drf-spectacular extension, which nothing else imports.
         import_module("apps.oauth_provider.schema")
+        import_module("apps.oauth_provider.checks")

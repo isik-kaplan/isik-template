@@ -10,6 +10,7 @@ from apps.users.tasks import ping
 
 from {{ cookiecutter.project_slug }} import __version__
 from {{ cookiecutter.project_slug }}.celery_task import OnCommitTask
+from {{ cookiecutter.project_slug }}.config import CONFIG as config
 
 
 HEADER = OnCommitTask.history_context_header
@@ -127,7 +128,13 @@ def test_the_worker_writes_inside_the_context_it_was_given(monkeypatch):
     finally:
         ping.pop_request()
 
-    assert seen == {"user": "user-1", "caused_by": "request", "task": "ping", "version": __version__}
+    assert seen == {
+        "user": "user-1",
+        "caused_by": "request",
+        "task": "ping",
+        "version": __version__,
+        "build": config.BUILD,
+    }
 
 
 def test_a_worker_given_no_cause_records_the_system(monkeypatch):

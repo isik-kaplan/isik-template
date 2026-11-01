@@ -110,6 +110,8 @@ services:
     build:
       context: ./{{ cookiecutter.project_slug }}
       dockerfile: Dockerfile
+      args:
+        BUILD: ${BUILD:-dev}
     image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-backend:latest
     env_file: .env
     volumes:

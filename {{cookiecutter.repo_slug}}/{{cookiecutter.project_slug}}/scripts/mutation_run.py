@@ -15,6 +15,7 @@ import os
 import sys
 from pathlib import Path
 
+import mutation_limits
 import mutation_naming
 import mutmut_decorators
 import tomllib
@@ -99,6 +100,7 @@ def main(argv):
     # pytest-django re-adds the checkout root to sys.path, so a settings mutant collects both test copies.
     os.environ.setdefault("PY_IGNORE_IMPORTMISMATCH", "1")
     _instead_of_the_clean_run()
+    mutation_limits.install()
     from mutmut.__main__ import cli
 
     return cli(["run", *argv], standalone_mode=False) or 0

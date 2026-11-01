@@ -5,9 +5,12 @@ is and how to run it; [SETUP.md](../SETUP.md) what to do before launch.
 
 ## Backend conventions
 
+- **A viewset's docstring is its published description**: drf-spectacular puts it in the API document and every
+  generated client. Say what the resource is; keep implementation notes in comments.
 - **Every request is a transaction** (`ATOMIC_REQUESTS`). A view opts out only through isik's
   `not_atomic(reason)`; isik's check `isik.E011` refuses one that used Django's `non_atomic_requests`
-  directly. Anything that cannot roll back waits for the commit: Celery tasks are dispatched on commit
+  directly, failing startup here rather than warning as isik does by default. Anything that cannot roll back
+  waits for the commit: Celery tasks are dispatched on commit
   (isik's `HistoryContextTask` default), and `AccountAdapter.send_mail` uses `transaction.on_commit`. Account mail
 {%- if cookiecutter.background_jobs == "inline" %}
   is rendered and sent by a task, which retries an SMTP outage - inline, once the request commits.
@@ -101,6 +104,11 @@ up as `[redacted]`, and headers are an allowlist of their own, so `Authorization
 `X-CSRFToken` never pass. Sentry (on only when `SENTRY__DSN` is set) applies the same rule through
 `before_send`, drops cookies outright, and runs with `send_default_pii=False`.
 
+One request id reaches everything: nginx sets `X-Request-ID` (its own `$request_id`, never the client's) and
+logs it, the request line and every history row carry it, Sentry tags events with it, and the response hands it
+back so somebody on an error page can quote it. History rows and Sentry's release also name the build: the
+image's `BUILD` build argument, the commit CI built it from (`dev` when unset).
+
 ## Starter kit
 
 These ship tested and mutation-clean but with nothing calling them yet: building blocks for what most projects
@@ -132,8 +140,13 @@ will.
 docker compose up -d --wait database{% if cookiecutter.storage != "disk" %} storage{% endif %}
 docker compose run --rm --no-deps backend python -m pytest   # backend, 100% coverage required
 cd {{ cookiecutter.project_slug }}-frontend && npm install && npm run lint && npm run test
-cd e2e && docker compose build && docker compose up -d && docker compose run --build --rm playwright npx playwright test
+cd e2e && docker compose build && docker compose up -d && docker compose run --build --rm playwright
 ```
+
+The whole e2e suite runs once per stack, since specs never clear what they write; a second is refused.
+`bash e2e/reset.sh` clears the app's database, mail and that marker but keeps Authentik, whose cold start takes
+minutes; `docker compose down -v` resets everything. Handed a command
+(`docker compose run --rm playwright npx playwright test <spec>`), the runner just runs it.
 
 `docker compose run --rm frontend-test` runs the web and API-client suites inside the frontend
 Dockerfile's own `tester` stage instead of on whatever node your machine has - the way CI runs them.
@@ -147,6 +160,14 @@ assembling them from a variable, which the type checker cannot follow.
 yet - see `.github/workflows/ci.yml`'s `mobile`/`mobile-mutation` jobs for what does run in CI.
 {% endif %}
 `.github/workflows/ci.yml` runs all of the above on every push/PR.
+
+`manage.py triggers` lists every trigger by table with its timing, condition and what it does (refuses, writes,
+stamps, locks); `--model`, `--sql`, `--format=json`.
+
+Two traps that cost time: a `pytest` run on the host leaves host-compiled bytecode the bind-mounted container
+then uses, so its tracebacks print `???` and name `/Users/` paths - delete every `__pycache__` outside `mutants/`.
+And a `compose run` interrupted mid-way can leave a container in `Created` that every later `compose run` waits
+on forever (a pre-commit hook that hangs with no output): `docker ps -a --filter status=created`, then `docker rm -f`.
 
 ### Mutation testing
 

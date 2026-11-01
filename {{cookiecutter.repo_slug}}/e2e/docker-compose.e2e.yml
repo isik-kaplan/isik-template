@@ -97,9 +97,12 @@ services:
       - ./e2e/playwright/test-results:/e2e/test-results
       # What the legal specs check against.
       - ./{{ cookiecutter.project_slug }}-frontend/apps/web/src/legal:/legal:ro
+      # Only the marker saying this stack had its whole suite; `down -v` and reset.sh clear it.
+      - e2e-state:/e2e-state
 
 volumes:
   certs:
+  e2e-state:
 
 networks:
   internal:

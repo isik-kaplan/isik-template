@@ -5,6 +5,10 @@ on:
     branches: [master]
   pull_request:
 
+# Images report the commit they were built from.
+env:
+  BUILD: {{ '${{' }} github.sha {{ '}}' }}
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -197,6 +201,11 @@ jobs:
       - name: Export the stats
         if: always()
         run: docker compose run --rm --no-deps backend python -m mutmut export-cicd-stats
+
+      # mutmut's export calls a CPU budget burned and a wall clock run out both "timeout"; only the second is alive.
+      - name: Restate the stats
+        if: always()
+        run: docker compose run --rm --no-deps backend python -m scripts.mutation_cache restate
 
       # Survivors are only candidates here; this fails on a stale tree or a run that tested nothing.
       - name: Check phase one ran

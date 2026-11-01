@@ -5,10 +5,15 @@ Imported by `settings`, so it reaches for nothing Django has not built yet.
 
 from urllib.parse import parse_qsl
 
+from apps.common.logging.emit import ambient
 from apps.common.logging.redaction import LOGGABLE_HEADERS, REDACTED, values_of
 
 
 def scrub_event(event, hint):
+    # Tagged so an event leads to the access log, the request line and the history rows of its request.
+    request_id = ambient().get("request_id")
+    if request_id:
+        event.setdefault("tags", {}).setdefault("request_id", request_id)
     request = event.get("request")
     if not request:
         return event

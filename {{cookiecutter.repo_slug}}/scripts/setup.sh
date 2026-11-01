@@ -159,6 +159,7 @@ if [ -n "$storage_endpoint" ]; then
   set_var "${PREFIX}__STORAGE__ENDPOINT_URL" "$storage_endpoint"
   set_var "${PREFIX}__STORAGE__BUCKET_NAME" "$(ask "Bucket name" "{{ cookiecutter.repo_slug }}")"
   set_var "${PREFIX}__STORAGE__REGION_NAME" "$(ask "Region" "us-east-1")"
+  set_var "${PREFIX}__STORAGE__ADDRESSING_STYLE" "$(ask "Addressing style, path or virtual (AWS: virtual)" "path")"
   set_var "${PREFIX}__STORAGE__ACCESS_KEY_ID" "$(ask "Access key ID" "")"
   set_var "${PREFIX}__STORAGE__SECRET_ACCESS_KEY" "$(ask_secret "Secret access key")"
   echo "Create that bucket yourself: the app never creates one, so its keys need no s3:CreateBucket."

@@ -5,6 +5,7 @@ test that earned it. Reads mutmut's files as JSON, not its classes, to survive r
 
     python -m scripts.mutation_cache prune        # before the tree is built
     python -m scripts.mutation_cache invalidate   # after it, before the queue is built
+    python -m scripts.mutation_cache restate      # after `mutmut export-cicd-stats`
 """
 
 import ast
@@ -23,6 +24,7 @@ STATS = TREE / "mutmut-stats.json"
 BASELINE = TREE / ".test-hashes.json"
 KILLERS = TREE / "mutmut-mutants.jsonl"
 CONFIRMED = TREE / "mutmut-confirmed.json"
+CICD_STATS = TREE / "mutmut-cicd-stats.json"
 
 # Changes mutmut does not act on: its git check drops `.py` and only warns about the rest.
 WATCHED = (
@@ -37,8 +39,30 @@ WATCHED = (
     "scripts/**/*.py",
 )
 
-# Not -24: mutmut's table lists it as a kill and later as a SIGXCPU timeout, and the later entry wins.
-KILLS = frozenset({1, 3})
+# Spelled out, not read from mutmut, whose table names `-24` both a kill and a timeout (the latter wins).
+STATUS_BY_EXIT_CODE = {
+    None: "not checked",
+    0: "survived",
+    1: "killed",
+    2: "check was interrupted by user",
+    3: "killed",
+    5: "no tests",
+    24: "timeout",
+    # `mutation_limits` leaves SIGXCPU to the kernel: the mutant spent a whole CPU budget without ending.
+    -24: "unending",
+    # The wall clock, which says the machine was busy and nothing about the mutant.
+    -15: "timeout",
+    33: "no tests",
+    34: "skipped",
+    35: "suspicious",
+    36: "timeout",
+    37: "caught by type check",
+    152: "timeout",
+    255: "timeout",
+    -9: "segfault",
+    -11: "segfault",
+}
+KILLS = frozenset(code for code, status in STATUS_BY_EXIT_CODE.items() if status == "killed")
 # mutmut resets this itself when the type checker's set changes.
 TYPE_CHECKED = 37
 
@@ -321,14 +345,41 @@ def invalidate_changed_tests(root=ROOT, patterns=WATCHED, baseline=None):
     return result
 
 
+def counts(tree=TREE):
+    """The export's buckets, counted from the sidecars under this file's reading of each exit code."""
+    tally = {}
+    for code in verdicts(tree).values():
+        bucket = STATUS_BY_EXIT_CODE.get(code, "suspicious").replace(" ", "_")
+        tally[bucket] = tally.get(bucket, 0) + 1
+    tally["total"] = sum(tally.values())
+    return tally
+
+
+def restate_stats(path=CICD_STATS, tree=TREE):
+    """Rewrite mutmut's export, which files `unending` under `timeout`; its other buckets are zeroed, not dropped."""
+    path = Path(path)
+    if not path.exists():
+        return None
+    restated = {**dict.fromkeys(json.loads(path.read_text()), 0), **counts(tree)}
+    path.write_text(json.dumps(restated, indent=4) + "\n")
+    return restated
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
-    if len(argv) != 1 or argv[0] not in ("prune", "invalidate"):
+    if len(argv) != 1 or argv[0] not in ("prune", "invalidate", "restate"):
         print(__doc__)
         return 2
     if argv[0] == "prune":
         removed = prune_orphaned_tree(*_copied_paths())
         print(f"{removed} orphaned file(s) removed from the tree")
+        return 0
+    if argv[0] == "restate":
+        restated = restate_stats(CICD_STATS, TREE)
+        if restated is None:
+            print(f"no {CICD_STATS} to restate - did `mutmut export-cicd-stats` run?")
+            return 1
+        print(f"{restated['total']:,} verdict(s) restated, {restated.get('unending', 0)} unending")
         return 0
     result = invalidate_changed_tests()
     print(f"{len(result['changed'])} watched file(s) changed")

@@ -3,6 +3,7 @@
 from isik.django.celery import HistoryContextTask
 
 from {{ cookiecutter.project_slug }} import __version__
+from {{ cookiecutter.project_slug }}.config import CONFIG as config
 
 
 class OnCommitTask(HistoryContextTask):
@@ -10,4 +11,4 @@ class OnCommitTask(HistoryContextTask):
 
     def worker_history_context(self):
         """This process's version, not the dispatcher's: the build running the task wrote the rows."""
-        return {**super().worker_history_context(), "version": __version__}
+        return {**super().worker_history_context(), "version": __version__, "build": config.BUILD}

@@ -10,6 +10,8 @@ CONFIG = config(
         "SECRET_KEY": string(),
         "CREDENTIAL_KEY": string(missing_default=""),
         "DOMAIN": string(),
+        # The commit the image was built from, a build argument: many commits share a version.
+        "BUILD": string(missing_default="dev"),
         "DB": {
             "NAME": string(),
             "USER": string(),
@@ -39,6 +41,10 @@ CONFIG = config(
             "ACCESS_KEY_ID": string(),
             "SECRET_ACCESS_KEY": string(),
             "REGION_NAME": string(),
+{%- if cookiecutter.storage == "s3" %}
+            # The provider's answer: Garage takes only "path", AWS is moving new buckets to "virtual".
+            "ADDRESSING_STYLE": string(missing_default="path"),
+{%- endif %}
         },
 {%- endif %}
         "SETUP": {

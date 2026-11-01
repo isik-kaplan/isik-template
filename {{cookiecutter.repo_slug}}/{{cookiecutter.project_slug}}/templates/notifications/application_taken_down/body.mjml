@@ -1,0 +1,8 @@
+{% raw -%}
+{% extends "account/email/base/base.html" %}
+{% load i18n %}
+
+{% block content %}
+        <mj-text>{% if notice.variant == "withdrawn" %}{% blocktrans with name=data.name %}The application "{{ name }}" was withdrawn: it no longer signs anybody in, and its tokens stop working.{% endblocktrans %}{% else %}{% blocktrans with name=data.name %}The application "{{ name }}" was switched off by whoever registered it, so it signs nobody in until they switch it back on.{% endblocktrans %}{% endif %}</mj-text>
+{% endblock content %}
+{%- endraw %}

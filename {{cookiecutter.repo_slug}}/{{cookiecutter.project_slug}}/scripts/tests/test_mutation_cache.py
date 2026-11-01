@@ -394,7 +394,7 @@ def test_the_job_leaves_a_baseline_the_next_run_agrees_with(paths):
 
 
 @pytest.mark.parametrize("argv", [[], ["both"], ["prune", "invalidate"], ["--help"]])
-def test_only_the_two_steps_are_commands(argv, capsys):
+def test_only_the_named_steps_are_commands(argv, capsys):
     assert mutation_cache.main(argv) == 2
     assert "mutation_cache" in capsys.readouterr().out
 
@@ -975,3 +975,90 @@ def test_a_kill_is_pinned_to_the_test_the_order_plugin_logged(paths):
     )
 
     assert mutation_cache.killers(paths["tree"] / "mutmut-mutants.jsonl") == {"m": None}
+
+
+def _tree_holding(tmp_path, codes):
+    (tmp_path / "mutants/apps/users").mkdir(parents=True)
+    (tmp_path / f"mutants/{MODELS}.meta").write_text(json.dumps({"exit_code_by_key": codes}))
+    return tmp_path / "mutants"
+
+
+def test_a_spent_cpu_budget_is_counted_apart_from_a_busy_machine(tmp_path):
+    tree = _tree_holding(tmp_path, {"burned__mutmut_1": -24, "crowded__mutmut_1": -15, "dead__mutmut_1": 1})
+
+    assert mutation_cache.counts(tree) == {"unending": 1, "timeout": 1, "killed": 1, "total": 3}
+
+
+def test_a_spent_cpu_budget_is_not_a_kill_a_changed_test_can_keep():
+    assert mutation_cache.KILLS == {1, 3}
+
+
+def test_two_mutants_in_one_bucket_are_two(tmp_path):
+    tree = _tree_holding(tmp_path, {"one__mutmut_1": 1, "two__mutmut_1": 1})
+
+    assert mutation_cache.counts(tree)["killed"] == 2
+
+
+def test_an_exit_code_nothing_reads_is_still_counted_and_alive(tmp_path):
+    tree = _tree_holding(tmp_path, {"strange__mutmut_1": 99})
+
+    assert mutation_cache.counts(tree) == {"suspicious": 1, "total": 1}
+
+
+def test_buckets_are_spelled_the_way_the_export_spells_them(tmp_path):
+    """`check_mutants` reads `check_was_interrupted_by_user` and `no_tests` from the restated file."""
+    tree = _tree_holding(tmp_path, {"stopped__mutmut_1": 2, "lonely__mutmut_1": 33, "fresh__mutmut_1": None})
+
+    assert mutation_cache.counts(tree) == {
+        "check_was_interrupted_by_user": 1,
+        "no_tests": 1,
+        "not_checked": 1,
+        "total": 3,
+    }
+
+
+def test_restating_zeroes_a_bucket_it_has_no_reading_for_rather_than_dropping_it(tmp_path):
+    tree = _tree_holding(tmp_path, {"dead__mutmut_1": 1})
+    stats = tmp_path / "stats.json"
+    stats.write_text(json.dumps({"killed": 0, "timeout": 4, "caught_by_type_check": 7}))
+
+    restated = mutation_cache.restate_stats(stats, tree)
+
+    assert restated == {"killed": 1, "timeout": 0, "caught_by_type_check": 0, "total": 1}
+    assert json.loads(stats.read_text()) == restated
+    assert '\n    "killed": 1' in stats.read_text()
+    assert stats.read_text().endswith("}\n")
+
+
+def test_restating_a_run_that_exported_nothing_invents_no_file(tmp_path):
+    absent = tmp_path / "absent.json"
+
+    assert mutation_cache.restate_stats(absent, _tree_holding(tmp_path, {})) is None
+    assert not absent.exists()
+
+
+def test_the_restate_step_refuses_a_run_whose_stats_were_never_exported(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(mutation_cache, "CICD_STATS", tmp_path / "absent.json")
+    monkeypatch.setattr(mutation_cache, "TREE", _tree_holding(tmp_path, {}))
+
+    assert mutation_cache.main(["restate"]) == 1
+    assert capsys.readouterr().out == (
+        f"no {tmp_path / 'absent.json'} to restate - did `mutmut export-cicd-stats` run?\n"
+    )
+
+
+@pytest.mark.parametrize(
+    ("codes", "printed"),
+    [
+        ({"burned__mutmut_1": -24, "dead__mutmut_1": 1}, "2 verdict(s) restated, 1 unending\n"),
+        ({"dead__mutmut_1": 1}, "1 verdict(s) restated, 0 unending\n"),
+    ],
+)
+def test_the_restate_step_says_what_it_found(tmp_path, monkeypatch, capsys, codes, printed):
+    monkeypatch.setattr(mutation_cache, "TREE", _tree_holding(tmp_path, codes))
+    stats = tmp_path / "stats.json"
+    stats.write_text(json.dumps({"killed": 0}))
+    monkeypatch.setattr(mutation_cache, "CICD_STATS", stats)
+
+    assert mutation_cache.main(["restate"]) == 0
+    assert capsys.readouterr().out == printed

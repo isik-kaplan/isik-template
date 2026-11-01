@@ -286,7 +286,8 @@ approval or auto - see SETUP.md). Its tables exist whatever the mode, and while 
 of its routes answers 404. Two flows are offered: the authorization code flow with PKCE, for a website
 or an app that can open a browser and be sent back, and the device code flow (RFC 8628), for a command
 line that can only show a code. DOT's dynamic client registration, introspection and its own unstyled
-pages are not routed. DOT's consent screen redirects to `/auth/oauth/authorize`, the frontend's page,
+pages are not routed: `apps/oauth_provider/urls.py` names every route DOT ships as served or not, and a DOT
+upgrade that adds or drops one fails startup (`oauth_provider.E002`/`E003`) until somebody decides. DOT's consent screen redirects to `/auth/oauth/authorize`, the frontend's page,
 which posts the answer straight back. A signed-out person goes through the ordinary sign-in first, and
 `next` lets sign-in return to that one authorize endpoint and nowhere else off-site.
 
@@ -301,12 +302,14 @@ Anybody signed in registers an app at `/applications` - DOT's own `Application`,
 `apps.oauth_provider.models.Application`, which carries its review state and the scopes it asks for.
 In approval mode it waits for a superuser (`/staff/applications`) before it signs anybody in; in auto
 mode it is approved for what it asks the moment it is registered. A superuser can withdraw one, its
-owner can switch it off, and either takes every token it holds down with it. The profile's Apps tab
+owner can switch it off, and either takes every token it holds down with it; the other superusers are told
+(`application_taken_down`, which they may mute). The profile's Apps tab
 lists the apps a person let in, with a way to shut each one out (revoking its refresh tokens too).
 Those moves are `apps/oauth_provider/services.py`'s alone: triggers refuse an approval, or an approved
 scope, written from anywhere else - DOT's admin, a shell, a stray `update()` - and check constraints
 keep DOT's own columns from skipping the consent question or naming a grant this project does not
-serve. DOT's application admin is kept for looking things up and deleting, and changes nothing.
+serve. DOT's application admin is kept for looking things up and deleting, and changes nothing. Expired
+tokens and spent grants are deleted daily ({% if cookiecutter.background_jobs == "celery-with-beat" %}beat{% else %}uWSGI's cron{% endif %}, `manage.py clear_expired_tokens`).
 
 Beyond signing somebody in, an app can ask to act for them on the API. Its scopes are this project's
 permissions (`apps/users/permissions.py`, the `where:action:what` names), and only the delegatable
@@ -391,8 +394,8 @@ declared in `apps/features/declarations.py`:
 
 `/v0/settings/` lists each setting with its value and why it is that value, and takes a change under the
 version it read (If-Match); `/v0/features/` lists what a person has. The profile's Settings tab is one
-component reading both. A grant ending changes things with no write, so a sweep says so: {% if cookiecutter.background_jobs == "celery-with-beat" %}beat runs it
-every minute{% else %}uWSGI runs `manage.py features --sweep` every minute{% endif %}. Deleting a person erases their grants and settings, with
+component reading both. A grant ending changes things with no write, so a sweep says so: {% if cookiecutter.background_jobs == "celery-with-beat" %}one runs at the
+next boundary a grant has (`SWEEP: "next_boundary"`), with beat running it hourly as a backstop{% else %}uWSGI runs `manage.py features --sweep` every minute{% endif %}. Deleting a person erases their grants and settings, with
 their history, in the same transaction.
 
 ## Permissions

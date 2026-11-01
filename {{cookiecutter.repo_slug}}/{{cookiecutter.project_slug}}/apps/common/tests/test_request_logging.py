@@ -7,11 +7,13 @@ import json
 import time
 from urllib.parse import urlencode
 
+import pghistory
 import pytest
 from allauth.account.adapter import get_adapter
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
+from django.http import HttpResponse
 from django.test import RequestFactory
 from hypothesis import given
 from hypothesis import strategies as st
@@ -377,3 +379,28 @@ class TestSentryKeepsTheSameRule:
         """Not every exception has a request behind it - a task's does not."""
         assert scrub_event({"exception": {"values": []}}, hint=None) == {"exception": {"values": []}}
         assert scrub_event({"request": {}}, hint=None) == {"request": {}}
+
+    def test_an_event_is_tagged_with_the_request_it_came_from(self):
+        """So it leads to the access log, the request line and the history rows of the same request."""
+        with pghistory.context(request_id="01JB4F"):
+            event = scrub_event({"exception": {"values": []}, "tags": {"kept": "yes"}}, hint=None)
+
+        assert event["tags"] == {"kept": "yes", "request_id": "01JB4F"}
+
+
+@pytest.mark.django_db
+def test_the_response_carries_the_id_back_to_whoever_asked():
+    """Somebody on an error page can quote one id that every log of the request carries."""
+    middleware = RequestLogMiddleware(get_response=lambda _: HttpResponse(status=500))
+
+    with pghistory.context(request_id="01JB4F"):
+        response = middleware(RequestFactory().get("/x/"))
+
+    assert response["X-Request-ID"] == "01JB4F"
+
+
+@pytest.mark.django_db
+def test_a_response_outside_any_context_carries_no_id():
+    response = RequestLogMiddleware(get_response=lambda _: HttpResponse())(RequestFactory().get("/x/"))
+
+    assert "X-Request-ID" not in response

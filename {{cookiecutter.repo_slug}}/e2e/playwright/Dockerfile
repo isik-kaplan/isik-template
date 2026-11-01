@@ -10,4 +10,5 @@ RUN npx playwright install --with-deps chromium
 
 COPY . .
 
-CMD ["npx", "playwright", "test"]
+# The whole suite, once per stack; a command handed to `run` instead runs as given.
+ENTRYPOINT ["sh", "run-once.sh"]

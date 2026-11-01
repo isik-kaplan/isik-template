@@ -53,6 +53,9 @@ def test_a_cycle_back_to_the_root_does_not_abandon_a_sibling_dependency():
             _declaration("b:read:x", requires=("root:read:x",)),
         ]
     )
+    # Something that returns whatever the graph does first: with the dedupe broken the walk below never ends, and
+    # a test that can only hang reads to a mutation run as a crash, not a kill.
+    assert vocabulary.closure({"gone:read:x"}) == {"gone:read:x"}
 
     assert vocabulary.closure({"root:read:x"}) == {"root:read:x", "a:read:x", "b:read:x"}
 

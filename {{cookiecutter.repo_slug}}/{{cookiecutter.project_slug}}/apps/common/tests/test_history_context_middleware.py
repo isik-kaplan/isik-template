@@ -7,6 +7,7 @@ from isik.django.apps.common.middleware import HistoryContextMiddleware
 from apps.users.models.user import User
 
 from {{ cookiecutter.project_slug }} import __version__
+from {{ cookiecutter.project_slug }}.config import CONFIG as config
 
 
 def test_a_served_request_records_the_version_that_served_it():
@@ -15,9 +16,21 @@ def test_a_served_request_records_the_version_that_served_it():
     def view(request):
         seen.update(open_history_context())
 
+    HistoryContextMiddleware(get_response=view)(RequestFactory().post("/", HTTP_X_REQUEST_ID="01JB4F"))
+
+    assert (seen["version"], seen["build"], seen["request_id"]) == (__version__, config.BUILD, "01JB4F")
+
+
+def test_a_request_nginx_never_named_still_gets_an_id():
+    """Tests and anything else reaching Django directly; a row with no id would lead nowhere."""
+    seen = {}
+
+    def view(request):
+        seen.update(open_history_context())
+
     HistoryContextMiddleware(get_response=view)(RequestFactory().post("/"))
 
-    assert seen["version"] == __version__
+    assert len(seen["request_id"]) == 32
 
 
 @pytest.mark.django_db
