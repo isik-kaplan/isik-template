@@ -188,6 +188,7 @@ export const SHARDS = {
     'src/app/too-many-requests/page.tsx',
     'src/app/page.tsx',
     'src/components/app-auth/LanguageSwitcher.tsx',
+    'src/components/app-search/CommandPalette.tsx',
     'src/components/app/ConflictNotice.tsx',
     'src/components/app/EditMode.tsx',
     'src/components/app/Editor.tsx',
@@ -221,6 +222,8 @@ export const SHARDS = {
     'src/components/base/sonner.tsx',
     'src/components/base/tabs.tsx',
     'src/components/base/tooltip.tsx',
+    'src/lib/queryGrammar.ts',
+    'src/lib/searchableResources.ts',
     'src/lib/utils.ts',
   ],
 }

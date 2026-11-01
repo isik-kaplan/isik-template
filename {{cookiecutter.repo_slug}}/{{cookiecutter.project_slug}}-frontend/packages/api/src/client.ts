@@ -78,8 +78,8 @@ export class Api {
     return this.client.GET('/v0/users/{id}/history/', { params: { path: { id }, query } })
   }
 
-  async oauthApplications() {
-    return this.client.GET('/v0/oauth-applications/')
+  async oauthApplications(query?: ApiQuery<'/v0/oauth-applications/'>) {
+    return this.client.GET('/v0/oauth-applications/', { params: { query } })
   }
 
   async registerOAuthApplication(

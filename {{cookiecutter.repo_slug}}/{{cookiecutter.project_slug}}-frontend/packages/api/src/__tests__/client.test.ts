@@ -39,6 +39,12 @@ describe('Api', () => {
   it.each([
     ['oauthApplications', (api: Api) => api.oauthApplications(), 'GET', '/v0/oauth-applications/'],
     [
+      'oauthApplications, searched',
+      (api: Api) => api.oauthApplications({ search: 'acme' }),
+      'GET',
+      '/v0/oauth-applications/?search=acme',
+    ],
+    [
       'registerOAuthApplication',
       (api: Api) =>
         api.registerOAuthApplication(

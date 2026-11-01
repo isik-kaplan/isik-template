@@ -1987,6 +1987,48 @@
         "unprefixed lookup - none of them are."
       ]
     }
+  ],
+  "src/components/app-search/CommandPalette.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "6bfc17ac532e",
+      "reason": [
+        "equivalent mutant. Every way in goes through show(), which empties the query before the dialog",
+        "renders it, and the search waits for a person it has not asked about yet - the first value is never read."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "fe46519c184b",
+      "reason": [
+        "equivalent mutant. show() calls only state setters, which React keeps the same across renders, so",
+        "rebuilding it on any dependency leaves it doing exactly the same thing."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "b811c00801cc",
+      "reason": [
+        "equivalent mutant. show() is the one dependency and never changes, so subscribing once or on every",
+        "render leaves exactly one listener calling the same function."
+      ]
+    }
   ]{% if cookiecutter.webhooks != "none" %},
   "src/app/webhooks/page.tsx": [
     {
@@ -2029,6 +2071,16 @@
       "reason": [
         "equivalent mutant. t's reference never changes across renders in this single-language app, so this",
         "memo never actually recomputes either way."
+      ]
+    }
+  ]{% endif %}{% if cookiecutter.webhooks == "users" %},
+  "src/lib/searchableResources.ts": [
+    {
+      "mutator": "ConditionalExpression",
+      "fingerprint": "a4ac6bd7fa20",
+      "reason": [
+        "equivalent mutant while every person manages their own endpoints: mayManageWebhooks answers true for",
+        "anybody, so asking it changes nothing until webhooks are staff's alone."
       ]
     }
   ]{% endif %}

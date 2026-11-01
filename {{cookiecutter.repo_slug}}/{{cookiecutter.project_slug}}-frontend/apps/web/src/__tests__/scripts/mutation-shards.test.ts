@@ -46,6 +46,7 @@ const NOT_MUTATED: Record<string, string> = {
   'src/global.d.ts': 'A type declaration; it emits nothing to run and so has no mutants.',
   'src/i18n/index.ts': 'A barrel re-exporting what the shards measure where it is defined.',
   'src/i18n/i18next.d.ts': 'A type declaration; it emits nothing to run and so has no mutants.',
+  'src/lib/queryGrammar.generated.ts': 'Data written from the API schema; generate-query-grammar.test.ts holds it.',
 }
 
 function cli(...args: string[]) {

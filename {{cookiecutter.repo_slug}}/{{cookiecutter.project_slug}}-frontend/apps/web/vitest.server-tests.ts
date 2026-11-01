@@ -16,5 +16,6 @@ export const SERVER_TEST_FILES = [
   'src/__tests__/lib/serverApi.test.ts',
   'src/__tests__/proxy.test.ts',
   // Build tooling: it never meets a browser.
+  'src/__tests__/scripts/generate-query-grammar.test.ts',
   'src/__tests__/scripts/mutation-shards.test.ts',
 ]
