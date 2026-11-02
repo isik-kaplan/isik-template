@@ -37,6 +37,16 @@ def test_a_model_missing_a_guard_is_named(monkeypatch):
     assert error.hint == "Track them with isik's track_events or track_history, without append_only=False."
 
 
+def test_every_model_missing_a_guard_is_named(monkeypatch):
+    other = type("Other", (), {"_meta": SimpleNamespace(label="stub.Other")})
+    monkeypatch.setattr(checks, "event_models", lambda: [STUB, other])
+    monkeypatch.setattr(pgtrigger, "registered", lambda: [])
+
+    (error,) = event_models_are_append_only(app_configs=None)
+
+    assert error.msg == "These event models are not append-only: stub.Event, stub.Other."
+
+
 def test_a_model_with_no_triggers_at_all_is_named_rather_than_crashed_on(monkeypatch):
     _only_the_stub(monkeypatch, [])
 

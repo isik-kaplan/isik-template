@@ -396,7 +396,8 @@ def test_the_response_carries_the_id_back_to_whoever_asked():
     with pghistory.context(request_id="01JB4F"):
         response = middleware(RequestFactory().get("/x/"))
 
-    assert response["X-Request-ID"] == "01JB4F"
+    # As sent, not as looked up: a header lookup ignores case.
+    assert ("X-Request-ID", "01JB4F") in response.items()
 
 
 @pytest.mark.django_db

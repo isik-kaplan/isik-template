@@ -76,18 +76,20 @@ def _decided():
 
 
 def test_a_route_the_toolkit_adds_is_reported(monkeypatch):
-    monkeypatch.setattr(urls, "shipped_route_names", lambda: {*_decided(), "new"})
+    monkeypatch.setattr(urls, "shipped_route_names", lambda: {*_decided(), "new", "newer"})
 
     (error,) = checks.every_toolkit_route_is_decided(None)
 
     assert error.id == "oauth_provider.E002"
-    assert error.msg == "django-oauth-toolkit ships routes nobody decided about: new."
+    assert error.msg == "django-oauth-toolkit ships routes nobody decided about: new, newer."
+    assert error.hint == "Name each in SERVED or NOT_SERVED in apps/oauth_provider/urls.py."
 
 
 def test_a_name_the_toolkit_stopped_shipping_is_reported(monkeypatch):
-    monkeypatch.setattr(urls, "shipped_route_names", lambda: _decided() - {"device"})
+    monkeypatch.setattr(urls, "shipped_route_names", lambda: _decided() - {"device", "list"})
 
     (error,) = checks.every_toolkit_route_is_decided(None)
 
     assert error.id == "oauth_provider.E003"
-    assert error.msg.endswith("no longer ships: device.")
+    assert error.msg.endswith("no longer ships: device, list.")
+    assert error.hint == "Drop each, and check whether a rename put back a route that was not served."
