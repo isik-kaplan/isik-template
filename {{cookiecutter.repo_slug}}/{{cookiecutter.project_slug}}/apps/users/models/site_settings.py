@@ -50,7 +50,14 @@ class SiteSettings(BaseModel):
         db_table = "users_site_settings"
         verbose_name = _("site settings")
         verbose_name_plural = _("site settings")
-        constraints = [models.CheckConstraint(condition=models.Q(singleton=True), name="site_settings_singleton")]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(singleton=True),
+                name="site_settings_singleton",
+                violation_error_message=_("There is only one set of site settings; change that one instead."),
+                violation_error_code="singleton",
+            )
+        ]
 
     def __str__(self):
         return str(self._meta.verbose_name)

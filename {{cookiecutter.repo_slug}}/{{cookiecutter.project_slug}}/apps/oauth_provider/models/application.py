@@ -1,6 +1,7 @@
 import pgtrigger
 from django.db import models
 from django.db.models import Q
+from django.utils.translation import gettext_lazy as _
 from isik.django.apps.common.db import VersionedModel, track_events
 from isik.django.apps.notifications.audiences import Field
 from isik.django.apps.notifications.choices import Policy
@@ -115,7 +116,12 @@ class Application(VersionedModel, AbstractApplication):
         ]
         constraints = [
             # DOT's columns, which its admin offers to change.
-            models.CheckConstraint(condition=Q(skip_authorization=False), name="always_asks"),
+            models.CheckConstraint(
+                condition=Q(skip_authorization=False),
+                name="always_asks",
+                violation_error_message=_("An application always asks its user before it is let in."),
+                violation_error_code="always_asks",
+            ),
             models.CheckConstraint(
                 condition=Q(
                     authorization_grant_type__in=[
@@ -124,6 +130,8 @@ class Application(VersionedModel, AbstractApplication):
                     ]
                 ),
                 name="served_grant_types",
+                violation_error_message=_("This site serves only the authorization code and device code grants."),
+                violation_error_code="served_grant_types",
             ),
         ]
 
