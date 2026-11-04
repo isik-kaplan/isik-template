@@ -137,7 +137,11 @@ def test_an_application_holding_only_a_refresh_token_is_shut_out_too(client, sig
     _refresh(signed_in, application)
     headless.prove()
 
-    assert client.delete(_detail(application.pk)).status_code == 204
+    response = client.delete(_detail(application.pk))
+
+    assert response.status_code == 204
+    # CommonMiddleware's zero, taken back off by ContentLengthMiddleware.
+    assert not response.has_header("Content-Length")
     assert not RefreshToken.objects.filter(revoked__isnull=True).exists()
 
 

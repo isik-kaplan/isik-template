@@ -88,7 +88,9 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    # First: the Docker healthcheck's Host: localhost matches no django-hosts pattern.
+    # Outermost, so it measures the body last and sees answers made above CommonMiddleware.
+    "apps.common.middleware.content_length.ContentLengthMiddleware",
+    # Before django-hosts: the Docker healthcheck's Host: localhost matches no pattern.
     "apps.common.middleware.health_check.HealthCheckMiddleware",
     "django_hosts.middleware.HostsRequestMiddleware",
     # Before anything that may answer early (CommonMiddleware), or the response lacks CORS headers.
