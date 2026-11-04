@@ -22,7 +22,7 @@ describe('ConsentSignOut', () => {
   })
 
   it('signs this account out and asks again for whoever signs in next', async () => {
-    render(<ConsentSignOut username="alice" authorizeUrl="https://auth.x.test/o/authorize/?client_id=c" />)
+    render(<ConsentSignOut name="alice" authorizeUrl="https://auth.x.test/o/authorize/?client_id=c" />)
 
     expect(screen.getByText(/Not alice\?/).textContent).toBe('Not alice? Sign in as somebody else')
     await userEvent.click(screen.getByRole('button', { name: 'Sign in as somebody else' }))

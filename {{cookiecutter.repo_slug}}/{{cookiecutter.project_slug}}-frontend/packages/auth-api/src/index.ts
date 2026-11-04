@@ -1,5 +1,5 @@
 export { AuthApi, PROVIDER_REAUTHENTICATE_PATH, PROVIDER_REDIRECT_PATH, SESSION_PATH } from './client'
-export type { AuthApiOptions } from './client'
+export type { AuthApiOptions, ProviderSignupBody, SignupBody } from './client'
 export type { paths } from './schema'
 export {
   errorsOf,

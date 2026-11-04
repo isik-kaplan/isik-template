@@ -3,7 +3,10 @@
 import { type ReactNode, createContext, useContext } from 'react'
 
 // language: the saved preference, absent when unset. The language in effect is useLanguage()'s.
-export type Session = { user: { id: string; username: string; email: string; language?: string } } | null
+// display: allauth's label for the account; username is absent for somebody with no handle.
+export type Session = {
+  user: { id: string; display: string; username?: string; email: string; language?: string }
+} | null
 
 const SessionContext = createContext<Session>(null)
 

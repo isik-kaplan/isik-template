@@ -22,7 +22,6 @@ def staff_only(db):
 def test_everybody_the_rung_shuts_out_gets_a_notice_and_nobody_else(staff_only):
     # Skipped ones first, so skipping one isn't mistaken for being done.
     User.objects.create_user(username="gone", email="gone@example.test", is_active=False)
-    User.objects.create_user(username="no-address", email="")
     User.objects.create_user(username="staff", email="staff@example.test", is_staff=True)
     members = [User.objects.create_user(username=f"member-{n}", email=f"member-{n}@example.test") for n in range(3)]
 

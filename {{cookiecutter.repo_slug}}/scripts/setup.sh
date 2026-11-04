@@ -116,11 +116,13 @@ fi
 # nginx appends too, so it counts as one more.
 set_var "${PREFIX}__TRUSTED_PROXY_COUNT" "$((front_proxies + 1))"
 {% endif %}
-superuser_username="$(ask "Superuser username" "admin")"
-set_var "${PREFIX}__SETUP__SUPERUSER__USERNAME" "$superuser_username"
-
 superuser_email="$(ask "Superuser email" "admin@${domain}")"
 set_var "${PREFIX}__SETUP__SUPERUSER__EMAIL" "$superuser_email"
+{%- if cookiecutter.name_requirement != "full_only" %}
+
+superuser_username="$(ask "Superuser username" "admin")"
+set_var "${PREFIX}__SETUP__SUPERUSER__USERNAME" "$superuser_username"
+{%- endif %}
 
 echo
 echo "DEBUG=false switches email from console to real SMTP - needed for password reset and"
@@ -210,7 +212,7 @@ frontend_sentry_dsn="$(ask "Frontend (browser) Sentry DSN" "")"
 
 echo
 echo "Wrote $ENV_FILE for a real deployment."
-echo "Superuser: $superuser_username / $superuser_password - save this, it's only shown once."
+echo "Superuser: $superuser_email / $superuser_password - save this, it's only shown once."
 echo
 {%- if cookiecutter.tls_termination == "self" %}
 echo "Point $domain, api.$domain, admin.$domain, and auth.$domain's DNS at this host's public IP"

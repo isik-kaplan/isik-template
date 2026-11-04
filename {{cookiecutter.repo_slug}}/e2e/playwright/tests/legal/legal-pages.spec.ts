@@ -4,7 +4,7 @@ import { signUpAndVerify } from '../helpers'
 import { DOCUMENTS, englishText, firstLine } from '../legal'
 
 const ADMIN = 'http://admin.{{ cookiecutter.domain }}'
-const SUPERUSER = process.env.{{ cookiecutter.config_prefix }}__SETUP__SUPERUSER__USERNAME ?? ''
+const SUPERUSER_EMAIL = process.env.{{ cookiecutter.config_prefix }}__SETUP__SUPERUSER__EMAIL ?? ''
 const SUPERUSER_PASSWORD = process.env.{{ cookiecutter.config_prefix }}__SETUP__SUPERUSER__PASSWORD ?? ''
 
 test('every legal document is one footer click away, and shows its text or says it is missing', async ({ page }) => {
@@ -56,12 +56,13 @@ test('signing up records which version of the documents the new account agreed t
 
   const admin = await (await browser.newContext()).newPage()
   await admin.goto(`${ADMIN}/`)
-  await admin.getByLabel('Username').fill(SUPERUSER)
+  await admin.getByLabel('Email').fill(SUPERUSER_EMAIL)
   await admin.getByLabel('Password').fill(SUPERUSER_PASSWORD)
   await admin.getByRole('button', { name: 'Log in' }).click()
   await admin.waitForURL(`${ADMIN}/`)
   await admin.goto(`${ADMIN}/users/user/?q=${username}`)
-  await admin.getByRole('link', { name: username, exact: true }).click()
+  // The admin lists people by address, which everybody has.
+  await admin.getByRole('link', { name: `${username}@example.test`, exact: true }).click()
 
   const version = admin.locator('.field-terms_version .readonly')
   const acceptedAt = admin.locator('.field-terms_accepted_at .readonly')

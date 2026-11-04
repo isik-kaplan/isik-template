@@ -19,7 +19,7 @@ export default async function HomePage() {
       <h1 className="text-2xl font-semibold">{t('auth:appTitle')}</h1>
       {session ? (
         <>
-          <p className="text-muted-foreground">{t('auth:signedInAs', { username: session.user.username })}</p>
+          <p className="text-muted-foreground">{t('auth:signedInAs', { name: session.user.display })}</p>
           <nav className="flex flex-wrap justify-center gap-2">
             <Button variant="outline" render={<Link href="/profile" />}>
               {t('auth:homeProfileLink')}

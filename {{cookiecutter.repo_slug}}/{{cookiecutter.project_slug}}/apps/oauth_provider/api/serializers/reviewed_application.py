@@ -5,6 +5,7 @@ from rest_framework import serializers
 from apps.common.api.serializers import BaseModelSerializer
 from apps.oauth_provider.api.fields.redirect_uris import RedirectURIsField
 from apps.users.api.fields.scope import ScopeField
+from apps.users.names import label
 
 
 Application = get_application_model()
@@ -21,7 +22,7 @@ class ReviewedApplicationSerializer(BaseModelSerializer):
     redirect_uris = RedirectURIsField(read_only=True, help_text="Where a sign-in may return to.")
     requested_scopes = ScopeField(many=True, read_only=True, help_text="What it asks to do on somebody's behalf.")
     approved_scopes = ScopeField(many=True, read_only=True, help_text="What of that it may ask anybody for.")
-    owner = serializers.CharField(source="user.username", read_only=True, help_text="Who registered it.")
+    owner = serializers.SerializerMethodField(help_text="Who registered it: their name, handle or address.")
 
     class Meta:
         model = Application
@@ -41,3 +42,7 @@ class ReviewedApplicationSerializer(BaseModelSerializer):
             "updated",
         ]
         read_only_fields = fields
+
+    def get_owner(self, application) -> str:
+        # Only superusers review applications, so the address fallback stays among them.
+        return label(application.user)

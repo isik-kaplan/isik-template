@@ -241,14 +241,6 @@ def test_somebody_with_no_password_proves_at_their_provider_or_sets_one_by_email
 
 
 @pytest.mark.django_db
-def test_nobody_is_offered_a_mail_they_have_no_address_for(alice, providers):
-    alice.set_unusable_password()
-    alice.email = ""
-    alice.save()
-
-    assert proof.ways_to_prove(_request(alice)) == []
-
-
 @pytest.mark.django_db
 def test_a_provider_proof_tells_allauth_whose_challenge_it_was(alice, now):
     seen = []

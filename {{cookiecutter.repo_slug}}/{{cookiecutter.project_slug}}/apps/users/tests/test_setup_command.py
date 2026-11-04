@@ -27,7 +27,8 @@ def test_setup_creates_a_superuser_with_the_configured_credentials():
     call_command("setup")
 
     user = User.objects.get(is_superuser=True)
-    assert user.username == config.SETUP.SUPERUSER.USERNAME
+    # A project that asks for no handle configures none.
+    assert user.username == (config.SETUP.SUPERUSER.USERNAME or None)
     assert user.email == config.SETUP.SUPERUSER.EMAIL
     assert user.check_password(config.SETUP.SUPERUSER.PASSWORD)
 
@@ -43,8 +44,8 @@ def test_setup_confirms_the_configured_address_so_the_superuser_can_sign_in_to_t
 
 
 @pytest.mark.django_db
-def test_setup_prints_a_success_message_naming_the_username():
-    assert _setup_output()[-1] == f"Created superuser '{config.SETUP.SUPERUSER.USERNAME}'."
+def test_setup_prints_a_success_message_naming_the_address():
+    assert _setup_output()[-1] == f"Created superuser '{config.SETUP.SUPERUSER.EMAIL}'."
 
 
 @pytest.mark.django_db

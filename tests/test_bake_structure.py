@@ -473,3 +473,32 @@ def test_the_backend_venv_lives_outside_the_bind_mounted_source(cookies):
     dockerfile = (result.project_path / result.context["project_slug"] / "Dockerfile").read_text()
     assert "ENV UV_PROJECT_ENVIRONMENT=/venv" in dockerfile
     assert 'ENV PATH="/venv/bin:$PATH"' in dockerfile
+
+
+NAME_REQUIREMENTS = json.loads(Path(__file__).parent.parent.joinpath("cookiecutter.json").read_text())["name_requirement"]
+
+
+@pytest.mark.parametrize("requirement", NAME_REQUIREMENTS)
+def test_each_name_requirement_bakes_into_the_settings_it_names(cookies, requirement):
+    """The backend's own tests cover every requirement whichever is baked; this checks the bake picks one."""
+    result = cookies.bake(extra_context={**load_context("default"), "name_requirement": requirement})
+    assert result.exit_code == 0
+
+    slug = result.context["project_slug"]
+    settings = (result.project_path / slug / slug / "settings.py").read_text()
+    prefix = result.context["config_prefix"]
+    env_example = (result.project_path / ".env.example").read_text()
+    setup = (result.project_path / "scripts" / "setup.sh").read_text()
+
+    assert f"NAME_REQUIREMENT = NameRequirement.{requirement.upper()}\n" in settings
+    # A project that never asks for a handle gives its superuser none.
+    asks_for_a_handle = requirement != "full_only"
+    assert (f"{prefix}__SETUP__SUPERUSER__USERNAME=admin" in env_example) is asks_for_a_handle
+    assert ('set_var "${PREFIX}__SETUP__SUPERUSER__USERNAME"' in setup) is asks_for_a_handle
+    assert f"{prefix}__SETUP__SUPERUSER__EMAIL=admin@" in env_example
+
+
+def test_an_unknown_name_requirement_is_refused(cookies):
+    result = cookies.bake(extra_context={**load_context("default"), "name_requirement": "nickname_only"})
+
+    assert result.exit_code != 0

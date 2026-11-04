@@ -49,7 +49,8 @@ CONFIG = config(
 {%- endif %}
         "SETUP": {
             "SUPERUSER": {
-                "USERNAME": string(),
+                # Empty for no handle.
+                "USERNAME": string(missing_default=""),
                 "EMAIL": string(),
                 "PASSWORD": string(),
             },

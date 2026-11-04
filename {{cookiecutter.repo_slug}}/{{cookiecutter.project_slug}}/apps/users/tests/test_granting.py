@@ -12,7 +12,9 @@ from apps.users.permissions import Permission
 
 
 def holding(*names, is_staff=False, is_superuser=False, username="actor"):
-    person = User.objects.create_user(username=username, is_staff=is_staff, is_superuser=is_superuser)
+    person = User.objects.create_user(
+        email=f"{username}@example.test", username=username, is_staff=is_staff, is_superuser=is_superuser
+    )
     sentinel = ContentType.objects.get_for_model(PermissionRow)
     person.user_permissions.add(*PermissionRow.objects.filter(content_type=sentinel, codename__in=names))
     return User.objects.get(pk=person.pk)

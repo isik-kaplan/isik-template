@@ -37,11 +37,11 @@ export default async function ProfileTabsLayout({ children }: { children: React.
       <div className="flex flex-col items-center gap-3">
         <Avatar className="size-14">
           <AvatarFallback className="text-lg leading-none font-semibold uppercase">
-            {getInitials(user.username)}
+            {getInitials(user.display)}
           </AvatarFallback>
         </Avatar>
         <div className="flex flex-col items-center gap-0.5">
-          <p className="text-base font-semibold">{user.username}</p>
+          <p className="text-base font-semibold">{user.display}</p>
           {user.email && <p className="text-sm text-muted-foreground">{user.email}</p>}
         </div>
       </div>

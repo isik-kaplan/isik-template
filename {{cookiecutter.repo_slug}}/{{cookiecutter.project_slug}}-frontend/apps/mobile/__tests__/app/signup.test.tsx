@@ -1,6 +1,14 @@
 import Signup from '@/app/signup'
+import type { NameRequirement } from '@/lib/nameRequirement'
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native'
+
+let mockRequirement: NameRequirement = 'username_with_optional_full'
+jest.mock('@/lib/nameRequirement', () => ({
+  get NAME_REQUIREMENT() {
+    return mockRequirement
+  },
+}))
 
 const mockSignup = jest.fn()
 jest.mock('@/lib/session', () => ({ getAuthApi: () => ({ signup: (...args: unknown[]) => mockSignup(...args) }) }))
@@ -14,8 +22,28 @@ jest.mock('expo-router', () => {
   }
 })
 
+// Each requirement's names as the backend's NameRequirement offers them, in form order.
+const OFFERED: [NameRequirement, string[]][] = [
+  ['username_with_optional_full', ['username', 'first_name', 'last_name']],
+  ['full_only', ['first_name', 'last_name']],
+  ['full_and_username', ['first_name', 'last_name', 'username']],
+  ['full_with_optional_username', ['first_name', 'last_name', 'username']],
+  ['username_only', ['username']],
+]
+const TEST_IDS: Record<string, string> = {
+  first_name: 'first-name-input',
+  last_name: 'last-name-input',
+  username: 'username-input',
+}
+const PLACEHOLDERS: Record<string, string> = { first_name: 'First name', last_name: 'Last name', username: 'Username' }
+const VALUES: Record<string, string> = { first_name: 'Jane', last_name: 'Doe', username: 'jane' }
+const inputOrder = () => screen.getAllByTestId(/-input$/).map((node) => node.props.testID)
+
 describe('Signup', () => {
-  beforeEach(() => jest.clearAllMocks())
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockRequirement = 'username_with_optional_full'
+  })
 
   it('navigates to the authenticated home on a successful signup', async () => {
     mockSignup.mockResolvedValue({ data: { meta: { is_authenticated: true } }, error: undefined })
@@ -25,7 +53,13 @@ describe('Signup', () => {
     await fireEvent.changeText(screen.getByTestId('password-input'), 'correct-horse')
     await fireEvent.press(screen.getByTestId('signup-submit'))
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/(authenticated)/home'))
-    expect(mockSignup).toHaveBeenCalledWith({ username: 'jane', email: 'jane@test.test', password: 'correct-horse' })
+    expect(mockSignup).toHaveBeenCalledWith({
+      username: 'jane',
+      first_name: '',
+      last_name: '',
+      email: 'jane@test.test',
+      password: 'correct-horse',
+    })
   })
 
   it('says signing up, by either route, is agreeing to the legal documents', async () => {
@@ -183,5 +217,36 @@ describe('Signup', () => {
       )
     )
     expect(mockReplace).not.toHaveBeenCalled()
+  })
+
+  describe.each(OFFERED)('under %s', (name, offered) => {
+    beforeEach(() => {
+      mockRequirement = name
+    })
+
+    it('asks for exactly its names, in its order, before the email and password', async () => {
+      await render(<Signup />)
+      expect(inputOrder()).toEqual([...offered.map((field) => TEST_IDS[field]), 'email-input', 'password-input'])
+      for (const field of offered) {
+        expect(screen.getByTestId(TEST_IDS[field]).props.placeholder).toBe(PLACEHOLDERS[field])
+        expect(screen.getByTestId(TEST_IDS[field]).props.value).toBe('')
+        expect(screen.getByTestId(TEST_IDS[field]).props.autoCapitalize).toBe(field === 'username' ? 'none' : 'words')
+      }
+    })
+
+    it('sends only its names, with the email and password', async () => {
+      mockSignup.mockResolvedValue({ data: { meta: { is_authenticated: true } }, error: undefined })
+      await render(<Signup />)
+      for (const field of offered) await fireEvent.changeText(screen.getByTestId(TEST_IDS[field]), VALUES[field])
+      await fireEvent.changeText(screen.getByTestId('email-input'), 'jane@test.test')
+      await fireEvent.changeText(screen.getByTestId('password-input'), 'correct-horse')
+      await fireEvent.press(screen.getByTestId('signup-submit'))
+      await waitFor(() => expect(mockReplace).toHaveBeenCalled())
+      expect(mockSignup).toHaveBeenCalledWith({
+        email: 'jane@test.test',
+        password: 'correct-horse',
+        ...Object.fromEntries(offered.map((field) => [field, VALUES[field]])),
+      })
+    })
   })
 })

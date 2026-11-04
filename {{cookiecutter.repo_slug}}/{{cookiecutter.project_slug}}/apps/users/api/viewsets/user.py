@@ -42,7 +42,8 @@ class UserViewSet(ProvesWhoTheyAre, HistoryMixin, BaseModelViewSet):
     filterset_fields = {"is_active": ["exact"], "is_staff": ["exact"], "is_superuser": ["exact"]}
     search_fields = ["username", "email", "first_name", "last_name"]
     ordering_fields = ["username", "email", "created_at", "last_login"]
-    ordering = ["username"]
+    # The address, which everybody has; a handle is optional.
+    ordering = ["email"]
     history_list_permission_classes = [IsAuthenticated]
     history_list_scoped_to_queryset = True
     reauthentication_exempt_actions = {

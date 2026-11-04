@@ -11,6 +11,8 @@ vi.mock('@/lib/getSession', () => ({
 }))
 vi.mock('next/headers', () => ({ headers: async () => new Headers({ host: 'test-project.test' }) }))
 const push = vi.fn()
+// Pinned: the form's fields follow the generated requirement.
+vi.mock('@/config/names', () => ({ NAME_REQUIREMENT: 'username_with_optional_full' }))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }))
 vi.mock('@/config/public', () => ({ CONFIG: { DOMAIN: 'test-project.test' } }))
 vi.mock('@/lib/socialProviders', () => ({ socialProviders: () => [{ id: 'google', name: 'Google', icon: '' }] }))

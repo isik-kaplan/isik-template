@@ -17,6 +17,13 @@
   "storage": ["garage", "s3", "disk"],
   "cache": ["redis", "database"],
   "webhooks": ["none", "staff", "users"],
+  "name_requirement": [
+    "username_with_optional_full",
+    "full_only",
+    "full_and_username",
+    "full_with_optional_username",
+    "username_only"
+  ],
   "isik_version": "0.48.0",
   "isikk_core_version": "0.20.0",
   "_copy_without_render": [
@@ -46,6 +53,14 @@
       "none": "None: notifications reach the inbox and email only",
       "staff": "Endpoints staff register for the whole deployment",
       "users": "Endpoints each user registers for their own notifications"
+    },
+    "name_requirement": {
+      "__prompt__": "What a signup asks people to be called",
+      "username_with_optional_full": "A handle; first and last name optional",
+      "full_only": "First and last name; no handle",
+      "full_and_username": "First and last name, and a handle",
+      "full_with_optional_username": "First and last name; handle optional",
+      "username_only": "A handle; no name asked for"
     }
   }
 }

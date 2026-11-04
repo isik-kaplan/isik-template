@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const pendingProviderSignup = vi.fn()
 const AuthApi = vi.hoisted(() => vi.fn())
+// Pinned: the form's fields follow the generated requirement.
+vi.mock('@/config/names', () => ({ NAME_REQUIREMENT: 'username_with_optional_full' }))
 vi.mock('@{{ cookiecutter.repo_slug }}/auth-api', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   AuthApi,

@@ -1449,11 +1449,11 @@ export interface components {
              * @description Identifies this record. A UUIDv7, so ids sort roughly by when they were created.
              */
             readonly id: string;
-            /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
-            readonly username: string;
+            /** @description A handle this user chose, or empty if they have none. */
+            readonly username: string | null;
             /**
-             * Email address
              * Format: email
+             * @description The address this user signs in with and is written to at.
              */
             readonly email: string;
             readonly first_name: string;
@@ -1835,9 +1835,12 @@ export interface components {
         };
         /** @description The signed-in person, as they see and edit themselves; nobody changes their own rank or permissions. */
         PatchedUserRequest: {
-            /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
-            username?: string;
-            /** Email address */
+            /** @description A handle this user chose, or empty if they have none. */
+            username?: string | null;
+            /**
+             * Format: email
+             * @description The address this user signs in with and is written to at.
+             */
             email?: string;
             first_name?: string;
             last_name?: string;
@@ -1936,7 +1939,7 @@ export interface components {
             readonly redirect_uris: string[];
             /** @description Where it stands. Only an approved application signs anybody in or holds working tokens. */
             readonly approval: components["schemas"]["ApplicationApproval"];
-            /** @description Who registered it. */
+            /** @description Who registered it: their name, handle or address. */
             readonly owner: string;
             /** @description What it asks to do on somebody's behalf. */
             readonly requested_scopes: string[];
@@ -2050,10 +2053,13 @@ export interface components {
              * @description Identifies this record. A UUIDv7, so ids sort roughly by when they were created.
              */
             readonly id: string;
-            /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
-            username: string;
-            /** Email address */
-            email?: string;
+            /** @description A handle this user chose, or empty if they have none. */
+            username?: string | null;
+            /**
+             * Format: email
+             * @description The address this user signs in with and is written to at.
+             */
+            email: string;
             first_name?: string;
             last_name?: string;
             /** @description The language this user chose for the interface, or blank to follow their browser's. */
@@ -2092,11 +2098,11 @@ export interface components {
              * @description Identifies this record. A UUIDv7, so ids sort roughly by when they were created.
              */
             readonly id: string;
-            /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
-            readonly username: string;
+            /** @description A handle this user chose, or empty if they have none. */
+            readonly username: string | null;
             /**
-             * Email address
              * Format: email
+             * @description The address this user signs in with and is written to at.
              */
             readonly email: string;
             readonly first_name: string;

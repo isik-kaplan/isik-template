@@ -11,6 +11,7 @@ import { Label } from '@/components/base/label'
 
 import { useClientTranslation } from '@/i18n/client'
 import { authOrigin } from '@/lib/authOrigin'
+import { handleLogsIn } from '@/lib/names'
 import { VERIFY_EMAIL_REQUIRED_PATH } from '@/lib/sessionChannel'
 import { useAuthValidatedFormState } from '@/lib/submit'
 
@@ -25,7 +26,9 @@ export function LoginForm({ redirectTo = '/' }: { redirectTo?: string }) {
   const schema = useMemo(
     () =>
       z.object({
-        login: z.string().min(1, t('auth:validationLoginRequired')),
+        login: z
+          .string()
+          .min(1, handleLogsIn() ? t('auth:validationLoginRequired') : t('auth:validationEmailRequired')),
         password: z.string().min(1, t('auth:validationPasswordRequired')),
       }),
     [t]
@@ -68,7 +71,7 @@ export function LoginForm({ redirectTo = '/' }: { redirectTo?: string }) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <Label htmlFor="login">{t('auth:loginIdentifierLabel')}</Label>
+        <Label htmlFor="login">{handleLogsIn() ? t('auth:loginIdentifierLabel') : t('auth:loginEmailLabel')}</Label>
         <Input
           id="login"
           name="login"

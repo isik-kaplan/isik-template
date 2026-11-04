@@ -35,6 +35,9 @@ class AccountAdapter(DefaultAccountAdapter):
         user = super().authenticate(request, **credentials)
         return user if user is None or admits(user, SiteSettings.current().login_policy) else None
 
+    def populate_username(self, request, user):
+        """Never invent a handle out of the name and the address: having none is allowed."""
+
     def save_user(self, request, user, form, commit=True):
         self.accept_terms(user)
         return super().save_user(request, user, form, commit=commit)

@@ -387,6 +387,24 @@
       ]
     }
   ],
+  "src/components/app-auth/NameFields.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
   "src/components/app-auth/PasskeyList.tsx": [
     {
       "mutator": "ArrayDeclaration",
@@ -819,7 +837,7 @@
     },
     {
       "mutator": "StringLiteral",
-      "fingerprint": "7e0a6e1dccbf",
+      "fingerprint": "75d9d064893b",
       "reason": [
         "equivalent mutant, unreachable rather than untested - the submit hook only falls back to this",
         "string when allauth's refusal carries no message, which by isSuccess above already means this call",
@@ -988,7 +1006,7 @@
     },
     {
       "mutator": "ArrayDeclaration",
-      "fingerprint": "11c47177b97b",
+      "fingerprint": "97b1affc6913",
       "reason": [
         "equivalent mutant. t's reference only changes with the language, which this form never sees change",
         "while it is mounted, so this memo recomputes the same schema either way."

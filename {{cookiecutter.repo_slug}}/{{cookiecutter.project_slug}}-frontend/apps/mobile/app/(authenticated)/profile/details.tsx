@@ -10,7 +10,7 @@ import { Text } from 'react-native'
 
 export default function ProfileDetails() {
   const { t } = useTranslation()
-  const [user, setUser] = useState<{ username: string; email: string; language?: string } | undefined>()
+  const [user, setUser] = useState<{ username?: string; email: string; language?: string } | undefined>()
   const isMounted = useIsMounted()
 
   useEffect(() => {
@@ -24,10 +24,12 @@ export default function ProfileDetails() {
   return (
     <Screen testID="profile-details">
       <Heading testID="profile-details-heading">{t('profileDetailsHeading')}</Heading>
-      <ListRow testID="profile-details-username-row">
-        <Text>{t('profileDetailsUsernameLabel')}</Text>
-        <Text testID="profile-details-username">{user?.username}</Text>
-      </ListRow>
+      {user?.username ? (
+        <ListRow testID="profile-details-username-row">
+          <Text>{t('profileDetailsUsernameLabel')}</Text>
+          <Text testID="profile-details-username">{user.username}</Text>
+        </ListRow>
+      ) : null}
       <ListRow testID="profile-details-email-row">
         <Text>{t('profileDetailsEmailLabel')}</Text>
         <Text testID="profile-details-email">{user?.email}</Text>

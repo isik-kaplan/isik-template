@@ -1,6 +1,9 @@
 import { ProfileNameForm } from '@/components/app-auth/ProfileNameForm'
 import { EditModeProvider, WhileEditing, WhileReading, useEditMode } from '@/components/app/EditMode'
 
+import { NAME_FIELDS, NAME_LABELS, NAME_REQUIRED_MESSAGES, NAME_TABLE, NAME_VALUES } from '@/__tests__/support/names'
+import type { NameRequirement } from '@/config/names'
+
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { toast } from 'sonner'
@@ -8,6 +11,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 vi.mock('@/lib/apiOrigin', () => ({ apiOrigin: () => 'http://api.test-project.test' }))
+
+const requirement = vi.hoisted(() => ({ current: 'username_with_optional_full' as NameRequirement }))
+vi.mock('@/config/names', () => ({
+  get NAME_REQUIREMENT() {
+    return requirement.current
+  },
+}))
 
 // As the API answers: the version only ever in the ETag header, never in the body.
 const ANSWERED = { username: 'jane', email: 'jane@test.test', first_name: 'Jane', last_name: 'Doe' }
@@ -55,6 +65,7 @@ describe('ProfileNameForm', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    requirement.current = 'username_with_optional_full'
   })
 
   afterEach(() => {
@@ -71,7 +82,7 @@ describe('ProfileNameForm', () => {
   })
 
   it('starts both names empty for a user the API answered without them', () => {
-    renderForm(vi.fn(), { username: 'jane', etag: '"1"' })
+    renderForm(vi.fn(), { username: 'jane', email: 'jane@test.test', etag: '"1"' })
 
     expect((screen.getByLabelText('First name') as HTMLInputElement).value).toBe('')
     expect((screen.getByLabelText('Last name') as HTMLInputElement).value).toBe('')
@@ -209,5 +220,63 @@ describe('ProfileNameForm', () => {
     await save()
 
     expect(toast.error).toHaveBeenCalledWith('Could not save your details.')
+  })
+  describe.each(NAME_TABLE)('under %s', (name, offered, required) => {
+    const names = offered.filter((field) => field !== 'username')
+    const BLANK = { username: null, email: 'jane@test.test', first_name: '', last_name: '', etag: '"1"' }
+
+    beforeEach(() => {
+      requirement.current = name
+    })
+
+    it('edits only its names once a handle is chosen', () => {
+      renderForm(vi.fn(), USER)
+
+      expect([...document.querySelectorAll('input')].map((input) => input.name)).toEqual(names)
+    })
+
+    it('lets somebody with no handle choose one, where one is asked for', () => {
+      renderForm(vi.fn(), BLANK)
+
+      expect([...document.querySelectorAll('input')].map((input) => input.name)).toEqual(offered)
+    })
+
+    it('refuses exactly the required names left empty', async () => {
+      globalThis.fetch = vi.fn() as unknown as typeof fetch
+      renderForm(vi.fn(), BLANK)
+
+      await save()
+
+      for (const field of NAME_FIELDS) {
+        expect(screen.queryByText(NAME_REQUIRED_MESSAGES[field]) !== null).toBe(required.includes(field))
+      }
+      expect(globalThis.fetch).not.toHaveBeenCalled()
+    })
+
+    it('sends only the names it shows', async () => {
+      const fetchMock = vi.fn(async (_input: Request) => jsonResponse(200, { ...ANSWERED, ...NAME_VALUES }, '"2"'))
+      globalThis.fetch = fetchMock as unknown as typeof fetch
+      const user = userEvent.setup()
+      renderForm(vi.fn(), BLANK)
+
+      for (const field of offered) await user.type(screen.getByLabelText(NAME_LABELS[field]), NAME_VALUES[field])
+      await user.click(screen.getByRole('button', { name: 'Save' }))
+
+      expect(await fetchMock.mock.calls[0][0].json()).toEqual(
+        Object.fromEntries(offered.map((field) => [field, NAME_VALUES[field]]))
+      )
+    })
+  })
+
+  it('leaves a chosen handle alone, required or not', async () => {
+    requirement.current = 'full_and_username'
+    const fetchMock = vi.fn(async (_input: Request) => jsonResponse(200, ANSWERED, '"2"'))
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+    renderForm(vi.fn(), { ...USER, username: 'jane' })
+
+    await save()
+
+    expect(screen.queryByText('Choose a username.')).toBeNull()
+    expect(await fetchMock.mock.calls[0][0].json()).toEqual({ first_name: 'Jane', last_name: 'Doe' })
   })
 })

@@ -44,7 +44,7 @@ def reviewer(superuser, headless, provider):
 def pending(db, alice):
     application = make_application(
         name="Bob's Planner",
-        user=User.objects.create_user(username="bob"),
+        user=User.objects.create_user(email="bob@example.test", username="bob"),
         client_type=Application.CLIENT_PUBLIC,
         authorization_grant_type=Application.GRANT_AUTHORIZATION_CODE,
         redirect_uris=REDIRECT_URI,

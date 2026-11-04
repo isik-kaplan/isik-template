@@ -144,7 +144,7 @@ def test_there_is_a_ceiling_on_how_many_one_person_keeps(client, proven, headles
 
 @pytest.mark.django_db
 def test_the_ceiling_is_counted_per_person(client, proven):
-    bob = User.objects.create_user(username="bob")
+    bob = User.objects.create_user(email="bob@example.test", username="bob")
     for number in range(TOKENS_PER_USER):
         make_token(user=bob, scopes=[], name=f"token {number}")
 
@@ -155,7 +155,7 @@ def test_the_ceiling_is_counted_per_person(client, proven):
 def test_somebody_sees_only_their_own_tokens_newest_first(client, signed_in):
     older = make_token(user=signed_in, scopes=[], name="older")
     newer = make_token(user=signed_in, scopes=[], name="newer")
-    make_token(user=User.objects.create_user(username="bob"), scopes=[], name="bob's")
+    make_token(user=User.objects.create_user(email="bob@example.test", username="bob"), scopes=[], name="bob's")
 
     rows = client.get(LIST).json()["results"]
 
@@ -165,7 +165,9 @@ def test_somebody_sees_only_their_own_tokens_newest_first(client, signed_in):
 
 @pytest.mark.django_db
 def test_somebody_elses_token_is_not_found(client, signed_in):
-    theirs = make_token(user=User.objects.create_user(username="bob"), scopes=[], name="bob's")
+    theirs = make_token(
+        user=User.objects.create_user(email="bob@example.test", username="bob"), scopes=[], name="bob's"
+    )
 
     assert client.get(_detail(theirs)).status_code == 404
     assert client.delete(_detail(theirs)).status_code == 404

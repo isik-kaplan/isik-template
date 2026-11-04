@@ -1,11 +1,28 @@
 import { SignupForm } from '@/components/app-auth/SignupForm'
 
+import {
+  NAME_AUTOCOMPLETE,
+  NAME_FIELDS,
+  NAME_LABELS,
+  NAME_REQUIRED_MESSAGES,
+  NAME_TABLE,
+  NAME_VALUES,
+} from '@/__tests__/support/names'
+import type { NameRequirement } from '@/config/names'
+
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
+
+const requirement = vi.hoisted(() => ({ current: 'username_with_optional_full' as NameRequirement }))
+vi.mock('@/config/names', () => ({
+  get NAME_REQUIREMENT() {
+    return requirement.current
+  },
+}))
 
 const push = vi.fn()
 
@@ -30,6 +47,7 @@ describe('SignupForm', () => {
   beforeEach(() => {
     vi.mocked(toast.error).mockClear()
     push.mockClear()
+    requirement.current = 'username_with_optional_full'
   })
 
   afterEach(() => {
@@ -203,5 +221,78 @@ describe('SignupForm', () => {
     await fillAndSubmit(user)
 
     await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('Could not sign you up.'))
+  })
+  describe.each(NAME_TABLE)('under %s', (name, offered, required) => {
+    beforeEach(() => {
+      requirement.current = name
+    })
+
+    it('asks for exactly its names, in its order, before the email and password', () => {
+      const { container } = render(<SignupForm />)
+
+      const inputs = [...container.querySelectorAll('input')]
+      expect(inputs.map((input) => input.name)).toEqual([...offered, 'email', 'password'])
+      for (const field of offered) {
+        const input = screen.getByLabelText(NAME_LABELS[field]) as HTMLInputElement
+        expect([input.name, input.value, input.autocomplete]).toEqual([field, '', NAME_AUTOCOMPLETE[field]])
+      }
+    })
+
+    it('refuses exactly the required names left empty', async () => {
+      const user = userEvent.setup()
+      render(<SignupForm />)
+
+      await user.type(screen.getByLabelText('Email'), 'jane@example.com')
+      await user.type(screen.getByLabelText('Password'), 'correct-horse-battery')
+      await user.click(screen.getByRole('button', { name: 'Sign up' }))
+
+      await vi.waitFor(() => expect(screen.getByText(NAME_REQUIRED_MESSAGES[required[0]])).toBeTruthy())
+      for (const field of NAME_FIELDS) {
+        expect(screen.queryByText(NAME_REQUIRED_MESSAGES[field]) !== null).toBe(required.includes(field))
+      }
+    })
+
+    it('refuses a required name of only spaces', async () => {
+      const user = userEvent.setup()
+      render(<SignupForm />)
+
+      await user.type(screen.getByLabelText(NAME_LABELS[required[0]]), '   ')
+      await user.click(screen.getByRole('button', { name: 'Sign up' }))
+
+      expect(await screen.findByText(NAME_REQUIRED_MESSAGES[required[0]])).toBeTruthy()
+    })
+
+    it('sends only its names, with the email and password', async () => {
+      const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        jsonResponse(200, { status: 200, data: { user: {} }, meta: { is_authenticated: true } })
+      )
+      globalThis.fetch = fetchMock
+      const user = userEvent.setup()
+      render(<SignupForm />)
+
+      for (const field of offered) await user.type(screen.getByLabelText(NAME_LABELS[field]), NAME_VALUES[field])
+      await user.type(screen.getByLabelText('Email'), 'jane@example.com')
+      await user.type(screen.getByLabelText('Password'), 'correct-horse-battery')
+      await user.click(screen.getByRole('button', { name: 'Sign up' }))
+
+      await vi.waitFor(() => expect(push).toHaveBeenCalled())
+      const postCall = fetchMock.mock.calls.find(([request]) => request instanceof Request)
+      const body = await (postCall?.[0] as Request).clone().json()
+      expect(body).toEqual({
+        email: 'jane@example.com',
+        password: 'correct-horse-battery',
+        ...Object.fromEntries(offered.map((field) => [field, NAME_VALUES[field]])),
+      })
+    })
+  })
+
+  it('refuses a name longer than the column', async () => {
+    const user = userEvent.setup()
+    render(<SignupForm />)
+
+    fireEvent.change(screen.getByLabelText('First name'), { target: { value: 'a'.repeat(151) } })
+    await user.click(screen.getByRole('button', { name: 'Sign up' }))
+
+    expect(await screen.findByText('Use at most 150 characters.')).toBeTruthy()
   })
 })

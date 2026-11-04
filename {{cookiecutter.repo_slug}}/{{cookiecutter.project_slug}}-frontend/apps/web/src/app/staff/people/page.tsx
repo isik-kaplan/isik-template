@@ -10,6 +10,7 @@ import { Badge } from '@/components/base/badge'
 
 import { sUseTranslation } from '@/i18n'
 import { maySeePeople } from '@/lib/access'
+import { personLabel } from '@/lib/names'
 import { serverApi } from '@/lib/serverApi'
 
 import type { ApiQuery } from '@{{ cookiecutter.repo_slug }}/api'
@@ -54,7 +55,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
           {people.map((person) => (
             <li key={person.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-3">
               <Link href={`/staff/people/${person.id}`} className="font-medium underline-offset-4 hover:underline">
-                {person.username}
+                {personLabel(person)}
               </Link>
               <span className="text-sm text-muted-foreground">{person.email}</span>
               {person.is_superuser && <Badge>{t('auth:peopleSuperuser')}</Badge>}

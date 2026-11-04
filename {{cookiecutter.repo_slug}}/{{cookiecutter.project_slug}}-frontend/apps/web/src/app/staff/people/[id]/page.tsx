@@ -5,6 +5,7 @@ import { PageShell } from '@/components/app/PageShell'
 
 import { sUseTranslation } from '@/i18n'
 import { maySeePeople } from '@/lib/access'
+import { personLabel } from '@/lib/names'
 import { serverApi } from '@/lib/serverApi'
 
 import { etagOf } from '@{{ cookiecutter.repo_slug }}/api'
@@ -25,7 +26,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
 
   return (
     <PageShell
-      title={person.username}
+      title={personLabel(person)}
       description={person.email}
       backHref="/staff/people"
       backLabel={t('auth:peopleBack')}

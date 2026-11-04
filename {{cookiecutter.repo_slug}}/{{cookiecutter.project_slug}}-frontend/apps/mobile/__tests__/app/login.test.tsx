@@ -1,6 +1,14 @@
 import Login from '@/app/login'
+import type { NameRequirement } from '@/lib/nameRequirement'
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native'
+
+let mockRequirement: NameRequirement = 'username_with_optional_full'
+jest.mock('@/lib/nameRequirement', () => ({
+  get NAME_REQUIREMENT() {
+    return mockRequirement
+  },
+}))
 
 const mockLogin = jest.fn()
 jest.mock('@/lib/session', () => ({ getAuthApi: () => ({ login: (...args: unknown[]) => mockLogin(...args) }) }))
@@ -16,7 +24,10 @@ jest.mock('expo-router', () => {
 })
 
 describe('Login', () => {
-  beforeEach(() => jest.clearAllMocks())
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockRequirement = 'full_only'
+  })
 
   it('navigates to the authenticated home on a successful login', async () => {
     mockLogin.mockResolvedValue({ data: { meta: { is_authenticated: true } }, error: undefined })
@@ -201,5 +212,46 @@ describe('Login', () => {
       expect(screen.getByTestId('login-error').props.children).toBe('Too many requests. Wait a moment, then try again.')
     )
     expect(mockReplace).not.toHaveBeenCalled()
+  })
+
+  describe.each<[NameRequirement, boolean]>([
+    ['username_with_optional_full', true],
+    ['full_only', false],
+    ['full_and_username', true],
+    ['full_with_optional_username', false],
+    ['username_only', true],
+  ])('under %s', (name, byHandle) => {
+    beforeEach(() => {
+      mockRequirement = name
+    })
+
+    it(byHandle ? 'asks for a username or an email' : 'asks for an email alone', async () => {
+      await render(<Login />)
+      expect(screen.getByTestId('email-input').props.placeholder).toBe(byHandle ? 'Username or email' : 'Email')
+      expect(screen.getByTestId('email-input').props.keyboardType).toBe(byHandle ? 'default' : 'email-address')
+    })
+
+    it(byHandle ? 'sends a plain identifier as the username' : 'sends any identifier as the email', async () => {
+      mockLogin.mockResolvedValue({ data: { meta: { is_authenticated: true } }, error: undefined })
+      await render(<Login />)
+      await fireEvent.changeText(screen.getByTestId('email-input'), 'jane')
+      await fireEvent.changeText(screen.getByTestId('password-input'), 'correct-horse')
+      await fireEvent.press(screen.getByTestId('login-submit'))
+      await waitFor(() => expect(mockReplace).toHaveBeenCalled())
+      expect(mockLogin).toHaveBeenCalledWith({
+        ...(byHandle ? { username: 'jane' } : { email: 'jane' }),
+        password: 'correct-horse',
+      })
+    })
+
+    it('sends an address as the email', async () => {
+      mockLogin.mockResolvedValue({ data: { meta: { is_authenticated: true } }, error: undefined })
+      await render(<Login />)
+      await fireEvent.changeText(screen.getByTestId('email-input'), 'jane@test.test')
+      await fireEvent.changeText(screen.getByTestId('password-input'), 'correct-horse')
+      await fireEvent.press(screen.getByTestId('login-submit'))
+      await waitFor(() => expect(mockReplace).toHaveBeenCalled())
+      expect(mockLogin).toHaveBeenCalledWith({ email: 'jane@test.test', password: 'correct-horse' })
+    })
   })
 })

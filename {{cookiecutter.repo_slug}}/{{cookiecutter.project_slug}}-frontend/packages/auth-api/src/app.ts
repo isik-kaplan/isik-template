@@ -1,3 +1,4 @@
+import type { ProviderSignupBody, SignupBody } from './client'
 import { createOpenApiClient } from './httpClient'
 import type { paths } from './schema'
 
@@ -70,7 +71,7 @@ export class AppAuthApi {
     return this.client.POST('/v0/app/v1/auth/login', { body: credentials })
   }
 
-  async signup(data: { username: string; email: string; password: string }) {
+  async signup(data: SignupBody) {
     return this.client.POST('/v0/app/v1/auth/signup', { body: data })
   }
 
@@ -156,7 +157,7 @@ export class AppAuthApi {
     return this.client.GET('/v0/app/v1/auth/provider/signup')
   }
 
-  async completeProviderSignup(data: { username: string; email: string; password?: string }) {
+  async completeProviderSignup(data: ProviderSignupBody) {
     return this.client.POST('/v0/app/v1/auth/provider/signup', { body: data })
   }
 

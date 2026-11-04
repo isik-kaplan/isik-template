@@ -14,7 +14,7 @@ vi.mock('@/config/public', () => ({ CONFIG }))
 const me = vi.fn()
 vi.mock('@/lib/serverApi', () => ({ serverApi: async () => ({ me }) }))
 
-const JANE = { user: { id: '1', username: 'jane', email: 'jane@test.test' } }
+const JANE = { user: { id: '1', username: 'jd', display: 'Jane Doe', email: 'jane@test.test' } }
 
 function asked(fields: { is_staff?: boolean; is_superuser?: boolean; permissions?: string[] } = {}) {
   me.mockResolvedValue({ data: { is_staff: false, is_superuser: false, permissions: [], ...fields } })
@@ -28,13 +28,13 @@ describe('HomePage', () => {
     CONFIG.OAUTH_PROVIDER.MODE = 'approval'
   })
 
-  it('greets a logged-in visitor by username, with a logout button', async () => {
+  it('greets a logged-in visitor by their account label, with a logout button', async () => {
     getSession.mockResolvedValue(JANE)
     asked()
 
     render(await HomePage())
 
-    expect(screen.getByText(/jane/)).toBeTruthy()
+    expect(screen.getByText('Signed in as Jane Doe.')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Log out' })).toBeTruthy()
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('{{ cookiecutter.project_name }}')
   })

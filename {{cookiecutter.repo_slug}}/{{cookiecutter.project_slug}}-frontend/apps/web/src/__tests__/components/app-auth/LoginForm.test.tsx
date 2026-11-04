@@ -1,5 +1,7 @@
 import { LoginForm } from '@/components/app-auth/LoginForm'
 
+import { NAME_TABLE } from '@/__tests__/support/names'
+import type { NameRequirement } from '@/config/names'
 import { VERIFY_EMAIL_REQUIRED_PATH } from '@/lib/sessionChannel'
 
 import { expectUniqueAccessibleNames } from '@isikk/core/testing'
@@ -9,6 +11,13 @@ import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
+
+const requirement = vi.hoisted(() => ({ current: 'username_with_optional_full' as NameRequirement }))
+vi.mock('@/config/names', () => ({
+  get NAME_REQUIREMENT() {
+    return requirement.current
+  },
+}))
 
 const push = vi.fn()
 const refresh = vi.fn()
@@ -28,6 +37,7 @@ describe('LoginForm', () => {
     vi.mocked(toast.error).mockClear()
     push.mockClear()
     refresh.mockClear()
+    requirement.current = 'username_with_optional_full'
   })
 
   afterEach(() => {
@@ -231,5 +241,30 @@ describe('LoginForm', () => {
     expect(push).toHaveBeenCalledTimes(1)
     expect(refresh).not.toHaveBeenCalled()
     expect(screen.queryByText('Could not log you in.')).toBeNull()
+  })
+  describe.each(NAME_TABLE)('under %s', (name, _offered, required) => {
+    const byHandle = required.includes('username')
+    const label = byHandle ? 'Username or email' : 'Email'
+    const missing = byHandle ? 'Enter your username or email.' : 'Enter your email.'
+
+    beforeEach(() => {
+      requirement.current = name
+    })
+
+    it(`asks for "${label}", the only ways in`, () => {
+      render(<LoginForm />)
+
+      expect((screen.getByLabelText(label) as HTMLInputElement).name).toBe('login')
+    })
+
+    it(`says "${missing}" for an empty identifier`, async () => {
+      const user = userEvent.setup()
+      render(<LoginForm />)
+
+      await user.type(screen.getByLabelText('Password'), 'secret123')
+      await user.click(screen.getByRole('button', { name: 'Log in' }))
+
+      expect(await screen.findByText(missing)).toBeTruthy()
+    })
   })
 })

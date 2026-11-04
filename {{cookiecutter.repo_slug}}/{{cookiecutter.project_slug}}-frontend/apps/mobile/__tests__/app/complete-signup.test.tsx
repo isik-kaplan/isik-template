@@ -1,6 +1,14 @@
 import CompleteSignup from '@/app/complete-signup'
+import type { NameRequirement } from '@/lib/nameRequirement'
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native'
+
+let mockRequirement: NameRequirement = 'username_with_optional_full'
+jest.mock('@/lib/nameRequirement', () => ({
+  get NAME_REQUIREMENT() {
+    return mockRequirement
+  },
+}))
 
 const mockPendingProviderSignup = jest.fn()
 const mockCompleteProviderSignup = jest.fn()
@@ -16,8 +24,28 @@ jest.mock('expo-router', () => ({ router: { replace: (...args: unknown[]) => moc
 
 const pending = { data: { data: { user: { username: 'suggested', email: 'jane@test.test' } } } }
 
+// Each requirement's names as the backend's NameRequirement offers them, in form order.
+const OFFERED: [NameRequirement, string[]][] = [
+  ['username_with_optional_full', ['username', 'first_name', 'last_name']],
+  ['full_only', ['first_name', 'last_name']],
+  ['full_and_username', ['first_name', 'last_name', 'username']],
+  ['full_with_optional_username', ['first_name', 'last_name', 'username']],
+  ['username_only', ['username']],
+]
+const TEST_IDS: Record<string, string> = {
+  first_name: 'first-name-input',
+  last_name: 'last-name-input',
+  username: 'username-input',
+}
+const PLACEHOLDERS: Record<string, string> = { first_name: 'First name', last_name: 'Last name', username: 'Username' }
+const VALUES: Record<string, string> = { first_name: 'Jane', last_name: 'Doe', username: 'jane' }
+const inputOrder = () => screen.getAllByTestId(/-input$/).map((node) => node.props.testID)
+
 describe('CompleteSignup', () => {
-  beforeEach(() => jest.clearAllMocks())
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockRequirement = 'username_with_optional_full'
+  })
 
   it('redirects to login when there is no pending signup', async () => {
     mockPendingProviderSignup.mockResolvedValue({ data: undefined })
@@ -71,6 +99,8 @@ describe('CompleteSignup', () => {
     await fireEvent.press(screen.getByTestId('complete-signup-submit'))
     expect(mockCompleteProviderSignup).toHaveBeenCalledWith({
       username: 'suggested',
+      first_name: '',
+      last_name: '',
       email: 'jane@test.test',
       password: 'correct-horse',
     })
@@ -186,5 +216,46 @@ describe('CompleteSignup', () => {
       )
     )
     expect(mockReplace).not.toHaveBeenCalled()
+  })
+
+  it('starts the handle empty when the provider suggests none', async () => {
+    mockPendingProviderSignup.mockResolvedValue({ data: { data: { user: { email: 'jane@test.test' } } } })
+    await render(<CompleteSignup />)
+    await waitFor(() => expect(screen.getByTestId('username-input')).toBeTruthy())
+    expect(screen.getByTestId('username-input').props.value).toBe('')
+  })
+
+  describe.each(OFFERED)('under %s', (name, offered) => {
+    beforeEach(() => {
+      mockRequirement = name
+    })
+
+    it('asks for exactly its names, in its order, before the password', async () => {
+      mockPendingProviderSignup.mockResolvedValue(pending)
+      await render(<CompleteSignup />)
+      await waitFor(() => expect(screen.getByTestId('password-input')).toBeTruthy())
+      expect(inputOrder()).toEqual([...offered.map((field) => TEST_IDS[field]), 'password-input'])
+      for (const field of offered) {
+        expect(screen.getByTestId(TEST_IDS[field]).props.placeholder).toBe(PLACEHOLDERS[field])
+      }
+    })
+
+    it('sends only its names, the suggested handle only where one is asked for', async () => {
+      mockPendingProviderSignup.mockResolvedValue(pending)
+      mockCompleteProviderSignup.mockResolvedValue({ data: { meta: { is_authenticated: true } }, error: undefined })
+      await render(<CompleteSignup />)
+      await waitFor(() => expect(screen.getByTestId('password-input')).toBeTruthy())
+      for (const field of offered) {
+        if (field !== 'username') await fireEvent.changeText(screen.getByTestId(TEST_IDS[field]), VALUES[field])
+      }
+      await fireEvent.changeText(screen.getByTestId('password-input'), 'correct-horse')
+      await fireEvent.press(screen.getByTestId('complete-signup-submit'))
+      await waitFor(() => expect(mockReplace).toHaveBeenCalled())
+      expect(mockCompleteProviderSignup).toHaveBeenCalledWith({
+        email: 'jane@test.test',
+        password: 'correct-horse',
+        ...Object.fromEntries(offered.map((field) => [field, field === 'username' ? 'suggested' : VALUES[field]])),
+      })
+    })
   })
 })

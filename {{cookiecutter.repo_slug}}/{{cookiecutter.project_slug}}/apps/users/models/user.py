@@ -1,5 +1,7 @@
 from django.conf import settings
-from django.contrib.auth.models import AbstractUser, _user_has_module_perms, _user_has_perm
+from django.contrib.auth.hashers import make_password
+from django.contrib.auth.models import AbstractUser, UserManager, _user_has_module_perms, _user_has_perm
+from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db import models
 from isik.django.apps.common.db import track_events
 
@@ -11,8 +13,42 @@ def language_choices():
     return settings.LANGUAGES
 
 
+class AddressedUserManager(UserManager):
+    """Django's, keyed on the address: its own refuses any user without a username."""
+
+    def _create_user_object(self, username, email, password, **extra_fields):
+        if not email:
+            raise ValueError("The given email must be set")
+        username = self.model.normalize_username(username) if username else None
+        user = self.model(username=username, email=self.normalize_email(email), **extra_fields)
+        user.password = make_password(password)
+        return user
+
+    def create_user(self, email, password=None, **extra_fields):
+        return super().create_user(extra_fields.pop("username", None), email, password, **extra_fields)
+
+    def create_superuser(self, email, password=None, **extra_fields):
+        return super().create_superuser(extra_fields.pop("username", None), email, password, **extra_fields)
+
+
 @track_events()
 class User(AbstractUser, BaseModel):
+    email = models.EmailField(
+        unique=True,
+        help_text="The address this user signs in with and is written to at.",
+        db_comment="The identifier: unique, and never absent.",
+    )
+    # Null, not blank, for no handle: many people may have none, and an empty string is unique once.
+    username = models.CharField(
+        max_length=150,
+        unique=True,
+        null=True,
+        blank=True,
+        validators=[UnicodeUsernameValidator()],
+        error_messages={"unique": "A user with that username already exists."},
+        help_text="A handle this user chose, or empty if they have none.",
+        db_comment="Optional and unique; null for no handle. Never derived from the name or the address.",
+    )
     # The derived CHECK is still a fixed list in the migration: changing LANGUAGES needs a new migration.
     language = models.CharField(
         max_length=15,
@@ -37,12 +73,23 @@ class User(AbstractUser, BaseModel):
         db_comment="Set with terms_version at signup; null when there was nothing to agree to.",
     )
 
+    objects = AddressedUserManager()
+
+    USERNAME_FIELD = "email"
+    # AbstractUser lists email here, which auth.E002 refuses once it is the identifier.
+    REQUIRED_FIELDS = []
+
     # The write version covers grants too, so a stale page can't quietly undo an admin grant.
     concurrency_relations = ("groups", "user_permissions")
 
     class Meta(AbstractUser.Meta):
         swappable = "AUTH_USER_MODEL"
         db_table = "users_user"
+
+    def save(self, *args, **kwargs):
+        # allauth and forms write "" for no handle.
+        self.username = self.username or None
+        super().save(*args, **kwargs)
 
     @property
     def acting_through_a_token(self):

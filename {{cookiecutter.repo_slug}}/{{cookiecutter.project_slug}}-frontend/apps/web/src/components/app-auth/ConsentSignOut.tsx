@@ -11,7 +11,7 @@ import { broadcastSessionCleared } from '@/lib/sessionChannel'
 import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
 /** "Not you?": signs out and asks the same question again of whoever signs in next. */
-export function ConsentSignOut({ username, authorizeUrl }: { username: string; authorizeUrl: string }) {
+export function ConsentSignOut({ name, authorizeUrl }: { name: string; authorizeUrl: string }) {
   const { t } = useClientTranslation(['auth'])
   const router = useRouter()
 
@@ -23,7 +23,7 @@ export function ConsentSignOut({ username, authorizeUrl }: { username: string; a
 
   return (
     <p className="text-center text-sm text-muted-foreground">
-      {t('auth:oauthConsentNotYou', { username })}{' '}
+      {t('auth:oauthConsentNotYou', { name })}{' '}
       <Button variant="link" className="h-auto p-0" onClick={signOut}>
         {t('auth:oauthConsentSignOut')}
       </Button>

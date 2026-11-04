@@ -316,7 +316,7 @@ def test_nobody_registers_more_than_their_share(client, signed_in, provider, hea
 @pytest.mark.django_db
 def test_the_share_is_counted_per_person(client, proven, settings, application):
     settings.OAUTH_PROVIDER_APPLICATIONS_PER_USER = 1
-    application.user = User.objects.create_user(username="bob")
+    application.user = User.objects.create_user(email="bob@example.test", username="bob")
     application.save()
 
     assert client.post(LIST, NEW, content_type="application/json").status_code == 201
@@ -325,7 +325,7 @@ def test_the_share_is_counted_per_person(client, proven, settings, application):
 @pytest.mark.django_db
 def test_somebody_sees_only_their_own_applications_newest_first(client, signed_in, provider, application):
     newer = make_application(name="Newer", user=signed_in, client_type="public")
-    make_application(name="Bob's", user=User.objects.create_user(username="bob"))
+    make_application(name="Bob's", user=User.objects.create_user(email="bob@example.test", username="bob"))
 
     names = [row["name"] for row in client.get(LIST).json()["results"]]
 
@@ -611,7 +611,7 @@ def test_asking_for_more_needs_a_proof(client, signed_in, provider, application)
 
 @pytest.mark.django_db
 def test_somebody_elses_application_is_not_found(client, proven, application):
-    application.user = User.objects.create_user(username="bob")
+    application.user = User.objects.create_user(email="bob@example.test", username="bob")
     application.save()
 
     assert client.get(_detail(application)).status_code == 404

@@ -14,6 +14,7 @@ from apps.common.logging.scrub import scrub_event
 from apps.notifications.push import push_credentials
 from apps.oauth_provider import device_codes
 from apps.oauth_provider.mode import oauth_provider_mode
+from apps.users.names import NameRequirement
 from apps.users.social_login import social_login_provider_ids
 
 from . import __version__
@@ -202,8 +203,15 @@ AUTHENTICATION_BACKENDS = [
     "apps.users.backends.permissions.PermissionsBackend",
 ]
 
-ACCOUNT_LOGIN_METHODS = {"username", "email"}
-ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*"]
+# What a signup asks somebody to be called; chosen when the project was generated.
+NAME_REQUIREMENT = NameRequirement.{{ cookiecutter.name_requirement.upper() }}
+ACCOUNT_LOGIN_METHODS = NAME_REQUIREMENT.login_methods
+# The handle is listed optional under every requirement, so the API schema never changes;
+# apps.users.signup_form applies the requirement. Unlisted, allauth would drop the field.
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username", "password1*"]
+ACCOUNT_SIGNUP_FORM_CLASS = "apps.users.signup_form.SignupNames"
+# allauth's default is the handle, which somebody may not have. Shown to the person themselves and in their mail.
+ACCOUNT_USER_DISPLAY = "apps.users.names.label"
 ACCOUNT_ADAPTER = "apps.users.adapters.account.AccountAdapter"
 SOCIALACCOUNT_ADAPTER = "apps.users.adapters.social_account.SocialAccountAdapter"
 # True would commit the provider's username unconfirmed on a first social signup.

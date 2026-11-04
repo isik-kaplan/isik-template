@@ -91,6 +91,14 @@ rate limits keep their counts: `redis` (default) bundles a Redis; `database` kee
 table, with no service of its own. Either is one store every process shares, which per-process memory
 would not be.
 
+`name_requirement` picks what a signup asks people to be called: a full name and a handle, each
+required, optional or not asked for, in the five combinations that always leave somebody a name
+(`username_with_optional_full`, the default, asks for a handle and offers the name). Under every
+answer the email address is the identifier, unique in the database, and always signs in; the handle
+signs in too where every account must have one. The backend enforces the answer at signup and on the
+profile, and its tests cover all five whichever one a project was generated with, so it needs no
+context of its own in CI.
+
 ## Developing this template
 
 ```

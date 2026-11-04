@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 
-import { Button, ErrorText, Heading, LegalConsentNotice, Screen, TextField } from '@/components'
+import { Button, ErrorText, Heading, LegalConsentNotice, NameFields, Screen, TextField } from '@/components'
 
 import { useTranslation } from '@/lib/i18n'
+import { type NameField, offeredNames, offeredValues } from '@/lib/names'
 import { getAuthApi } from '@/lib/session'
 import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 
@@ -15,7 +16,7 @@ import { Text } from 'react-native'
 export default function CompleteSignup() {
   const { t } = useTranslation()
   const [email, setEmail] = useState<string | undefined>()
-  const [username, setUsername] = useState('')
+  const [names, setNames] = useState<Record<NameField, string>>({ first_name: '', last_name: '', username: '' })
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | undefined>()
   const [submitting, setSubmitting] = useState(false)
@@ -29,7 +30,7 @@ export default function CompleteSignup() {
           return
         }
         setEmail(data.data.user.email)
-        setUsername(data.data.user.username)
+        setNames((current) => ({ ...current, username: data.data.user.username ?? '' }))
       })
   }, [])
 
@@ -42,7 +43,7 @@ export default function CompleteSignup() {
         data,
         error: apiError,
         response: http,
-      } = await getAuthApi().completeProviderSignup({ username, email, password })
+      } = await getAuthApi().completeProviderSignup({ email, password, ...offeredValues(names) })
       const throttled = tooManyRequestsMessage(t, http)
       if (throttled) {
         setError(throttled)
@@ -66,12 +67,10 @@ export default function CompleteSignup() {
     <Screen testID="complete-signup-form">
       <Heading testID="complete-signup-heading">{t('completeSignupHeading')}</Heading>
       <Text testID="complete-signup-email">{email}</Text>
-      <TextField
-        testID="username-input"
-        placeholder={t('usernamePlaceholder')}
-        autoCapitalize="none"
-        value={username}
-        onChangeText={setUsername}
+      <NameFields
+        shown={offeredNames()}
+        values={names}
+        onChange={(name, value) => setNames((current) => ({ ...current, [name]: value }))}
       />
       <TextField
         testID="password-input"

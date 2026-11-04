@@ -94,7 +94,8 @@ asks for both). A provider without credentials still shows its button, but its f
   gives it one.
 
 Use `http://` in the redirect URI for a local stack without TLS. A first sign-in through a provider lands on a
-"finish signing up" page, where the person confirms a username and sees the legal documents they agree to.
+"finish signing up" page, where the person gives the names this project asks for and sees the legal documents
+they agree to.
 
 ### Other apps signing in with this one
 

@@ -14,7 +14,7 @@ USERS = reverse("users-list")
 
 @pytest.fixture
 def bob(db):
-    return User.objects.create_user(username="bob")
+    return User.objects.create_user(email="bob@example.test", username="bob")
 
 
 def _as_the_application(path, access_token):

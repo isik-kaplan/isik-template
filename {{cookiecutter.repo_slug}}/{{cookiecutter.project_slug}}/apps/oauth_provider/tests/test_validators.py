@@ -31,16 +31,16 @@ def test_everything_known_about_somebody_is_said():
 
 @pytest.mark.django_db
 def test_what_is_not_known_is_left_out_rather_than_said_empty():
-    user = User.objects.create_user(username="nobody", email="")
+    user = User.objects.create_user(email="nobody@example.test")
 
-    assert _claims(user) == {"preferred_username": "nobody"}
+    assert _claims(user) == {"email": "nobody@example.test", "email_verified": False}
 
 
 @pytest.mark.django_db
 def test_an_address_allauth_never_verified_says_so():
     user = User.objects.create_user(username="made-by-hand", email="admin@example.test")
     EmailAddress.objects.create(user=user, email="other@example.test", verified=True, primary=False)
-    somebody_else = User.objects.create_user(username="somebody-else")
+    somebody_else = User.objects.create_user(email="somebody-else@example.test", username="somebody-else")
     EmailAddress.objects.create(user=somebody_else, email="else@example.test", verified=True, primary=True)
 
     assert _claims(user) == {
@@ -60,6 +60,12 @@ def test_an_unverified_primary_address_is_said_unverified():
 
 @pytest.mark.django_db
 def test_a_first_name_alone_is_the_whole_name():
-    user = User.objects.create_user(username="cher", first_name="Cher")
+    user = User.objects.create_user(email="cher@example.test", username="cher", first_name="Cher")
 
-    assert _claims(user) == {"preferred_username": "cher", "given_name": "Cher", "name": "Cher"}
+    assert _claims(user) == {
+        "preferred_username": "cher",
+        "given_name": "Cher",
+        "name": "Cher",
+        "email": "cher@example.test",
+        "email_verified": False,
+    }

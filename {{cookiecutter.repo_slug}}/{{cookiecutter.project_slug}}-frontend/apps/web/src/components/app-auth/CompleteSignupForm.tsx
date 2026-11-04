@@ -6,15 +6,16 @@ import { useMemo } from 'react'
 import type React from 'react'
 
 import { Button } from '@/components/base/button'
-import { Input } from '@/components/base/input'
 import { Label } from '@/components/base/label'
 
 import { useClientTranslation } from '@/i18n/client'
 import { authOrigin } from '@/lib/authOrigin'
+import { offeredNames } from '@/lib/names'
 import { useAuthValidatedFormState } from '@/lib/submit'
 
 import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
+import { NameFields, nameSchema, shownNames } from './NameFields'
 import { PasswordInput } from './PasswordInput'
 import { detailOf } from '@isikk/core/allauth'
 import { z } from 'zod'
@@ -28,15 +29,18 @@ export type CompleteSignupFormProps = {
 export function CompleteSignupForm({ email, suggestedUsername = '' }: CompleteSignupFormProps) {
   const { t } = useClientTranslation(['auth'])
   const router = useRouter()
+  const shown = offeredNames()
   const schema = useMemo(
     () =>
       z.object({
-        username: z.string().min(1, t('auth:validationUsernameRequired')),
+        ...nameSchema(t),
         password: z.string().min(8, t('auth:validationPasswordMinLength')),
       }),
     [t]
   )
   const { formState, formErrors, handleFormStateEvent, isSubmitting, submit } = useAuthValidatedFormState(schema, {
+    first_name: '',
+    last_name: '',
     username: suggestedUsername,
     password: '',
   })
@@ -45,29 +49,22 @@ export function CompleteSignupForm({ email, suggestedUsername = '' }: CompleteSi
     event.preventDefault()
 
     const authApi = new AuthApi(authOrigin())
-    await submit((value) => authApi.completeProviderSignup({ ...value, email }), {
-      // A 401 can mean success: mandatory verification creates the account without logging in.
-      isSuccess: ({ data, error }) => Boolean(data) || detailOf(error) === undefined,
-      failure: t('auth:completeSignupError'),
-      leavesOnSuccess: true,
-      onSuccess: ({ response }) => router.push(response.status === 200 ? '/' : '/auth/login'),
-    })
+    await submit(
+      (value) => authApi.completeProviderSignup({ email, password: value.password, ...shownNames(value, shown) }),
+      {
+        // A 401 can mean success: mandatory verification creates the account without logging in.
+        isSuccess: ({ data, error }) => Boolean(data) || detailOf(error) === undefined,
+        failure: t('auth:completeSignupError'),
+        leavesOnSuccess: true,
+        onSuccess: ({ response }) => router.push(response.status === 200 ? '/' : '/auth/login'),
+      }
+    )
   }
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <p className="text-muted-foreground text-sm">{t('auth:completeSignupBody', { email })}</p>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="username">{t('auth:completeSignupUsernameLabel')}</Label>
-        <Input
-          id="username"
-          name="username"
-          autoComplete="username"
-          value={formState.username}
-          onChange={handleFormStateEvent('username')}
-        />
-        {formErrors?.username && <p className="text-destructive text-sm">{formErrors.username[0]}</p>}
-      </div>
+      <NameFields shown={shown} values={formState} errors={formErrors} onChange={handleFormStateEvent} />
       <div className="flex flex-col gap-2">
         <Label htmlFor="password">{t('auth:completeSignupPasswordLabel')}</Label>
         <PasswordInput

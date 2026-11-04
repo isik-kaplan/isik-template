@@ -15,8 +15,11 @@
 
 type User = {
   id: string
-  username: string
+  // Absent for somebody with no handle, which some name requirements allow or never ask for.
+  username?: string
   email: string
+  // allauth's label for the account: name, then handle, then address (AccountAdapter.user_display).
+  display: string
   // Absent when unset (allauth's own DefaultHeadlessAdapter drops empty/None fields rather than
   // serving "" - see the backend's apps/users/headless.py), not just "" - browser fallback applies.
   language?: string
@@ -88,7 +91,7 @@ export interface paths {
   }
   '/v0/browser/v1/auth/signup': {
     post: {
-      requestBody: { content: { 'application/json': { username: string; email: string; password: string } } }
+      requestBody: { content: { 'application/json': { email: string; password: string; username?: string; first_name?: string; last_name?: string } } }
       responses: { 200: { content: { 'application/json': SessionOk } }; 401: { content: { 'application/json': SessionErr } } }
     }
   }
@@ -184,7 +187,7 @@ export interface paths {
       }
     }
     post: {
-      requestBody: { content: { 'application/json': { username: string; email: string; password?: string } } }
+      requestBody: { content: { 'application/json': { email: string; password?: string; username?: string; first_name?: string; last_name?: string } } }
       // 200 if this also completes login; 401 if the account was created but needs a separate
       // login (mandatory email verification) - same shape as signup itself.
       responses: { 200: { content: { 'application/json': SessionOk } }; 401: { content: { 'application/json': SessionErr } } }
@@ -330,7 +333,7 @@ export interface paths {
   }
   '/v0/app/v1/auth/signup': {
     post: {
-      requestBody: { content: { 'application/json': { username: string; email: string; password: string } } }
+      requestBody: { content: { 'application/json': { email: string; password: string; username?: string; first_name?: string; last_name?: string } } }
       responses: { 200: { content: { 'application/json': AppSessionOk } }; 401: { content: { 'application/json': AppSessionErr } } }
     }
   }
@@ -427,7 +430,7 @@ export interface paths {
       }
     }
     post: {
-      requestBody: { content: { 'application/json': { username: string; email: string; password?: string } } }
+      requestBody: { content: { 'application/json': { email: string; password?: string; username?: string; first_name?: string; last_name?: string } } }
       responses: { 200: { content: { 'application/json': AppSessionOk } }; 401: { content: { 'application/json': AppSessionErr } } }
     }
   }

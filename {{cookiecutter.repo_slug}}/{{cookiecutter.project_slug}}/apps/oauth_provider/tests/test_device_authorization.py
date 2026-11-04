@@ -115,7 +115,7 @@ def test_somebody_signed_in_sees_what_the_device_asks_for(client, provider, cli,
 
 @pytest.mark.django_db
 def test_allowed_the_device_gets_one_token_acting_for_whoever_allowed_it(client, provider, cli, manager):
-    User.objects.create_user(username="bob")
+    User.objects.create_user(email="bob@example.test", username="bob")
     codes = _ask(cli)
     assert _poll(cli, codes["device_code"]).json()["error"] == "authorization_pending"
 
@@ -295,7 +295,7 @@ def _grant(device_code, *, user=None, status=DeviceGrant.AUTHORIZED, client_id="
 
 @pytest.mark.django_db
 def test_an_authorized_code_is_spent_for_whoever_allowed_it_and_what_it_asked(alice):
-    bob = User.objects.create_user(username="bob")
+    bob = User.objects.create_user(email="bob@example.test", username="bob")
     _grant("code-for-bob", user=bob, scope="openid users:manage:user")
     _grant("code-for-alice", user=alice)
     request = _token_request("code-for-alice", "the-cli")

@@ -3,6 +3,9 @@
   "emailPlaceholder": "Email",
   "passwordPlaceholder": "Password",
   "usernamePlaceholder": "Username",
+  "firstNamePlaceholder": "First name",
+  "lastNamePlaceholder": "Last name",
+  "loginIdentifierPlaceholder": "Username or email",
 
   "loginHeading": "Log in",
   "loginSubmit": "Log in",

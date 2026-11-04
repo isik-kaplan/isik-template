@@ -125,6 +125,6 @@ def ways_to_prove(request):
             providers.append({"id": account.provider, "name": provider.name})
     if providers:
         flows.append({"id": PROVIDER_FLOW, "providers": providers})
-    if not user.has_usable_password() and user.email:
+    if not user.has_usable_password():
         flows.append({"id": SET_PASSWORD_BY_EMAIL_FLOW, "email": user.email})
     return flows

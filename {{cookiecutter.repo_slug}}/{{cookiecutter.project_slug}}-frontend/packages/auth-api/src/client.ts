@@ -2,6 +2,14 @@ import { createOpenApiClient } from './httpClient'
 import type { paths } from './schema'
 import { createDjangoFetch } from '@isikk/core'
 
+type Body<P extends keyof paths> = paths[P] extends {
+  post: { requestBody: { content: { 'application/json': infer B } } }
+}
+  ? B
+  : never
+export type SignupBody = Body<'/v0/browser/v1/auth/signup'>
+export type ProviderSignupBody = Body<'/v0/browser/v1/auth/provider/signup'>
+
 export type AuthApiOptions = {
   csrfCookieName?: string
   cookieHeader?: string
@@ -38,7 +46,7 @@ export class AuthApi {
     return this.client.POST('/v0/browser/v1/auth/login', { body: credentials })
   }
 
-  async signup(data: { username: string; email: string; password: string }) {
+  async signup(data: SignupBody) {
     return this.client.POST('/v0/browser/v1/auth/signup', { body: data })
   }
 
@@ -182,7 +190,7 @@ export class AuthApi {
     return this.client.GET('/v0/browser/v1/auth/provider/signup')
   }
 
-  async completeProviderSignup(data: { username: string; email: string; password?: string }) {
+  async completeProviderSignup(data: ProviderSignupBody) {
     return this.client.POST('/v0/browser/v1/auth/provider/signup', { body: data })
   }
 }

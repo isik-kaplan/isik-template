@@ -61,8 +61,9 @@ describe('ProfileDetails', () => {
   })
 
   it('styles each detail row', async () => {
-    mockSession.mockResolvedValue({ data: undefined })
+    mockSession.mockResolvedValue({ data: { data: { user: { username: 'jane', email: 'jane@test.test' } } } })
     await render(<ProfileDetails />)
+    await waitFor(() => expect(screen.getByTestId('profile-details-username-row')).toBeTruthy())
     const expected = {
       flexDirection: 'row',
       alignItems: 'center',
@@ -74,5 +75,13 @@ describe('ProfileDetails', () => {
     }
     expect(screen.getByTestId('profile-details-username-row').props.style).toEqual(expected)
     expect(screen.getByTestId('profile-details-email-row').props.style).toEqual(expected)
+  })
+
+  it('leaves out the username row for somebody with no handle', async () => {
+    mockSession.mockResolvedValue({ data: { data: { user: { email: 'jane@test.test' } } } })
+    await render(<ProfileDetails />)
+    await waitFor(() => expect(screen.getByTestId('profile-details-email').props.children).toBe('jane@test.test'))
+    expect(screen.queryByTestId('profile-details-username-row')).toBeNull()
+    expect(screen.queryByText('Username')).toBeNull()
   })
 })

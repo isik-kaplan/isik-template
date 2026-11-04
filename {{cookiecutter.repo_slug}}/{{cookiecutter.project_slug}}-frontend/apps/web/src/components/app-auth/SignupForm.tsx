@@ -11,26 +11,31 @@ import { Label } from '@/components/base/label'
 
 import { useClientTranslation } from '@/i18n/client'
 import { authOrigin } from '@/lib/authOrigin'
+import { offeredNames } from '@/lib/names'
 import { useAuthValidatedFormState } from '@/lib/submit'
 
 import { AuthApi, hasPendingVerifyEmail } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
+import { NameFields, nameSchema, shownNames } from './NameFields'
 import { PasswordInput } from './PasswordInput'
 import { z } from 'zod'
 
 export function SignupForm() {
   const { t } = useClientTranslation(['auth'])
   const router = useRouter()
+  const shown = offeredNames()
   const schema = useMemo(
     () =>
       z.object({
-        username: z.string().min(1, t('auth:validationUsernameRequired')),
+        ...nameSchema(t),
         email: z.email(t('auth:validationEmailInvalid')),
         password: z.string().min(8, t('auth:validationPasswordMinLength')),
       }),
     [t]
   )
   const { formState, formErrors, handleFormStateEvent, isSubmitting, submit } = useAuthValidatedFormState(schema, {
+    first_name: '',
+    last_name: '',
     username: '',
     email: '',
     password: '',
@@ -40,29 +45,22 @@ export function SignupForm() {
     event.preventDefault()
 
     const authApi = new AuthApi(authOrigin())
-    await submit((value) => authApi.signup(value), {
-      // With mandatory verification, success is a 401 with a pending verify_email flow.
-      isSuccess: ({ data, error, response }) =>
-        Boolean(data) || (response.status === 401 && hasPendingVerifyEmail(error)),
-      failure: t('auth:signupError'),
-      leavesOnSuccess: true,
-      onSuccess: () => router.push('/auth/signup-email-sent'),
-    })
+    await submit(
+      (value) => authApi.signup({ email: value.email, password: value.password, ...shownNames(value, shown) }),
+      {
+        // With mandatory verification, success is a 401 with a pending verify_email flow.
+        isSuccess: ({ data, error, response }) =>
+          Boolean(data) || (response.status === 401 && hasPendingVerifyEmail(error)),
+        failure: t('auth:signupError'),
+        leavesOnSuccess: true,
+        onSuccess: () => router.push('/auth/signup-email-sent'),
+      }
+    )
   }
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="username">{t('auth:signupUsernameLabel')}</Label>
-        <Input
-          id="username"
-          name="username"
-          autoComplete="username"
-          value={formState.username}
-          onChange={handleFormStateEvent('username')}
-        />
-        {formErrors?.username && <p className="text-destructive text-sm">{formErrors.username[0]}</p>}
-      </div>
+      <NameFields shown={shown} values={formState} errors={formErrors} onChange={handleFormStateEvent} />
       <div className="flex flex-col gap-2">
         <Label htmlFor="email">{t('auth:signupEmailLabel')}</Label>
         <Input

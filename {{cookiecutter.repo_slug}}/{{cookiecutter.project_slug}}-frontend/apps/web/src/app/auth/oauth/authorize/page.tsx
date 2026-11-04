@@ -90,7 +90,7 @@ export default async function OAuthAuthorizePage({ searchParams }: { searchParam
         </AutoFormButton>
       </div>
       <p className="text-center text-sm text-muted-foreground">{t('auth:oauthConsentFootnote')}</p>
-      {session && <ConsentSignOut username={session.user.username} authorizeUrl={authorizeUrl} />}
+      {session && <ConsentSignOut name={session.user.display} authorizeUrl={authorizeUrl} />}
     </AuthCard>
   )
 }

@@ -68,7 +68,7 @@ test('a save from a tab opened before another saved is refused, and can take tha
   }
   await other.getByLabel('First name').fill('Ada')
   await other.getByRole('button', { name: 'Save' }).click()
-  await expect(other.getByText('Ada', { exact: true })).toBeVisible()
+  await expect(other.getByRole('definition').getByText('Ada', { exact: true })).toBeVisible()
 
   await page.getByLabel('First name').fill('Grace')
   await page.getByRole('button', { name: 'Save' }).click()
@@ -80,7 +80,8 @@ test('a save from a tab opened before another saved is refused, and can take tha
   // Now on the version the other tab left, so a save goes through.
   await page.getByLabel('First name').fill('Grace')
   await page.getByRole('button', { name: 'Save' }).click()
-  await expect(page.getByText('Grace', { exact: true })).toBeVisible()
+  await expect(page.getByRole('definition').getByText('Grace', { exact: true })).toBeVisible()
   await page.reload()
-  await expect(page.getByText('Grace', { exact: true })).toBeVisible()
+  // The page title now names them too, so the check stays on the details row.
+  await expect(page.getByRole('definition').getByText('Grace', { exact: true })).toBeVisible()
 })

@@ -21,7 +21,9 @@ class OAuth2Validator(_OAuth2Validator):
 
     def get_additional_claims(self, request):
         user = request.user
-        claims = {"preferred_username": user.username}
+        claims = {}
+        if user.username:
+            claims["preferred_username"] = user.username
         if user.first_name:
             claims["given_name"] = user.first_name
         if user.last_name:
@@ -29,12 +31,11 @@ class OAuth2Validator(_OAuth2Validator):
         if user.get_full_name():
             claims["name"] = user.get_full_name()
 
-        # allauth's verified address; createsuperuser writes none, so fall back to User.email, unverified.
+        # allauth's verified address; an account made by hand has none, so fall back to User.email, unverified.
         primary = EmailAddress.objects.filter(user=user, primary=True).first()
         email = primary.email if primary else user.email
-        if email:
-            claims["email"] = email
-            claims["email_verified"] = bool(primary and primary.verified)
+        claims["email"] = email
+        claims["email_verified"] = bool(primary and primary.verified)
 
         if user.last_login:
             claims["auth_time"] = int(user.last_login.timestamp())

@@ -95,7 +95,7 @@ def test_a_revoked_refresh_token_holds_nothing(client, signed_in, application):
 
 @pytest.mark.django_db
 def test_somebody_elses_grants_are_not_listed(client, signed_in, application):
-    bob = User.objects.create_user(username="bob")
+    bob = User.objects.create_user(email="bob@example.test", username="bob")
     _access(bob, application, "openid")
     _refresh(bob, application)
 
@@ -118,7 +118,7 @@ def test_shutting_an_application_out_revokes_every_token_it_holds(client, signed
     _refresh(signed_in, application, access)
     _refresh(signed_in, application)
     _access(signed_in, application, "email")
-    bob = User.objects.create_user(username="bob")
+    bob = User.objects.create_user(email="bob@example.test", username="bob")
     bobs = _access(bob, application, "openid")
     bobs_refresh = _refresh(bob, application)
     other = make_application(name="Other", user=signed_in)
@@ -193,7 +193,7 @@ def test_an_application_holding_only_an_access_token_is_shut_out_too(client, sig
 
 @pytest.mark.django_db
 def test_somebody_elses_tokens_for_it_are_nothing_to_shut_out(client, signed_in, application, headless):
-    bob = User.objects.create_user(username="bob")
+    bob = User.objects.create_user(email="bob@example.test", username="bob")
     _refresh(bob, application, _access(bob, application, "openid"))
     headless.prove()
 

@@ -5,14 +5,14 @@ import { OIDC_CONFIGURED, login, signInAtAuthentik, signUpAndVerify } from '../h
 
 // Raised and lowered from the admin, as an operator would in an incident.
 const ADMIN = 'http://admin.{{ cookiecutter.domain }}'
-const SUPERUSER = process.env.{{ cookiecutter.config_prefix }}__SETUP__SUPERUSER__USERNAME ?? ''
+const SUPERUSER_EMAIL = process.env.{{ cookiecutter.config_prefix }}__SETUP__SUPERUSER__EMAIL ?? ''
 const SUPERUSER_PASSWORD = process.env.{{ cookiecutter.config_prefix }}__SETUP__SUPERUSER__PASSWORD ?? ''
 
 async function setLoginPolicy(browser: Browser, policy: string): Promise<Page> {
   const context = await browser.newContext()
   const page = await context.newPage()
   await page.goto(`${ADMIN}/`)
-  await page.getByLabel('Username').fill(SUPERUSER)
+  await page.getByLabel('Email').fill(SUPERUSER_EMAIL)
   await page.getByLabel('Password').fill(SUPERUSER_PASSWORD)
   await page.getByRole('button', { name: 'Log in' }).click()
   await page.waitForURL(`${ADMIN}/`)

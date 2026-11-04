@@ -5,6 +5,7 @@ import type { ApiType } from '@{{ cookiecutter.repo_slug }}/api'
 import { applicationsAreOn, {% if cookiecutter.webhooks != "none" %}mayManageWebhooks, {% endif %}mayReviewApplications, maySeePeople } from './access'
 import { createApi } from './apiClients'
 import { apiOrigin } from './apiOrigin'
+import { personLabel } from './names'
 import { parseQuery, queryFrom } from './queryGrammar'
 
 type Me = ApiType<'User'>
@@ -62,7 +63,7 @@ export function searchableResources(me: Me, t: Translate): SearchableResource[] 
         const { data } = await api.users(narrowed(query))
         return (data?.results ?? []).map((user) => ({
           id: user.id,
-          title: user.username,
+          title: personLabel(user),
           subtitle: user.email,
           href: `/staff/people/${user.id}`,
         }))

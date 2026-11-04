@@ -1,5 +1,8 @@
 import { CompleteSignupForm } from '@/components/app-auth/CompleteSignupForm'
 
+import { NAME_FIELDS, NAME_LABELS, NAME_REQUIRED_MESSAGES, NAME_TABLE, NAME_VALUES } from '@/__tests__/support/names'
+import type { NameRequirement } from '@/config/names'
+
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -8,6 +11,13 @@ const push = vi.fn()
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push }),
+}))
+
+const requirement = vi.hoisted(() => ({ current: 'username_with_optional_full' as NameRequirement }))
+vi.mock('@/config/names', () => ({
+  get NAME_REQUIREMENT() {
+    return requirement.current
+  },
 }))
 
 function jsonResponse(status: number, body: unknown) {
@@ -19,6 +29,7 @@ describe('CompleteSignupForm', () => {
 
   beforeEach(() => {
     push.mockClear()
+    requirement.current = 'username_with_optional_full'
   })
 
   afterEach(() => {
@@ -77,7 +88,13 @@ describe('CompleteSignupForm', () => {
     // openapi-fetch passes the submission as a Request; the CSRF-priming GET is a plain URL string.
     const postCall = fetchMock.mock.calls.find(([request]) => request instanceof Request)
     const body = await (postCall?.[0] as Request).clone().json()
-    expect(body).toEqual({ username: 'jane', password: 'correct-horse-battery', email: 'jane@example.com' })
+    expect(body).toEqual({
+      username: 'jane',
+      first_name: '',
+      last_name: '',
+      password: 'correct-horse-battery',
+      email: 'jane@example.com',
+    })
   })
 
   it('redirects home on a 200 (completed a pending login)', async () => {
@@ -138,5 +155,58 @@ describe('CompleteSignupForm', () => {
 
     expect(await screen.findByText('Try again later.')).toBeTruthy()
     expect(push).not.toHaveBeenCalled()
+  })
+  describe.each(NAME_TABLE)('under %s', (name, offered, required) => {
+    beforeEach(() => {
+      requirement.current = name
+    })
+
+    async function submitted(fetchMock: ReturnType<typeof vi.fn>) {
+      await vi.waitFor(() => expect(push).toHaveBeenCalled())
+      const postCall = fetchMock.mock.calls.find(([request]) => request instanceof Request)
+      return (postCall?.[0] as Request).clone().json()
+    }
+
+    it('asks for exactly its names, in its order, before the password', () => {
+      const { container } = render(<CompleteSignupForm email="jane@example.com" />)
+
+      expect([...container.querySelectorAll('input')].map((input) => input.name)).toEqual([...offered, 'password'])
+      for (const field of offered) expect(screen.getByLabelText(NAME_LABELS[field])).toBeTruthy()
+    })
+
+    it('refuses exactly the required names left empty', async () => {
+      const user = userEvent.setup()
+      render(<CompleteSignupForm email="jane@example.com" />)
+
+      await user.type(screen.getByLabelText('Password'), 'correct-horse-battery')
+      await user.click(screen.getByRole('button', { name: 'Finish signing up' }))
+
+      await vi.waitFor(() => expect(screen.getByText(NAME_REQUIRED_MESSAGES[required[0]])).toBeTruthy())
+      for (const field of NAME_FIELDS) {
+        expect(screen.queryByText(NAME_REQUIRED_MESSAGES[field]) !== null).toBe(required.includes(field))
+      }
+      expect(push).not.toHaveBeenCalled()
+    })
+
+    it('sends only its names, the suggested handle only where one is asked for', async () => {
+      const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        jsonResponse(200, { status: 200, data: { user: {} }, meta: { is_authenticated: true } })
+      )
+      globalThis.fetch = fetchMock
+      const user = userEvent.setup()
+      render(<CompleteSignupForm email="jane@example.com" suggestedUsername="jane" />)
+
+      for (const field of offered) {
+        if (field !== 'username') await user.type(screen.getByLabelText(NAME_LABELS[field]), NAME_VALUES[field])
+      }
+      await user.type(screen.getByLabelText('Password'), 'correct-horse-battery')
+      await user.click(screen.getByRole('button', { name: 'Finish signing up' }))
+
+      expect(await submitted(fetchMock)).toEqual({
+        email: 'jane@example.com',
+        password: 'correct-horse-battery',
+        ...Object.fromEntries(offered.map((field) => [field, NAME_VALUES[field]])),
+      })
+    })
   })
 })

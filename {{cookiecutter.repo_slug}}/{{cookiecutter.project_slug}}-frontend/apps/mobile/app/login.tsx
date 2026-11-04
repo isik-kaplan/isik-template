@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Button, ErrorText, Heading, Screen, SocialLoginButtons, TextField } from '@/components'
 
 import { useTranslation } from '@/lib/i18n'
+import { handleLogsIn } from '@/lib/names'
 import { getAuthApi } from '@/lib/session'
 import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 
@@ -13,16 +14,24 @@ import { Text } from 'react-native'
 
 export default function Login() {
   const { t } = useTranslation()
-  const [email, setEmail] = useState('')
+  const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | undefined>()
   const [submitting, setSubmitting] = useState(false)
+  const byHandle = handleLogsIn()
 
   async function submit() {
     setSubmitting(true)
     setError(undefined)
     try {
-      const { data, error: response, response: http } = await getAuthApi().login({ email, password })
+      const {
+        data,
+        error: response,
+        response: http,
+      } = await getAuthApi().login({
+        ...(byHandle && !login.includes('@') ? { username: login } : { email: login }),
+        password,
+      })
       const throttled = tooManyRequestsMessage(t, http)
       if (throttled) {
         setError(throttled)
@@ -53,11 +62,11 @@ export default function Login() {
       <Heading testID="login-heading">{t('loginHeading')}</Heading>
       <TextField
         testID="email-input"
-        placeholder={t('emailPlaceholder')}
+        placeholder={byHandle ? t('loginIdentifierPlaceholder') : t('emailPlaceholder')}
         autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
+        keyboardType={byHandle ? 'default' : 'email-address'}
+        value={login}
+        onChangeText={setLogin}
       />
       <TextField
         testID="password-input"

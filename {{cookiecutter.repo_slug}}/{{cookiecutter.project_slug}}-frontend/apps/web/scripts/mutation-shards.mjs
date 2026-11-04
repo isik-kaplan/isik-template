@@ -71,6 +71,7 @@ export const SHARDS = {
     'src/components/app-auth/CompleteSignupForm.tsx',
     'src/components/app-auth/ForgotPasswordForm.tsx',
     'src/components/app-auth/LoginForm.tsx',
+    'src/components/app-auth/NameFields.tsx',
     'src/components/app-auth/PasswordInput.tsx',
     'src/components/app-auth/ProveContent.tsx',
     'src/components/app-auth/ProvePasswordForm.tsx',
@@ -83,6 +84,8 @@ export const SHARDS = {
     'src/components/app-auth/SocialLoginSection.tsx',
     'src/components/app-auth/VerifyEmailButton.tsx',
     'src/components/app-auth/icons/brands.tsx',
+    'src/config/names.ts',
+    'src/lib/names.ts',
   ],
   // The signed-in account pages.
   profile: [

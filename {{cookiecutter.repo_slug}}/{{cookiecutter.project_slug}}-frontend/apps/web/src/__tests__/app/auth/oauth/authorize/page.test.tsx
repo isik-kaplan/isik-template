@@ -14,9 +14,9 @@ vi.mock('@/config/public', () => ({ CONFIG: { DOMAIN: '{{ cookiecutter.repo_slug
 const getSession = vi.fn()
 vi.mock('@/lib/getSession', () => ({ getLanguage: async () => 'en', getSession: () => getSession() }))
 vi.mock('@/components/app-auth/ConsentSignOut', () => ({
-  ConsentSignOut: ({ username, authorizeUrl }: { username: string; authorizeUrl: string }) => (
+  ConsentSignOut: ({ name, authorizeUrl }: { name: string; authorizeUrl: string }) => (
     <p>
-      sign {username} out, then {authorizeUrl}
+      sign {name} out, then {authorizeUrl}
     </p>
   ),
 }))
@@ -158,7 +158,7 @@ describe('OAuthAuthorizePage', () => {
   })
 
   it('lets somebody signed in be somebody else, asked the same question again', async () => {
-    getSession.mockResolvedValue({ user: { username: 'alice' } })
+    getSession.mockResolvedValue({ user: { username: 'al', display: 'alice' } })
     render(await OAuthAuthorizePage({ searchParams: Promise.resolve(ASKED) }))
 
     const again = new URLSearchParams({

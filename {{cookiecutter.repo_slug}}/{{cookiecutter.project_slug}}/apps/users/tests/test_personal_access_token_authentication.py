@@ -35,7 +35,7 @@ def _usernames(response):
 
 @pytest.fixture
 def bob(db):
-    return User.objects.create_user(username="bob")
+    return User.objects.create_user(email="bob@example.test", username="bob")
 
 
 @pytest.fixture
