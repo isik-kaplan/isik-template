@@ -24,7 +24,7 @@ describe('AuthApi', () => {
   it('primes the csrftoken cookie with one GET before an unsafe request when the browser has none yet', async () => {
     document.cookie = 'csrftoken=; expires=Thu, 01 Jan 1970 00:00:00 GMT'
     const baseFetch = vi.fn(async (input: RequestInfo | URL) => {
-      if (input === 'https://auth.example.test/v0/browser/v1/auth/session') document.cookie = 'csrftoken=primed-token'
+      if (input === 'https://auth.example.test/v0/browser/auth/session') document.cookie = 'csrftoken=primed-token'
       return new Response('{}', { status: 200 })
     })
     const api = new AuthApi('https://auth.example.test', { baseFetch })
@@ -43,46 +43,40 @@ describe('AuthApi', () => {
   })
 
   it.each([
-    ['config', () => [], 'GET', '/v0/browser/v1/config', undefined],
-    ['completeMfaChallenge', () => ['123456'], 'POST', '/v0/browser/v1/auth/2fa/authenticate', { code: '123456' }],
-    ['webauthnChallengeOptions', () => [], 'GET', '/v0/browser/v1/auth/webauthn/authenticate', undefined],
+    ['config', () => [], 'GET', '/v0/browser/config', undefined],
+    ['completeMfaChallenge', () => ['123456'], 'POST', '/v0/browser/auth/2fa/authenticate', { code: '123456' }],
+    ['webauthnChallengeOptions', () => [], 'GET', '/v0/browser/auth/webauthn/authenticate', undefined],
     [
       'completeWebauthnChallenge',
       () => [{ id: 'c' }],
       'POST',
-      '/v0/browser/v1/auth/webauthn/authenticate',
+      '/v0/browser/auth/webauthn/authenticate',
       { credential: { id: 'c' } },
     ],
-    ['reauthenticateWithCode', () => ['123456'], 'POST', '/v0/browser/v1/auth/2fa/reauthenticate', { code: '123456' }],
-    ['webauthnReauthenticationOptions', () => [], 'GET', '/v0/browser/v1/auth/webauthn/reauthenticate', undefined],
+    ['reauthenticateWithCode', () => ['123456'], 'POST', '/v0/browser/auth/2fa/reauthenticate', { code: '123456' }],
+    ['webauthnReauthenticationOptions', () => [], 'GET', '/v0/browser/auth/webauthn/reauthenticate', undefined],
     [
       'reauthenticateWithWebauthn',
       () => [{ id: 'c' }],
       'POST',
-      '/v0/browser/v1/auth/webauthn/reauthenticate',
+      '/v0/browser/auth/webauthn/reauthenticate',
       { credential: { id: 'c' } },
     ],
-    ['authenticators', () => [], 'GET', '/v0/browser/v1/account/authenticators', undefined],
-    ['totpStatus', () => [], 'GET', '/v0/browser/v1/account/authenticators/totp', undefined],
-    ['activateTotp', () => ['654321'], 'POST', '/v0/browser/v1/account/authenticators/totp', { code: '654321' }],
-    ['deactivateTotp', () => [], 'DELETE', '/v0/browser/v1/account/authenticators/totp', undefined],
-    ['recoveryCodes', () => [], 'GET', '/v0/browser/v1/account/authenticators/recovery-codes', undefined],
-    ['regenerateRecoveryCodes', () => [], 'POST', '/v0/browser/v1/account/authenticators/recovery-codes', undefined],
-    ['webauthnCreationOptions', () => [], 'GET', '/v0/browser/v1/account/authenticators/webauthn', undefined],
+    ['authenticators', () => [], 'GET', '/v0/browser/account/authenticators', undefined],
+    ['totpStatus', () => [], 'GET', '/v0/browser/account/authenticators/totp', undefined],
+    ['activateTotp', () => ['654321'], 'POST', '/v0/browser/account/authenticators/totp', { code: '654321' }],
+    ['deactivateTotp', () => [], 'DELETE', '/v0/browser/account/authenticators/totp', undefined],
+    ['recoveryCodes', () => [], 'GET', '/v0/browser/account/authenticators/recovery-codes', undefined],
+    ['regenerateRecoveryCodes', () => [], 'POST', '/v0/browser/account/authenticators/recovery-codes', undefined],
+    ['webauthnCreationOptions', () => [], 'GET', '/v0/browser/account/authenticators/webauthn', undefined],
     [
       'addWebauthn',
       () => [{ id: 'c' }, 'Laptop'],
       'POST',
-      '/v0/browser/v1/account/authenticators/webauthn',
+      '/v0/browser/account/authenticators/webauthn',
       { credential: { id: 'c' }, name: 'Laptop' },
     ],
-    [
-      'removeWebauthn',
-      () => [[7]],
-      'DELETE',
-      '/v0/browser/v1/account/authenticators/webauthn',
-      { authenticators: [7] },
-    ],
+    ['removeWebauthn', () => [[7]], 'DELETE', '/v0/browser/account/authenticators/webauthn', { authenticators: [7] }],
   ] as const)('%s calls %s %s', async (method, args, verb, path, body) => {
     const baseFetch = vi.fn<typeof fetch>(async () => new Response('{}', { status: 200 }))
     const api = new AuthApi('https://auth.example.test', { baseFetch, cookieHeader: 'csrftoken=t' })

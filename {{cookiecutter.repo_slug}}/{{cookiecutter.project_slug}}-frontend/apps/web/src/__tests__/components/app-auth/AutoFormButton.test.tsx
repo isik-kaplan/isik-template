@@ -52,7 +52,7 @@ describe('AutoFormButton', () => {
     await user.click(screen.getByRole('button', { name: 'Continue' }))
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/v0/browser/v1/auth/session'),
+      expect.stringContaining('/v0/browser/auth/session'),
       expect.objectContaining({ credentials: 'include' })
     )
     // Still submits with no cookie yet, with an empty token: this fetch mock sets none.

@@ -3,9 +3,9 @@
 Read off allauth's patterns, so a moved or added route isn't silently left ungated.
 """
 
-from allauth.headless import urls as headless_urls
 from django.urls import URLResolver, path
 
+from apps.users import headless_urls
 from apps.users.reauthentication.gate import ProvesWhoTheyAre
 from apps.users.reauthentication.views.change_password import ChangePasswordView
 from apps.users.reauthentication.views.manage_email import ManageEmailView

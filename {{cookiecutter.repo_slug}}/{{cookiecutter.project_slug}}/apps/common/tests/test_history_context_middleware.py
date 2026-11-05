@@ -38,10 +38,10 @@ def test_a_write_through_a_real_request_is_stamped_with_the_version(client):
     host = f"auth.{settings.PARENT_HOST}"
     user = User.objects.create_user(username="alice", email="alice@example.test", password="old-password")
     client.force_login(user)
-    client.get("/v0/browser/v1/auth/session", HTTP_HOST=host)  # primes the csrftoken cookie
+    client.get("/v0/browser/auth/session", HTTP_HOST=host)  # primes the csrftoken cookie
 
     client.post(
-        "/v0/browser/v1/account/password/change",
+        "/v0/browser/account/password/change",
         data={"current_password": "old-password", "new_password": "a-new-password"},
         content_type="application/json",
         HTTP_HOST=host,

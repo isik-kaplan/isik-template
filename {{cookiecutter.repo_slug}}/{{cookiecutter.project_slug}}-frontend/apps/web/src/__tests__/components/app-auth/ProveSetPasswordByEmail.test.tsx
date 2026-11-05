@@ -33,7 +33,7 @@ describe('ProveSetPasswordByEmail', () => {
       )
     ).toBeTruthy()
     const [request] = vi.mocked(globalThis.fetch).mock.calls[0] as [Request]
-    expect(request.url).toContain('/v0/browser/v1/auth/password/request')
+    expect(request.url).toContain('/v0/browser/auth/password/request')
     expect(await request.json()).toEqual({ email: 'alice@example.test' })
   })
 })

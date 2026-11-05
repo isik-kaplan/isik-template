@@ -23,7 +23,7 @@ from apps.users.models.user import User
 
 AUTH_HOST = f"auth.{settings.PARENT_HOST}"
 PASSWORD = "correct-horse-battery-staple"
-TOTP_PATH = "/v0/browser/v1/account/authenticators/totp"
+TOTP_PATH = "/v0/browser/account/authenticators/totp"
 
 
 def _current_code(secret):
@@ -34,7 +34,7 @@ def _current_code(secret):
 
 
 def _primed(client):
-    client.get("/v0/browser/v1/auth/session", HTTP_HOST=AUTH_HOST)
+    client.get("/v0/browser/auth/session", HTTP_HOST=AUTH_HOST)
     return client.cookies["csrftoken"].value
 
 
@@ -45,13 +45,13 @@ def _post(client, path, data):
 
 
 def _reauthenticate(client):
-    assert _post(client, "/v0/browser/v1/auth/reauthenticate", {"password": PASSWORD}).status_code == 200
+    assert _post(client, "/v0/browser/auth/reauthenticate", {"password": PASSWORD}).status_code == 200
 
 
 def _signed_in(client, *, verified=True):
     user = User.objects.create_user(username="alice", email="alice@example.test", password=PASSWORD)
     user.emailaddress_set.create(email=user.email, primary=True, verified=verified)
-    _post(client, "/v0/browser/v1/auth/login", {"email": "alice@example.test", "password": PASSWORD})
+    _post(client, "/v0/browser/auth/login", {"email": "alice@example.test", "password": PASSWORD})
     return user
 
 
@@ -90,7 +90,7 @@ def test_the_authenticator_app_shows_the_project_not_the_site_placeholder():
 
 @pytest.mark.django_db
 def test_the_headless_config_advertises_every_factor_but_no_passkey_login(client):
-    response = client.get("/v0/browser/v1/config", HTTP_HOST=AUTH_HOST)
+    response = client.get("/v0/browser/config", HTTP_HOST=AUTH_HOST)
 
     assert response.json()["data"]["mfa"] == {
         "supported_types": ["totp", "recovery_codes", "webauthn"],
@@ -100,7 +100,7 @@ def test_the_headless_config_advertises_every_factor_but_no_passkey_login(client
 
 @pytest.mark.django_db
 def test_no_passwordless_passkey_login_route_is_mounted(client):
-    response = client.get("/v0/browser/v1/auth/webauthn/login", HTTP_HOST=AUTH_HOST)
+    response = client.get("/v0/browser/auth/webauthn/login", HTTP_HOST=AUTH_HOST)
 
     assert response.status_code == 404
 
@@ -109,7 +109,7 @@ def test_no_passwordless_passkey_login_route_is_mounted(client):
 def test_a_password_alone_is_not_enough_once_a_factor_exists(client):
     _user_with_totp()
 
-    response = _post(client, "/v0/browser/v1/auth/login", {"email": "alice@example.test", "password": PASSWORD})
+    response = _post(client, "/v0/browser/auth/login", {"email": "alice@example.test", "password": PASSWORD})
 
     assert response.status_code == 401
     flows = {flow["id"]: flow for flow in response.json()["data"]["flows"]}
@@ -120,9 +120,9 @@ def test_a_password_alone_is_not_enough_once_a_factor_exists(client):
 @pytest.mark.django_db
 def test_the_authenticator_code_completes_the_login(client):
     _, secret = _user_with_totp()
-    _post(client, "/v0/browser/v1/auth/login", {"email": "alice@example.test", "password": PASSWORD})
+    _post(client, "/v0/browser/auth/login", {"email": "alice@example.test", "password": PASSWORD})
 
-    response = _post(client, "/v0/browser/v1/auth/2fa/authenticate", {"code": _current_code(secret)})
+    response = _post(client, "/v0/browser/auth/2fa/authenticate", {"code": _current_code(secret)})
 
     assert response.status_code == 200
     assert response.json()["meta"]["is_authenticated"] is True
@@ -136,9 +136,9 @@ def _unused_recovery_codes(user):
 def test_a_recovery_code_completes_the_login_once(client):
     user, _ = _user_with_totp()
     code = _unused_recovery_codes(user)[0]
-    _post(client, "/v0/browser/v1/auth/login", {"email": "alice@example.test", "password": PASSWORD})
+    _post(client, "/v0/browser/auth/login", {"email": "alice@example.test", "password": PASSWORD})
 
-    response = _post(client, "/v0/browser/v1/auth/2fa/authenticate", {"code": code})
+    response = _post(client, "/v0/browser/auth/2fa/authenticate", {"code": code})
 
     assert response.status_code == 200
     assert code not in _unused_recovery_codes(user)
@@ -148,12 +148,12 @@ def test_a_recovery_code_completes_the_login_once(client):
 def test_enabling_totp_mails_the_owner_through_the_projects_own_template(client, django_capture_on_commit_callbacks):
     user = User.objects.create_user(username="alice", email="alice@example.test", password=PASSWORD)
     user.emailaddress_set.create(email=user.email, primary=True, verified=True)
-    _post(client, "/v0/browser/v1/auth/login", {"email": "alice@example.test", "password": PASSWORD})
+    _post(client, "/v0/browser/auth/login", {"email": "alice@example.test", "password": PASSWORD})
     _reauthenticate(client)
     secret = client.get(TOTP_PATH, HTTP_HOST=AUTH_HOST).json()["meta"]["secret"]
 
     with django_capture_on_commit_callbacks(execute=True):
-        response = _post(client, "/v0/browser/v1/account/authenticators/totp", {"code": _current_code(secret)})
+        response = _post(client, "/v0/browser/account/authenticators/totp", {"code": _current_code(secret)})
 
     assert response.status_code == 200
     assert [message.subject for message in mail.outbox] == ["Two-factor authentication enabled"]
@@ -214,7 +214,7 @@ def test_the_frontend_origin_is_cors_allowed_over_https_too(client):
     """Passkeys exist only over https, which the e2e specs use."""
     origin = f"https://{settings.PARENT_HOST}"
 
-    response = client.get("/v0/browser/v1/auth/session", HTTP_HOST=AUTH_HOST, HTTP_ORIGIN=origin)
+    response = client.get("/v0/browser/auth/session", HTTP_HOST=AUTH_HOST, HTTP_ORIGIN=origin)
 
     assert response["Access-Control-Allow-Origin"] == origin
     assert f"https://{AUTH_HOST}" in settings.CSRF_TRUSTED_ORIGINS

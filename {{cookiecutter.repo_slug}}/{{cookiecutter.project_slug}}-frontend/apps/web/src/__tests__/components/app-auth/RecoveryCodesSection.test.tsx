@@ -44,7 +44,7 @@ describe('RecoveryCodesSection', () => {
 
     const [request] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [Request]
     expect(request.method).toBe('POST')
-    expect(new URL(request.url).pathname).toBe('/v0/browser/v1/account/authenticators/recovery-codes')
+    expect(new URL(request.url).pathname).toBe('/v0/browser/account/authenticators/recovery-codes')
     expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['aaaa', 'bbbb'])
     expect(toast.success).toHaveBeenCalledWith('New recovery codes generated. The old ones no longer work.')
     expect(refresh).toHaveBeenCalled()

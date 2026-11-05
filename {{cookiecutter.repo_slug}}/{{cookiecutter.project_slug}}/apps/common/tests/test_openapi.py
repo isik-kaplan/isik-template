@@ -77,13 +77,13 @@ def test_every_auth_path_is_one_a_request_reaches():
     paths = openapi.auth_document()["paths"]
 
     assert not [path for path in paths if "{client}" in path]
-    assert {"/v0/browser/v1/auth/session", "/v0/app/v1/auth/session"} <= paths.keys()
+    assert {"/v0/browser/auth/session", "/v0/app/auth/session"} <= paths.keys()
 
 
 def test_each_client_gets_its_own_copy_of_a_path():
     paths = openapi.auth_document()["paths"]
 
-    assert paths["/v0/browser/v1/auth/session"] is not paths["/v0/app/v1/auth/session"]
+    assert paths["/v0/browser/auth/session"] is not paths["/v0/app/auth/session"]
 
 
 def test_the_client_parameter_is_gone_with_the_template():
@@ -95,17 +95,15 @@ def test_the_client_parameter_is_gone_with_the_template():
 
 def test_a_path_mounted_for_one_client_only_is_expanded_for_that_one():
     """The app's token refresh has no browser twin, and is still checked when templated."""
-    paths = dict(openapi._concrete_paths({"/v0/{client}/v1/tokens/refresh": {}}, get_host("auth").urlconf))
+    paths = dict(openapi._concrete_paths({"/v0/{client}/tokens/refresh": {}}, get_host("auth").urlconf))
 
-    assert list(paths) == ["/v0/app/v1/tokens/refresh"]
+    assert list(paths) == ["/v0/app/tokens/refresh"]
 
 
 def test_an_already_concrete_path_is_kept_as_it_is():
     item = {"get": {}}
 
-    assert dict(openapi._concrete_paths({"/v0/browser/v1/x": item}, get_host("auth").urlconf)) == {
-        "/v0/browser/v1/x": item
-    }
+    assert dict(openapi._concrete_paths({"/v0/browser/x": item}, get_host("auth").urlconf)) == {"/v0/browser/x": item}
 
 
 def test_the_client_parameter_is_dropped_wherever_it_is_declared():

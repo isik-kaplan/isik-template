@@ -6,7 +6,7 @@ urlpatterns = [
     path("v0/provider-callback/", include("allauth.urls")),
     # Ahead of allauth's own, so the gated routes resolve to the gating views.
     path("v0/", include("apps.users.reauthentication.urls")),
-    path("v0/", include("allauth.headless.urls")),
+    path("v0/", include("apps.users.headless_urls")),
     # Every route 404s while the provider is off.
     path("o/", include("apps.oauth_provider.urls")),
 ]

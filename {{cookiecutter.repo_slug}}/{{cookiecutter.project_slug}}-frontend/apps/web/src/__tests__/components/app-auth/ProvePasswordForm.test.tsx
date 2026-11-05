@@ -51,7 +51,7 @@ describe('ProvePasswordForm', () => {
     // The screen is leaving, so the button stays shut rather than offering a second submit.
     expect(screen.getByRole('button', { name: 'Confirm' })).toHaveProperty('disabled', true)
     const [request] = vi.mocked(globalThis.fetch).mock.calls[0] as [Request]
-    expect(request.url).toContain('/v0/browser/v1/auth/reauthenticate')
+    expect(request.url).toContain('/v0/browser/auth/reauthenticate')
     expect(await request.json()).toEqual({ password: 'correct-horse' })
   })
 

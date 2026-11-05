@@ -7,8 +7,8 @@ type Body<P extends keyof paths> = paths[P] extends {
 }
   ? B
   : never
-export type SignupBody = Body<'/v0/browser/v1/auth/signup'>
-export type ProviderSignupBody = Body<'/v0/browser/v1/auth/provider/signup'>
+export type SignupBody = Body<'/v0/browser/auth/signup'>
+export type ProviderSignupBody = Body<'/v0/browser/auth/provider/signup'>
 
 export type AuthApiOptions = {
   csrfCookieName?: string
@@ -16,11 +16,11 @@ export type AuthApiOptions = {
   baseFetch?: typeof fetch
 }
 
-export const SESSION_PATH = '/v0/browser/v1/auth/session'
+export const SESSION_PATH = '/v0/browser/auth/session'
 // Submitted as a real HTML form, not fetch(), so the browser follows the 302 to the provider.
-export const PROVIDER_REDIRECT_PATH = '/v0/browser/v1/auth/provider/redirect'
+export const PROVIDER_REDIRECT_PATH = '/v0/browser/auth/provider/redirect'
 // Also a form submission: sends a signed-in person back to their provider to prove it is them.
-export const PROVIDER_REAUTHENTICATE_PATH = '/v0/browser/v1/auth/provider/reauthenticate'
+export const PROVIDER_REAUTHENTICATE_PATH = '/v0/browser/auth/provider/reauthenticate'
 
 export class AuthApi {
   client: ReturnType<typeof createOpenApiClient<paths>>
@@ -33,7 +33,7 @@ export class AuthApi {
   }
 
   async session() {
-    return this.client.GET('/v0/browser/v1/auth/session')
+    return this.client.GET('/v0/browser/auth/session')
   }
 
   async isAuthenticated(): Promise<boolean> {
@@ -43,72 +43,72 @@ export class AuthApi {
   }
 
   async login(credentials: { username?: string; email?: string; password: string }) {
-    return this.client.POST('/v0/browser/v1/auth/login', { body: credentials })
+    return this.client.POST('/v0/browser/auth/login', { body: credentials })
   }
 
   async signup(data: SignupBody) {
-    return this.client.POST('/v0/browser/v1/auth/signup', { body: data })
+    return this.client.POST('/v0/browser/auth/signup', { body: data })
   }
 
   async logout() {
-    return this.client.DELETE('/v0/browser/v1/auth/session')
+    return this.client.DELETE('/v0/browser/auth/session')
   }
 
   async reauthenticate(password: string) {
-    return this.client.POST('/v0/browser/v1/auth/reauthenticate', { body: { password } })
+    return this.client.POST('/v0/browser/auth/reauthenticate', { body: { password } })
   }
 
   async requestPasswordReset(email: string) {
-    return this.client.POST('/v0/browser/v1/auth/password/request', { body: { email } })
+    return this.client.POST('/v0/browser/auth/password/request', { body: { email } })
   }
 
   async resetPassword(key: string, password: string) {
-    return this.client.POST('/v0/browser/v1/auth/password/reset', { body: { key, password } })
+    return this.client.POST('/v0/browser/auth/password/reset', { body: { key, password } })
   }
 
   async changePassword(data: { current_password?: string; new_password: string }) {
-    return this.client.POST('/v0/browser/v1/account/password/change', { body: data })
+    return this.client.POST('/v0/browser/account/password/change', { body: data })
   }
 
   async verifyEmail(key: string) {
-    return this.client.POST('/v0/browser/v1/auth/email/verify', { body: { key } })
+    return this.client.POST('/v0/browser/auth/email/verify', { body: { key } })
   }
 
   async emails() {
-    return this.client.GET('/v0/browser/v1/account/email')
+    return this.client.GET('/v0/browser/account/email')
   }
 
   async addEmail(email: string) {
-    return this.client.POST('/v0/browser/v1/account/email', { body: { email } })
+    return this.client.POST('/v0/browser/account/email', { body: { email } })
   }
 
   async removeEmail(email: string) {
-    return this.client.DELETE('/v0/browser/v1/account/email', { body: { email } })
+    return this.client.DELETE('/v0/browser/account/email', { body: { email } })
   }
 
   async makeEmailPrimary(email: string) {
-    return this.client.PATCH('/v0/browser/v1/account/email', { body: { email, primary: true } })
+    return this.client.PATCH('/v0/browser/account/email', { body: { email, primary: true } })
   }
 
   async resendEmailVerification(email: string) {
-    return this.client.PUT('/v0/browser/v1/account/email', { body: { email } })
+    return this.client.PUT('/v0/browser/account/email', { body: { email } })
   }
 
   async providers() {
-    return this.client.GET('/v0/browser/v1/account/providers')
+    return this.client.GET('/v0/browser/account/providers')
   }
 
   async disconnectProvider(provider: string, account: string) {
-    return this.client.DELETE('/v0/browser/v1/account/providers', { body: { provider, account } })
+    return this.client.DELETE('/v0/browser/account/providers', { body: { provider, account } })
   }
 
   async sessions() {
-    return this.client.GET('/v0/browser/v1/auth/sessions')
+    return this.client.GET('/v0/browser/auth/sessions')
   }
 
   // Ending the current session too means the response can come back unauthenticated.
   async endSessions(sessions: number[]) {
-    return this.client.DELETE('/v0/browser/v1/auth/sessions', { body: { sessions } })
+    return this.client.DELETE('/v0/browser/auth/sessions', { body: { sessions } })
   }
 
   // An empty `sessions` array is a 400, not a no-op, so the lone-session case returns the list.
@@ -122,75 +122,75 @@ export class AuthApi {
   }
 
   async config() {
-    return this.client.GET('/v0/browser/v1/config')
+    return this.client.GET('/v0/browser/config')
   }
 
   async completeMfaChallenge(code: string) {
-    return this.client.POST('/v0/browser/v1/auth/2fa/authenticate', { body: { code } })
+    return this.client.POST('/v0/browser/auth/2fa/authenticate', { body: { code } })
   }
 
   async webauthnChallengeOptions() {
-    return this.client.GET('/v0/browser/v1/auth/webauthn/authenticate')
+    return this.client.GET('/v0/browser/auth/webauthn/authenticate')
   }
 
   async completeWebauthnChallenge(credential: Record<string, unknown>) {
-    return this.client.POST('/v0/browser/v1/auth/webauthn/authenticate', { body: { credential } })
+    return this.client.POST('/v0/browser/auth/webauthn/authenticate', { body: { credential } })
   }
 
   async reauthenticateWithCode(code: string) {
-    return this.client.POST('/v0/browser/v1/auth/2fa/reauthenticate', { body: { code } })
+    return this.client.POST('/v0/browser/auth/2fa/reauthenticate', { body: { code } })
   }
 
   async webauthnReauthenticationOptions() {
-    return this.client.GET('/v0/browser/v1/auth/webauthn/reauthenticate')
+    return this.client.GET('/v0/browser/auth/webauthn/reauthenticate')
   }
 
   async reauthenticateWithWebauthn(credential: Record<string, unknown>) {
-    return this.client.POST('/v0/browser/v1/auth/webauthn/reauthenticate', { body: { credential } })
+    return this.client.POST('/v0/browser/auth/webauthn/reauthenticate', { body: { credential } })
   }
 
   async authenticators() {
-    return this.client.GET('/v0/browser/v1/account/authenticators')
+    return this.client.GET('/v0/browser/account/authenticators')
   }
 
   // A 404 means no TOTP yet, and carries a fresh secret to enroll.
   async totpStatus() {
-    return this.client.GET('/v0/browser/v1/account/authenticators/totp')
+    return this.client.GET('/v0/browser/account/authenticators/totp')
   }
 
   async activateTotp(code: string) {
-    return this.client.POST('/v0/browser/v1/account/authenticators/totp', { body: { code } })
+    return this.client.POST('/v0/browser/account/authenticators/totp', { body: { code } })
   }
 
   async deactivateTotp() {
-    return this.client.DELETE('/v0/browser/v1/account/authenticators/totp')
+    return this.client.DELETE('/v0/browser/account/authenticators/totp')
   }
 
   async recoveryCodes() {
-    return this.client.GET('/v0/browser/v1/account/authenticators/recovery-codes')
+    return this.client.GET('/v0/browser/account/authenticators/recovery-codes')
   }
 
   async regenerateRecoveryCodes() {
-    return this.client.POST('/v0/browser/v1/account/authenticators/recovery-codes')
+    return this.client.POST('/v0/browser/account/authenticators/recovery-codes')
   }
 
   async webauthnCreationOptions() {
-    return this.client.GET('/v0/browser/v1/account/authenticators/webauthn')
+    return this.client.GET('/v0/browser/account/authenticators/webauthn')
   }
 
   async addWebauthn(credential: Record<string, unknown>, name?: string) {
-    return this.client.POST('/v0/browser/v1/account/authenticators/webauthn', { body: { credential, name } })
+    return this.client.POST('/v0/browser/account/authenticators/webauthn', { body: { credential, name } })
   }
 
   async removeWebauthn(authenticators: number[]) {
-    return this.client.DELETE('/v0/browser/v1/account/authenticators/webauthn', { body: { authenticators } })
+    return this.client.DELETE('/v0/browser/account/authenticators/webauthn', { body: { authenticators } })
   }
 
   async pendingProviderSignup() {
-    return this.client.GET('/v0/browser/v1/auth/provider/signup')
+    return this.client.GET('/v0/browser/auth/provider/signup')
   }
 
   async completeProviderSignup(data: ProviderSignupBody) {
-    return this.client.POST('/v0/browser/v1/auth/provider/signup', { body: data })
+    return this.client.POST('/v0/browser/auth/provider/signup', { body: data })
   }
 }

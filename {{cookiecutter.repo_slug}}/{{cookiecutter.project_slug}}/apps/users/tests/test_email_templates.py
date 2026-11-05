@@ -104,9 +104,9 @@ def test_every_mfa_flow_renders(flow):
 def test_signup_sends_a_real_confirmation_email(client):
     """Proves email_folder matches allauth's own template_prefix shape."""
     host = f"auth.{settings.PARENT_HOST}"
-    client.get("/v0/browser/v1/auth/session", HTTP_HOST=host)
+    client.get("/v0/browser/auth/session", HTTP_HOST=host)
     client.post(
-        "/v0/browser/v1/auth/signup",
+        "/v0/browser/auth/signup",
         data={"username": "newuser", "email": "newuser@example.test", "password": "correct-horse-battery-staple"},
         content_type="application/json",
         HTTP_HOST=host,
@@ -127,9 +127,9 @@ def test_password_reset_request_sends_the_reset_key_email(client):
     user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
     host = f"auth.{settings.PARENT_HOST}"
 
-    client.get("/v0/browser/v1/auth/session", HTTP_HOST=host)
+    client.get("/v0/browser/auth/session", HTTP_HOST=host)
     client.post(
-        "/v0/browser/v1/auth/password/request",
+        "/v0/browser/auth/password/request",
         data={"email": user.email},
         content_type="application/json",
         HTTP_HOST=host,

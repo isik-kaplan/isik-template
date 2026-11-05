@@ -12,8 +12,8 @@ const providers = vi.fn()
 const AuthApi = vi.hoisted(() => vi.fn())
 vi.mock('@{{ cookiecutter.repo_slug }}/auth-api', () => ({
   AuthApi,
-  PROVIDER_REDIRECT_PATH: '/v0/browser/v1/auth/provider/redirect',
-  SESSION_PATH: '/v0/browser/v1/auth/session',
+  PROVIDER_REDIRECT_PATH: '/v0/browser/auth/provider/redirect',
+  SESSION_PATH: '/v0/browser/auth/session',
 }))
 AuthApi.mockImplementation(() => ({ providers }))
 let cookieHeader: string | undefined = 'sessionid=abc123'
@@ -137,7 +137,7 @@ describe('ProfileConnectionsPage', () => {
     await user.click(within(row).getByRole('button', { name: 'Connect' }))
 
     const form = document.querySelector('form') as HTMLFormElement
-    expect(form.getAttribute('action')).toBe(`${AUTH_ORIGIN}/v0/browser/v1/auth/provider/redirect`)
+    expect(form.getAttribute('action')).toBe(`${AUTH_ORIGIN}/v0/browser/auth/provider/redirect`)
     expect((form.elements.namedItem('callback_url') as HTMLInputElement).value).toBe(
       'http://{{ cookiecutter.repo_slug }}.test/profile/connections'
     )

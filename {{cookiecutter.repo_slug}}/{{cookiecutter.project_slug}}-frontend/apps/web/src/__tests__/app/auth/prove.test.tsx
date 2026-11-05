@@ -87,7 +87,7 @@ describe('ProvePage', () => {
     await vi.waitFor(() => expect(document.querySelector('form')).toBeTruthy())
 
     const form = document.querySelector('form') as HTMLFormElement
-    expect(form.getAttribute('action')).toBe(`http://auth.${HOST}/v0/browser/v1/auth/provider/reauthenticate`)
+    expect(form.getAttribute('action')).toBe(`http://auth.${HOST}/v0/browser/auth/provider/reauthenticate`)
     expect((form.elements.namedItem('callback_url') as HTMLInputElement).value).toBe(
       `http://${HOST}/auth/prove?next=%2Fprofile%2Femails`
     )

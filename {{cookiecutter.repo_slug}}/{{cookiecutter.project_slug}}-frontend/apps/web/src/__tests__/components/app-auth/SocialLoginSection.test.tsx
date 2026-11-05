@@ -7,7 +7,7 @@ const providers = vi.hoisted(() => [{ id: 'google', name: 'Google', icon: '' }])
 
 vi.mock('@/lib/socialProviders', () => ({ socialProviders: () => providers }))
 
-const action = 'https://auth.example.test/v0/browser/v1/auth/provider/redirect'
+const action = 'https://auth.example.test/v0/browser/auth/provider/redirect'
 const callbackUrl = 'https://example.test/auth/callback-complete?next=%2F'
 
 describe('SocialLoginSection', () => {

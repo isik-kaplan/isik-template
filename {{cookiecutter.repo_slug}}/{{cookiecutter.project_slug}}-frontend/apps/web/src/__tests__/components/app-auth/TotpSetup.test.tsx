@@ -35,8 +35,8 @@ function on(method: string, path: string, status: number, body: unknown): Route 
     request.method === method && new URL(request.url).pathname === path ? jsonResponse(status, body) : undefined
 }
 
-const TOTP = '/v0/browser/v1/account/authenticators/totp'
-const RECOVERY = '/v0/browser/v1/account/authenticators/recovery-codes'
+const TOTP = '/v0/browser/account/authenticators/totp'
+const RECOVERY = '/v0/browser/account/authenticators/recovery-codes'
 
 async function typeCode(code: string) {
   const user = userEvent.setup()

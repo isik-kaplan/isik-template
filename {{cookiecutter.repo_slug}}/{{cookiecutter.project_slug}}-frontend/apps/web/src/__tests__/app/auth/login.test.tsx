@@ -77,9 +77,7 @@ describe('LoginPage', () => {
 
     const forms = document.querySelectorAll('form')
     const socialForm = Array.from(forms).find((form) => form.elements.namedItem('provider'))
-    expect(socialForm?.getAttribute('action')).toBe(
-      'http://auth.test-project.test/v0/browser/v1/auth/provider/redirect'
-    )
+    expect(socialForm?.getAttribute('action')).toBe('http://auth.test-project.test/v0/browser/auth/provider/redirect')
     expect((socialForm?.elements.namedItem('callback_url') as HTMLInputElement)?.value).toBe(
       'http://test-project.test/auth/callback-complete?next=%2Fdashboard'
     )

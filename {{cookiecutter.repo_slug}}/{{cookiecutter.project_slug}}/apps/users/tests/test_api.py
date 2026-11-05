@@ -288,9 +288,9 @@ def test_the_cross_user_history_filters_by_actor(client):
     superuser = User.objects.create_superuser(username="root", email="root@example.test", password="x")
     alice = User.objects.create_user(username="alice", email="alice@example.test", password="old-password")
     client.force_login(alice)
-    client.get("/v0/browser/v1/auth/session", HTTP_HOST=host)  # primes the csrftoken cookie
+    client.get("/v0/browser/auth/session", HTTP_HOST=host)  # primes the csrftoken cookie
     client.post(
-        "/v0/browser/v1/account/password/change",
+        "/v0/browser/account/password/change",
         data={"current_password": "old-password", "new_password": "a-new-password"},
         content_type="application/json",
         HTTP_HOST=host,

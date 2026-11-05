@@ -35,8 +35,8 @@ function requests() {
   return (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.map(([request]) => request as Request)
 }
 
-const WEBAUTHN = '/v0/browser/v1/account/authenticators/webauthn'
-const RECOVERY = '/v0/browser/v1/account/authenticators/recovery-codes'
+const WEBAUTHN = '/v0/browser/account/authenticators/webauthn'
+const RECOVERY = '/v0/browser/account/authenticators/recovery-codes'
 const CREATION_OPTIONS = {
   status: 200,
   data: {

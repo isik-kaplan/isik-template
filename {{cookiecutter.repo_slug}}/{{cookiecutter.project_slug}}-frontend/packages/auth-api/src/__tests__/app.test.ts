@@ -95,7 +95,7 @@ describe('AppAuthApi', () => {
     await api.signup({ username: 'jane', email: 'j@test.test', password: 'x' })
     const [input] = baseFetch.mock.calls[0]
     const url = input instanceof Request ? input.url : String(input)
-    expect(url).toContain('/v0/app/v1/auth/signup')
+    expect(url).toContain('/v0/app/auth/signup')
   })
 
   it.each([
@@ -127,7 +127,7 @@ describe('AppAuthApi', () => {
     await api.completeMfaChallenge('123456')
     const [request] = baseFetch.mock.calls[0] as unknown as [Request]
     expect(request.method).toBe('POST')
-    expect(request.url).toBe('https://auth.example.test/v0/app/v1/auth/2fa/authenticate')
+    expect(request.url).toBe('https://auth.example.test/v0/app/auth/2fa/authenticate')
     expect(await request.json()).toEqual({ code: '123456' })
   })
 })

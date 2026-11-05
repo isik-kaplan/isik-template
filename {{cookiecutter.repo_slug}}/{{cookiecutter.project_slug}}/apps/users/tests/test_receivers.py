@@ -24,9 +24,9 @@ def alice():
 
 
 def headless(client, method, path, data=""):
-    client.get("/v0/browser/v1/auth/session", HTTP_HOST=AUTH_HOST)  # primes the csrftoken cookie
+    client.get("/v0/browser/auth/session", HTTP_HOST=AUTH_HOST)  # primes the csrftoken cookie
     return getattr(client, method)(
-        f"/v0/browser/v1/{path}",
+        f"/v0/browser/{path}",
         data=data,
         content_type="application/json",
         HTTP_HOST=AUTH_HOST,
@@ -154,7 +154,7 @@ def alice_signed_in(client, alice):
 
 def _enable_totp(client):
     _prove(client)
-    secret = client.get("/v0/browser/v1/account/authenticators/totp", HTTP_HOST=AUTH_HOST).json()["meta"]["secret"]
+    secret = client.get("/v0/browser/account/authenticators/totp", HTTP_HOST=AUTH_HOST).json()["meta"]["secret"]
     return headless(client, "post", "account/authenticators/totp", {"code": _current_code(secret)})
 
 

@@ -28,9 +28,9 @@ def unpublished(monkeypatch):
 
 def _sign_up(client, username):
     host = f"auth.{settings.PARENT_HOST}"
-    client.get("/v0/browser/v1/auth/session", HTTP_HOST=host)
+    client.get("/v0/browser/auth/session", HTTP_HOST=host)
     client.post(
-        "/v0/browser/v1/auth/signup",
+        "/v0/browser/auth/signup",
         data={"username": username, "email": f"{username}@example.test", "password": PASSWORD},
         content_type="application/json",
         HTTP_HOST=host,

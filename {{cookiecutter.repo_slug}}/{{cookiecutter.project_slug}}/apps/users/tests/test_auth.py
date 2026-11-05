@@ -9,7 +9,7 @@ from apps.users.models.user import User
 
 @pytest.mark.django_db
 def test_session_endpoint_reports_anonymous(client):
-    response = client.get("/v0/browser/v1/auth/session", HTTP_HOST=f"auth.{settings.PARENT_HOST}")
+    response = client.get("/v0/browser/auth/session", HTTP_HOST=f"auth.{settings.PARENT_HOST}")
     assert response.status_code == 401
     assert response.json()["meta"]["is_authenticated"] is False
 
@@ -18,9 +18,9 @@ def test_session_endpoint_reports_anonymous(client):
 def test_signup_via_headless_api_leaves_email_verification_pending(client):
     host = f"auth.{settings.PARENT_HOST}"
     # Primes the csrftoken cookie.
-    client.get("/v0/browser/v1/auth/session", HTTP_HOST=host)
+    client.get("/v0/browser/auth/session", HTTP_HOST=host)
     response = client.post(
-        "/v0/browser/v1/auth/signup",
+        "/v0/browser/auth/signup",
         data={"username": "newuser", "email": "newuser@example.test", "password": "correct-horse-battery-staple"},
         content_type="application/json",
         HTTP_HOST=host,
@@ -38,10 +38,10 @@ def test_a_password_change_names_the_session_that_made_it(client):
     host = f"auth.{settings.PARENT_HOST}"
     user = User.objects.create_user(username="alice", email="alice@example.test", password="old-password")
     client.force_login(user)
-    client.get("/v0/browser/v1/auth/session", HTTP_HOST=host)  # primes the csrftoken cookie
+    client.get("/v0/browser/auth/session", HTTP_HOST=host)  # primes the csrftoken cookie
 
     response = client.post(
-        "/v0/browser/v1/account/password/change",
+        "/v0/browser/account/password/change",
         data={"current_password": "old-password", "new_password": "a-new-password"},
         content_type="application/json",
         HTTP_HOST=host,
@@ -61,7 +61,7 @@ def test_the_session_carries_the_users_saved_language(client, settings, a_second
     user = User.objects.create_user(username="alice", email="alice@example.test", password="x", language="tr")
     client.force_login(user)
 
-    response = client.get("/v0/browser/v1/auth/session", HTTP_HOST=f"auth.{settings.PARENT_HOST}")
+    response = client.get("/v0/browser/auth/session", HTTP_HOST=f"auth.{settings.PARENT_HOST}")
 
     assert response.json()["data"]["user"]["language"] == "tr"
 
@@ -71,7 +71,7 @@ def test_the_session_omits_language_when_the_user_has_no_preference(client):
     user = User.objects.create_user(username="alice", email="alice@example.test", password="x")
     client.force_login(user)
 
-    response = client.get("/v0/browser/v1/auth/session", HTTP_HOST=f"auth.{settings.PARENT_HOST}")
+    response = client.get("/v0/browser/auth/session", HTTP_HOST=f"auth.{settings.PARENT_HOST}")
 
     # allauth drops every empty field from this payload.
     assert "language" not in response.json()["data"]["user"]

@@ -58,7 +58,7 @@ export class AppAuthApi {
   }
 
   async session() {
-    return this.client.GET('/v0/app/v1/auth/session')
+    return this.client.GET('/v0/app/auth/session')
   }
 
   async isAuthenticated(): Promise<boolean> {
@@ -68,79 +68,79 @@ export class AppAuthApi {
   }
 
   async login(credentials: { username?: string; email?: string; password: string }) {
-    return this.client.POST('/v0/app/v1/auth/login', { body: credentials })
+    return this.client.POST('/v0/app/auth/login', { body: credentials })
   }
 
   async signup(data: SignupBody) {
-    return this.client.POST('/v0/app/v1/auth/signup', { body: data })
+    return this.client.POST('/v0/app/auth/signup', { body: data })
   }
 
   async logout() {
-    const result = await this.client.DELETE('/v0/app/v1/auth/session')
+    const result = await this.client.DELETE('/v0/app/auth/session')
     // A logout response may carry no new token, which would leave the dead one stored.
     await this.setToken(null)
     return result
   }
 
   async completeMfaChallenge(code: string) {
-    return this.client.POST('/v0/app/v1/auth/2fa/authenticate', { body: { code } })
+    return this.client.POST('/v0/app/auth/2fa/authenticate', { body: { code } })
   }
 
   async reauthenticate(password: string) {
-    return this.client.POST('/v0/app/v1/auth/reauthenticate', { body: { password } })
+    return this.client.POST('/v0/app/auth/reauthenticate', { body: { password } })
   }
 
   async requestPasswordReset(email: string) {
-    return this.client.POST('/v0/app/v1/auth/password/request', { body: { email } })
+    return this.client.POST('/v0/app/auth/password/request', { body: { email } })
   }
 
   async resetPassword(key: string, password: string) {
-    return this.client.POST('/v0/app/v1/auth/password/reset', { body: { key, password } })
+    return this.client.POST('/v0/app/auth/password/reset', { body: { key, password } })
   }
 
   async changePassword(data: { current_password?: string; new_password: string }) {
-    return this.client.POST('/v0/app/v1/account/password/change', { body: data })
+    return this.client.POST('/v0/app/account/password/change', { body: data })
   }
 
   async verifyEmail(key: string) {
-    return this.client.POST('/v0/app/v1/auth/email/verify', { body: { key } })
+    return this.client.POST('/v0/app/auth/email/verify', { body: { key } })
   }
 
   async emails() {
-    return this.client.GET('/v0/app/v1/account/email')
+    return this.client.GET('/v0/app/account/email')
   }
 
   async addEmail(email: string) {
-    return this.client.POST('/v0/app/v1/account/email', { body: { email } })
+    return this.client.POST('/v0/app/account/email', { body: { email } })
   }
 
   async removeEmail(email: string) {
-    return this.client.DELETE('/v0/app/v1/account/email', { body: { email } })
+    return this.client.DELETE('/v0/app/account/email', { body: { email } })
   }
 
   async makeEmailPrimary(email: string) {
-    return this.client.PATCH('/v0/app/v1/account/email', { body: { email, primary: true } })
+    return this.client.PATCH('/v0/app/account/email', { body: { email, primary: true } })
   }
 
   async resendEmailVerification(email: string) {
-    return this.client.PUT('/v0/app/v1/account/email', { body: { email } })
+    return this.client.PUT('/v0/app/account/email', { body: { email } })
   }
 
   async providers() {
-    return this.client.GET('/v0/app/v1/account/providers')
+    return this.client.GET('/v0/app/account/providers')
   }
 
   async disconnectProvider(provider: string, account: string) {
-    return this.client.DELETE('/v0/app/v1/account/providers', { body: { provider, account } })
+    return this.client.DELETE('/v0/app/account/providers', { body: { provider, account } })
   }
 
   async sessions() {
-    return this.client.GET('/v0/app/v1/auth/sessions')
+    return this.client.GET('/v0/app/auth/sessions')
   }
 
   // Ending the current session too means the response can come back unauthenticated.
   async endSessions(sessions: number[]) {
-    return this.client.DELETE('/v0/app/v1/auth/sessions', { body: { sessions } })
+    return this.client.DELETE('/v0/app/auth/sessions', { body: { sessions } })
   }
 
   // An empty `sessions` array is a 400, not a no-op, so the lone-session case returns the list.
@@ -154,14 +154,14 @@ export class AppAuthApi {
   }
 
   async pendingProviderSignup() {
-    return this.client.GET('/v0/app/v1/auth/provider/signup')
+    return this.client.GET('/v0/app/auth/provider/signup')
   }
 
   async completeProviderSignup(data: ProviderSignupBody) {
-    return this.client.POST('/v0/app/v1/auth/provider/signup', { body: data })
+    return this.client.POST('/v0/app/auth/provider/signup', { body: data })
   }
 
   async loginWithProviderToken(provider: string, token: Record<string, unknown>) {
-    return this.client.POST('/v0/app/v1/auth/provider/token', { body: { provider, process: 'login', token } })
+    return this.client.POST('/v0/app/auth/provider/token', { body: { provider, process: 'login', token } })
   }
 }

@@ -16,7 +16,7 @@ describe('afterSignIn', () => {
     ['https://example.test/o/authorize/', '/'],
     ['https://api.example.test/o/authorize/', '/'],
     ['https://auth.example.test.elsewhere.test/o/authorize/', '/'],
-    ['https://auth.example.test/v0/browser/v1/auth/session', '/'],
+    ['https://auth.example.test/v0/browser/auth/session', '/'],
     ['https://auth.example.test/o/authorize/../../v0/', '/'],
     ['javascript://auth.example.test/o/authorize/', '/'],
   ])('sends %j to %j', (next, expected) => {

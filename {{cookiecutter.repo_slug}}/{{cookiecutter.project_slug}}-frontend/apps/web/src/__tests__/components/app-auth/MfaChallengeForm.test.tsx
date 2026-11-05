@@ -37,10 +37,10 @@ function requests() {
   return (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.map(([request]) => request as Request)
 }
 
-const AUTHENTICATE = '/v0/browser/v1/auth/2fa/authenticate'
-const WEBAUTHN = '/v0/browser/v1/auth/webauthn/authenticate'
-const REAUTHENTICATE = '/v0/browser/v1/auth/2fa/reauthenticate'
-const WEBAUTHN_REAUTHENTICATE = '/v0/browser/v1/auth/webauthn/reauthenticate'
+const AUTHENTICATE = '/v0/browser/auth/2fa/authenticate'
+const WEBAUTHN = '/v0/browser/auth/webauthn/authenticate'
+const REAUTHENTICATE = '/v0/browser/auth/2fa/reauthenticate'
+const WEBAUTHN_REAUTHENTICATE = '/v0/browser/auth/webauthn/reauthenticate'
 const SIGNED_IN = { status: 200, data: { user: {} }, meta: { is_authenticated: true } }
 const INCORRECT = { status: 400, errors: [{ code: 'incorrect_code', param: 'code', message: 'Incorrect code.' }] }
 const ASSERTION = {

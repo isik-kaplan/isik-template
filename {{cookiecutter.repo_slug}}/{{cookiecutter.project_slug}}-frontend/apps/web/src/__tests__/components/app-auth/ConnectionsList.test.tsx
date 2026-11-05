@@ -44,7 +44,7 @@ describe('ConnectionsList', () => {
     render(
       <ConnectionsList
         initialProviders={[googleConnection]}
-        connectAction="https://auth.example.test/v0/browser/v1/auth/provider/redirect"
+        connectAction="https://auth.example.test/v0/browser/auth/provider/redirect"
         callbackUrl="https://example.test/profile/connections"
       />
     )
@@ -67,7 +67,7 @@ describe('ConnectionsList', () => {
     render(
       <ConnectionsList
         initialProviders={[]}
-        connectAction="https://auth.example.test/v0/browser/v1/auth/provider/redirect"
+        connectAction="https://auth.example.test/v0/browser/auth/provider/redirect"
         callbackUrl="https://example.test/profile/connections"
       />
     )
@@ -90,7 +90,7 @@ describe('ConnectionsList', () => {
     render(
       <ConnectionsList
         initialProviders={[googleConnection]}
-        connectAction="https://auth.example.test/v0/browser/v1/auth/provider/redirect"
+        connectAction="https://auth.example.test/v0/browser/auth/provider/redirect"
         callbackUrl="https://example.test/profile/connections"
       />
     )
@@ -113,7 +113,7 @@ describe('ConnectionsList', () => {
     render(
       <ConnectionsList
         initialProviders={[googleConnection]}
-        connectAction="https://auth.example.test/v0/browser/v1/auth/provider/redirect"
+        connectAction="https://auth.example.test/v0/browser/auth/provider/redirect"
         callbackUrl="https://example.test/profile/connections"
       />
     )
@@ -130,7 +130,7 @@ describe('ConnectionsList', () => {
     render(
       <ConnectionsList
         initialProviders={[googleConnection]}
-        connectAction="https://auth.example.test/v0/browser/v1/auth/provider/redirect"
+        connectAction="https://auth.example.test/v0/browser/auth/provider/redirect"
         callbackUrl="https://example.test/profile/connections"
       />
     )
@@ -147,7 +147,7 @@ describe('ConnectionsList', () => {
     render(
       <ConnectionsList
         initialProviders={[googleConnection]}
-        connectAction="https://auth.example.test/v0/browser/v1/auth/provider/redirect"
+        connectAction="https://auth.example.test/v0/browser/auth/provider/redirect"
         callbackUrl="https://example.test/profile/connections"
       />
     )
@@ -173,7 +173,7 @@ describe('ConnectionsList connect-flow errors', () => {
     render(
       <ConnectionsList
         initialProviders={[]}
-        connectAction="https://auth.example.test/v0/browser/v1/auth/provider/redirect"
+        connectAction="https://auth.example.test/v0/browser/auth/provider/redirect"
         callbackUrl="https://example.test/profile/connections"
         connectError={connectError}
       />
@@ -187,7 +187,7 @@ describe('ConnectionsList connect-flow errors', () => {
     render(
       <ConnectionsList
         initialProviders={[]}
-        connectAction="https://auth.example.test/v0/browser/v1/auth/provider/redirect"
+        connectAction="https://auth.example.test/v0/browser/auth/provider/redirect"
         callbackUrl="https://example.test/profile/connections"
         connectError="reauthentication_required"
       />
@@ -201,7 +201,7 @@ describe('ConnectionsList connect-flow errors', () => {
     const { rerender } = render(
       <ConnectionsList
         initialProviders={[]}
-        connectAction="https://auth.example.test/v0/browser/v1/auth/provider/redirect"
+        connectAction="https://auth.example.test/v0/browser/auth/provider/redirect"
         callbackUrl="https://example.test/profile/connections"
         connectError="cancelled"
       />
@@ -212,7 +212,7 @@ describe('ConnectionsList connect-flow errors', () => {
     rerender(
       <ConnectionsList
         initialProviders={[]}
-        connectAction="https://auth.example.test/v0/browser/v1/auth/provider/redirect"
+        connectAction="https://auth.example.test/v0/browser/auth/provider/redirect"
         callbackUrl="https://example.test/profile/connections"
       />
     )
@@ -223,7 +223,7 @@ describe('ConnectionsList connect-flow errors', () => {
     const { container } = render(
       <ConnectionsList
         initialProviders={[]}
-        connectAction="https://auth.example.test/v0/browser/v1/auth/provider/redirect"
+        connectAction="https://auth.example.test/v0/browser/auth/provider/redirect"
         callbackUrl="https://example.test/profile/connections"
       />
     )
@@ -237,7 +237,7 @@ describe('ConnectionsList connect-flow errors', () => {
     const { rerender } = render(
       <ConnectionsList
         initialProviders={[]}
-        connectAction="https://auth.example.test/v0/browser/v1/auth/provider/redirect"
+        connectAction="https://auth.example.test/v0/browser/auth/provider/redirect"
         callbackUrl="https://example.test/profile/connections"
       />
     )
@@ -246,7 +246,7 @@ describe('ConnectionsList connect-flow errors', () => {
     rerender(
       <ConnectionsList
         initialProviders={[]}
-        connectAction="https://auth.example.test/v0/browser/v1/auth/provider/redirect"
+        connectAction="https://auth.example.test/v0/browser/auth/provider/redirect"
         callbackUrl="https://example.test/profile/connections"
         connectError="cancelled"
       />
@@ -265,7 +265,7 @@ describe('ConnectionsList with no providers configured', () => {
     render(
       <EmptyConnectionsList
         initialProviders={[]}
-        connectAction="https://auth.example.test/v0/browser/v1/auth/provider/redirect"
+        connectAction="https://auth.example.test/v0/browser/auth/provider/redirect"
         callbackUrl="https://example.test/profile/connections"
       />
     )
