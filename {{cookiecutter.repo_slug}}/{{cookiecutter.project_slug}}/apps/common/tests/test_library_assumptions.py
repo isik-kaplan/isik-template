@@ -37,6 +37,22 @@ def test_a_response_header_is_case_insensitive():
         assert sum(1 for name in response.headers if name.lower() == "content-language") == 1
 
 
+@pytest.mark.parametrize("spelling", ["Content-Length", "content-length", "CONTENT-LENGTH"])
+def test_a_length_is_found_written_and_removed_under_any_spelling(spelling):
+    """ContentLengthMiddleware asks for, writes and deletes "Content-Length"."""
+    written = HttpResponse()
+    written[spelling] = "9"
+    assert written["Content-Length"] == "9"
+    assert sum(1 for name in written.headers if name.lower() == "content-length") == 1
+
+    found = HttpResponse()
+    found["Content-Length"] = "9"
+    assert found.has_header(spelling)
+
+    del found[spelling]
+    assert not found.has_header("Content-Length")
+
+
 def test_populate_user_never_reads_the_request():
     """allauth's populate_user reads only `data` and `sociallogin.user`, so the request cannot matter."""
     data = {"username": "ada", "email": "ada@example.test", "name": "Ada Lovelace"}

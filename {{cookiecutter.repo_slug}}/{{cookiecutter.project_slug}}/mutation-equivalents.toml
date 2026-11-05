@@ -180,3 +180,39 @@ verified_by = "apps/common/tests/test_library_assumptions.py::test_a_model_refer
 reason = """Refuses an expiry exactly at the lifetime's end instead of only one past it. `now` is read on the
 server as the request is validated, after any client chose its expiry, so no request can name that very
 microsecond: the two comparisons answer every request the same."""
+
+["apps.common.middleware.content_length.xǁContentLengthMiddlewareǁafter__mutmut__b55ae40f6dc1"]
+reason = """Deletes the header as "content-length" instead of "Content-Length". Django's HttpResponse
+headers are case-insensitive when looked up, written and deleted, so every spelling names the same
+header and no test can observe which one was used."""
+verified_by = "apps/common/tests/test_library_assumptions.py::test_a_length_is_found_written_and_removed_under_any_spelling"
+
+["apps.common.middleware.content_length.xǁContentLengthMiddlewareǁafter__mutmut__b55ae40f6dc1_1"]
+reason = """Asks for the header as "content-length" instead of "Content-Length". Django's HttpResponse
+headers are case-insensitive when looked up, written and deleted, so every spelling names the same
+header and no test can observe which one was used."""
+verified_by = "apps/common/tests/test_library_assumptions.py::test_a_length_is_found_written_and_removed_under_any_spelling"
+
+["apps.common.middleware.content_length.xǁContentLengthMiddlewareǁafter__mutmut__b55ae40f6dc1_2"]
+reason = """Writes the header as "content-length" instead of "Content-Length". Django's HttpResponse
+headers are case-insensitive when looked up, written and deleted, so every spelling names the same
+header and no test can observe which one was used."""
+verified_by = "apps/common/tests/test_library_assumptions.py::test_a_length_is_found_written_and_removed_under_any_spelling"
+
+["apps.common.middleware.content_length.xǁContentLengthMiddlewareǁafter__mutmut__5f82a07ae443"]
+reason = """Deletes the header as "CONTENT-LENGTH" instead of "Content-Length". Django's HttpResponse
+headers are case-insensitive when looked up, written and deleted, so every spelling names the same
+header and no test can observe which one was used."""
+verified_by = "apps/common/tests/test_library_assumptions.py::test_a_length_is_found_written_and_removed_under_any_spelling"
+
+["apps.common.middleware.content_length.xǁContentLengthMiddlewareǁafter__mutmut__5f82a07ae443_1"]
+reason = """Asks for the header as "CONTENT-LENGTH" instead of "Content-Length". Django's HttpResponse
+headers are case-insensitive when looked up, written and deleted, so every spelling names the same
+header and no test can observe which one was used."""
+verified_by = "apps/common/tests/test_library_assumptions.py::test_a_length_is_found_written_and_removed_under_any_spelling"
+
+["apps.common.middleware.content_length.xǁContentLengthMiddlewareǁafter__mutmut__5f82a07ae443_2"]
+reason = """Writes the header as "CONTENT-LENGTH" instead of "Content-Length". Django's HttpResponse
+headers are case-insensitive when looked up, written and deleted, so every spelling names the same
+header and no test can observe which one was used."""
+verified_by = "apps/common/tests/test_library_assumptions.py::test_a_length_is_found_written_and_removed_under_any_spelling"
