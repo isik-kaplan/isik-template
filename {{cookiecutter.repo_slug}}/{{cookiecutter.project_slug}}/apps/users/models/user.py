@@ -86,10 +86,10 @@ class User(AbstractUser, BaseModel):
         swappable = "AUTH_USER_MODEL"
         db_table = "users_user"
 
-    def save(self, *args, **kwargs):
+    def save(self, **kwargs):
         # allauth and forms write "" for no handle.
         self.username = self.username or None
-        super().save(*args, **kwargs)
+        super().save(**kwargs)
 
     @property
     def acting_through_a_token(self):

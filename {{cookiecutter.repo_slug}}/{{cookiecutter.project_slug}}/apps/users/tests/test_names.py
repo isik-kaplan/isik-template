@@ -4,10 +4,12 @@ import pytest
 from allauth.account.models import EmailAddress
 from django.conf import settings as django_settings
 from django.core.exceptions import ValidationError
+from rest_framework import serializers
 
 from apps.users.adapters.account import AccountAdapter
+from apps.users.api.serializers.user import UserSerializer
 from apps.users.models.user import User
-from apps.users.names import NameRequirement, label
+from apps.users.names import NOT_OFFERED, REQUIRED, NameRequirement, label
 from apps.users.tests.conftest import PASSWORD
 from conftest import versioned
 
@@ -24,7 +26,12 @@ def _signup(headless, **names):
 
 
 def _errors(response):
-    return {(error["param"], error["code"]) for error in response.json()["errors"]}
+    return {(error["param"], error["code"], error["message"]) for error in response.json()["errors"]}
+
+
+def _refused(names, refusal):
+    message, code = refusal
+    return {(name, code, str(message)) for name in names}
 
 
 @pytest.mark.parametrize(
@@ -95,7 +102,7 @@ def test_a_signup_missing_what_its_requirement_needs_is_refused_field_by_field(h
     response = _signup(headless)
 
     assert response.status_code == 400
-    assert _errors(response) == {(name, "required") for name in requirement.required}
+    assert _errors(response) == _refused(requirement.required, REQUIRED)
     assert not User.objects.exists()
 
 
@@ -108,7 +115,7 @@ def test_a_signup_carrying_what_its_requirement_never_asks_for_is_refused(headle
     unasked = set(names) - set(requirement.offered)
     assert (response.status_code == 400) is bool(unasked)
     if unasked:
-        assert _errors(response) == {(name, "not_offered") for name in unasked}
+        assert _errors(response) == _refused(unasked, NOT_OFFERED)
 
 
 @pytest.mark.django_db
@@ -173,7 +180,7 @@ def test_a_handle_is_normalized_like_django_does():
 
 
 def test_nobody_is_made_without_an_address():
-    with pytest.raises(ValueError, match="email must be set"):
+    with pytest.raises(ValueError, match="^The given email must be set$"):
         User.objects.create_user(email="", username="ada")
 
 
@@ -268,3 +275,26 @@ def test_the_session_labels_somebody_with_no_handle_by_name(headless):
 
     assert response.json()["data"]["user"]["display"] == "Ada Lovelace"
     assert "username" not in response.json()["data"]["user"]
+
+
+@pytest.mark.django_db
+def test_saving_only_some_fields_leaves_the_rest_as_stored():
+    user = User.objects.create_user(email="ada@example.test", first_name="Ada", last_name="Lovelace")
+    user.first_name, user.last_name = "Augusta", "King"
+
+    user.save(update_fields=["first_name"])
+
+    user.refresh_from_db()
+    assert (user.first_name, user.last_name) == ("Augusta", "Lovelace")
+
+
+def test_an_api_refusal_carries_the_code_of_what_went_wrong(settings):
+    settings.NAME_REQUIREMENT = NameRequirement.USERNAME_ONLY
+
+    with pytest.raises(serializers.ValidationError) as refused:
+        UserSerializer().validate({"username": "", "first_name": "Ada"})
+
+    assert {name: [error.code for error in errors] for name, errors in refused.value.detail.items()} == {
+        "username": ["required"],
+        "first_name": ["not_offered"],
+    }

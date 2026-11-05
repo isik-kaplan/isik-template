@@ -110,10 +110,10 @@
   "app/complete-signup.tsx": [
     {
       "mutator": "StringLiteral",
-      "fingerprint": "4c208b158cb0",
+      "fingerprint": "b654a2db6746",
       "reason": [
-        "Equivalent mutant: the form (the only place this renders) doesn't show until email is also set, and",
-        "both are always set together in the same effect below - so this initial value is never actually the",
+        "Equivalent mutant: the initial username. The form (the only place it renders) doesn't show until email",
+        "is also set, and the effect below sets both together - so this initial value is never actually the",
         "one a test could observe rendered."
       ]
     },
