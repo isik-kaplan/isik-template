@@ -11,6 +11,8 @@ import { getSession } from '@/lib/getSession'
 import { scopeLabel } from '@/lib/oauthScopes'
 import { requestOrigin } from '@/lib/requestOrigin'
 
+import brand from '@{{ cookiecutter.repo_slug }}/brand/brand.json'
+
 // What the backend's consent form takes back, each echoed unchanged.
 const CONSENT_FIELDS = [
   'client_id',
@@ -73,7 +75,7 @@ export default async function OAuthAuthorizePage({ searchParams }: { searchParam
   return (
     <AuthCard
       title={t('auth:oauthConsentTitle', { application })}
-      description={t('auth:oauthConsentIntro', { application, project: t('auth:appTitle') })}
+      description={t('auth:oauthConsentIntro', { application, project: brand.name })}
     >
       {description && <p className="text-sm">{description}</p>}
       <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">

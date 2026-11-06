@@ -1,10 +1,14 @@
+import brand from '@{{ cookiecutter.repo_slug }}/brand/brand.json'
+
 import type { ExpoConfig } from 'expo/config'
 
 const config: ExpoConfig = {
-  name: '{{ cookiecutter.project_name }}',
+  name: brand.name,
   slug: '{{ cookiecutter.project_slug }}',
   scheme: '{{ cookiecutter.project_slug }}',
   version: '0.1.0',
+  // The same source image the web app draws its icons from; Expo makes every size it needs.
+  icon: '../../packages/brand/icon.png',
   orientation: 'portrait',
   userInterfaceStyle: 'automatic',
   ios: {

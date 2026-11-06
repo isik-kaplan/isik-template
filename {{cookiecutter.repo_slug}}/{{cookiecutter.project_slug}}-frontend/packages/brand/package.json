@@ -1,0 +1,9 @@
+{
+  "name": "@{{ cookiecutter.repo_slug }}/brand",
+  "version": "0.1.0",
+  "private": true,
+  "exports": {
+    "./brand.json": "./brand.json",
+    "./icon.png": "./icon.png"
+  }
+}

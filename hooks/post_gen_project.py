@@ -12,6 +12,8 @@ from pathlib import Path
 PROJECT_NAME = {{ cookiecutter.project_name|tojson }}
 PROJECT_SLUG = {{ cookiecutter.project_slug|tojson }}
 DOMAIN = {{ cookiecutter.domain|tojson }}
+# Validated in _validate.py: empty, or an absolute path to a square PNG.
+ICON = {{ cookiecutter.icon|tojson }}
 INCLUDE_MOBILE = {{ cookiecutter.include_mobile }}
 TLS_TERMINATION = {{ cookiecutter.tls_termination|tojson }}
 BACKGROUND_JOBS = {{ cookiecutter.background_jobs|tojson }}
@@ -245,6 +247,9 @@ def generate_lock_files() -> list[str]:
 
 
 def main() -> None:
+    # The one source every icon is drawn from; without one, the placeholder stays.
+    if ICON:
+        shutil.copyfile(os.path.expanduser(ICON), f"{PROJECT_SLUG}-frontend/packages/brand/icon.png")
     # Not a Jinja-conditional directory name: rendered empty, cookiecutter targets the existing "apps" and fails.
     if not INCLUDE_MOBILE:
         shutil.rmtree(f"{PROJECT_SLUG}-frontend/apps/mobile")

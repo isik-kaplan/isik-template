@@ -184,12 +184,15 @@ export const SHARDS = {
   ],
   // The app shell and shared components.
   ui: [
+    'src/app/apple-icon.tsx',
+    'src/app/icon.tsx',
     'src/app/layout.tsx',
     'src/app/manifest.ts',
     'src/app/monkeypatches.tsx',
     'src/app/not-found.tsx',
     'src/app/too-many-requests/page.tsx',
     'src/app/page.tsx',
+    'src/lib/brandIcon.tsx',
     'src/components/app-auth/LanguageSwitcher.tsx',
     'src/components/app-search/CommandPalette.tsx',
     'src/components/app/ConflictNotice.tsx',

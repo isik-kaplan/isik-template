@@ -13,6 +13,7 @@
   "dependencies": {
     "@{{ cookiecutter.repo_slug }}/api": "*",
     "@{{ cookiecutter.repo_slug }}/auth-api": "*",
+    "@{{ cookiecutter.repo_slug }}/brand": "*",
     "web": "*",
     "@isikk/core": "^{{ cookiecutter.isikk_core_version }}",
     "@react-native-google-signin/google-signin": "^16.1.5",

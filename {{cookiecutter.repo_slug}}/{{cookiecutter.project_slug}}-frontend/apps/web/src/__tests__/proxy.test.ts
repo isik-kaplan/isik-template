@@ -72,7 +72,9 @@ describe('proxy', () => {
   })
 
   it('matches every path except Next.js internals, the favicon, and the manifest', () => {
-    expect(config.matcher).toEqual(['/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest).*)'])
+    expect(config.matcher).toEqual([
+      '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|icon/|apple-icon).*)',
+    ])
   })
 
   it('lets an anonymous visitor through to the page that says to wait', async () => {

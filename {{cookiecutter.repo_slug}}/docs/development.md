@@ -109,6 +109,20 @@ logs it, the request line and every history row carry it, Sentry tags events wit
 back so somebody on an error page can quote it. History rows and Sentry's release also name the build: the
 image's `BUILD` build argument, the commit CI built it from (`dev` when unset).
 
+## Name and icon
+
+Two sources, so renaming or rebranding is a change in two places:
+
+- **The backend** reads `PROJECT_NAME`, set by `{{ cookiecutter.config_prefix }}__NAME` (the bake's name by default),
+  for mails, the authenticator app's entry and the API docs' title.
+- **The web and mobile apps** read `{{ cookiecutter.project_slug }}-frontend/packages/brand`: `brand.json` holds
+  the name, and `icon.png` (square, 512px or larger) is the one image every icon is drawn from. The web app
+  renders its tab, install and home-screen icons from it (`src/app/icon.tsx`, `src/app/apple-icon.tsx`), and
+  Expo makes the app's own sizes from it. No size is committed, so replacing that one file changes them all.
+
+The domain is `{{ cookiecutter.config_prefix }}__DOMAIN`. The mobile bundle ID was derived from it at bake time
+and stays as it is: a published app's ID can't change.
+
 ## Starter kit
 
 These ship tested and mutation-clean but with nothing calling them yet: building blocks for what most projects

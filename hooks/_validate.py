@@ -1,6 +1,8 @@
 """pre_gen_project.py's checks, kept out of the templated hook so pytest and mutmut can reach them."""
 
+import os
 import re
+import struct
 
 
 class AnswersInvalid(ValueError):
@@ -173,6 +175,32 @@ def validate_domain(domain: str) -> None:
         raise AnswersInvalid(f"'domain' ({domain!r}) can only contain letters, digits, '.' and '-'.")
 
 
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+# Expo and the web manifest scale down from it; 512 is the largest size the manifest asks for.
+MINIMUM_ICON_SIZE = 512
+
+
+def validate_icon(icon: str) -> None:
+    """Empty keeps the placeholder. Absolute, since the hook runs from a temporary directory."""
+    if not icon:
+        return
+    path = os.path.expanduser(icon)
+    if not os.path.isabs(path):
+        raise AnswersInvalid(f"'icon' ({icon!r}) must be an absolute path - the hook doesn't run where you do.")
+    if not os.path.isfile(path):
+        raise AnswersInvalid(f"'icon' ({icon!r}) is not a file.")
+    with open(path, "rb") as file:
+        png = file.read()
+    if not png.startswith(PNG_SIGNATURE):
+        raise AnswersInvalid(f"'icon' ({icon!r}) must be a PNG.")
+    # The first chunk is always IHDR, whose first eight bytes are the width and height.
+    width, height = struct.unpack(">II", png[16:24])
+    if width != height:
+        raise AnswersInvalid(f"'icon' ({icon!r}) is {width}x{height}; it must be square.")
+    if width < MINIMUM_ICON_SIZE:
+        raise AnswersInvalid(f"'icon' ({icon!r}) is {width}px; it must be at least {MINIMUM_ICON_SIZE}px.")
+
+
 def parse_requested_languages(languages: str) -> list[str]:
     return [code.strip() for code in languages.split(",") if code.strip()]
 
@@ -205,6 +233,7 @@ def validate_answers(
     author_email: str,
     domain: str,
     languages: str = "en",
+    icon: str = "",
 ) -> None:
     validate_required_fields(
         project_name=project_name,
@@ -220,3 +249,4 @@ def validate_answers(
     validate_free_text(project_name=project_name, description=description, author_email=author_email)
     validate_domain(domain)
     validate_requested_languages(parse_requested_languages(languages))
+    validate_icon(icon)

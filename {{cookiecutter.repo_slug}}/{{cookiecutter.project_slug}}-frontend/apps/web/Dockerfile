@@ -6,6 +6,7 @@ COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/package.json
 COPY packages/api/package.json packages/api/package.json
 COPY packages/auth-api/package.json packages/auth-api/package.json
+COPY packages/brand/package.json packages/brand/package.json
 # package-lock.json is generated at bake time: its workspace entries name this project's packages.
 RUN npm ci
 

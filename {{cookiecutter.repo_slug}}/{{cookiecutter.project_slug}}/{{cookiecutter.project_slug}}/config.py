@@ -9,6 +9,8 @@ CONFIG = config(
         "DEBUG": boolean(),
         "SECRET_KEY": string(),
         "CREDENTIAL_KEY": string(missing_default=""),
+        # What people are shown the product is called: mails, the authenticator app, the API docs.
+        "NAME": string(missing_default={{ cookiecutter.project_name|tojson }}),
         "DOMAIN": string(),
         # The commit the image was built from, a build argument: many commits share a version.
         "BUILD": string(missing_default="dev"),

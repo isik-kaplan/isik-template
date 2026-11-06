@@ -149,6 +149,7 @@ ROOT_URLCONF = "{{ cookiecutter.project_slug }}.urls.api"
 ROOT_HOSTCONF = "{{ cookiecutter.project_slug }}.hosts"
 DEFAULT_HOST = "api"
 PARENT_HOST = config.DOMAIN
+PROJECT_NAME = config.NAME
 
 SITE_ID = 1
 
@@ -228,7 +229,7 @@ USERSESSIONS_TRACK_ACTIVITY = False
 MFA_SUPPORTED_TYPES = ["totp", "recovery_codes", "webauthn"]
 MFA_ADAPTER = "apps.users.adapters.mfa.MFAAdapter"
 # Otherwise the authenticator app shows the Site row's name, "example.com".
-MFA_TOTP_ISSUER = {{ cookiecutter.project_name|tojson }}
+MFA_TOTP_ISSUER = PROJECT_NAME
 # A passkey is a second factor here, never a replacement for the password.
 MFA_PASSKEY_LOGIN_ENABLED = False
 MFA_RECOVERY_CODES_SHOW_ONCE = True
@@ -543,7 +544,7 @@ ISIK_CHECKS = {
 }
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": {{ (cookiecutter.project_name ~ " API")|tojson }},
+    "TITLE": f"{PROJECT_NAME} API",
     "DESCRIPTION": {{ cookiecutter.description|tojson }},
     "VERSION": __version__,
     "COMPONENT_SPLIT_REQUEST": True,

@@ -8,6 +8,8 @@ import { applicationsAreOn, {% if cookiecutter.webhooks != "none" %}mayManageWeb
 import { getSession } from '@/lib/getSession'
 import { serverApi } from '@/lib/serverApi'
 
+import brand from '@{{ cookiecutter.repo_slug }}/brand/brand.json'
+
 export default async function HomePage() {
   const session = await getSession()
   const { t } = await sUseTranslation(['auth'])
@@ -16,7 +18,7 @@ export default async function HomePage() {
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
-      <h1 className="text-2xl font-semibold">{t('auth:appTitle')}</h1>
+      <h1 className="text-2xl font-semibold">{brand.name}</h1>
       {session ? (
         <>
           <p className="text-muted-foreground">{t('auth:signedInAs', { name: session.user.display })}</p>

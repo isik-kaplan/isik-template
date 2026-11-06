@@ -13,6 +13,8 @@ import { requireSession } from '@/lib/getSession'
 import { describedScopes, scopeLabel } from '@/lib/oauthScopes'
 import { serverApi } from '@/lib/serverApi'
 
+import brand from '@{{ cookiecutter.repo_slug }}/brand/brand.json'
+
 function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value
 }
@@ -38,7 +40,7 @@ export default async function DevicePage({ searchParams }: { searchParams: Promi
           title={t('auth:deviceConsentTitle', { application: device.application_name })}
           description={t('auth:deviceConsentIntro', {
             application: device.application_name,
-            project: t('auth:appTitle'),
+            project: brand.name,
           })}
         >
           {device.application_description && <p className="text-sm">{device.application_description}</p>}

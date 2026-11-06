@@ -22,6 +22,7 @@ try:
         author_email={{ cookiecutter.author_email|tojson }},
         domain={{ cookiecutter.domain|tojson }},
         languages={{ cookiecutter.languages|tojson }},
+        icon={{ cookiecutter.icon|tojson }},
     )
 except AnswersInvalid as error:
     print(f"ERROR: {error}", file=sys.stderr)

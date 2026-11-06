@@ -1,5 +1,4 @@
 import ApplicationsPage from '@/app/applications/page'
-import auth from '@/locales/en/auth.json'
 
 import { render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -47,7 +46,7 @@ describe('ApplicationsPage', () => {
 
     expect(screen.getByRole('heading').textContent).toBe('Your apps')
     expect(screen.getByTestId('description').textContent).toBe(
-      `Register an app so its users can sign in with their ${auth.appTitle} account, and let it act for them if they agree.`
+      `Register an app so its users can sign in with their {{ cookiecutter.project_name }} account, and let it act for them if they agree.`
     )
     expect(screen.getByRole('link', { name: 'Back to home' }).getAttribute('href')).toBe('/')
     expect(screen.getByRole('link', { name: 'Register an app' }).getAttribute('href')).toBe('/applications/new')

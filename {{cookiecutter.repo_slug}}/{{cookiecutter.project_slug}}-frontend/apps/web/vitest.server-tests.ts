@@ -5,6 +5,7 @@
  */
 export const SERVER_TEST_FILES = [
   'src/__tests__/app/auth/callback-complete.test.tsx',
+  'src/__tests__/app/icon.test.tsx',
   'src/__tests__/app/manifest.test.ts',
   'src/__tests__/app/profile/page.test.tsx',
   'src/__tests__/config/public.test.ts',

@@ -32,6 +32,23 @@ def test_social_login_installs_and_configures_exactly_the_named_providers():
     ]
 
 
+def test_the_name_is_set_once_and_everything_server_side_reads_it():
+    """A fresh interpreter, since settings are built once, at import."""
+    script = (
+        "from {{ cookiecutter.project_slug }} import settings; "
+        "print(settings.PROJECT_NAME); print(settings.MFA_TOTP_ISSUER); print(settings.SPECTACULAR_SETTINGS['TITLE'])"
+    )
+    env = {**os.environ, "{{ cookiecutter.config_prefix }}__NAME": "Renamed"}
+
+    result = subprocess.run([sys.executable, "-c", script], env=env, capture_output=True, text=True, check=True)
+
+    assert result.stdout.splitlines()[-3:] == ["Renamed", "Renamed", "Renamed API"]
+
+
+def test_the_name_defaults_to_the_one_the_project_was_made_with():
+    assert config.NAME == {{ cookiecutter.project_name|tojson }}
+
+
 def test_the_signing_key_may_spell_its_line_breaks_as_backslash_n():
     """A fresh interpreter, since settings are built once, at import."""
     script = "from {{ cookiecutter.project_slug }} import settings; print(repr(settings.OAUTH2_PROVIDER['OIDC_RSA_PRIVATE_KEY']))"

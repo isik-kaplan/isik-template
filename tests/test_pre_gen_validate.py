@@ -1,3 +1,5 @@
+import struct
+
 import pytest
 
 from hooks._validate import (
@@ -7,6 +9,7 @@ from hooks._validate import (
     validate_answers,
     validate_domain,
     validate_free_text,
+    validate_icon,
     validate_requested_languages,
     validate_required_fields,
     validate_slugs,
@@ -232,3 +235,67 @@ def test_rejects_multiple_duplicated_languages_joined_with_a_real_separator():
     with pytest.raises(AnswersInvalid) as excinfo:
         validate_requested_languages(["en", "tr", "tr", "fr", "fr"])
     assert str(excinfo.value) == "'languages' lists the same language more than once: fr, tr."
+
+
+def _png(tmp_path, width, height, name="icon.png"):
+    """The signature and IHDR's length, type, width and height, then the rest of the file."""
+    path = tmp_path / name
+    header = b"\x89PNG\r\n\x1a\n" + struct.pack(">I", 13) + b"IHDR" + struct.pack(">II", width, height)
+    path.write_bytes(header + bytes(range(256)))
+    return path
+
+
+def test_an_empty_icon_keeps_the_placeholder():
+    validate_icon("")
+
+
+# 2**31 reads as negative if the size were taken as signed.
+@pytest.mark.parametrize("size", [512, 1024, 2**31])
+def test_accepts_a_square_png_of_at_least_512(tmp_path, size):
+    validate_icon(str(_png(tmp_path, size, size)))
+
+
+def test_accepts_an_icon_under_the_home_directory(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    _png(tmp_path, 512, 512)
+
+    validate_icon("~/icon.png")
+
+
+def test_rejects_a_relative_icon_path(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _png(tmp_path, 512, 512)
+
+    with pytest.raises(
+        AnswersInvalid, match=r"^'icon' \('icon.png'\) must be an absolute path - the hook doesn't run where you do\.$"
+    ):
+        validate_icon("icon.png")
+
+
+def test_rejects_an_icon_that_is_not_a_file(tmp_path):
+    with pytest.raises(AnswersInvalid, match=r"^'icon' \(.*\) is not a file\.$"):
+        validate_icon(str(tmp_path))
+
+
+def test_rejects_an_icon_that_is_not_a_png(tmp_path):
+    path = tmp_path / "icon.jpg"
+    path.write_bytes(b"\xff\xd8\xff\xe0" + bytes(20))
+
+    with pytest.raises(AnswersInvalid, match=r"^'icon' \(.*\) must be a PNG\.$"):
+        validate_icon(str(path))
+
+
+@pytest.mark.parametrize(("width", "height"), [(1024, 512), (512, 1024)])
+def test_rejects_an_icon_that_is_not_square(tmp_path, width, height):
+    with pytest.raises(AnswersInvalid, match=rf"^'icon' \(.*\) is {width}x{height}; it must be square\.$"):
+        validate_icon(str(_png(tmp_path, width, height)))
+
+
+def test_rejects_an_icon_smaller_than_512(tmp_path):
+    with pytest.raises(AnswersInvalid, match=r"^'icon' \(.*\) is 511px; it must be at least 512px\.$"):
+        validate_icon(str(_png(tmp_path, 511, 511)))
+
+
+def test_validate_answers_checks_the_icon_too(tmp_path):
+    with pytest.raises(AnswersInvalid, match="must be square"):
+        validate_answers(**valid_answers(icon=str(_png(tmp_path, 1024, 512))))

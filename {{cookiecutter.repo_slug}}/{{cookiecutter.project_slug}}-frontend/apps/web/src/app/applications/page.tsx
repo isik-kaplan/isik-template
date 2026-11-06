@@ -8,6 +8,8 @@ import { sUseTranslation } from '@/i18n'
 import { approvalLabel } from '@/lib/applicationApproval'
 import { serverApi } from '@/lib/serverApi'
 
+import brand from '@{{ cookiecutter.repo_slug }}/brand/brand.json'
+
 /** The applications the signed-in person registered so their users can sign in with this project. */
 export default async function ApplicationsPage() {
   const { t } = await sUseTranslation(['auth'])
@@ -17,7 +19,7 @@ export default async function ApplicationsPage() {
   return (
     <PageShell
       title={t('auth:applicationsTitle')}
-      description={t('auth:applicationsHint', { project: t('auth:appTitle') })}
+      description={t('auth:applicationsHint', { project: brand.name })}
       backHref="/"
       backLabel={t('auth:backToHome')}
     >

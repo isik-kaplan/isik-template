@@ -14,7 +14,7 @@ def test_mjml_template_adds_site_name_and_the_stored_domain():
 
     mocked.assert_called_once_with(
         "some/template.html",
-        {"site_name": {{ cookiecutter.project_name|tojson }}, "site_url": settings.PARENT_HOST, "extra": "value"},
+        {"site_name": settings.PROJECT_NAME, "site_url": settings.PARENT_HOST, "extra": "value"},
         request,
     )
 
@@ -27,7 +27,7 @@ def test_text_template_adds_site_name_and_the_stored_domain():
 
     mocked.assert_called_once_with(
         "some/template.txt",
-        {"site_name": {{ cookiecutter.project_name|tojson }}, "site_url": settings.PARENT_HOST, "extra": "value"},
+        {"site_name": settings.PROJECT_NAME, "site_url": settings.PARENT_HOST, "extra": "value"},
         request,
     )
 
@@ -44,3 +44,12 @@ def test_context_overrides_the_global_defaults_on_collision():
         text_template("t.txt", {"site_name": "Custom name", "site_url": "custom.example.test"}, None)
 
     assert mocked.call_args[0][1] == {"site_name": "Custom name", "site_url": "custom.example.test"}
+
+
+def test_a_mail_names_the_product_as_it_is_configured_now(settings):
+    settings.PROJECT_NAME = "Renamed"
+
+    with patch("apps.common.email._text_template") as mocked:
+        text_template("t.txt", {}, None)
+
+    assert mocked.call_args[0][1]["site_name"] == "Renamed"

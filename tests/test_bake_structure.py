@@ -475,7 +475,9 @@ def test_the_backend_venv_lives_outside_the_bind_mounted_source(cookies):
     assert 'ENV PATH="/venv/bin:$PATH"' in dockerfile
 
 
-NAME_REQUIREMENTS = json.loads(Path(__file__).parent.parent.joinpath("cookiecutter.json").read_text())["name_requirement"]
+NAME_REQUIREMENTS = json.loads(Path(__file__).parent.parent.joinpath("cookiecutter.json").read_text())[
+    "name_requirement"
+]
 
 
 @pytest.mark.parametrize("requirement", NAME_REQUIREMENTS)
@@ -500,5 +502,37 @@ def test_each_name_requirement_bakes_into_the_settings_it_names(cookies, require
 
 def test_an_unknown_name_requirement_is_refused(cookies):
     result = cookies.bake(extra_context={**load_context("default"), "name_requirement": "nickname_only"})
+
+    assert result.exit_code != 0
+
+
+def _brand_icon(result):
+    return result.project_path / f"{result.context['project_slug']}-frontend" / "packages" / "brand" / "icon.png"
+
+
+def test_the_icon_given_at_bake_time_is_the_one_every_size_is_drawn_from(cookies, tmp_path):
+    icon = tmp_path / "icon.png"
+    icon.write_bytes(b"\x89PNG\r\n\x1a\n" + (13).to_bytes(4, "big") + b"IHDR" + (512).to_bytes(4, "big") * 2 + b"rest")
+
+    result = cookies.bake(extra_context={**load_context("default"), "icon": str(icon)})
+
+    assert result.exit_code == 0, result.exception
+    assert _brand_icon(result).read_bytes() == icon.read_bytes()
+
+
+def test_without_an_icon_the_placeholder_is_copied_as_it_is(cookies):
+    result = cookies.bake(extra_context=load_context("default"))
+
+    template_icon = Path(__file__).parent.parent.joinpath(
+        "{{cookiecutter.repo_slug}}", "{{cookiecutter.project_slug}}-frontend", "packages", "brand", "icon.png"
+    )
+    assert _brand_icon(result).read_bytes() == template_icon.read_bytes()
+
+
+def test_a_bad_icon_stops_the_bake(cookies, tmp_path):
+    icon = tmp_path / "icon.png"
+    icon.write_bytes(b"not a png at all, just some bytes")
+
+    result = cookies.bake(extra_context={**load_context("default"), "icon": str(icon)})
 
     assert result.exit_code != 0

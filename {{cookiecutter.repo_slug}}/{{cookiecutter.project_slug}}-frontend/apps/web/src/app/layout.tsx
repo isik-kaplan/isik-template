@@ -14,10 +14,12 @@ import { LanguageProvider } from '@/lib/LanguageContext'
 import { SessionProvider } from '@/lib/SessionContext'
 import { getLanguage, getSession } from '@/lib/getSession'
 
+import brand from '@{{ cookiecutter.repo_slug }}/brand/brand.json'
+
 import { ThemeProvider } from 'next-themes'
 
 export const metadata: Metadata = {
-  title: '{{ cookiecutter.project_name }}',
+  title: brand.name,
 {#- Prettier's own quote choice: double quotes only when the text has an apostrophe (_validate.py bans '"'). #}
   description: {% if "'" in cookiecutter.description -%}
     "{{ cookiecutter.description }}"
