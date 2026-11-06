@@ -4,14 +4,15 @@ from apps.common.api.request_policies import RecentlyProvedWhoTheyAre
 
 
 class ProvesWhoTheyAre(RequestPoliciesMixin):
-    """Gates every action until it is named in `reauthentication_exempt_actions` with a reason, so a
-    route added later refuses rather than slips through."""
+    """Gates the actions named in `reauthentication_acts`; anything else is no act and passes.
+
+    Opt-in on purpose: asking for a password on something harmless teaches people to type it at anything.
+    """
 
     request_policies = [RecentlyProvedWhoTheyAre]
-    reauthentication_exempt_actions = {}
 
-    # action -> fields whose presence makes a request an act; an action not named here is always gated.
-    reauthentication_fields = {}
+    # action -> None for the whole action, or the fields whose presence in the body makes it an act.
+    reauthentication_acts = {}
 
     def refuse_before_proving(self, request):
         """Refuse a cheap, already-knowable precondition before asking for proof; None goes on to the gate."""

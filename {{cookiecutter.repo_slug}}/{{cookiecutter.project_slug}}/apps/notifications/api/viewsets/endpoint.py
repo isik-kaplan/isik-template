@@ -10,7 +10,6 @@ from isik.django.drf.error_handling import refusal
 {%- endif %}
 
 from apps.common.api.reauthentication import ProvesWhoTheyAre
-from apps.common.api.request_policies import NoReauthentication
 {%- if cookiecutter.webhooks == "users" %}
 from apps.features.declarations import WEBHOOKS
 {%- endif %}
@@ -29,13 +28,7 @@ class EndpointViewSet({% if cookiecutter.webhooks == "staff" %}DeploymentEndpoin
 {%- endif %}
 
     endpoint = "notification-endpoints"
-    reauthentication_exempt_actions = {
-        "list": NoReauthentication(reason="reading the endpoints takes nothing from anybody at all"),
-        "retrieve": NoReauthentication(reason="reading an endpoint takes nothing from anybody at all"),
-        "destroy": NoReauthentication(reason="deleting an endpoint only stops what it was being sent"),
-        "finish_rotation": NoReauthentication(reason="dropping the old secret only takes a signing key away"),
-        "unpark": NoReauthentication(reason="sends again to the address it was already registered at"),
-    }
+    reauthentication_acts = {"create": None, "update": None, "partial_update": None, "rotate_secret": None}
 {%- if cookiecutter.webhooks == "users" %}
     owner_field = "owner"
 

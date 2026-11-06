@@ -7,7 +7,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.common.api.reauthentication import ProvesWhoTheyAre
-from apps.common.api.request_policies import NoReauthentication
 from apps.oauth_provider.api.serializers.authorized_application import AuthorizedApplicationSerializer
 from apps.oauth_provider.services import revoke_tokens
 
@@ -24,9 +23,7 @@ class AuthorizedApplicationViewSet(ProvesWhoTheyAre, IdempotencyMixin, Precondit
 
     permission_classes = [IsAuthenticated]
     serializer_class = AuthorizedApplicationSerializer
-    reauthentication_exempt_actions = {
-        "list": NoReauthentication(reason="reading what holds access to your own account takes nothing")
-    }
+    reauthentication_acts = {"destroy": None}
     precondition_exempt_actions = {
         "destroy": NoPrecondition(
             reason="shutting an application out only takes access away, whatever it was granted since the page loaded"

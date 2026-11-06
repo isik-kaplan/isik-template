@@ -6,7 +6,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.common.api.reauthentication import ProvesWhoTheyAre
-from apps.common.api.request_policies import NoReauthentication
 from apps.common.api.viewsets import BaseModelViewSet
 from apps.users.api.serializers.delegatable_scope import DelegatableScopeSerializer
 from apps.users.api.serializers.personal_access_token import PersonalAccessTokenSerializer
@@ -22,12 +21,7 @@ class PersonalAccessTokenViewSet(ProvesWhoTheyAre, BaseModelViewSet):
     serializer_class = PersonalAccessTokenSerializer
     permission_classes = [IsAuthenticated]
     http_method_names = ["get", "post", "delete", "head", "options"]
-    reauthentication_exempt_actions = {
-        "list": NoReauthentication(reason="reading your own tokens takes nothing from anybody"),
-        "retrieve": NoReauthentication(reason="reading your own token takes nothing from anybody"),
-        "destroy": NoReauthentication(reason="deleting a token only takes away the access it gave"),
-        "scopes": NoReauthentication(reason="reading what a token may be given takes nothing from anybody"),
-    }
+    reauthentication_acts = {"create": None}
     # Every use stamps last_used_at, so a version-checked delete would fail on a token in use.
     precondition_exempt_actions = {
         "destroy": NoPrecondition(reason="deleting a token only takes access away, however it was used since"),

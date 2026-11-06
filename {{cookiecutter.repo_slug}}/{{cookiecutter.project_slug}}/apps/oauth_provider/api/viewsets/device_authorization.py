@@ -10,8 +10,6 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 
-from apps.common.api.reauthentication import ProvesWhoTheyAre
-from apps.common.api.request_policies import NoReauthentication
 from apps.oauth_provider.api.permissions.may_answer_devices import MayAnswerDevices
 from apps.oauth_provider.api.serializers.device_authorization import DeviceAuthorizationSerializer
 from apps.oauth_provider.device_codes import as_stored
@@ -27,20 +25,13 @@ USER_CODE = OpenApiParameter(
 UNKNOWN = _("That code is wrong, has expired or was already answered. Start again on the device.")
 
 
-class DeviceAuthorizationViewSet(ProvesWhoTheyAre, IdempotencyMixin, PreconditionMixin, viewsets.ViewSet):
+class DeviceAuthorizationViewSet(IdempotencyMixin, PreconditionMixin, viewsets.ViewSet):
     """A device asking to act for whoever enters the code it shows; allowed, its next poll gets a token."""
 
     permission_classes = [MayAnswerDevices]
     throttle_scope = "device_codes"
     lookup_field = "user_code"
     lookup_value_regex = "[^/]+"
-    reauthentication_exempt_actions = {
-        "retrieve": NoReauthentication(reason="reading what a device asks for takes nothing from anybody"),
-        "approve": NoReauthentication(
-            reason="the same consent the authorize page asks for, which nobody signs in again to give"
-        ),
-        "deny": NoReauthentication(reason="turning a device away only refuses it access it never had"),
-    }
     precondition_exempt_actions = {
         "approve": NoPrecondition(reason="a code is answered once, and an answer to one already answered is refused"),
         "deny": NoPrecondition(reason="a code is answered once, and an answer to one already answered is refused"),

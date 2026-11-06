@@ -533,7 +533,6 @@ ISIK_FEATURES = {
 }
 ISIK_CHECKS = {
     Check.DOCUMENTATION: {
-        CheckOption.EXEMPTION_TYPES: ["apps.common.schema_docs.NoHelpText", "apps.common.schema_docs.NoComment"],
         # AbstractUser's and DOT's fields are described by their libraries, not redeclared here to say it again.
         CheckOption.INHERITED_FROM_LIBRARIES: False,
     },

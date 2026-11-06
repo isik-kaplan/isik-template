@@ -8,7 +8,6 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from apps.common.api.reauthentication import ProvesWhoTheyAre
-from apps.common.api.request_policies import NoReauthentication
 from apps.common.api.viewsets import BaseModelViewSet
 from apps.oauth_provider.api.permissions.may_register_applications import MayRegisterApplications
 from apps.oauth_provider.api.serializers.application import ApplicationSerializer
@@ -34,16 +33,12 @@ class ApplicationViewSet(ProvesWhoTheyAre, BaseModelViewSet):
     serializer_class = ApplicationSerializer
     permission_classes = [MayRegisterApplications]
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
-    reauthentication_exempt_actions = {
-        "list": NoReauthentication(reason="reading your own applications takes nothing from anybody"),
-        "retrieve": NoReauthentication(reason="reading your own application takes nothing from anybody"),
-        "delegatable_scopes": NoReauthentication(
-            reason="reading what an application may ask for takes nothing from anybody"
-        ),
-        "disable": NoReauthentication(reason="switching your own application off only takes access away"),
-        "restore": NoReauthentication(reason="switching it back on gives it no more than the approval it already had"),
+    reauthentication_acts = {
+        "create": None,
+        "partial_update": {"redirect_uris", "requested_scopes"},
+        "destroy": None,
+        "rotate_secret": None,
     }
-    reauthentication_fields = {"partial_update": {"redirect_uris", "requested_scopes"}}
     # Each is refused from any state but the one it starts from, so a stale page overwrites nothing.
     precondition_exempt_actions = {
         "rotate_secret": NoPrecondition(reason="every rotation makes a new secret, so a stale page loses nothing"),

@@ -6,7 +6,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.common.api.reauthentication import ProvesWhoTheyAre
-from apps.common.api.request_policies import NoReauthentication
 from apps.common.api.viewsets import BaseModelViewSet
 from apps.users.api.permissions.may_manage_users import MayManageUsers
 from apps.users.api.serializers.managed_user import ManagedUserSerializer
@@ -46,18 +45,7 @@ class UserViewSet(ProvesWhoTheyAre, HistoryMixin, BaseModelViewSet):
     ordering = ["email"]
     history_list_permission_classes = [IsAuthenticated]
     history_list_scoped_to_queryset = True
-    reauthentication_exempt_actions = {
-        "list": NoReauthentication(reason="reading accounts takes nothing from anybody"),
-        "retrieve": NoReauthentication(reason="reading an account takes nothing from anybody"),
-        "history": NoReauthentication(reason="reading what already happened changes nothing"),
-        "history_list": NoReauthentication(reason="reading what already happened changes nothing"),
-        "me": NoReauthentication(reason="answers who is asking, which somebody being asked to prove themselves needs"),
-        "update_me": NoReauthentication(
-            reason="editing your own name and language, where your rank and permissions are read-only"
-        ),
-        "reauthentication": NoReauthentication(reason="lists the ways to prove it is you, which proving needs first"),
-        "permissions": NoReauthentication(reason="reading what permissions exist takes nothing from anybody"),
-    }
+    reauthentication_acts = {"partial_update": None}
     # An application holding `users:manage:user` for somebody who has it may read the accounts they can.
     token_actions = frozenset({"list", "retrieve"})
     # Read actions are the only ones that send the version as ETag.

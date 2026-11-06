@@ -8,7 +8,6 @@ from rest_framework.exceptions import MethodNotAllowed, ValidationError
 from rest_framework.response import Response
 
 from apps.common.api.reauthentication import ProvesWhoTheyAre
-from apps.common.api.request_policies import NoReauthentication
 from apps.common.api.viewsets import BaseModelViewSet
 from apps.oauth_provider.api.permissions.may_review_applications import MayReviewApplications
 from apps.oauth_provider.api.serializers.approval import ApprovalSerializer
@@ -36,14 +35,7 @@ class ReviewedApplicationViewSet(ProvesWhoTheyAre, BaseModelViewSet):
     ordering_fields = ["name", "approval", "created"]
     # Waiting ones first, oldest first among them.
     ordering = ["-waiting", "created"]
-    reauthentication_exempt_actions = {
-        "list": NoReauthentication(reason="reading the applications takes nothing from anybody"),
-        "retrieve": NoReauthentication(reason="reading an application takes nothing from anybody"),
-        "withdraw": NoReauthentication(reason="taking an approval back only takes access away"),
-        "create": NoReauthentication(
-            reason="refused outright: a superuser reviews applications here, not authors them"
-        ),
-    }
+    reauthentication_acts = {"approve": None}
 
     # Approving is not exempt: its owner may have changed the requested scopes since the page loaded.
     precondition_exempt_actions = {

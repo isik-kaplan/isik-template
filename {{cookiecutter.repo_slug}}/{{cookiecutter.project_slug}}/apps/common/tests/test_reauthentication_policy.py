@@ -7,11 +7,12 @@ from allauth.account.internal.flows.login import AUTHENTICATION_METHODS_SESSION_
 from django.contrib.sessions.backends.db import SessionStore
 from rest_framework import viewsets
 from rest_framework.permissions import AllowAny
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.common.api.reauthentication import ProvesWhoTheyAre
-from apps.common.api.request_policies import NoReauthentication, RecentlyProvedWhoTheyAre
+from apps.common.api.request_policies import RecentlyProvedWhoTheyAre
 from apps.users.models.user import User
 from apps.users.reauthentication.proof import SPENT_AT_SESSION_KEY
 from conftest import give_authentication_records
@@ -19,14 +20,16 @@ from conftest import give_authentication_records
 
 class GatedViewSet(ProvesWhoTheyAre, viewsets.ViewSet):
     permission_classes = [AllowAny]
-    reauthentication_exempt_actions = {"list": NoReauthentication(reason="reading the list takes nothing from anybody")}
-    reauthentication_fields = {"partial_update": {"is_active"}}
+    reauthentication_acts = {"create": None, "partial_update": {"is_active"}, "destroy": None}
 
     def list(self, request):
         return Response([])
 
     def create(self, request):
         return Response({}, status=201)
+
+    def update(self, request, pk=None):
+        return Response({})
 
     def partial_update(self, request, pk=None):
         return Response({})
@@ -108,12 +111,27 @@ def test_a_proof_buys_one_act_and_the_next_one_asks_again(call, session):
     assert _refused(second)
 
 
-def test_an_exempt_action_neither_asks_for_a_proof_nor_spends_one(call, session):
-    _prove(session, call.user)
+@pytest.mark.parametrize(("method", "action"), [("get", "list"), ("put", "update")])
+def test_a_read_or_an_undeclared_write_neither_asks_for_a_proof_nor_spends_one(call, session, method, action):
+    assert call(method, action, {}, pk="1" if action == "update" else None).status_code == 200
 
-    assert call("get", "list").status_code == 200
-    assert SPENT_AT_SESSION_KEY not in session
+    _prove(session, call.user)
+    answered = call(method, action, {}, pk="1" if action == "update" else None)
+    spent = SPENT_AT_SESSION_KEY in session
+
+    assert answered.status_code == 200
+    assert not spent
     assert call("post", "create").status_code == 201
+
+
+@pytest.mark.parametrize(("method", "action"), [("get", "create"), ("put", "update")])
+def test_a_read_of_a_declared_action_or_an_undeclared_write_is_no_act(method, action):
+    """An act names a write; the same action reached by GET never asks."""
+    request = Request(getattr(APIRequestFactory(), method)("/", {}, format="json"))
+    view = GatedViewSet()
+    view.action = action
+
+    assert RecentlyProvedWhoTheyAre.names_a_serious_field(request, view) is False
 
 
 def test_an_ordinary_field_is_not_an_act_but_a_serious_one_is(call, session):

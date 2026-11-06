@@ -131,8 +131,9 @@ will.
   `apps.common.sql.refuse_plaintext`, and set `CREDENTIAL_KEY` (`scripts/setup.sh` generates one for a
   deployment).
 - **The DRF reauthentication gate** (`apps/common/api/reauthentication.py`): the same "prove it is you" step
-  the account routes use, for your own viewsets. Mix `ProvesWhoTheyAre` into the viewset and name exempt
-  actions in `reauthentication_exempt_actions` with a reason; everything else is gated.
+  the account routes use, for your own viewsets. Mix `ProvesWhoTheyAre` into the viewset and name its acts in
+  `reauthentication_acts`: `None` for the whole action, or the body fields that make it one. Reads and every
+  other write pass, and `apps/users/tests/test_reauthentication_gate.py` pins the full list.
 
 ## Testing
 
@@ -220,10 +221,10 @@ Each of these fails a commit (pre-commit) and CI rather than relying on review:
   `{{ cookiecutter.project_slug }}/scripts/layout_check.py`; a deliberate exception goes in its
   `EXCEPTIONS` with the reason.
 - **Every field says what it is.** Each model field this project declares carries a `help_text` (the
-  published API description) and a `db_comment` (what someone in psql sees), or
-  `NoHelpText(reason=...)` / `NoComment(reason=...)` from `apps/common/schema_docs.py` saying why it needs none.
-  isik's check `isik.E010` refuses to start otherwise (configured in `ISIK_CHECKS`).
-- **Every opt-out names the rule it skips.** The sentinels above, `NotAtomic`, `NoIdempotencyKey`,
+  published API description) and a `db_comment` (what someone in psql sees), with no per-field way out.
+  isik's check `isik.E010` refuses to start otherwise (configured in `ISIK_CHECKS`). Fields inherited unchanged
+  from a library are the library's to describe.
+- **Every opt-out names the rule it skips.** `NotAtomic`, `NoIdempotencyKey`,
   `NoReplay`, `NoPrecondition` and isik's own registry opt-outs are isik `Exemption` types that refuse a reason too short
   to be one; `python manage.py exemptions` lists them by rule.
 - **Serializers over a `BaseModel` list `created_at` and `updated_at`.** By hand - a sweep test in
