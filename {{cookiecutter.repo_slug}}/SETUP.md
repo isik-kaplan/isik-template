@@ -120,8 +120,10 @@ the profile's Tokens tab.
 
 ## 6. Email, storage and error reporting
 
+{% if cookiecutter.email == "smtp" -%}
 - **Email.** With `DEBUG=true` mail is printed to the backend's log. A deployment needs
   `{{ cookiecutter.config_prefix }}__EMAIL__SMTP__*`, or verification and password reset links go nowhere.
+{%- endif %}
 {%- if cookiecutter.storage == "garage" %}
 - **Object storage.** Uploads go to the bundled Garage, on the `storage_data` volume. Back it up;
   `setup.sh` generated its keys.

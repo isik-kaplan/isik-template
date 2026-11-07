@@ -89,7 +89,9 @@ all three no stored file is public: a view decides who may have one and answers 
 `apps.common.files.serve_file()`, and nginx sends the file (`X-Accel-Redirect`). `cache` picks where
 rate limits keep their counts: `redis` (default) bundles a Redis; `database` keeps them in a Postgres
 table, with no service of its own. Either is one store every process shares, which per-process memory
-would not be.
+would not be. `email` picks the provider outgoing mail goes through; `smtp`, any SMTP server, is the
+only one so far. No credential is asked at bake time: each provider reads its own env vars, which
+`.env.example` lists for the provider chosen, and development prints mail to the log whichever it is.
 
 `name_requirement` picks what a signup asks people to be called: a full name and a handle, each
 required, optional or not asked for, in the five combinations that always leave somebody a name

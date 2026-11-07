@@ -124,6 +124,8 @@ superuser_username="$(ask "Superuser username" "admin")"
 set_var "${PREFIX}__SETUP__SUPERUSER__USERNAME" "$superuser_username"
 {%- endif %}
 
+{%- if cookiecutter.email == "smtp" %}
+
 echo
 echo "DEBUG=false switches email from console to real SMTP - needed for password reset and"
 echo "verification links to actually go anywhere."
@@ -137,6 +139,7 @@ if [ -n "$smtp_host" ]; then
 else
   echo "Skipped - fill in ${PREFIX}__EMAIL__SMTP__* in $ENV_FILE yourself before going live, or no email will send."
 fi
+{%- endif %}
 
 {%- if cookiecutter.storage != "disk" %}
 

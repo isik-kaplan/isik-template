@@ -17,6 +17,7 @@
   "background_jobs": ["celery-with-beat", "celery", "inline"],
   "storage": ["garage", "s3", "disk"],
   "cache": ["redis", "database"],
+  "email": ["smtp"],
   "webhooks": ["none", "staff", "users"],
   "name_requirement": [
     "username_with_optional_full",
@@ -50,6 +51,10 @@
       "__prompt__": "Cache, where rate limits keep their counts",
       "redis": "Redis, bundled",
       "database": "A table in Postgres: no service of its own, slower under load"
+    },
+    "email": {
+      "__prompt__": "Outgoing email (credentials go in env vars, not here)",
+      "smtp": "Any SMTP server; printed to the log in development"
     },
     "webhooks": {
       "__prompt__": "Webhooks, which POST notifications to endpoints",

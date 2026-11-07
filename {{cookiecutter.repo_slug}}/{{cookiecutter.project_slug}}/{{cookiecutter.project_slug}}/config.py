@@ -87,8 +87,9 @@ CONFIG = config(
             "SLOW_REQUEST_MS": integer(missing_default=1000),
         },
         "EMAIL": {
-            # Only e2e sets it, forcing "smtp" despite DEBUG.
+            # Only e2e sets it, forcing the provider despite DEBUG.
             "BACKEND": string(missing_default=""),
+{%- if cookiecutter.email == "smtp" %}
             "SMTP": {
                 "HOST": string(),
                 "PORT": string(),
@@ -96,6 +97,7 @@ CONFIG = config(
                 "PASSWORD": string(),
                 "USE_TLS": boolean(missing_default=True),
             },
+{%- endif %}
             "DEFAULT_FROM": string(),
         },
         # Push is off until a service has credentials: see .env.example.

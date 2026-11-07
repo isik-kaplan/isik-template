@@ -569,14 +569,15 @@ CELERY_BROKER_URL = f"amqp://{config.BROKER.USER}:{config.BROKER.PASSWORD}@{conf
 CELERY_RESULT_BACKEND = "django-db"
 {%- endif %}
 
-# EMAIL__BACKEND overrides DEBUG's choice: e2e needs smtp but DEBUG=false would force secure cookies.
+# EMAIL__BACKEND overrides DEBUG's choice: e2e needs the provider but DEBUG=false would force secure cookies.
+{%- if cookiecutter.email == "smtp" %}
+EMAIL_PROVIDER = "django.core.mail.backends.smtp.EmailBackend"
+{%- endif %}
 EMAIL_BACKEND = {
     "console": "django.core.mail.backends.console.EmailBackend",
-    "smtp": "django.core.mail.backends.smtp.EmailBackend",
-}.get(
-    config.EMAIL.BACKEND,
-    "django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.smtp.EmailBackend",
-)
+    "{{ cookiecutter.email }}": EMAIL_PROVIDER,
+}.get(config.EMAIL.BACKEND, "django.core.mail.backends.console.EmailBackend" if DEBUG else EMAIL_PROVIDER)
+{%- if cookiecutter.email == "smtp" %}
 EMAIL_HOST = config.EMAIL.SMTP.HOST
 EMAIL_PORT = config.EMAIL.SMTP.PORT
 EMAIL_HOST_USER = config.EMAIL.SMTP.USER
@@ -584,6 +585,7 @@ EMAIL_HOST_PASSWORD = config.EMAIL.SMTP.PASSWORD
 EMAIL_USE_TLS = config.EMAIL.SMTP.USE_TLS
 # Without one a mail host that drops packets holds the worker forever.
 EMAIL_TIMEOUT = 10
+{%- endif %}
 DEFAULT_FROM_EMAIL = config.EMAIL.DEFAULT_FROM
 
 if config.SENTRY.DSN:  # see pyproject.toml's coverage exclude_lines for why
