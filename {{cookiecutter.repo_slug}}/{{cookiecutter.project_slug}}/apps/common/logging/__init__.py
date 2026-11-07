@@ -23,6 +23,7 @@ from apps.common.logging.events import (
     RECOVERY_CODES_REGENERATED,
     REQUEST,
     SIGNUP_COMPLETED,
+    UNVERIFIED_ACCOUNTS_REMOVED,
     Event,
     declare,
 )
@@ -52,6 +53,7 @@ __all__ = [
     "RECOVERY_CODES_REGENERATED",
     "REQUEST",
     "SIGNUP_COMPLETED",
+    "UNVERIFIED_ACCOUNTS_REMOVED",
     "Event",
     "ambient",
     "audit",

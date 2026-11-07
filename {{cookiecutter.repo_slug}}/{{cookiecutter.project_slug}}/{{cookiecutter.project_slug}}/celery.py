@@ -34,5 +34,11 @@ def schedule_housekeeping(sender, **kwargs):
     """Merged like isik's entries: a CELERY_BEAT_SCHEDULE setting would shadow theirs."""
     # Daily: the token tables stay correct however large they grow.
     tokens = {"task": "clear_expired_tokens", "schedule": crontab(hour=4, minute=30)}
-    sender.conf.beat_schedule = {**(sender.conf.beat_schedule or {}), "clear-expired-tokens": tokens}
+    # Daily: an address held by a signup that never proved it is released within a day of its link expiring.
+    unverified = {"task": "remove_unverified_accounts", "schedule": crontab(hour=4, minute=45)}
+    sender.conf.beat_schedule = {
+        **(sender.conf.beat_schedule or {}),
+        "clear-expired-tokens": tokens,
+        "remove-unverified-accounts": unverified,
+    }
 {%- endif %}
