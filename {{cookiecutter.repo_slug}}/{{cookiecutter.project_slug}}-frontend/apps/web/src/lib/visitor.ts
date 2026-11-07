@@ -4,7 +4,10 @@ import { serverConfig } from '@/config/server'
 const CLIENT_IP_HEADER = 'x-client-ip'
 
 /** A fetch nginx rate-limits against this render's visitor, not the frontend; plain without a key. */
-export function visitorFetch(requestHeaders: Headers, baseFetch: typeof fetch = fetch.bind(globalThis)): typeof fetch {
+export function visitorFetch(
+  requestHeaders: Headers,
+  baseFetch: typeof fetch = (input, init) => fetch(input, init)
+): typeof fetch {
   const key = serverConfig().FRONTEND_KEY
   const visitor = requestHeaders.get(CLIENT_IP_HEADER)
   if (!key || !visitor) return baseFetch

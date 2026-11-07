@@ -76,6 +76,32 @@ describe('createApi auto-logout wrapping', () => {
   })
 })
 
+describe('the fetch a client uses without being given one', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('for the API is the global fetch at the time of the call, not when the client was made', async () => {
+    const api = createApi('http://api.test')
+    const later = vi.fn(async () => responseWith({}))
+    vi.stubGlobal('fetch', later)
+
+    await api.me()
+
+    expect(later).toHaveBeenCalledOnce()
+  })
+
+  it('for the auth API is the global fetch at the time of the call, not when the client was made', async () => {
+    const auth = createAuthApi('http://auth.test')
+    const later = vi.fn(async () => responseWith({}))
+    vi.stubGlobal('fetch', later)
+
+    await auth.session()
+
+    expect(later).toHaveBeenCalledOnce()
+  })
+})
+
 describe('createAuthApi auto-logout wrapping', () => {
   afterEach(() => {
     vi.clearAllMocks()

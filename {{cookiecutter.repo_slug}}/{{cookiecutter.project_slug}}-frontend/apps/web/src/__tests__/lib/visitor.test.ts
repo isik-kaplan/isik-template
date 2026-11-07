@@ -46,4 +46,15 @@ describe('visitorFetch', () => {
     expect(new Headers(platform.mock.lastCall?.[1]?.headers).get('X-Visitor-Ip')).toBe('203.0.113.7')
     platform.mockRestore()
   })
+
+  it('looks the platform fetch up per call, so one installed after it was made is the one used', async () => {
+    const fetch = visitorFetch(new Headers({ 'x-client-ip': '203.0.113.7' }))
+    const later = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response('{}'))
+    vi.stubGlobal('fetch', later)
+
+    await fetch('http://api.test.test/')
+
+    expect(later).toHaveBeenCalledOnce()
+    vi.unstubAllGlobals()
+  })
 })

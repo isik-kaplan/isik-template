@@ -20,6 +20,18 @@ describe('AppAuthApi', () => {
     }
   })
 
+  it('looks the global fetch up per call, so one installed after it was made is the one used', async () => {
+    const api = new AppAuthApi('https://api.example.test', { getToken: () => null, setToken: vi.fn() })
+    const later = vi.fn<typeof fetch>(async () => jsonResponse({ status: 200, data: {}, meta: {} }))
+    vi.stubGlobal('fetch', later)
+    try {
+      await api.session()
+      expect(later).toHaveBeenCalledOnce()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   test.prop([fc.stringMatching(/^[A-Za-z0-9]+$/)])(
     'sends whatever token getToken returns as X-Session-Token, verbatim',
     async (token) => {

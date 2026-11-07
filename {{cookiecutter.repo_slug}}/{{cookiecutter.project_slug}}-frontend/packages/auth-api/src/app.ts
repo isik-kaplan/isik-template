@@ -31,7 +31,8 @@ export class AppAuthApi {
   constructor(baseUrl: string, options: AppAuthApiOptions) {
     this.getToken = options.getToken
     this.setToken = options.setToken
-    this.baseFetch = options.baseFetch ?? fetch.bind(globalThis)
+    // Looked up per call, not bound once: a fake installed after construction is the one used.
+    this.baseFetch = options.baseFetch ?? ((input, init) => fetch(input, init))
     this.client = createOpenApiClient<paths>({ baseUrl, fetch: this.fetch })
   }
 

@@ -11,8 +11,9 @@ import { nameFetchFailures } from '@isikk/core'
 const SESSION_CLEARED_HEADER = 'X-Session-Cleared'
 
 // Neither branch clears the cookie, so its presence alone never means "authenticated".
-function autoLogoutFetch(rawFetch: typeof fetch): typeof fetch {
-  // Named inside: redirect() throws, and an outer wrapper would rename it a fetch failure.
+function autoLogoutFetch(rawFetch?: typeof fetch): typeof fetch {
+  // Named inside: redirect() throws, and an outer wrapper would rename it a fetch failure. Without rawFetch it
+  // looks the global fetch up per call, so a fake installed later is the one used.
   const baseFetch = nameFetchFailures(rawFetch)
   return async (input, init) => {
     const response = await baseFetch(input, init)
@@ -35,9 +36,9 @@ function autoLogoutFetch(rawFetch: typeof fetch): typeof fetch {
 }
 
 export function createApi(baseUrl: string, options: ApiOptions = {}): Api {
-  return new Api(baseUrl, { ...options, baseFetch: autoLogoutFetch(options.baseFetch ?? fetch.bind(globalThis)) })
+  return new Api(baseUrl, { ...options, baseFetch: autoLogoutFetch(options.baseFetch) })
 }
 
 export function createAuthApi(baseUrl: string, options: AuthApiOptions = {}): AuthApi {
-  return new AuthApi(baseUrl, { ...options, baseFetch: autoLogoutFetch(options.baseFetch ?? fetch.bind(globalThis)) })
+  return new AuthApi(baseUrl, { ...options, baseFetch: autoLogoutFetch(options.baseFetch) })
 }
