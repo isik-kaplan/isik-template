@@ -57,6 +57,13 @@ def test_an_enciphered_column_keeps_the_options_it_was_declared_with():
     assert field.plaintext_without_a_key is False
 
 
+@pytest.mark.parametrize(("declared", "written"), [(True, {"plaintext_without_a_key": True}), (False, {})])
+def test_a_migration_carries_the_option_to_store_cleartext_only_when_it_is_set(declared, written):
+    _, _, args, kwargs = EncryptedField(plaintext_without_a_key=declared).deconstruct()
+
+    assert (args, kwargs) == ([], written)
+
+
 def test_a_secret_that_merely_looks_enciphered_is_enciphered_all_the_same(credential_key):
     """Skipping a prefixed value would store `fernet:hunter2` in the clear, past the trigger."""
     field = EncryptedField()

@@ -17,6 +17,13 @@ class EncryptedField(models.TextField):
         self.plaintext_without_a_key = plaintext_without_a_key
         super().__init__(*args, **kwargs)
 
+    def deconstruct(self):
+        # A migration rebuilds the field from this; without it the option never reaches one.
+        name, path, args, kwargs = super().deconstruct()
+        if self.plaintext_without_a_key:
+            kwargs["plaintext_without_a_key"] = True
+        return name, path, args, kwargs
+
     def _cipher(self):
         from cryptography.fernet import Fernet
 
