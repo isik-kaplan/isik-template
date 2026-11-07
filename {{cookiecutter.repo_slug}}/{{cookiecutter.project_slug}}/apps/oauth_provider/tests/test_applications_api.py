@@ -18,7 +18,7 @@ from conftest import versioned
 AccessToken = get_access_token_model()
 Application = get_application_model()
 
-LIST = api_path("oauth-applications-list")
+LIST = api_path("oauth_provider:applications-list")
 NEW = {"name": "Acme Notes", "client_type": "confidential", "redirect_uris": [REDIRECT_URI]}
 
 
@@ -27,11 +27,11 @@ GRANT = "users:grant:rights"
 
 
 def _detail(application):
-    return api_path("oauth-applications-detail", application.pk)
+    return api_path("oauth_provider:applications-detail", application.pk)
 
 
 def _action(application, name):
-    return api_path(f"oauth-applications-{name}", application.pk)
+    return api_path(f"oauth_provider:applications-{name}", application.pk)
 
 
 def _later():
@@ -89,7 +89,7 @@ def test_only_a_scope_an_application_may_be_given_can_be_asked_for(client, prove
 
 @pytest.mark.django_db
 def test_the_scopes_an_application_may_ask_for_are_listed_with_what_they_mean(client, signed_in, provider):
-    response = client.get(api_path("oauth-applications-delegatable-scopes"))
+    response = client.get(api_path("oauth_provider:applications-delegatable-scopes"))
 
     assert response.json() == [
         {"name": "users:grant:rights", "label": "Change what other people may do"},

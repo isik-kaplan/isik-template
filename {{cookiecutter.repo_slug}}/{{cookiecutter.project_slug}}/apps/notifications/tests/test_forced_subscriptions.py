@@ -12,8 +12,8 @@ from apps.notifications.models import InboxItem
 from conftest import deliver_waiting_notices
 
 
-KINDS = api_path("notification-kinds-list")
-SUBSCRIPTIONS = api_path("notification-subscriptions-list")
+KINDS = api_path("notifications:kinds-list")
+SUBSCRIPTIONS = api_path("notifications:subscriptions-list")
 REASON = "Turned off while we investigate repeated alerts on this account."
 
 

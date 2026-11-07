@@ -9,7 +9,7 @@ from apps.oauth_provider.tests.conftest import permission, set_approval, tokens_
 from apps.users.models.user import User
 
 
-USERS = api_path("users-list")
+USERS = api_path("users:users-list")
 
 
 @pytest.fixture
@@ -90,7 +90,12 @@ def test_a_scope_withdrawn_from_the_application_since_is_gone_from_its_tokens_to
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "path", [api_path("users-me"), api_path("oauth-applications-list"), api_path("authorized-applications-list")]
+    "path",
+    [
+        api_path("users:users-me"),
+        api_path("oauth_provider:applications-list"),
+        api_path("oauth_provider:authorized-applications-list"),
+    ],
 )
 def test_an_application_reaches_only_what_says_it_may(client, provider, application, signed_in, path):
     tokens = tokens_for(client, application)

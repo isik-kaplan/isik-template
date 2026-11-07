@@ -13,11 +13,11 @@ Application = get_application_model()
 AccessToken = get_access_token_model()
 RefreshToken = get_refresh_token_model()
 
-LIST = api_path("authorized-applications-list")
+LIST = api_path("oauth_provider:authorized-applications-list")
 
 
 def _detail(pk):
-    return api_path("authorized-applications-detail", pk)
+    return api_path("oauth_provider:authorized-applications-detail", pk)
 
 
 def _access(user, application, scope, created=None, token=None):

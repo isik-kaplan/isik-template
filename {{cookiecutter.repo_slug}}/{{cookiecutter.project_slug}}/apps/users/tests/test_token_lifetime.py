@@ -12,7 +12,7 @@ from apps.features.declarations import LONG_LIVED_TOKENS, STAFF
 from apps.users.models import PersonalAccessToken
 
 
-LIST = api_path("personal-access-tokens-list")
+LIST = api_path("users:personal-access-tokens-list")
 REASON = "Shortened while this account's tokens are being reviewed."
 
 

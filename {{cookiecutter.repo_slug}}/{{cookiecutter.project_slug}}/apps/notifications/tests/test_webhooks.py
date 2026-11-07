@@ -16,7 +16,7 @@ from apps.users.personal_access_tokens import make_token
 from conftest import deliver_waiting_notices
 
 
-ENDPOINTS = api_path("notification-endpoints-list")
+ENDPOINTS = api_path("notifications:endpoints-list")
 
 
 def _endpoint(url, **fields):
@@ -73,7 +73,7 @@ def test_staff_see_every_endpoint_and_are_shown_a_new_ones_secret_once(client, s
     assert made.status_code == 201, made.content
     assert made.json()["secret"]
     assert len(client.get(ENDPOINTS).json()["results"]) == 2
-    assert client.get(api_path("notification-endpoints-detail", made.json()["id"])).json()["secret"] is None
+    assert client.get(api_path("notifications:endpoints-detail", made.json()["id"])).json()["secret"] is None
 {%- endif %}
 {%- if cookiecutter.webhooks == "users" %}
 

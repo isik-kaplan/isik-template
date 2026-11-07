@@ -12,14 +12,14 @@ from apps.users.models.user import User
 from apps.users.personal_access_tokens import PREFIX, checksum, make_token
 
 
-LIST = api_path("personal-access-tokens-list")
-SCOPES = api_path("personal-access-tokens-scopes")
+LIST = api_path("users:personal-access-tokens-list")
+SCOPES = api_path("users:personal-access-tokens-scopes")
 MANAGE = "users:manage:user"
 GRANT = "users:grant:rights"
 
 
 def _detail(token):
-    return api_path("personal-access-tokens-detail", token.pk)
+    return api_path("users:personal-access-tokens-detail", token.pk)
 
 
 def permission(name):

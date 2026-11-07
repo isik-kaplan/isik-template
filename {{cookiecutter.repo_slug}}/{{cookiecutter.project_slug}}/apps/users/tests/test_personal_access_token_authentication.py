@@ -16,7 +16,7 @@ from apps.users.models.user import User
 from apps.users.personal_access_tokens import make_token
 
 
-USERS = api_path("users-list")
+USERS = api_path("users:users-list")
 MANAGE = "users:manage:user"
 
 
@@ -76,7 +76,7 @@ def test_a_rank_is_never_a_tokens_to_act_with(alice, bob, rank):
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("path", [api_path("users-me"), api_path("personal-access-tokens-list")])
+@pytest.mark.parametrize("path", [api_path("users:users-me"), api_path("users:personal-access-tokens-list")])
 def test_a_token_reaches_only_what_says_it_may(alice, path):
     response = _with(path, _token(alice))
 
@@ -87,7 +87,7 @@ def test_a_token_reaches_only_what_says_it_may(alice, path):
 @pytest.mark.django_db
 def test_a_token_cannot_make_another(manager):
     response = Client().post(
-        api_path("personal-access-tokens-list"),
+        api_path("users:personal-access-tokens-list"),
         {"name": "more"},
         content_type="application/json",
         HTTP_AUTHORIZATION=f"Bearer {_token(manager, [MANAGE])}",

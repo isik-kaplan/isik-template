@@ -19,13 +19,13 @@ AccessToken = get_access_token_model()
 DeviceGrant = get_device_grant_model()
 
 DEVICE_GRANT = "urn:ietf:params:oauth:grant-type:device_code"
-USERS = api_path("users-list")
+USERS = api_path("users:users-list")
 
 
 def _detail(code, action=None):
     if action:
-        return api_path(f"device-authorizations-{action}", code)
-    return api_path("device-authorizations-detail", code)
+        return api_path(f"oauth_provider:device-authorizations-{action}", code)
+    return api_path("oauth_provider:device-authorizations-detail", code)
 
 
 @pytest.fixture

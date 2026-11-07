@@ -25,7 +25,7 @@ class ReviewedApplicationViewSet(ProvesWhoTheyAre, BaseModelViewSet):
         reason="A second viewset over Application, so which audience is served is decided by the route, not the caller."
     )
     model = Application
-    endpoint = "oauth-application-reviews"
+    endpoint = "application-reviews"
     serializer_class = ReviewedApplicationSerializer
     permission_classes = [MayReviewApplications]
     # POST for approve and withdraw only.

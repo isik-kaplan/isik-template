@@ -14,17 +14,17 @@ from conftest import versioned
 AccessToken = get_access_token_model()
 Application = get_application_model()
 
-LIST = api_path("oauth-application-reviews-list")
+LIST = api_path("oauth_provider:application-reviews-list")
 MANAGE = str(Permission.USERS_MANAGE_USER)
 GRANT = str(Permission.USERS_GRANT_RIGHTS)
 
 
 def _detail(application):
-    return api_path("oauth-application-reviews-detail", application.pk)
+    return api_path("oauth_provider:application-reviews-detail", application.pk)
 
 
 def _action(application, name):
-    return api_path(f"oauth-application-reviews-{name}", application.pk)
+    return api_path(f"oauth_provider:application-reviews-{name}", application.pk)
 
 
 @pytest.fixture

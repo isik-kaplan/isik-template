@@ -27,7 +27,7 @@ class EndpointViewSet({% if cookiecutter.webhooks == "staff" %}DeploymentEndpoin
     secret, which is shown once."""
 {%- endif %}
 
-    endpoint = "notification-endpoints"
+    endpoint = "endpoints"
     reauthentication_acts = {"create": None, "update": None, "partial_update": None, "rotate_secret": None}
 {%- if cookiecutter.webhooks == "users" %}
     owner_field = "owner"

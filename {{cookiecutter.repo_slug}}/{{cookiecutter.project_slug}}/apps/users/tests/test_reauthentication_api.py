@@ -7,7 +7,7 @@ from apps.users.reauthentication.proof import PROVIDER_FLOW, SET_PASSWORD_BY_EMA
 from apps.users.tests.conftest import OIDC_PROVIDER_ID
 
 
-URL = api_path("users-reauthentication")
+URL = api_path("users:users-reauthentication")
 
 
 @pytest.mark.django_db

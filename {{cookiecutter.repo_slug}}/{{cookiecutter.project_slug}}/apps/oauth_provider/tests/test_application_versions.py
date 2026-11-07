@@ -15,7 +15,7 @@ MANAGE = "users:manage:user"
 
 
 def _detail(application):
-    return api_path("oauth-applications-detail", application.pk)
+    return api_path("oauth_provider:applications-detail", application.pk)
 
 
 def _rename(client, application, name, headers):
@@ -85,7 +85,7 @@ def test_deleting_one_from_a_stale_page_is_refused(client, signed_in, provider, 
 
 @pytest.mark.django_db
 def test_switching_off_needs_no_version(client, signed_in, provider, application):
-    response = client.post(api_path("oauth-applications-disable", application.pk))
+    response = client.post(api_path("oauth_provider:applications-disable", application.pk))
 
     assert response.status_code == 200
     assert response["ETag"] == versioned(application)["If-Match"]
@@ -103,7 +103,7 @@ def test_approving_what_it_asked_for_before_its_owner_changed_that_is_refused(
     application.save()
 
     response = client.post(
-        api_path("oauth-application-reviews-approve", application.pk),
+        api_path("oauth_provider:application-reviews-approve", application.pk),
         {"approved_scopes": [MANAGE]},
         content_type="application/json",
         headers=read,

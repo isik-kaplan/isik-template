@@ -7,12 +7,12 @@ from apps.notifications.models import Device
 from apps.users.models.user import User
 
 
-DEVICES = api_path("notification-devices-list")
+DEVICES = api_path("notifications:devices-list")
 PHONE = {"platform": "apns", "token": "a1b2c3", "environment": "sandbox", "app_id": ""}
 
 
 def _device(pk):
-    return api_path("notification-devices-detail", pk)
+    return api_path("notifications:devices-detail", pk)
 
 
 @pytest.mark.django_db

@@ -29,7 +29,7 @@ class ApplicationViewSet(ProvesWhoTheyAre, BaseModelViewSet):
     the provider's mode."""
 
     model = Application
-    endpoint = "oauth-applications"
+    endpoint = "applications"
     serializer_class = ApplicationSerializer
     permission_classes = [MayRegisterApplications]
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]

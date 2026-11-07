@@ -14,7 +14,7 @@ class DeliveryViewSet({% if cookiecutter.webhooks == "staff" %}DeploymentEndpoin
     again."""
 {%- endif %}
 
-    endpoint = "notification-deliveries"
+    endpoint = "deliveries"
 {%- if cookiecutter.webhooks == "users" %}
     owner_field = "owner"
 {%- endif %}

@@ -10,12 +10,12 @@ from apps.features.declarations import STAFF
 from apps.users.reauthentication.gate import REAUTHENTICATION_REQUIRED_HEADER
 
 
-SETTINGS = api_path("settings-list")
+SETTINGS = api_path("features:settings-list")
 REASON = "Required for every account with access to production data."
 
 
 def _detail(name):
-    return api_path("settings-detail", name)
+    return api_path("features:settings-detail", name)
 
 
 def _settings(client):

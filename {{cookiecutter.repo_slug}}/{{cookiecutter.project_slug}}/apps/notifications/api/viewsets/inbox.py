@@ -11,7 +11,7 @@ class InboxViewSet(drf.InboxViewSet):
     """The signed-in person's notifications, newest first: ?unread=true for the unread, marked read one at a time
     or all at once."""
 
-    endpoint = "notification-inbox"
+    endpoint = "inbox"
 
     @none_during_schema_generation
     def get_queryset(self):

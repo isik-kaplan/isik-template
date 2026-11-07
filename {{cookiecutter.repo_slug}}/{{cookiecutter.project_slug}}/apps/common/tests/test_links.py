@@ -22,12 +22,12 @@ def default_host_is_auth(settings):
 
 
 def test_api_path_names_the_api_host_rather_than_the_default(default_host_is_auth):
-    assert api_path("users-list") == "/v0/users/"
+    assert api_path("users:users-list") == "/v0/users/"
 
 
 def test_a_path_takes_its_arguments_by_position_or_by_name():
-    assert api_path("users-detail", ID) == f"/v0/users/{ID}/"
-    assert api_path("users-detail", pk=ID) == f"/v0/users/{ID}/"
+    assert api_path("users:users-detail", ID) == f"/v0/users/{ID}/"
+    assert api_path("users:users-detail", pk=ID) == f"/v0/users/{ID}/"
 
 
 def test_auth_path_names_the_auth_host():
