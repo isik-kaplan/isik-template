@@ -4,7 +4,7 @@ from isik.django.apps.idempotency.drf import NoReplay
 from isik.django.drf.viewsets import NoPrecondition
 from oauth2_provider.models import get_application_model
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ErrorDetail, ValidationError
 from rest_framework.response import Response
 
 from apps.common.api.reauthentication import ProvesWhoTheyAre
@@ -71,12 +71,12 @@ class ApplicationViewSet(ProvesWhoTheyAre, BaseModelViewSet):
             .exclude(approval=Application.Approval.DISABLED)
             .exists()
         ):
-            return {"detail": DISABLE_FIRST}
+            return {"detail": ErrorDetail(DISABLE_FIRST, code="disable_first")}
         return None
 
     def perform_destroy(self, instance):
         if instance.approval != Application.Approval.DISABLED:
-            raise ValidationError({"detail": DISABLE_FIRST})
+            raise ValidationError({"detail": DISABLE_FIRST}, code="disable_first")
         instance.delete()
 
     @extend_schema(request=RotateSecretSerializer, responses=RotatedSecretSerializer)
@@ -85,7 +85,7 @@ class ApplicationViewSet(ProvesWhoTheyAre, BaseModelViewSet):
         """A new secret for the same client id, readable in this answer and never again."""
         application = self.get_object()
         if application.client_type != Application.CLIENT_CONFIDENTIAL:
-            raise ValidationError({"detail": _("A public application has no secret to rotate.")})
+            raise ValidationError({"detail": _("A public application has no secret to rotate.")}, code="no_secret")
         body = RotateSecretSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         secret = rotate_client_secret(application, revoke=body.validated_data["revoke_tokens"])
@@ -97,7 +97,9 @@ class ApplicationViewSet(ProvesWhoTheyAre, BaseModelViewSet):
         """Its owner's off switch: every token it holds goes now. The only state it may be deleted from."""
         application = self.get_object()
         if application.approval != Application.Approval.APPROVED:
-            raise ValidationError({"detail": _("Only an approved application can be switched off.")})
+            raise ValidationError(
+                {"detail": _("Only an approved application can be switched off.")}, code="not_approved"
+            )
         return Response(self.get_serializer(disable_application(application)).data)
 
     @extend_schema(request=None, responses=ApplicationSerializer)
@@ -105,7 +107,7 @@ class ApplicationViewSet(ProvesWhoTheyAre, BaseModelViewSet):
     def restore(self, request, *args, **kwargs):
         application = self.get_object()
         if application.approval != Application.Approval.DISABLED:
-            raise ValidationError({"detail": NOT_DISABLED})
+            raise ValidationError({"detail": NOT_DISABLED}, code="not_switched_off")
         return Response(self.get_serializer(restore_application(application)).data)
 
     # Not paginated: the vocabulary is a handful of names.

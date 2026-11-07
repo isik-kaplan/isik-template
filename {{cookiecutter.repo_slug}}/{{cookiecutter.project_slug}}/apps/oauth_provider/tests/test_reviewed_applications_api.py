@@ -199,7 +199,10 @@ def test_one_its_owner_switched_off_is_theirs_to_switch_back_on(client, reviewer
     )
 
     assert response.status_code == 400
-    assert response.json() == {"detail": "Its owner switched it off; switching it back on is theirs to do."}
+    assert response.json() == {
+        "detail": "Its owner switched it off; switching it back on is theirs to do.",
+        "code": "switched_off_by_owner",
+    }
 
 
 @pytest.mark.django_db
@@ -225,7 +228,7 @@ def test_withdrawing_twice_says_so(client, superuser, provider, application):
     response = client.post(_action(application, "withdraw"))
 
     assert response.status_code == 400
-    assert response.json() == {"detail": "It is already withdrawn."}
+    assert response.json() == {"detail": "It is already withdrawn.", "code": "already_withdrawn"}
 
 
 @pytest.mark.django_db

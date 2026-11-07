@@ -392,7 +392,8 @@ def test_one_still_switched_on_is_not_deleted_and_nobody_proves_themselves_to_he
 
     assert response.status_code == 400
     assert response.json() == {
-        "detail": "Switch it off first: deleting it is for an application nobody is using any more."
+        "detail": "Switch it off first: deleting it is for an application nobody is using any more.",
+        "code": "disable_first",
     }
     assert Application.objects.exists()
 
@@ -428,7 +429,7 @@ def test_only_an_approved_application_is_switched_off(client, signed_in, provide
     response = client.post(_action(application, "disable"))
 
     assert response.status_code == 400
-    assert response.json() == {"detail": "Only an approved application can be switched off."}
+    assert response.json() == {"detail": "Only an approved application can be switched off.", "code": "not_approved"}
 
 
 @pytest.mark.django_db
@@ -452,7 +453,10 @@ def test_only_an_application_its_owner_switched_off_is_switched_back_on(
     response = client.post(_action(application, "restore"))
 
     assert response.status_code == 400
-    assert response.json() == {"detail": "Only an application its owner switched off can be switched back on."}
+    assert response.json() == {
+        "detail": "Only an application its owner switched off can be switched back on.",
+        "code": "not_switched_off",
+    }
     application.refresh_from_db()
     assert application.approval == approval
 
@@ -510,6 +514,7 @@ def test_one_still_switched_on_is_not_deleted_whatever_reaches_the_delete(proven
     assert refused.value.detail == {
         "detail": "Switch it off first: deleting it is for an application nobody is using any more."
     }
+    assert refused.value.detail["detail"].code == "disable_first"
     assert Application.objects.filter(pk=application.pk).exists()
 
 
@@ -532,7 +537,7 @@ def test_a_public_application_has_no_secret_to_rotate(client, proven, applicatio
     response = client.post(_action(application, "rotate-secret"), {}, content_type="application/json")
 
     assert response.status_code == 400
-    assert response.json() == {"detail": "A public application has no secret to rotate."}
+    assert response.json() == {"detail": "A public application has no secret to rotate.", "code": "no_secret"}
 
 
 @pytest.mark.django_db

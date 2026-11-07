@@ -60,7 +60,10 @@ class ReviewedApplicationViewSet(ProvesWhoTheyAre, BaseModelViewSet):
         """Approve it for these of the scopes it asked for; also reinstates a withdrawn one."""
         application = self.get_object()
         if application.approval == Application.Approval.DISABLED:
-            raise ValidationError({"detail": "Its owner switched it off; switching it back on is theirs to do."})
+            raise ValidationError(
+                {"detail": "Its owner switched it off; switching it back on is theirs to do."},
+                code="switched_off_by_owner",
+            )
         body = ApprovalSerializer(data=request.data, context={"application": application})
         body.is_valid(raise_exception=True)
         approve_application(application, body.validated_data["approved_scopes"])
@@ -72,5 +75,5 @@ class ReviewedApplicationViewSet(ProvesWhoTheyAre, BaseModelViewSet):
         """Take it down everywhere, now: every token it holds goes."""
         application = self.get_object()
         if application.approval == Application.Approval.WITHDRAWN:
-            raise ValidationError({"detail": "It is already withdrawn."})
+            raise ValidationError({"detail": "It is already withdrawn."}, code="already_withdrawn")
         return Response(self.get_serializer(withdraw_application(application)).data)

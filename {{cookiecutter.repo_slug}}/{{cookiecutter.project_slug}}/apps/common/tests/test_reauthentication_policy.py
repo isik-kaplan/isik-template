@@ -6,6 +6,7 @@ import pytest
 from allauth.account.internal.flows.login import AUTHENTICATION_METHODS_SESSION_KEY
 from django.contrib.sessions.backends.db import SessionStore
 from rest_framework import viewsets
+from rest_framework.exceptions import ErrorDetail
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -39,7 +40,7 @@ class GatedViewSet(ProvesWhoTheyAre, viewsets.ViewSet):
 
     def refuse_before_proving(self, request):
         if request.query_params.get("pk") == "missing":
-            return {"detail": "There is nothing there to remove."}
+            return {"detail": ErrorDetail("There is nothing there to remove.", code="nothing_to_remove")}
         return super().refuse_before_proving(request)
 
 
@@ -151,7 +152,7 @@ def test_an_act_that_would_be_refused_anyway_says_so_without_asking_for_a_proof(
     response = call("delete", "destroy", pk="missing")
 
     assert response.status_code == 400
-    assert response.data == {"detail": "There is nothing there to remove."}
+    assert response.data == {"detail": "There is nothing there to remove.", "code": "nothing_to_remove"}
     assert "X-Reauthentication-Required" not in response
     assert _refused(call("delete", "destroy", pk="there"))
 
