@@ -150,6 +150,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+      # A first boot migrates every app and collects static files before uwsgi listens: more than ten retries.
+      start_period: 300s
 {%- if cookiecutter.background_jobs != "inline" %}
 
   worker:
