@@ -7,13 +7,17 @@ from allauth.headless.constants import Client
 from allauth.headless.spec.internal import schema
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
-from django.urls import Resolver404, path, resolve
+from django.urls import Resolver404, URLResolver, path, resolve
+from django.urls.resolvers import RoutePattern
 
 from apps.common.links import auth_path
 from apps.users import headless_urls
 from apps.users.headless_spec import ALLAUTH_VERSION, VERSIONED
 from apps.users.reauthentication.routing import walk
 from apps.users.tests.conftest import AUTH_URLCONF
+
+
+PHONE_VIEWS = {"ManagePhoneView", "VerifyPhoneView", "ResendPhoneVerificationCodeView"}
 
 
 @pytest.mark.parametrize("client", list(Client))
@@ -26,9 +30,49 @@ def test_allauth_still_builds_each_client_under_one_v1(client):
 @pytest.mark.parametrize("client", list(Client))
 def test_what_is_mounted_is_everything_allauth_built(client):
     built = walk(allauth_urls.build_urlpatterns(client))
-    unwrapped = [(route.removeprefix(ALLAUTH_VERSION), view.view_class) for route, view in built]
+    unwrapped = [
+        (route.removeprefix(ALLAUTH_VERSION), view.view_class)
+        for route, view in built
+        if view.view_class.__name__ not in PHONE_VIEWS
+    ]
 
     assert [(route, view.view_class) for route, view in walk(headless_urls.unversioned(client))] == unwrapped
+
+
+@pytest.mark.parametrize("client", list(Client))
+def test_no_phone_route_is_served_since_no_account_has_a_phone_number(client):
+    """allauth's adapter raises on every phone call, so each of these would answer with a 500."""
+    built = {view.view_class.__name__ for _, view in walk(allauth_urls.build_urlpatterns(client))}
+    mounted = {view.view_class.__name__ for _, view in walk(headless_urls.unversioned(client))}
+
+    assert PHONE_VIEWS <= built
+    assert mounted == built - PHONE_VIEWS
+
+
+def test_dropping_a_route_keeps_everything_else_about_where_it_was_mounted():
+    nested = URLResolver(
+        RoutePattern("inner/"),
+        [
+            path("phone", lambda request: None, name="manage_phone"),
+            path("email", lambda request: None, name="manage_email"),
+        ],
+        {"client": "browser"},
+        "inner_app",
+        "inner_namespace",
+    )
+
+    (kept,) = headless_urls.served([nested])
+
+    assert [pattern.name for pattern in kept.url_patterns] == ["manage_email"]
+    assert (str(kept.pattern), kept.default_kwargs) == ("inner/", {"client": "browser"})
+    assert (kept.app_name, kept.namespace) == ("inner_app", "inner_namespace")
+
+
+@pytest.mark.django_db
+def test_the_phone_page_is_not_found_rather_than_a_server_error(client, signed_in):
+    response = client.get("/v0/browser/account/phone", HTTP_HOST=f"auth.{settings.PARENT_HOST}")
+
+    assert response.status_code == 404
 
 
 @pytest.mark.parametrize(
