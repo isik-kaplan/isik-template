@@ -184,6 +184,19 @@ then uses, so its tracebacks print `???` and name `/Users/` paths - delete every
 And a `compose run` interrupted mid-way can leave a container in `Created` that every later `compose run` waits
 on forever (a pre-commit hook that hangs with no output): `docker ps -a --filter status=created`, then `docker rm -f`.
 
+### What the gates can't see
+
+Coverage and mutation testing measure this project's own packages, which is right, but it means a declaration
+that hands a behaviour to a library (an isik mixin's options, a DRF `Meta`, a model field's `unique=True`) is
+covered the moment its module is imported. It has no branch to miss and nothing worth mutating, so both gates
+report 100% on a behaviour that never ran. A library bug behind such a declaration once answered a write with
+a 500 under thousands of green tests.
+
+So a declaration that carries a value through a library gets a test of the behaviour itself, not of the
+declaration: write a value, write the same value again, and write one another row already holds. A field that
+stores something has those three cases even when every line of ours is already covered; the e2e suite is the
+other place they show up, which is why a flow worth having is worth one there too.
+
 ### Mutation testing
 
 The backend is held to a 100% mutation kill rate (mutmut, `backend-mutation` in CI). A mutant no test
