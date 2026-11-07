@@ -75,7 +75,7 @@ LOGIN_REFUSED_BY_POLICY = declare("login.refused_by_policy", logging.WARNING, ("
 LOGIN_POLICY_SWEPT = declare("login_policy.swept", logging.WARNING, ("policy", "sessions"), audited=True)
 
 # Housekeeping, so a cleanup that stopped running shows up as missing lines. Uncounted: DOT logs its own counts.
-EXPIRED_TOKENS_CLEARED = declare("oauth.expired_tokens_cleared", logging.INFO)
+EXPIRED_TOKENS_CLEARED = declare("oauth.expired_tokens_cleared", logging.INFO, ("deleted",))
 
 # A mail allauth added since apps/notifications/kinds.py was written: sent, but kept nowhere.
 ACCOUNT_MAIL_UNRECORDED = declare("account_mail.unrecorded", logging.WARNING, ("template",))
