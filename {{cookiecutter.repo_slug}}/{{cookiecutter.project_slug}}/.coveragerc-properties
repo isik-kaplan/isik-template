@@ -18,7 +18,7 @@ omit =
 show_missing = true
 # A floor, not the target. The target is 100; this is the coverage already reached, and it goes up
 # with the suite, so a deleted property or a module that stopped being covered still fails.
-fail_under = 59
+fail_under = 80
 exclude_lines =
     raise NotImplementedError
     if TYPE_CHECKING:
