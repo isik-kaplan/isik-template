@@ -44,7 +44,8 @@ export default defineConfig({
       // `all`, so a file no test imports shows as 0% rather than vanishing.
       all: true,
       include: ['src/**/*.ts', 'src/**/*.tsx'],
-      exclude: ['src/**/*.d.ts', 'src/__tests__/**'],
+      // The Sentry entry points hand it options and call nothing of ours; Next runs them, no test does.
+      exclude: ['src/**/*.d.ts', 'src/__tests__/**', 'src/instrumentation*.ts', 'src/sentry.*.config.ts'],
       // No threshold: packages/mutation-check/check-coverage.mjs enforces it against coverage-exemptions.json.
       reporter: ['text', 'html', 'json'],
     },

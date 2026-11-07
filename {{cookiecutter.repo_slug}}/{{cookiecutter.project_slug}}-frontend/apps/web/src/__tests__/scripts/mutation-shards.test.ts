@@ -47,6 +47,10 @@ const NOT_MUTATED: Record<string, string> = {
   'src/i18n/index.ts': 'A barrel re-exporting what the shards measure where it is defined.',
   'src/i18n/i18next.d.ts': 'A type declaration; it emits nothing to run and so has no mutants.',
   'src/lib/queryGrammar.generated.ts': 'Data written from the API schema; generate-query-grammar.test.ts holds it.',
+  'src/instrumentation.ts': 'Imports the Sentry config for its runtime; Next calls it, no test does.',
+  'src/instrumentation-client.ts': 'Hands Sentry its build-time options and calls nothing of ours.',
+  'src/sentry.edge.config.ts': 'Hands Sentry lib/sentry.ts options, which are tested and mutated there.',
+  'src/sentry.server.config.ts': 'Hands Sentry lib/sentry.ts options, which are tested and mutated there.',
 }
 
 function cli(...args: string[]) {

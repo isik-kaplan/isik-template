@@ -221,8 +221,10 @@ services:
       context: ./{{ cookiecutter.project_slug }}-frontend
       dockerfile: apps/web/Dockerfile
       args:
-        # The one build-time value: next build inlines it into the client bundle.
+        # Build-time: next build inlines them into the client bundle. The rate is the backend's, so a trace is
+        # sampled on both sides or neither.
         NEXT_PUBLIC_SENTRY_DSN: {{ '${NEXT_PUBLIC_SENTRY_DSN:-}' }}
+        NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: {{ '${' + cookiecutter.config_prefix + '__SENTRY__TRACES_SAMPLE_RATE:-0}' }}
     image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-frontend:latest
     # Named one by one: none of the backend's secrets belong in the public-facing process.
     environment:
@@ -232,6 +234,7 @@ services:
       {{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS: {{ '${' + cookiecutter.config_prefix + '__SOCIAL_LOGIN__PROVIDERS:-}' }}
       {{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__ICONS: {{ '${' + cookiecutter.config_prefix + '__SOCIAL_LOGIN__ICONS:-}' }}
       {{ server_sentry_dsn }}: {{ '${' + server_sentry_dsn + ':-}' }}
+      {{ cookiecutter.config_prefix }}_SERVER__SENTRY__TRACES_SAMPLE_RATE: {{ '${' + cookiecutter.config_prefix + '__SENTRY__TRACES_SAMPLE_RATE:-0}' }}
       # A secret, so under the server-only prefix.
       {{ cookiecutter.config_prefix }}_SERVER__FRONTEND_KEY: {{ '${' + cookiecutter.config_prefix + '__FRONTEND_KEY:-}' }}
 {%- if cookiecutter.tls_termination == "external" %}

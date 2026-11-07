@@ -23,9 +23,11 @@ FROM node:{{ cookiecutter.node_version }}-alpine AS builder
 WORKDIR /repo
 COPY --from=deps /repo/node_modules ./node_modules
 COPY . .
-# The one build-time value: next build inlines NEXT_PUBLIC_* into the client bundle. Empty disables it.
+# The build-time values: next build inlines NEXT_PUBLIC_* into the client bundle. An empty DSN disables it.
 ARG NEXT_PUBLIC_SENTRY_DSN=
 ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
+ARG NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=0
+ENV NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=$NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE
 RUN npm run build --workspace=@{{ cookiecutter.repo_slug }}/api --workspace=@{{ cookiecutter.repo_slug }}/auth-api
 RUN npm run build --workspace=web
 

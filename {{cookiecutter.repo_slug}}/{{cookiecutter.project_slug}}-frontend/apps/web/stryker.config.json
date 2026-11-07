@@ -12,7 +12,11 @@
     "!src/**/index.ts",
     "!src/**/*.d.ts",
     "!src/__tests__/**",
-    "!src/lib/queryGrammar.generated.ts"
+    "!src/lib/queryGrammar.generated.ts",
+    "!src/instrumentation.ts",
+    "!src/instrumentation-client.ts",
+    "!src/sentry.edge.config.ts",
+    "!src/sentry.server.config.ts"
   ],
   "thresholds": { "high": 100, "low": 90, "break": null },
   "timeoutMS": 15000,

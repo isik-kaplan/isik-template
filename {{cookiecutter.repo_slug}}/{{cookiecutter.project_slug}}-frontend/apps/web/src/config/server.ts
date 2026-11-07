@@ -3,7 +3,8 @@ import { config, string } from '@isikk/core/node'
 const read = () =>
   config(
     {
-      SENTRY: { DSN: string({ missingDefault: '' }) },
+      // The backend's rate, passed through by compose, so both halves of a trace are sampled or neither is.
+      SENTRY: { DSN: string({ missingDefault: '' }), TRACES_SAMPLE_RATE: string({ missingDefault: '0' }) },
       // Shared with nginx to trust lib/visitor.ts's header; unset, every server fetch counts as the frontend's.
       FRONTEND_KEY: string({ missingDefault: '' }),
     },

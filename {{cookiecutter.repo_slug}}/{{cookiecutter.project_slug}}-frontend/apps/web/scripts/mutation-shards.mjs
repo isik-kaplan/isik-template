@@ -38,6 +38,7 @@ export const SHARDS = {
     'src/lib/oauthScopes.ts',
     'src/lib/reauthentication.ts',
     'src/lib/requestOrigin.ts',
+    'src/lib/sentry.ts',
     'src/lib/monkeypatches.ts',
     'src/lib/resolveLanguage.ts',
     'src/lib/serverApi.ts',
