@@ -2,6 +2,7 @@
 
 import pytest
 from django.core.exceptions import PermissionDenied as DjangoPermissionDenied
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import Http404
 from rest_framework.exceptions import NotAuthenticated, NotFound, PermissionDenied, ValidationError
 from rest_framework.views import APIView
@@ -31,12 +32,19 @@ def test_field_validation_is_left_in_the_shape_its_readers_expect():
     assert response.data == {"name": ["This field may not be blank."]}
 
 
-def test_a_refusal_django_raised_answers_without_inventing_a_code():
-    """DRF converts `Http404` inside its own handler, so what reaches here carries no detail to read."""
+def test_a_not_found_django_raised_carries_a_code_too():
+    """DRF converts `Http404` inside its own handler; the code is read off what it rendered."""
     response = exception_handler(Http404(), CONTEXT)
 
     assert response.status_code == 404
-    assert response.data == {"detail": NotFound.default_detail}
+    assert response.data == {"detail": NotFound.default_detail, "code": NotFound.default_code}
+
+
+def test_a_row_django_refused_is_a_400_in_the_field_shape_not_a_500():
+    response = exception_handler(DjangoValidationError({"name": ["Taken."]}), CONTEXT)
+
+    assert response.status_code == 400
+    assert response.data == {"name": ["Taken."]}
 
 
 def test_an_exception_drf_does_not_handle_is_still_not_handled():
@@ -61,19 +69,29 @@ def test_a_refusal_is_written_down_with_its_code(client, logged):
     assert refused["code"] == "apps.common.api.exception_handler"
 
 
-def test_a_refusal_django_raised_has_no_code_to_give(logged):
-    """Django's own PermissionDenied arrives here before DRF converts it, carrying no `detail`."""
+def test_a_refusal_django_raised_is_written_down_with_drfs_code(logged):
+    """Django's own PermissionDenied arrives unconverted; its code is read off the body DRF rendered."""
     response = exception_handler(DjangoPermissionDenied(), context={})
+
+    assert response.status_code == 403
+    assert response.data["code"] == PermissionDenied.default_code
+    assert [(line["event"], line["permission"]) for line in logged] == [("permission.refused", "permission_denied")]
+
+
+@pytest.mark.parametrize("detail", [{"reason": ["Not for you."]}, ["Not for you.", "Nor today."]])
+def test_a_refusal_rendered_without_a_code_is_written_down_with_none(logged, detail):
+    """A body that isn't a single sentence has no code to read."""
+    response = exception_handler(PermissionDenied(detail), context={})
 
     assert response.status_code == 403
     assert [(line["event"], line["permission"]) for line in logged] == [("permission.refused", "")]
 
 
-def test_the_view_context_reaches_drfs_own_handler(monkeypatch):
-    """DRF's handler reads nothing from it today, but anything layered on top of it may."""
+def test_the_view_context_reaches_isiks_handler(monkeypatch):
+    """Nothing reads it today, but anything layered on top of it may."""
     seen = []
     monkeypatch.setattr(
-        "apps.common.api.exception_handler.drf_exception_handler", lambda exc, context: seen.append((exc, context))
+        "apps.common.api.exception_handler.isik_exception_handler", lambda exc, context: seen.append((exc, context))
     )
     exc, context = NotFound(), {"view": object()}
 
