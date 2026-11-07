@@ -1,11 +1,11 @@
 from django.contrib import admin, messages
 from django.shortcuts import redirect
-from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import ngettext
 
 from apps.admin.forms.site_settings import SiteSettingsForm
 from apps.common.admin.base import BaseAdmin
+from apps.common.links import admin_path
 from apps.users.login_policy import sweep
 from apps.users.models.site_settings import SiteSettings
 from apps.users.tasks.logins_closed import tell_the_people_a_rung_signed_out
@@ -20,8 +20,8 @@ class SiteSettingsAdmin(BaseAdmin):
         # One row, so the list is a detour: straight to it, or to creating it.
         existing = SiteSettings.objects.first()
         if existing is None:
-            return redirect(reverse("admin:users_sitesettings_add"))
-        return redirect(reverse("admin:users_sitesettings_change", args=[existing.pk]))
+            return redirect(admin_path("admin:users_sitesettings_add"))
+        return redirect(admin_path("admin:users_sitesettings_change", existing.pk))
 
     def has_add_permission(self, request):
         return super().has_add_permission(request) and not SiteSettings.objects.exists()

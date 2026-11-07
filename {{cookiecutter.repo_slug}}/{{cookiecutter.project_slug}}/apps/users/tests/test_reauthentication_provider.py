@@ -13,14 +13,14 @@ from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.sessions.backends.db import SessionStore
 from django.test import RequestFactory
-from django.urls import reverse
 
+from apps.common.links import auth_path
 from apps.users.adapters.social_account import SocialAccountAdapter
 from apps.users.models.site_settings import SiteSettings
 from apps.users.models.user import User
 from apps.users.reauthentication import proof
 from apps.users.reauthentication.forms.prove_with_provider import ProveWithProviderForm
-from apps.users.tests.conftest import AUTH_URLCONF, AUTHORIZATION_ENDPOINT, OIDC_PROVIDER_ID, Headless
+from apps.users.tests.conftest import AUTHORIZATION_ENDPOINT, OIDC_PROVIDER_ID, Headless
 
 
 PROVE_PAGE = f"http://{settings.PARENT_HOST}/auth/prove?next=%2Fprofile%2Femails"
@@ -39,7 +39,7 @@ def social_only(client, alice, providers):
 def _prove_with(client, provider, callback_url=PROVE_PAGE):
     client.get(Headless.url("account:current_session"), HTTP_HOST=f"auth.{settings.PARENT_HOST}")
     return client.post(
-        reverse("prove_with_provider", urlconf=AUTH_URLCONF),
+        auth_path("prove_with_provider"),
         {"provider": provider, "callback_url": callback_url, "csrfmiddlewaretoken": client.cookies["csrftoken"].value},
         HTTP_HOST=f"auth.{settings.PARENT_HOST}",
     )

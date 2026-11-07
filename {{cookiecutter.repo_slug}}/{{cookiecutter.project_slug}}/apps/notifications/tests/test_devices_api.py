@@ -1,18 +1,18 @@
 """A phone is registered by whoever signs in on it, seen only by them, and forgotten when they sign out there."""
 
 import pytest
-from django.urls import reverse
 
+from apps.common.links import api_path
 from apps.notifications.models import Device
 from apps.users.models.user import User
 
 
-DEVICES = reverse("notification-devices-list")
+DEVICES = api_path("notification-devices-list")
 PHONE = {"platform": "apns", "token": "a1b2c3", "environment": "sandbox", "app_id": ""}
 
 
 def _device(pk):
-    return reverse("notification-devices-detail", args=[pk])
+    return api_path("notification-devices-detail", pk)
 
 
 @pytest.mark.django_db

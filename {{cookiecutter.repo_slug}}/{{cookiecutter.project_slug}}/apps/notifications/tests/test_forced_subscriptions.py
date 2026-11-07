@@ -2,18 +2,18 @@
 own choice back when staff let go."""
 
 import pytest
-from django.urls import reverse
 from isik.django.apps.notifications.audience.helpers import force_subscription, release_subscription
 from isik.django.apps.notifications.kinds import raise_notice
 
+from apps.common.links import api_path
 from apps.features.declarations import STAFF
 from apps.notifications.kinds import ACCOUNT_CHANGED, TOKEN_CREATED
 from apps.notifications.models import InboxItem
 from conftest import deliver_waiting_notices
 
 
-KINDS = reverse("notification-kinds-list")
-SUBSCRIPTIONS = reverse("notification-subscriptions-list")
+KINDS = api_path("notification-kinds-list")
+SUBSCRIPTIONS = api_path("notification-subscriptions-list")
 REASON = "Turned off while we investigate repeated alerts on this account."
 
 

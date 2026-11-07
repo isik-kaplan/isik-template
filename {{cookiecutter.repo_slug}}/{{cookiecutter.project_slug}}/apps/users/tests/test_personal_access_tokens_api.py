@@ -3,23 +3,23 @@ from datetime import timedelta
 import pytest
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
-from django.urls import reverse
 from django.utils import timezone
 
+from apps.common.links import api_path
 from apps.users.api.serializers.personal_access_token import TOKENS_PER_USER
 from apps.users.models import PersonalAccessToken
 from apps.users.models.user import User
 from apps.users.personal_access_tokens import PREFIX, checksum, make_token
 
 
-LIST = reverse("personal-access-tokens-list")
-SCOPES = reverse("personal-access-tokens-scopes")
+LIST = api_path("personal-access-tokens-list")
+SCOPES = api_path("personal-access-tokens-scopes")
 MANAGE = "users:manage:user"
 GRANT = "users:grant:rights"
 
 
 def _detail(token):
-    return reverse("personal-access-tokens-detail", args=[token.pk])
+    return api_path("personal-access-tokens-detail", token.pk)
 
 
 def permission(name):

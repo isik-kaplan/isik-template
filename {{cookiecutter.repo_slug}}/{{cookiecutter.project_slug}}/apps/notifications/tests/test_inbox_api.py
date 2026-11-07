@@ -2,9 +2,9 @@
 
 import pghistory
 import pytest
-from django.urls import reverse
 from isik.django.apps.notifications.kinds import raise_notice
 
+from apps.common.links import api_path
 from apps.notifications.kinds import ACCOUNT_CHANGED
 from apps.notifications.models import InboxItem
 from apps.users.models.user import User
@@ -12,10 +12,10 @@ from apps.users.personal_access_tokens import make_token
 from conftest import deliver_waiting_notices
 
 
-INBOX = reverse("notification-inbox-list")
-READ_ALL = reverse("notification-inbox-read-all")
-SUBSCRIPTIONS = reverse("notification-subscriptions-list")
-KINDS = reverse("notification-kinds-list")
+INBOX = api_path("notification-inbox-list")
+READ_ALL = api_path("notification-inbox-read-all")
+SUBSCRIPTIONS = api_path("notification-subscriptions-list")
+KINDS = api_path("notification-kinds-list")
 
 
 def _token_for(user, actor=None):
@@ -60,7 +60,7 @@ def test_reading_one_or_all_marks_them_and_unread_lists_what_is_left(client, sig
     _token_for(signed_in)
     first, second = InboxItem.objects.filter(user=signed_in)
 
-    assert client.post(reverse("notification-inbox-read", args=[first.pk])).status_code == 200
+    assert client.post(api_path("notification-inbox-read", first.pk)).status_code == 200
     assert [item["id"] for item in client.get(INBOX, {"unread": "true"}).json()["results"]] == [str(second.pk)]
     assert client.post(READ_ALL).json() == {"marked": 1}
     assert client.get(INBOX, {"unread": "true"}).json()["results"] == []
@@ -72,7 +72,7 @@ def test_somebody_else_cannot_mark_an_item_read(client, signed_in):
     _token_for(bob)
     (item,) = InboxItem.objects.filter(user=bob)
 
-    assert client.post(reverse("notification-inbox-read", args=[item.pk])).status_code == 404
+    assert client.post(api_path("notification-inbox-read", item.pk)).status_code == 404
     item.refresh_from_db()
     assert item.read_at is None
 

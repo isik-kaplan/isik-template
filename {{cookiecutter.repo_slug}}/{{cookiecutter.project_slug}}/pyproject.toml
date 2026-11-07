@@ -75,9 +75,17 @@ unfixable = []
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "logging.getLogger".msg = "Declare an event in apps/common/logging/events.py and write it with log() or audit()."
 "logging.Logger".msg = "Declare an event in apps/common/logging/events.py and write it with log() or audit()."
+# Three hosts, and the API's urlconf is also ROOT_URLCONF: a bare reverse() answers for the API whatever was meant.
+"django.urls.reverse".msg = "Say which host: apps.common.links' api_path, auth_path or admin_path."
+"django.urls.reverse_lazy".msg = "Say which host: apps.common.links' api_path, auth_path or admin_path."
+"django.shortcuts.reverse".msg = "Say which host: apps.common.links' api_path, auth_path or admin_path."
 
 [tool.ruff.lint.per-file-ignores]
 "apps/common/logging/emit.py" = ["TID251"]
+# The one module that reverses a URL, naming the host for everything else.
+"apps/common/links.py" = ["TID251"]
+# Reverses inside its own test urlconf, which no host serves.
+"apps/common/tests/test_idempotency_claims.py" = ["TID251"]
 "scripts/*" = ["T20"]
 
 [tool.ruff.lint.isort]

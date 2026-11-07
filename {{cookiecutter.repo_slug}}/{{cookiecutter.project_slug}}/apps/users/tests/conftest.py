@@ -7,8 +7,8 @@ from allauth.socialaccount.providers.github.provider import GitHubProvider
 from allauth.socialaccount.providers.openid_connect.provider import OpenIDConnectProvider
 from allauth.socialaccount.providers.openid_connect.views import OpenIDConnectOAuth2Adapter
 from django.conf import settings
-from django.urls import reverse
 
+from apps.common.links import auth_path
 from apps.users.models.user import User
 
 
@@ -29,7 +29,7 @@ class Headless:
 
     @staticmethod
     def url(name):
-        return reverse(f"headless:browser:{name}", urlconf=AUTH_URLCONF)
+        return auth_path(f"headless:browser:{name}")
 
     def call(self, method, name, data=None):
         self.client.get(self.url("account:current_session"), HTTP_HOST=self.host)

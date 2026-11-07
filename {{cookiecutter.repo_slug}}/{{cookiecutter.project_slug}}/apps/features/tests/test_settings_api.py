@@ -2,20 +2,20 @@
 whether they may change it - and one guarding their account asks them to prove it is them first."""
 
 import pytest
-from django.urls import reverse
 from isik.django.apps.features.operations import force_setting
 from isik.django.apps.features.resolution import effective
 
+from apps.common.links import api_path
 from apps.features.declarations import STAFF
 from apps.users.reauthentication.gate import REAUTHENTICATION_REQUIRED_HEADER
 
 
-SETTINGS = reverse("settings-list")
+SETTINGS = api_path("settings-list")
 REASON = "Required for every account with access to production data."
 
 
 def _detail(name):
-    return reverse("settings-detail", args=[name])
+    return api_path("settings-detail", name)
 
 
 def _settings(client):

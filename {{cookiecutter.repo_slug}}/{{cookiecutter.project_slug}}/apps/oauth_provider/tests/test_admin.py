@@ -1,19 +1,18 @@
 import pytest
 from django.conf import settings
 from django.contrib.admin.sites import site
-from django.urls import reverse
 
+from apps.common.links import admin_path
 from apps.oauth_provider.admin import ApplicationAdmin
 from apps.oauth_provider.tests.conftest import Application
 from apps.users.models.user import User
 
 
-ADMIN_URLCONF = "{{ cookiecutter.project_slug }}.urls.admin"
 HOST = {"HTTP_HOST": f"admin.{settings.PARENT_HOST}"}
 
 
 def _url(name, *args):
-    return reverse(f"admin:oauth_provider_application_{name}", args=args, urlconf=ADMIN_URLCONF)
+    return admin_path(f"admin:oauth_provider_application_{name}", *args)
 
 
 @pytest.fixture

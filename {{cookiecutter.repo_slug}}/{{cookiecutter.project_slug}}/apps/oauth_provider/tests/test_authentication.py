@@ -1,15 +1,15 @@
 import pytest
 from django.test import Client
-from django.urls import reverse
 from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory
 
+from apps.common.links import api_path
 from apps.oauth_provider.authentication import ApplicationTokenAuthentication
 from apps.oauth_provider.tests.conftest import permission, set_approval, tokens_for
 from apps.users.models.user import User
 
 
-USERS = reverse("users-list")
+USERS = api_path("users-list")
 
 
 @pytest.fixture
@@ -90,7 +90,7 @@ def test_a_scope_withdrawn_from_the_application_since_is_gone_from_its_tokens_to
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "path", [reverse("users-me"), reverse("oauth-applications-list"), reverse("authorized-applications-list")]
+    "path", [api_path("users-me"), api_path("oauth-applications-list"), api_path("authorized-applications-list")]
 )
 def test_an_application_reaches_only_what_says_it_may(client, provider, application, signed_in, path):
     tokens = tokens_for(client, application)

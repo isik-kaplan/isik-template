@@ -4,15 +4,15 @@ staff force it to when they do."""
 from datetime import timedelta
 
 import pytest
-from django.urls import reverse
 from django.utils import timezone
 from isik.django.apps.features.operations import force_setting, grant, set_setting
 
+from apps.common.links import api_path
 from apps.features.declarations import LONG_LIVED_TOKENS, STAFF
 from apps.users.models import PersonalAccessToken
 
 
-LIST = reverse("personal-access-tokens-list")
+LIST = api_path("personal-access-tokens-list")
 REASON = "Shortened while this account's tokens are being reviewed."
 
 

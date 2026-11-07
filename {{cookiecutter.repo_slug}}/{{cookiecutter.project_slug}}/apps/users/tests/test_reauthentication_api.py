@@ -1,13 +1,13 @@
 import pytest
 from allauth.socialaccount.models import SocialAccount
 from allauth.socialaccount.providers.github.provider import GitHubProvider
-from django.urls import reverse
 
+from apps.common.links import api_path
 from apps.users.reauthentication.proof import PROVIDER_FLOW, SET_PASSWORD_BY_EMAIL_FLOW
 from apps.users.tests.conftest import OIDC_PROVIDER_ID
 
 
-URL = reverse("users-reauthentication")
+URL = api_path("users-reauthentication")
 
 
 @pytest.mark.django_db

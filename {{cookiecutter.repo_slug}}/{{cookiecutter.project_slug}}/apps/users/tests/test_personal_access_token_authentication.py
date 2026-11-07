@@ -4,19 +4,19 @@ import pytest
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 from django.test import Client
-from django.urls import reverse
 from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory
 
+from apps.common.links import api_path
 from apps.users.authentication import PersonalAccessTokenAuthentication
 from apps.users.models import PersonalAccessToken, SiteSettings
 from apps.users.models.user import User
 from apps.users.personal_access_tokens import make_token
 
 
-USERS = reverse("users-list")
+USERS = api_path("users-list")
 MANAGE = "users:manage:user"
 
 
@@ -76,7 +76,7 @@ def test_a_rank_is_never_a_tokens_to_act_with(alice, bob, rank):
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("path", [reverse("users-me"), reverse("personal-access-tokens-list")])
+@pytest.mark.parametrize("path", [api_path("users-me"), api_path("personal-access-tokens-list")])
 def test_a_token_reaches_only_what_says_it_may(alice, path):
     response = _with(path, _token(alice))
 
@@ -87,7 +87,7 @@ def test_a_token_reaches_only_what_says_it_may(alice, path):
 @pytest.mark.django_db
 def test_a_token_cannot_make_another(manager):
     response = Client().post(
-        reverse("personal-access-tokens-list"),
+        api_path("personal-access-tokens-list"),
         {"name": "more"},
         content_type="application/json",
         HTTP_AUTHORIZATION=f"Bearer {_token(manager, [MANAGE])}",

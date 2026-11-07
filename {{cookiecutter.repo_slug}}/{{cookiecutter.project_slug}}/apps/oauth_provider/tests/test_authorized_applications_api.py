@@ -1,10 +1,10 @@
 from datetime import timedelta
 
 import pytest
-from django.urls import reverse
 from django.utils import timezone
 from oauth2_provider.models import get_access_token_model, get_application_model, get_refresh_token_model
 
+from apps.common.links import api_path
 from apps.oauth_provider.tests.conftest import auth_host, make_application, o, tokens_for
 from apps.users.models.user import User
 
@@ -13,11 +13,11 @@ Application = get_application_model()
 AccessToken = get_access_token_model()
 RefreshToken = get_refresh_token_model()
 
-LIST = reverse("authorized-applications-list")
+LIST = api_path("authorized-applications-list")
 
 
 def _detail(pk):
-    return reverse("authorized-applications-detail", args=[pk])
+    return api_path("authorized-applications-detail", pk)
 
 
 def _access(user, application, scope, created=None, token=None):

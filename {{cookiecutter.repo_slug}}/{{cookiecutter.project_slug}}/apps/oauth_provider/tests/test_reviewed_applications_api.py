@@ -1,10 +1,10 @@
 from datetime import timedelta
 
 import pytest
-from django.urls import reverse
 from django.utils import timezone
 from oauth2_provider.models import get_access_token_model, get_application_model
 
+from apps.common.links import api_path
 from apps.oauth_provider.tests.conftest import REDIRECT_URI, make_application, permission, set_approval
 from apps.users.models.user import User
 from apps.users.permissions import Permission
@@ -14,17 +14,17 @@ from conftest import versioned
 AccessToken = get_access_token_model()
 Application = get_application_model()
 
-LIST = reverse("oauth-application-reviews-list")
+LIST = api_path("oauth-application-reviews-list")
 MANAGE = str(Permission.USERS_MANAGE_USER)
 GRANT = str(Permission.USERS_GRANT_RIGHTS)
 
 
 def _detail(application):
-    return reverse("oauth-application-reviews-detail", args=[application.pk])
+    return api_path("oauth-application-reviews-detail", application.pk)
 
 
 def _action(application, name):
-    return reverse(f"oauth-application-reviews-{name}", args=[application.pk])
+    return api_path(f"oauth-application-reviews-{name}", application.pk)
 
 
 @pytest.fixture

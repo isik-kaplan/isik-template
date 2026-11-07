@@ -12,14 +12,14 @@ from django.conf import settings
 from django.contrib.sessions.backends.db import SessionStore
 from django.http import HttpResponse
 from django.test import RequestFactory
-from django.urls import reverse
 
+from apps.common.links import auth_path
 from apps.users.models.user import User
 from apps.users.reauthentication.gate import REAUTHENTICATION_REQUIRED_HEADER, ProvesWhoTheyAre
 from apps.users.reauthentication.proof import SPENT_AT_SESSION_KEY
 from apps.users.reauthentication.views.provider_token import ProviderTokenView
 from apps.users.reauthentication.views.redirect_to_provider import RedirectToProviderView
-from apps.users.tests.conftest import AUTH_URLCONF, AUTHORIZATION_ENDPOINT, OIDC_PROVIDER_ID, PASSWORD, Headless
+from apps.users.tests.conftest import AUTHORIZATION_ENDPOINT, OIDC_PROVIDER_ID, PASSWORD, Headless
 from conftest import give_authentication_records
 
 
@@ -277,7 +277,7 @@ def test_the_app_client_is_gated_and_spends_its_proof_on_its_own_session(client,
     host = {"HTTP_HOST": f"auth.{settings.PARENT_HOST}"}
 
     def url(name):
-        return reverse(f"headless:app:{name}", urlconf=AUTH_URLCONF)
+        return auth_path(f"headless:app:{name}")
 
     login = client.post(
         url("account:login"),

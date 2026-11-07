@@ -7,8 +7,9 @@ from allauth.headless.constants import Client
 from allauth.headless.spec.internal import schema
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
-from django.urls import Resolver404, path, resolve, reverse
+from django.urls import Resolver404, path, resolve
 
+from apps.common.links import auth_path
 from apps.users import headless_urls
 from apps.users.headless_spec import ALLAUTH_VERSION, VERSIONED
 from apps.users.reauthentication.routing import walk
@@ -47,7 +48,7 @@ def test_routes_that_are_no_longer_one_v1_are_refused_rather_than_half_mounted(m
 
 @pytest.mark.parametrize("client", ["browser", "app"])
 def test_each_client_answers_without_allauths_version(client):
-    assert reverse(f"headless:{client}:account:login", urlconf=AUTH_URLCONF) == f"/v0/{client}/auth/login"
+    assert auth_path(f"headless:{client}:account:login") == f"/v0/{client}/auth/login"
 
     with pytest.raises(Resolver404):
         resolve(f"/v0/{client}/v1/auth/login", urlconf=AUTH_URLCONF)

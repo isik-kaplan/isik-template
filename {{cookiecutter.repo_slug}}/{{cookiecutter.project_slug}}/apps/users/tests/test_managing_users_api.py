@@ -1,8 +1,8 @@
 import pytest
 from django.contrib.auth.models import Permission as PermissionRow
 from django.contrib.contenttypes.models import ContentType
-from django.urls import reverse
 
+from apps.common.links import api_path
 from apps.users.models.user import User
 from apps.users.permissions import Permission
 from conftest import versioned
@@ -13,7 +13,7 @@ GRANT = str(Permission.USERS_GRANT_RIGHTS)
 
 
 def _detail(user):
-    return reverse("users-detail", args=[user.pk])
+    return api_path("users-detail", user.pk)
 
 
 def _grant(user, *names):
@@ -71,8 +71,8 @@ def test_a_superuser_is_shown_with_what_they_were_granted_not_everything_they_ho
 def test_the_people_list_can_be_searched_and_narrowed(client, manager, bob):
     User.objects.create_user(username="carol", email="carol@example.test", is_active=False)
 
-    found = client.get(reverse("users-list"), {"search": "bob"}).json()["results"]
-    inactive = client.get(reverse("users-list"), {"is_active": "false"}).json()["results"]
+    found = client.get(api_path("users-list"), {"search": "bob"}).json()["results"]
+    inactive = client.get(api_path("users-list"), {"is_active": "false"}).json()["results"]
 
     assert [row["username"] for row in found] == ["bob"]
     assert [row["username"] for row in inactive] == ["carol"]
@@ -196,7 +196,7 @@ def test_a_person_sees_their_own_rank_and_permissions_and_cannot_change_them(cli
     _grant(signed_in, GRANT)
 
     body = client.patch(
-        reverse("users-me"), {"is_superuser": True}, content_type="application/json", headers=versioned(signed_in)
+        api_path("users-me"), {"is_superuser": True}, content_type="application/json", headers=versioned(signed_in)
     ).json()
 
     assert body["is_superuser"] is False
@@ -205,7 +205,7 @@ def test_a_person_sees_their_own_rank_and_permissions_and_cannot_change_them(cli
 
 @pytest.mark.django_db
 def test_every_permission_there_is_to_grant_is_listed_with_what_it_does(client, signed_in):
-    response = client.get(reverse("users-permissions"))
+    response = client.get(api_path("users-permissions"))
 
     assert response.json() == [
         {

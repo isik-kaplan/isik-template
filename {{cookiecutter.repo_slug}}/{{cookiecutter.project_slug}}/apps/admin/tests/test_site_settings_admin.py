@@ -7,19 +7,18 @@ from django.conf import settings
 from django.contrib.admin.sites import site
 from django.contrib.sessions.backends.db import SessionStore
 from django.contrib.sessions.models import Session
-from django.urls import reverse
 
+from apps.common.links import admin_path
 from apps.users.models.site_settings import SiteSettings
 from apps.users.models.user import User
 
 
-ADMIN_URLCONF = "{{ cookiecutter.project_slug }}.urls.admin"
 HOST = {"HTTP_HOST": f"admin.{settings.PARENT_HOST}"}
 LoginPolicy = SiteSettings.LoginPolicy
 
 
 def _url(name, *args):
-    return reverse(f"admin:users_sitesettings_{name}", args=args, urlconf=ADMIN_URLCONF)
+    return admin_path(f"admin:users_sitesettings_{name}", *args)
 
 
 @pytest.fixture

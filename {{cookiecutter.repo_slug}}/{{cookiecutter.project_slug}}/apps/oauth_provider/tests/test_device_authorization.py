@@ -3,12 +3,12 @@ from urllib.parse import urlencode
 
 import pytest
 from django.test import Client
-from django.urls import reverse
 from django.utils import timezone
 from oauth2_provider.models import get_access_token_model, get_device_grant_model
 from oauthlib.common import Request as OAuthlibRequest
 from oauthlib.oauth2.rfc6749 import errors
 
+from apps.common.links import api_path
 from apps.oauth_provider.device_codes import ALPHABET, LENGTH, as_stored, spend_device_code, user_code
 from apps.oauth_provider.services import deciding
 from apps.oauth_provider.tests.conftest import auth_host, make_application, o, permission, set_approval
@@ -19,13 +19,13 @@ AccessToken = get_access_token_model()
 DeviceGrant = get_device_grant_model()
 
 DEVICE_GRANT = "urn:ietf:params:oauth:grant-type:device_code"
-USERS = reverse("users-list")
+USERS = api_path("users-list")
 
 
 def _detail(code, action=None):
     if action:
-        return reverse(f"device-authorizations-{action}", args=[code])
-    return reverse("device-authorizations-detail", args=[code])
+        return api_path(f"device-authorizations-{action}", code)
+    return api_path("device-authorizations-detail", code)
 
 
 @pytest.fixture

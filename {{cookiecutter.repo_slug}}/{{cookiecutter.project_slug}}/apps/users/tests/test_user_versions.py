@@ -4,9 +4,9 @@ import pytest
 from django.contrib.auth.models import Group
 from django.contrib.auth.models import Permission as PermissionRow
 from django.contrib.contenttypes.models import ContentType
-from django.urls import reverse
 from isik.django.apps.common.db.concurrency import assert_concurrency_field_changes
 
+from apps.common.links import api_path
 from apps.users.models import PersonalAccessToken, SiteSettings
 from apps.users.models.user import User
 from apps.users.permissions import Permission
@@ -65,7 +65,7 @@ def test_a_grant_made_since_the_page_loaded_refuses_its_save_rather_than_being_t
     read = versioned(bob)
     bob.user_permissions.add(a_permission)
 
-    response = _patch(client, reverse("users-detail", args=[bob.pk]), {"permissions": []}, read)
+    response = _patch(client, api_path("users-detail", bob.pk), {"permissions": []}, read)
 
     assert response.status_code == 412
     assert response.json()["current"]["permissions"] == [str(Permission.USERS_MANAGE_USER)]
@@ -86,7 +86,7 @@ def test_deactivating_somebody_from_a_stale_page_is_refused_with_how_they_are_no
     bob.first_name = "Robert"
     bob.save()
 
-    response = _patch(client, reverse("users-detail", args=[bob.pk]), {"is_active": False}, read)
+    response = _patch(client, api_path("users-detail", bob.pk), {"is_active": False}, read)
 
     assert response.status_code == 412
     assert response.json()["current"]["first_name"] == "Robert"
@@ -96,7 +96,7 @@ def test_deactivating_somebody_from_a_stale_page_is_refused_with_how_they_are_no
 
 @pytest.mark.django_db
 def test_changing_somebody_without_naming_a_version_is_refused(client, manager, bob):
-    response = _patch(client, reverse("users-detail", args=[bob.pk]), {"is_active": False}, {})
+    response = _patch(client, api_path("users-detail", bob.pk), {"is_active": False}, {})
 
     assert response.status_code == 428
     bob.refresh_from_db()
@@ -106,9 +106,9 @@ def test_changing_somebody_without_naming_a_version_is_refused(client, manager, 
 @pytest.mark.django_db
 def test_two_tabs_on_your_own_profile_cannot_overwrite_each_other(client, signed_in, a_second_language):
     read = versioned(signed_in)
-    assert _patch(client, reverse("users-me"), {"first_name": "Alice"}, read).status_code == 200
+    assert _patch(client, api_path("users-me"), {"first_name": "Alice"}, read).status_code == 200
 
-    response = _patch(client, reverse("users-me"), {"language": "tr"}, read)
+    response = _patch(client, api_path("users-me"), {"language": "tr"}, read)
 
     assert response.status_code == 412
     assert response.json()["current"]["first_name"] == "Alice"
@@ -118,7 +118,7 @@ def test_two_tabs_on_your_own_profile_cannot_overwrite_each_other(client, signed
 
 @pytest.mark.django_db
 def test_your_own_profile_answers_with_the_version_it_left(client, signed_in):
-    response = _patch(client, reverse("users-me"), {"first_name": "Alice"}, versioned(signed_in))
+    response = _patch(client, api_path("users-me"), {"first_name": "Alice"}, versioned(signed_in))
 
     assert response.status_code == 200
     assert response["ETag"] == versioned(signed_in)["If-Match"]
@@ -126,12 +126,12 @@ def test_your_own_profile_answers_with_the_version_it_left(client, signed_in):
 
 @pytest.mark.django_db
 def test_reading_yourself_carries_the_version_to_send_back(client, signed_in):
-    assert client.get(reverse("users-me"))["ETag"] == versioned(signed_in)["If-Match"]
+    assert client.get(api_path("users-me"))["ETag"] == versioned(signed_in)["If-Match"]
 
 
 @pytest.mark.django_db
 def test_reading_somebody_carries_the_version_to_send_back(client, manager, bob):
-    assert client.get(reverse("users-detail", args=[bob.pk]))["ETag"] == versioned(bob)["If-Match"]
+    assert client.get(api_path("users-detail", bob.pk))["ETag"] == versioned(bob)["If-Match"]
 
 
 @pytest.mark.django_db
@@ -139,7 +139,7 @@ def test_deleting_a_token_needs_no_version(client, signed_in, headless):
     """Exempt: every use moves its version."""
     token = make_token(user=signed_in, scopes=[], name="ci")
 
-    response = client.delete(reverse("personal-access-tokens-detail", args=[token.pk]))
+    response = client.delete(api_path("personal-access-tokens-detail", token.pk))
 
     assert response.status_code == 204
 
@@ -147,7 +147,7 @@ def test_deleting_a_token_needs_no_version(client, signed_in, headless):
 @pytest.mark.django_db
 def test_an_empty_version_is_a_stale_one_not_a_missing_one(client, manager, bob):
     """`If-Match: ""` names a version, just one that never existed."""
-    response = _patch(client, reverse("users-detail", args=[bob.pk]), {"is_active": False}, {"If-Match": '""'})
+    response = _patch(client, api_path("users-detail", bob.pk), {"is_active": False}, {"If-Match": '""'})
 
     assert response.status_code == 412
     bob.refresh_from_db()
@@ -157,7 +157,7 @@ def test_an_empty_version_is_a_stale_one_not_a_missing_one(client, manager, bob)
 @pytest.mark.django_db
 def test_an_unchanged_read_of_yourself_is_not_cached_across_people(client, signed_in):
     """The 304 says who it was for: a shared cache keying on the URL alone would hand one person's 304 to another."""
-    response = client.get(reverse("users-me"), headers={"If-None-Match": versioned(signed_in)["If-Match"]})
+    response = client.get(api_path("users-me"), headers={"If-None-Match": versioned(signed_in)["If-Match"]})
 
     assert response.status_code == 304
     assert "Cookie" in response["Vary"]

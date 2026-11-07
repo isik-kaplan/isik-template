@@ -9,9 +9,9 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from django.conf import settings
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
-from django.urls import reverse
 from oauth2_provider.models import get_application_model
 
+from apps.common.links import auth_path
 from apps.oauth_provider.services import APPROVAL_GUARDS, deciding
 from apps.users.permissions import Permission as PermissionName
 from apps.users.tests import conftest as users
@@ -25,7 +25,6 @@ headless = users.headless
 
 Application = get_application_model()
 
-AUTH_URLCONF = "{{ cookiecutter.project_slug }}.urls.auth"
 REDIRECT_URI = "https://client.example.test/callback"
 VERIFIER = "a-code-verifier-long-enough-to-satisfy-rfc-7636-forty-three-chars"
 CHALLENGE = base64.urlsafe_b64encode(hashlib.sha256(VERIFIER.encode()).digest()).rstrip(b"=").decode()
@@ -41,7 +40,7 @@ def auth_host():
 
 
 def o(name):
-    return reverse(f"oauth2_provider:{name}", urlconf=AUTH_URLCONF)
+    return auth_path(f"oauth2_provider:{name}")
 
 
 @pytest.fixture
