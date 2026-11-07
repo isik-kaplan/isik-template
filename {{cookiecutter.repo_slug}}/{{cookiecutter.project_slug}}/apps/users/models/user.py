@@ -3,7 +3,7 @@ from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import AbstractUser, UserManager, _user_has_module_perms, _user_has_perm
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db import models
-from isik.django.apps.common.db import track_events
+from isik.django.apps.common.db import if_unset, redeclare, track_events
 
 from apps.common.models.base import BaseModel
 from apps.users.permissions import Permission
@@ -33,6 +33,44 @@ class AddressedUserManager(UserManager):
 
 @track_events()
 class User(AbstractUser, BaseModel):
+    password = redeclare(
+        AbstractUser.password,
+        help_text="A hash of this person's password, never the password itself.",
+        db_comment="Django's algorithm$iterations$salt$hash; starts with ! when no password can sign in.",
+    )
+    last_login = redeclare(
+        AbstractUser.last_login,
+        help_text="When this person last signed in, or empty if they never have.",
+        db_comment="Moved by Django's user_logged_in signal; null until the first sign-in.",
+    )
+    first_name = redeclare(
+        AbstractUser.first_name,
+        help_text="The person's given name. Whether signup asks for one is the project's name requirement.",
+        db_comment="Free text, never used to sign in.",
+    )
+    last_name = redeclare(
+        AbstractUser.last_name,
+        help_text="The person's family name. Whether signup asks for one is the project's name requirement.",
+        db_comment="Free text, never used to sign in.",
+    )
+    # Django's help texts already say what these grant; the comments add what this project does with them.
+    is_superuser = redeclare(
+        AbstractUser.is_superuser,
+        help_text=if_unset("Whether this person holds every permission without being given each."),
+        db_comment="Every permission, and sign-in under every login policy; only a superuser makes another.",
+    )
+    is_staff = redeclare(
+        AbstractUser.is_staff,
+        help_text=if_unset("Whether this person may enter the admin site."),
+        db_comment="Admin and staff pages, every account readable outside a token, and the staff login policy.",
+    )
+    is_active = redeclare(
+        AbstractUser.is_active,
+        help_text=if_unset("Whether this account may sign in."),
+        db_comment="False shuts the account out, sessions and tokens too; accounts are deactivated, never deleted.",
+    )
+    # created_at, from BaseModel and set by the database, already says when the account was made.
+    date_joined = None
     email = models.EmailField(
         unique=True,
         help_text="The address this user signs in with and is written to at.",

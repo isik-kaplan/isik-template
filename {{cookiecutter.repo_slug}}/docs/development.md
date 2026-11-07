@@ -236,8 +236,9 @@ Each of these fails a commit (pre-commit) and CI rather than relying on review:
   `EXCEPTIONS` with the reason.
 - **Every field says what it is.** Each model field this project declares carries a `help_text` (the
   published API description) and a `db_comment` (what someone in psql sees), with no per-field way out.
-  isik's check `isik.E010` refuses to start otherwise (configured in `ISIK_CHECKS`). Fields inherited unchanged
-  from a library are the library's to describe.
+  isik's check `isik.E010` refuses to start otherwise, for the fields a library's abstract model gives too:
+  `User` and `Application` declare theirs again with isik's `redeclare()`, which changes only what it is given,
+  and `if_unset()` where the library already wrote a help text.
 - **Every opt-out names the rule it skips.** `NotAtomic`, `NoIdempotencyKey`,
   `NoReplay`, `NoPrecondition` and isik's own registry opt-outs are isik `Exemption` types that refuse a reason too short
   to be one; `python manage.py exemptions` lists them by rule.

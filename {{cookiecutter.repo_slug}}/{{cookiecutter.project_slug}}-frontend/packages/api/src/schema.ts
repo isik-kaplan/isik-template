@@ -941,11 +941,13 @@ export interface components {
          *     approved and that person consents.
          */
         Application: {
+            /** @description Identifies this application here; what it presents to sign people in is client_id. */
             readonly id: number;
             /** @description Shown to everybody asked to let it in. */
             name: string;
             /** @description What it does, shown to everybody asked to let it in. */
             description?: string;
+            /** @description What the application presents to sign people in, generated when it is registered. */
             readonly client_id: string;
             /** @description confidential for a server that keeps a secret, public for a browser or mobile app. */
             client_type: components["schemas"]["ApplicationClientType"];
@@ -961,9 +963,15 @@ export interface components {
             readonly approved_scopes: string[];
             /** @description Only in the answer to registering a confidential application, and never again: it is stored hashed. Lost, it is rotated. */
             readonly client_secret: string | null;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description When the application was registered.
+             */
             readonly created: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description When the application was last saved.
+             */
             readonly updated: string;
         };
         /** @enum {string} */
@@ -1456,7 +1464,9 @@ export interface components {
              * @description The address this user signs in with and is written to at.
              */
             readonly email: string;
+            /** @description The person's given name. Whether signup asks for one is the project's name requirement. */
             readonly first_name: string;
+            /** @description The person's family name. Whether signup asks for one is the project's name requirement. */
             readonly last_name: string;
             /**
              * Active
@@ -1475,7 +1485,10 @@ export interface components {
             is_superuser?: boolean;
             /** @description What they were granted, as permission names - not what that implies. */
             permissions?: components["schemas"]["Permissions"][];
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description When this person last signed in, or empty if they never have.
+             */
             readonly last_login: string | null;
             /**
              * Format: date-time
@@ -1842,7 +1855,9 @@ export interface components {
              * @description The address this user signs in with and is written to at.
              */
             email?: string;
+            /** @description The person's given name. Whether signup asks for one is the project's name requirement. */
             first_name?: string;
+            /** @description The person's family name. Whether signup asks for one is the project's name requirement. */
             last_name?: string;
             /** @description The language this user chose for the interface, or blank to follow their browser's. */
             language?: components["schemas"]["UserLanguage"];
@@ -1928,12 +1943,17 @@ export interface components {
          *     what it asks for beside what it was let have.
          */
         ReviewedApplication: {
+            /** @description Identifies this application here; what it presents to sign people in is client_id. */
             readonly id: number;
+            /** @description What the application is called, shown to everybody asked to let it in. */
             readonly name: string;
             /** @description What it does, shown to everybody asked to let it in. */
             readonly description: string;
+            /** @description What the application presents to sign people in, generated when it is registered. */
             readonly client_id: string;
+            /** @description Whether it keeps a secret: confidential for a server, public for a browser, mobile or device app. */
             readonly client_type: components["schemas"]["ApplicationClientType"];
+            /** @description How it gets its tokens: through a person signing in, or a code they enter on another device. */
             readonly authorization_grant_type: components["schemas"]["ApplicationAuthorizationGrantType"];
             /** @description Where a sign-in may return to. */
             readonly redirect_uris: string[];
@@ -1945,9 +1965,15 @@ export interface components {
             readonly requested_scopes: string[];
             /** @description What of that it may ask anybody for. */
             readonly approved_scopes: string[];
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description When the application was registered.
+             */
             readonly created: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description When the application was last saved.
+             */
             readonly updated: string;
         };
         /** @description A 412's body: the object as it is now, in `current`. */
@@ -2060,7 +2086,9 @@ export interface components {
              * @description The address this user signs in with and is written to at.
              */
             email: string;
+            /** @description The person's given name. Whether signup asks for one is the project's name requirement. */
             first_name?: string;
+            /** @description The person's family name. Whether signup asks for one is the project's name requirement. */
             last_name?: string;
             /** @description The language this user chose for the interface, or blank to follow their browser's. */
             language?: components["schemas"]["UserLanguage"];
@@ -2105,7 +2133,9 @@ export interface components {
              * @description The address this user signs in with and is written to at.
              */
             readonly email: string;
+            /** @description The person's given name. Whether signup asks for one is the project's name requirement. */
             readonly first_name: string;
+            /** @description The person's family name. Whether signup asks for one is the project's name requirement. */
             readonly last_name: string;
             /**
              * Active
@@ -2122,7 +2152,10 @@ export interface components {
              * @description Whether they may do everything, without being granted anything.
              */
             is_superuser?: boolean;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description When this person last signed in, or empty if they never have.
+             */
             readonly last_login: string | null;
             /**
              * Format: date-time
@@ -3246,7 +3279,6 @@ export interface operations {
                 "If-None-Match"?: string;
             };
             path: {
-                /** @description A unique integer value identifying this application. */
                 id: number;
             };
             cookie?: never;
@@ -3289,7 +3321,6 @@ export interface operations {
                 "If-Match": string;
             };
             path: {
-                /** @description A unique integer value identifying this application. */
                 id: number;
             };
             cookie?: never;
@@ -3361,7 +3392,6 @@ export interface operations {
                 "Idempotency-Key": string;
             };
             path: {
-                /** @description A unique integer value identifying this application. */
                 id: number;
             };
             cookie?: never;
@@ -3490,7 +3520,6 @@ export interface operations {
                 "If-None-Match"?: string;
             };
             path: {
-                /** @description A unique integer value identifying this application. */
                 id: number;
             };
             cookie?: never;
@@ -3533,7 +3562,6 @@ export interface operations {
                 "If-Match": string;
             };
             path: {
-                /** @description A unique integer value identifying this application. */
                 id: number;
             };
             cookie?: never;
@@ -3598,7 +3626,6 @@ export interface operations {
                 "If-Match": string;
             };
             path: {
-                /** @description A unique integer value identifying this application. */
                 id: number;
             };
             cookie?: never;
@@ -3670,7 +3697,6 @@ export interface operations {
                 "Idempotency-Key": string;
             };
             path: {
-                /** @description A unique integer value identifying this application. */
                 id: number;
             };
             cookie?: never;
@@ -3716,7 +3742,6 @@ export interface operations {
                 "Idempotency-Key": string;
             };
             path: {
-                /** @description A unique integer value identifying this application. */
                 id: number;
             };
             cookie?: never;
@@ -3762,7 +3787,6 @@ export interface operations {
                 "Idempotency-Key": string;
             };
             path: {
-                /** @description A unique integer value identifying this application. */
                 id: number;
             };
             cookie?: never;

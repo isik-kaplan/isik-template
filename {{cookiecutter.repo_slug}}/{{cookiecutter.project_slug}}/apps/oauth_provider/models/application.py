@@ -2,7 +2,7 @@ import pgtrigger
 from django.db import models
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
-from isik.django.apps.common.db import VersionedModel, track_events
+from isik.django.apps.common.db import VersionedModel, if_unset, redeclare, track_events
 from isik.django.apps.notifications.audiences import Field
 from isik.django.apps.notifications.choices import Policy
 from isik.django.apps.notifications.kinds import notifies
@@ -50,6 +50,92 @@ from apps.notifications.kinds import (
 class Application(VersionedModel, AbstractApplication):
     """`user` is its owner, never whose account it acts in. Versioned, since DOT's `updated` is `auto_now`,
     which a QuerySet.update() never touches."""
+
+    id = redeclare(
+        AbstractApplication.id,
+        help_text="Identifies this application here; what it presents to sign people in is client_id.",
+        db_comment="Internal key; OAuth requests and tokens name the application by client_id instead.",
+    )
+    client_id = redeclare(
+        AbstractApplication.client_id,
+        help_text="What the application presents to sign people in, generated when it is registered.",
+        db_comment="Unique and generated at registration; the client_id every OAuth request carries.",
+    )
+    user = redeclare(
+        AbstractApplication.user,
+        help_text="Who registered this application and manages it, never whose account it acts in.",
+        db_comment="The owner; deleting them deletes the applications they registered.",
+    )
+    redirect_uris = redeclare(
+        AbstractApplication.redirect_uris,
+        help_text=if_unset("Where a sign-in may return to."),
+        db_comment="Space-separated; a code goes only to one of these exactly. Empty for a device code client.",
+    )
+    post_logout_redirect_uris = redeclare(
+        AbstractApplication.post_logout_redirect_uris,
+        help_text=if_unset("Where signing out may return to."),
+        db_comment="Space-separated, and unused: signing out through an application isn't served here.",
+    )
+    client_type = redeclare(
+        AbstractApplication.client_type,
+        help_text="Whether it keeps a secret: confidential for a server, public for a browser, mobile or device app.",
+        db_comment="RFC 6749 section 2.1. Only a confidential one is issued a secret; PKCE is required of both.",
+    )
+    authorization_grant_type = redeclare(
+        AbstractApplication.authorization_grant_type,
+        help_text="How it gets its tokens: through a person signing in, or a code they enter on another device.",
+        db_comment="Held by served_grant_types to the authorization code and device code grants.",
+    )
+    client_secret = redeclare(
+        AbstractApplication.client_secret,
+        help_text=if_unset("What a confidential application proves itself with."),
+        db_comment="A hash, so the secret itself is shown once, when it is issued or rotated.",
+    )
+    hash_client_secret = redeclare(
+        AbstractApplication.hash_client_secret,
+        help_text="Whether the secret is stored hashed; always, for an application registered here.",
+        db_comment="DOT's default, which nothing here turns off: no stored secret can be read back.",
+    )
+    name = redeclare(
+        AbstractApplication.name,
+        help_text="What the application is called, shown to everybody asked to let it in.",
+        db_comment="Chosen by its owner and required by the API; not unique.",
+    )
+    skip_authorization = redeclare(
+        AbstractApplication.skip_authorization,
+        help_text="Whether people are let in without being asked; never, here.",
+        db_comment="Held false by always_asks.",
+    )
+    created = redeclare(
+        AbstractApplication.created,
+        help_text="When the application was registered.",
+        db_comment="Set by DOT on insert (auto_now_add).",
+    )
+    updated = redeclare(
+        AbstractApplication.updated,
+        help_text="When the application was last saved.",
+        db_comment="auto_now: a QuerySet.update() never moves it, which is why the row is versioned too.",
+    )
+    algorithm = redeclare(
+        AbstractApplication.algorithm,
+        help_text="How its OpenID Connect ID tokens are signed.",
+        db_comment="RS256 for every application registered here, signed with OAUTH_PROVIDER__SIGNING_KEY.",
+    )
+    allowed_origins = redeclare(
+        AbstractApplication.allowed_origins,
+        help_text=if_unset("Browser origins allowed to call the token endpoint."),
+        db_comment="Space-separated origins DOT lets reach the token endpoint from a browser; nothing here sets any.",
+    )
+    registration_source = redeclare(
+        AbstractApplication.registration_source,
+        help_text=if_unset("How this application was registered."),
+        db_comment="manual for every application here: neither dynamic registration nor CIMD is served.",
+    )
+    cimd_expires_at = redeclare(
+        AbstractApplication.cimd_expires_at,
+        help_text=if_unset("When a Client ID Metadata Document should be fetched again."),
+        db_comment="Null here: only a CIMD application has one, and CIMD isn't served.",
+    )
 
     class Approval(models.TextChoices):
         PENDING = "pending", "Pending review"
