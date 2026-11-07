@@ -1,6 +1,7 @@
 import ast
 import json
 import os
+import re
 import subprocess
 import tomllib
 from pathlib import Path
@@ -55,7 +56,8 @@ def test_no_unrendered_jinja_in_output(cookies, context_name):
     for source_path in template_root.rglob("*"):
         if not source_path.is_file():
             continue
-        if "{% raw" in source_path.read_text(errors="ignore"):
+        # Either spelling of the tag: "{%- raw" also strips the whitespace before it.
+        if re.search(r"\{%-?\s*raw", source_path.read_text(errors="ignore")):
             relative = source_path.relative_to(template_root).as_posix()
             rendered_relative = relative.replace("{{cookiecutter.project_slug}}", result.context["project_slug"])
             raw_escaped_relative_paths.add(rendered_relative)
