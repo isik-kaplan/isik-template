@@ -11,8 +11,6 @@ from allauth.socialaccount.providers.openid_connect.provider import OpenIDConnec
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.sessions.backends.db import SessionStore
 from django.test import RequestFactory
-from hypothesis import given
-from hypothesis import strategies as st
 
 from apps.users.models.user import User
 from apps.users.reauthentication import proof
@@ -134,24 +132,6 @@ def test_a_proving_round_trip_lands_back_where_it_started_saying_how_it_went(pro
 
     assert url.path == "/auth/prove"
     assert dict(parse_qsl(url.query)) == {"next": "/profile", **query}
-
-
-# Surrogates are the one thing UTF-8 cannot encode.
-_TEXT = st.text(st.characters(exclude_categories=("Cs",)))
-
-
-@given(
-    path=st.sampled_from(["/", "/auth/prove", "http://example.test/a/b"]),
-    existing=st.dictionaries(_TEXT.filter(bool), _TEXT, max_size=3),
-    added=st.dictionaries(_TEXT.filter(bool), _TEXT, min_size=1, max_size=3),
-)
-def test_with_query_keeps_what_the_url_had_and_adds_the_rest(path, existing, added):
-    url = proof.with_query(path, existing)
-
-    result = urlsplit(proof.with_query(url, added))
-
-    assert result.path == urlsplit(path).path
-    assert parse_qsl(result.query, keep_blank_values=True) == [*existing.items(), *added.items()]
 
 
 @pytest.mark.parametrize(

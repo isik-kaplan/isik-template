@@ -5,7 +5,6 @@ Payloads are asserted whole: the risk is a value that appears, which a per-key c
 
 import json
 import time
-from urllib.parse import urlencode
 
 import pghistory
 import pytest
@@ -15,17 +14,13 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.http import HttpResponse
 from django.test import RequestFactory
-from hypothesis import given
-from hypothesis import strategies as st
 
 from apps.common.logging.redaction import (
-    LOGGABLE,
     REDACTED,
     body_of,
     client_ip_of,
     headers_of,
     query_of,
-    values_of,
     worth_logging,
 )
 from apps.common.logging.scrub import scrub_event
@@ -96,14 +91,6 @@ class TestWhatItMaySay:
         request = RequestFactory().get("/x/", {"page": "2", "token": "hunter2", "email": "a@b.test"})
 
         assert query_of(request) == {"page": "2", "token": REDACTED, "email": REDACTED}
-
-    @given(st.dictionaries(st.text(), st.text()))
-    def test_no_value_outside_the_allowlist_survives(self, sent):
-        """Property: whatever names a caller invents, only an allowlisted one keeps its value."""
-        kept = values_of(sent.items())
-
-        assert kept.keys() == sent.keys()
-        assert all(kept[name] == (value if name in LOGGABLE else REDACTED) for name, value in sent.items())
 
     def test_a_password_is_reported_as_having_been_sent_and_no_more(self):
         request = RequestFactory().post(
@@ -340,13 +327,6 @@ class TestSentryKeepsTheSameRule:
 
         assert event == {"request": {"query_string": {"page": "2", "key": REDACTED, "blank": REDACTED}}}
 
-    @given(st.dictionaries(st.text(min_size=1), st.text()))
-    def test_no_query_value_outside_the_allowlist_survives(self, sent):
-        event = scrub_event({"request": {"query_string": urlencode(sent)}}, hint=None)
-
-        for name, value in event["request"]["query_string"].items():
-            assert value == (sent[name] if name in LOGGABLE else REDACTED)
-
     def test_a_query_string_not_sent_as_a_string_is_left_alone(self):
         assert scrub_event({"request": {"query_string": None}}, hint=None) == {"request": {"query_string": None}}
 
@@ -386,6 +366,12 @@ class TestSentryKeepsTheSameRule:
             event = scrub_event({"exception": {"values": []}, "tags": {"kept": "yes"}}, hint=None)
 
         assert event["tags"] == {"kept": "yes", "request_id": "01JB4F"}
+
+    def test_an_event_with_no_tags_yet_is_given_them(self):
+        with pghistory.context(request_id="01JB4F"):
+            event = scrub_event({"exception": {"values": []}}, hint=None)
+
+        assert event["tags"] == {"request_id": "01JB4F"}
 
 
 @pytest.mark.django_db

@@ -12,8 +12,6 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, connection, transaction
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
-from hypothesis import given
-from hypothesis import strategies as st
 
 from apps.users import login_policy
 from apps.users.backends import AuthenticationBackend
@@ -38,17 +36,6 @@ LoginPolicy = SiteSettings.LoginPolicy
 )
 def test_each_rung_admits_whoever_holds_it_and_everybody_above(policy, is_staff, is_superuser, admitted):
     assert LoginPolicy.admits(policy, is_staff=is_staff, is_superuser=is_superuser) is admitted
-
-
-@given(lower=st.sampled_from(LoginPolicy), higher=st.sampled_from(LoginPolicy), is_staff=st.booleans())
-def test_raising_the_ladder_never_lets_anybody_new_in(lower, higher, is_staff):
-    ladder = list(LoginPolicy)
-    if ladder.index(lower) > ladder.index(higher):
-        lower, higher = higher, lower
-
-    if LoginPolicy.admits(higher, is_staff=is_staff, is_superuser=False):
-        assert LoginPolicy.admits(lower, is_staff=is_staff, is_superuser=False)
-    assert LoginPolicy.admits(higher, is_staff=is_staff, is_superuser=True)
 
 
 @pytest.mark.parametrize(

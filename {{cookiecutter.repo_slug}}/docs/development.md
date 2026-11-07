@@ -197,6 +197,33 @@ declaration: write a value, write the same value again, and write one another ro
 stores something has those three cases even when every line of ours is already covered; the e2e suite is the
 other place they show up, which is why a flow worth having is worth one there too.
 
+### Property tests
+
+`properties/` is a second suite over the same code, run with
+`docker compose run --rm --no-deps backend python -m pytest -m hypothesis --cov-config=.coveragerc-properties`.
+Hypothesis marks every `@given` test `hypothesis`, and `properties/conftest.py` marks everything else in
+that folder, so `-m 'not hypothesis'` in the default options keeps the two apart with no list to maintain.
+Neither suite depends on the other: the example suite keeps its 100% gate and is the only one mutation
+testing runs. The property suite's coverage is a floor (`fail_under` in `.coveragerc-properties`), raised
+whenever it rises, on its way to 100. Choose what to cover next by the most uncovered statements per
+hour of work, after each full run.
+
+One profile, 25 examples, everywhere; under mutation (`MUTANT_UNDER_TEST`) it is derandomized. What has
+cost time:
+
+- Every example runs inside the one transaction the test opened. Wrap each example in
+  `with transaction.atomic(): ...; transaction.set_rollback(True)`, and each step too when any step may
+  be refused, or one refused insert aborts every example after it.
+- A function-scoped fixture is built once per test, not per example, so its object is stale after the
+  first example. `refresh_from_db()` at the top of each one.
+- Two empty reads compare equal. A "read, act, read, compare" property asserts the first read found
+  something, and a sweep asserts it swept something.
+- Enumerate the surface with `pytest.mark.parametrize` and generate the input with Hypothesis. Drawing
+  the path from 25 examples makes coverage swing between runs.
+- Don't compare a database ordering with Python's `sorted`; Postgres sorts by its collation.
+- A generated identifier must not be a keyword.
+- When a property fails, decide whether the code or the generator is wrong before changing either.
+
 ### Mutation testing
 
 The backend is held to a 100% mutation kill rate (mutmut, `backend-mutation` in CI). A mutant no test

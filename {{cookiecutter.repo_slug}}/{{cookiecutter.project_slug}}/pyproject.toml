@@ -99,7 +99,9 @@ project = ["{{ cookiecutter.project_slug }}"]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "{{ cookiecutter.project_slug }}.settings"
-addopts = "-n auto --dist loadfile --cov --cov-report=term-missing --strict-markers"
+# `not hypothesis`: the property suite in properties/ is its own run with its own coverage, and
+# mutation testing measures only this one. `-m hypothesis` on the command line selects it instead.
+addopts = "-n auto --dist loadfile --cov --cov-report=term-missing --strict-markers -m 'not hypothesis'"
 # pytest's own defaults plus `mutants`.
 norecursedirs = ["*.egg", ".*", "_darcs", "build", "CVS", "dist", "node_modules", "venv", "{arch}", "mutants"]
 

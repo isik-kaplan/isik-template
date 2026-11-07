@@ -1,6 +1,5 @@
+import pytest
 from django.http import HttpResponse
-from hypothesis import given
-from hypothesis import strategies as st
 
 from apps.common.middleware.health_check import HealthCheckMiddleware
 
@@ -17,9 +16,8 @@ def test_health_path_returns_ok():
     assert response.content == b"ok"
 
 
-@given(path=st.text().filter(lambda p: p != "/health/"))
-def test_non_health_paths_pass_through(path):
-    # Exact-match only, e.g. "/health/x" or "healthy" must not accidentally match.
+@pytest.mark.parametrize("path", ["/health", "/health/x", "/healthy/", "health/", "/HEALTH/"])
+def test_only_the_exact_health_path_is_answered_there(path):
     sentinel = HttpResponse("passed through")
     middleware = HealthCheckMiddleware(get_response=lambda request: sentinel)
     assert middleware(_FakeRequest(path)) is sentinel

@@ -112,6 +112,12 @@ jobs:
             pg_restore -U "$POSTGRES_USER" -d "$TEMPLATE" --exit-on-error /tmp/template.dump'
       - name: Test (100% coverage required)
         run: docker compose run --rm --no-deps -e MUTMUT_DB_TEMPLATE backend python -m pytest
+      # The same code again through properties/ alone, held to its own floor in .coveragerc-properties.
+      - name: Property tests
+        if: always()
+        run: >-
+          docker compose run --rm --no-deps -e MUTMUT_DB_TEMPLATE backend
+          python -m pytest -m hypothesis --cov-config=.coveragerc-properties
       - if: always()
         run: docker compose down -v
 

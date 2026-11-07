@@ -1,0 +1,26 @@
+# The property suite's coverage, measured apart from the example suite's. Each suite has to reach
+# the application alone, so if one of them is wrong the other still has to pass.
+#
+# `*/tests/*` is omitted: the example suite's test code is not this suite's to cover, and counting it
+# would make 100% unreachable whatever the properties did.
+[run]
+source = apps,{{ cookiecutter.project_slug }},properties
+branch = true
+omit =
+    */migrations/*
+    */tests/*
+    */conftest.py
+    */wsgi.py
+    */asgi.py
+    */celery.py
+
+[report]
+show_missing = true
+# A floor, not the target. The target is 100; this is the coverage already reached, and it goes up
+# with the suite, so a deleted property or a module that stopped being covered still fails.
+fail_under = 59
+exclude_lines =
+    raise NotImplementedError
+    if TYPE_CHECKING:
+    if not config\.RATE_LIMITS\.ENABLED:
+    if config\.SENTRY\.DSN:

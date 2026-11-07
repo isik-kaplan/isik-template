@@ -9,8 +9,6 @@ import uuid
 import pghistory
 import pytest
 from django.conf import settings
-from hypothesis import assume, given
-from hypothesis import strategies as st
 
 from apps.common.logging import DECLARED, REQUEST, Event, ambient, audit, declare, emit, log
 from apps.common.logging.emit import AUDIT_LOGGER, LOGGER
@@ -65,17 +63,6 @@ class TestTheVocabulary:
     def test_an_event_is_not_audited_unless_declared_so(self):
         assert REQUEST.audited is False
         assert Event("anything", logging.INFO).requires == ()
-
-    @given(st.from_regex(NAME_SHAPE, fullmatch=True))
-    def test_every_declared_name_is_one_a_query_can_be_saved_against(self, name):
-        """Property: whatever `declare` accepts, it accepts exactly once."""
-        assume(name not in DECLARED)
-        declare(name, logging.INFO)
-        try:
-            with pytest.raises(ValueError, match="declared twice"):
-                declare(name, logging.INFO)
-        finally:
-            del DECLARED[name]
 
     def test_every_event_the_project_declares_is_shaped_alike(self):
         assert all(NAME_SHAPE.fullmatch(name) for name in DECLARED)
