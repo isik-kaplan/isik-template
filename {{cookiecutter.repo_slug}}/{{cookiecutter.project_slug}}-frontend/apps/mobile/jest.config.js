@@ -4,6 +4,8 @@ module.exports = {
   // Absolute paths: Stryker loads the environment itself, without <rootDir>.
   testEnvironment: require.resolve('./jest/StopAtFirstKillEnvironment.js'),
   testSequencer: require.resolve('./jest/NarrowestFirstSequencer.js'),
+  // The property suite has its own config and coverage (jest.properties.config.js).
+  testPathIgnorePatterns: ['/node_modules/', '<rootDir>/properties/'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },

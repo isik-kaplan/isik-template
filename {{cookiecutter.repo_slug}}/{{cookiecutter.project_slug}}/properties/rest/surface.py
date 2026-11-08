@@ -7,7 +7,7 @@ the document is built from anyway.
 
 import re
 
-from django.urls import URLPattern, URLResolver, get_resolver
+from django.urls import URLResolver, get_resolver
 from django_hosts.resolvers import get_host
 
 
@@ -19,7 +19,7 @@ def _walk(patterns, prefix=""):
         route = prefix + str(entry.pattern)
         if isinstance(entry, URLResolver):
             yield from _walk(entry.url_patterns, route)
-        elif isinstance(entry, URLPattern):
+        else:
             # DRF's routers write anchored regexes; the URL is what sits between the anchors.
             yield route.replace("^", "").replace("$", ""), entry
 

@@ -8,6 +8,7 @@
     "ios": "expo start --ios",
     "lint:types": "tsc --noEmit",
     "test": "jest --coverage && node ../../packages/mutation-check/check-coverage.mjs .",
+    "test:properties": "jest --config jest.properties.config.js --coverage",
     "test:mutation": "stryker run && node ../../packages/mutation-check/check-mutants.mjs . --shard all"
   },
   "dependencies": {

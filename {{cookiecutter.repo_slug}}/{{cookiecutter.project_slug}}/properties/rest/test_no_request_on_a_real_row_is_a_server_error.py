@@ -92,8 +92,7 @@ def caller(client, settings, db):
     pipeline.fan_out()
     # Not the webhook deliveries: sending one is a request to the endpoint's URL.
     waiting = Delivery.objects.filter(state=DeliveryState.PENDING).exclude(channel="webhook")
-    for pk in waiting.values_list("pk", flat=True):
-        pipeline.send(pk)
+    list(map(pipeline.send, waiting.values_list("pk", flat=True)))
     return client
 
 
@@ -105,9 +104,8 @@ def _an_id(caller, path):
     if _collection(path) in UNLISTED:
         return UNLISTED[_collection(path)]
     listed = caller.get(_collection(path), HTTP_HOST=HOST)
-    if listed.status_code != 200:
-        return None
-    rows = listed.json()
+    # A collection this caller may not list has no id to offer.
+    rows = listed.json() if listed.status_code == 200 else []
     rows = rows.get("results", rows) if isinstance(rows, dict) else rows
     return next((str(row.get("id", row.get("name", row.get("key")))) for row in rows), None)
 

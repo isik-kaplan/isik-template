@@ -114,9 +114,12 @@ def _expected_refusal(step, argument, before, requested):
     return step == "approve" and not argument <= requested
 
 
+# Each run also starts with a move the lifecycle refuses, which a drawn sequence meets only some of the time.
+@pytest.mark.parametrize("lead", [(), (("disable", set()),), (("withdraw", set()), ("disable", set()))])
 @pytest.mark.parametrize("mode", ["approval", "auto"])
-@given(steps=STEPS, first_request=SCOPES)
-def test_every_step_keeps_the_lifecycle_rules(steps, first_request, mode, pool, owner, settings):
+@given(drawn=STEPS, first_request=SCOPES)
+def test_every_step_keeps_the_lifecycle_rules(lead, drawn, first_request, mode, pool, owner, settings):
+    steps = [*lead, *drawn]
     settings.OAUTH_PROVIDER_MODE = mode
     with transaction.atomic():
         application = services.register_application(

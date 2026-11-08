@@ -210,9 +210,8 @@ other place they show up, which is why a flow worth having is worth one there to
 Hypothesis marks every `@given` test `hypothesis`, and `properties/conftest.py` marks everything else in
 that folder, so `-m 'not hypothesis'` in the default options keeps the two apart with no list to maintain.
 Neither suite depends on the other: the example suite keeps its 100% gate and is the only one mutation
-testing runs. The property suite's coverage is a floor (`fail_under` in `.coveragerc-properties`), raised
-whenever it rises, on its way to 100. Choose what to cover next by the most uncovered statements per
-hour of work, after each full run.
+testing runs. The property suite is held to 100% too (`fail_under` in `.coveragerc-properties`), its own
+code included, so a branch a draw takes only sometimes shows up as a failure rather than as a gap.
 
 One profile, 25 examples, everywhere; under mutation (`MUTANT_UNDER_TEST`) it is derandomized. What has
 cost time:
@@ -229,6 +228,22 @@ cost time:
 - Don't compare a database ordering with Python's `sorted`; Postgres sorts by its collation.
 - A generated identifier must not be a keyword.
 - When a property fails, decide whether the code or the generator is wrong before changing either.
+
+The frontend has the same second suite in `apps/web/properties/` (fast-check, `npm run test:properties`,
+`vitest.properties.config.mts`){% if cookiecutter.include_mobile %} and `apps/mobile/properties/` (`npm run test:properties`,
+`jest.properties.config.js`){% endif %}, gated at 100% of lines, functions and statements and 99% of branches: a
+branch can be the one a draw didn't take. Where a property lives says where it runs: `properties/server/`
+in node, `properties/browser/` in jsdom. What has cost time there:
+
+- The hooks run once per property, not per example. Start each example with `freshDom()` (or reset the
+  spies and stores yourself), or 25 renders pile into one document.
+- Draw the deciding outcome rather than independent booleans that have to line up: an outcome that is
+  one in eight is missed by about one run in twenty-five. With more than five outcomes, loop over all of
+  them in each example, or write one property per outcome.
+- A bake-time option is a constant in `src/config/`; mock it with a getter over a hoisted holder and draw
+  it, so every project's branches run in this one.
+- A field the API document marks optional is drawn absent too, and a refusal is drawn with and without
+  the field it is about.
 
 ### Mutation testing
 

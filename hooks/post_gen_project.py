@@ -277,9 +277,11 @@ def main() -> None:
         for screen in ("app/webhooks", "components/app-webhooks"):
             shutil.rmtree(f"{web}/{screen}")
             shutil.rmtree(f"{web}/__tests__/{screen}")
+        os.remove(f"{PROJECT_SLUG}-frontend/apps/web/properties/browser/components/webhooks.property.tsx")
     if PHONE == "none":
         os.remove(f"{PROJECT_SLUG}/apps/users/reauthentication/views/manage_phone.py")
         os.remove(f"{PROJECT_SLUG}/apps/users/tests/test_phone.py")
+        os.remove(f"{PROJECT_SLUG}/properties/users/test_phone_adapter.py")
         web = f"{PROJECT_SLUG}-frontend/apps/web/src"
         for screen in ("app/auth/verify-phone", "app/profile/(tabs)/phone"):
             shutil.rmtree(f"{web}/{screen}")
@@ -292,6 +294,7 @@ def main() -> None:
             "__tests__/app/profile/(tabs)/phone.test.tsx",
         ):
             os.remove(f"{web}/{module}")
+        os.remove(f"{PROJECT_SLUG}-frontend/apps/web/properties/browser/components/phone.property.tsx")
         for module in ("e2e/playwright/tests/sms.ts", "e2e/playwright/tests/profile/phone.spec.ts"):
             os.remove(module)
         if INCLUDE_MOBILE:
@@ -301,8 +304,13 @@ def main() -> None:
                 "app/(authenticated)/profile/phone.tsx",
                 "__tests__/app/verify-phone.test.tsx",
                 "__tests__/app/(authenticated)/profile/phone.test.tsx",
+                "properties/app/auth/verify-phone.property.tsx",
+                "properties/app/signedIn/phone.property.tsx",
             ):
                 os.remove(f"{mobile}/{module}")
+    # The per-person endpoint limit is a feature only where each person registers their own.
+    if WEBHOOKS != "users":
+        os.remove(f"{PROJECT_SLUG}/properties/notifications/test_endpoint_limit.py")
     if WEBHOOKS != "staff":
         os.remove(f"{notification_api}/deployment.py")
         shutil.rmtree(f"{notification_api}/permissions")

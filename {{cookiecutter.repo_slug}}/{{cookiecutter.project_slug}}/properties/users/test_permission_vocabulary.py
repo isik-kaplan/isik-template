@@ -84,7 +84,11 @@ def test_a_requirement_nobody_declared_is_refused(name, missing):
 SEGMENT = st.text(st.characters(min_codepoint=97, max_codepoint=122) | st.just(":"), max_size=6)
 
 
-@given(segments=st.lists(SEGMENT, min_size=1, max_size=5))
+# Three nonempty segments drawn on their own: a random list of segments is seldom one.
+@given(
+    segments=st.lists(SEGMENT, min_size=1, max_size=5)
+    | st.lists(SEGMENT.filter(lambda part: part and ":" not in part), min_size=3, max_size=3)
+)
 def test_a_name_is_three_nonempty_segments_or_nothing(segments):
     name = ":".join(segments)
     parts = name.split(":")

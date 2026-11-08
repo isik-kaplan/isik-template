@@ -28,7 +28,12 @@ export default defineConfig({
       // `exclude` replaces the default rather than adding to it, so the default is carried over.
       {
         extends: true,
-        test: { name: 'browser', environment: 'jsdom', exclude: [...configDefaults.exclude, ...SERVER_TEST_FILES] },
+        test: {
+          name: 'browser',
+          environment: 'jsdom',
+          // The property suite has its own config and coverage (vitest.properties.config.mts).
+          exclude: [...configDefaults.exclude, ...SERVER_TEST_FILES, 'properties/**'],
+        },
       },
     ],
     environment: 'jsdom',

@@ -315,6 +315,9 @@ jobs:
         run: docker build -f apps/web/Dockerfile --target tester -t {{ cookiecutter.repo_slug }}-frontend-test .
       - name: Run the suites
         run: docker run --rm {{ cookiecutter.repo_slug }}-frontend-test
+      # The same app again through properties/ alone, held to its own coverage in vitest.properties.config.mts.
+      - name: Property tests
+        run: docker run --rm {{ cookiecutter.repo_slug }}-frontend-test npm run test:properties --workspace=web
 
   frontend-mutation-shards:
     runs-on: ubuntu-latest
@@ -404,6 +407,10 @@ jobs:
         run: |
           npm run lint:types
           npm run test
+      # The same app again through properties/ alone, held to its own coverage in jest.properties.config.js.
+      - name: Property tests
+        working-directory: {{ cookiecutter.project_slug }}-frontend/apps/mobile
+        run: npm run test:properties
 
   mobile-mutation:
     runs-on: ubuntu-latest
