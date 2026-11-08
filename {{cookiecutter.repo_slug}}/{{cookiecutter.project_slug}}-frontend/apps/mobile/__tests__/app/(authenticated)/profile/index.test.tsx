@@ -16,6 +16,9 @@ describe('Profile', () => {
   it.each([
     ['profile-details-link', '/profile/details', 'Account details'],
     ['profile-emails-link', '/profile/emails', 'Email addresses'],
+{%- if cookiecutter.phone != "none" %}
+    ['profile-phone-link', '/profile/phone', 'Phone number'],
+{%- endif %}
     ['profile-password-link', '/profile/password', 'Change password'],
     ['profile-connections-link', '/profile/connections', 'Connected accounts'],
     ['profile-sessions-link', '/profile/sessions', 'Active sessions'],

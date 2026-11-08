@@ -31,7 +31,14 @@ def _sign_up(client, username):
     client.get("/v0/browser/auth/session", HTTP_HOST=host)
     client.post(
         "/v0/browser/auth/signup",
-        data={"username": username, "email": f"{username}@example.test", "password": PASSWORD},
+        data={
+            "username": username,
+            "email": f"{username}@example.test",
+{%- if cookiecutter.phone == "required" %}
+            "phone": "+14155550123",
+{%- endif %}
+            "password": PASSWORD,
+        },
         content_type="application/json",
         HTTP_HOST=host,
         HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,

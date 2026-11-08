@@ -19,6 +19,9 @@ from django.test import RequestFactory
 
 from apps.users.adapters.mfa import MFAAdapter
 from apps.users.models.user import User
+{%- if cookiecutter.phone == "required" %}
+from apps.users.tests.conftest import SIGNS_IN
+{%- endif %}
 
 
 AUTH_HOST = f"auth.{settings.PARENT_HOST}"
@@ -49,14 +52,14 @@ def _reauthenticate(client):
 
 
 def _signed_in(client, *, verified=True):
-    user = User.objects.create_user(username="alice", email="alice@example.test", password=PASSWORD)
+    user = User.objects.create_user(username="alice", email="alice@example.test", password=PASSWORD{{ ", **SIGNS_IN" if cookiecutter.phone == "required" }})
     user.emailaddress_set.create(email=user.email, primary=True, verified=verified)
     _post(client, "/v0/browser/auth/login", {"email": "alice@example.test", "password": PASSWORD})
     return user
 
 
 def _user_with_totp():
-    user = User.objects.create_user(username="alice", email="alice@example.test", password=PASSWORD)
+    user = User.objects.create_user(username="alice", email="alice@example.test", password=PASSWORD{{ ", **SIGNS_IN" if cookiecutter.phone == "required" }})
     user.emailaddress_set.create(email=user.email, primary=True, verified=True)
     secret = generate_totp_secret()
     TOTP.activate(user, secret)
@@ -146,7 +149,7 @@ def test_a_recovery_code_completes_the_login_once(client):
 
 @pytest.mark.django_db
 def test_enabling_totp_mails_the_owner_through_the_projects_own_template(client, django_capture_on_commit_callbacks):
-    user = User.objects.create_user(username="alice", email="alice@example.test", password=PASSWORD)
+    user = User.objects.create_user(username="alice", email="alice@example.test", password=PASSWORD{{ ", **SIGNS_IN" if cookiecutter.phone == "required" }})
     user.emailaddress_set.create(email=user.email, primary=True, verified=True)
     _post(client, "/v0/browser/auth/login", {"email": "alice@example.test", "password": PASSWORD})
     _reauthenticate(client)

@@ -280,5 +280,23 @@
         "below is equivalent too."
       ]
     }
-  ]
+  ]{% if cookiecutter.phone != "none" %},
+  "app/(authenticated)/profile/phone.tsx": [
+    {
+      "mutator": "ConditionalExpression",
+      "fingerprint": "1d6e3418cbfc",
+      "reason": [
+        "Equivalent mutant either way, both the guard and the deps array - see lib/useAuthenticated.ts's own",
+        "copy of this same effect for why."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "1cf406907db3",
+      "reason": [
+        "Equivalent mutant either way, both the guard and the deps array - see lib/useAuthenticated.ts's own",
+        "copy of this same effect for why."
+      ]
+    }
+  ]{% endif %}
 }

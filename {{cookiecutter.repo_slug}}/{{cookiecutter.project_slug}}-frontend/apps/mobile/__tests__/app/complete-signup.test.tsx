@@ -1,5 +1,6 @@
 import CompleteSignup from '@/app/complete-signup'
 import type { NameRequirement } from '@/lib/nameRequirement'
+import type { Phone } from '@/lib/phoneOption'
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native'
 
@@ -7,6 +8,13 @@ let mockRequirement: NameRequirement = 'username_with_optional_full'
 jest.mock('@/lib/nameRequirement', () => ({
   get NAME_REQUIREMENT() {
     return mockRequirement
+  },
+}))
+
+let mockPhone: Phone = 'none'
+jest.mock('@/lib/phoneOption', () => ({
+  get PHONE() {
+    return mockPhone
   },
 }))
 
@@ -20,7 +28,10 @@ jest.mock('@/lib/session', () => ({
 }))
 
 const mockReplace = jest.fn()
-jest.mock('expo-router', () => ({ router: { replace: (...args: unknown[]) => mockReplace(...args) } }))
+const mockPush = jest.fn()
+jest.mock('expo-router', () => ({
+  router: { replace: (...args: unknown[]) => mockReplace(...args), push: (...args: unknown[]) => mockPush(...args) },
+}))
 
 const pending = { data: { data: { user: { username: 'suggested', email: 'jane@test.test' } } } }
 
@@ -45,6 +56,7 @@ describe('CompleteSignup', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockRequirement = 'username_with_optional_full'
+    mockPhone = 'none'
   })
 
   it('redirects to login when there is no pending signup', async () => {
@@ -257,5 +269,49 @@ describe('CompleteSignup', () => {
         ...Object.fromEntries(offered.map((field) => [field, field === 'username' ? 'suggested' : VALUES[field]])),
       })
     })
+  })
+
+  it('asks for no phone number while accounts have none', async () => {
+    mockPendingProviderSignup.mockResolvedValue(pending)
+    await render(<CompleteSignup />)
+    await screen.findByTestId('complete-signup-form')
+    expect(screen.queryByTestId('phone-input')).toBeNull()
+  })
+
+  it.each([
+    ['required', 'Phone number, with its + and country code'],
+    ['optional', 'Phone number (optional), with its + and country code'],
+  ] as const)('asks for a %s number', async (mode, placeholder) => {
+    mockPhone = mode
+    mockPendingProviderSignup.mockResolvedValue(pending)
+    await render(<CompleteSignup />)
+    expect((await screen.findByTestId('phone-input')).props.placeholder).toBe(placeholder)
+  })
+
+  it('sends the number a provider signup needs and goes to its code step', async () => {
+    mockPhone = 'required'
+    mockPendingProviderSignup.mockResolvedValue(pending)
+    mockCompleteProviderSignup.mockResolvedValue({
+      data: undefined,
+      error: { status: 401, data: { flows: [{ id: 'verify_phone', is_pending: true }] } },
+    })
+    await render(<CompleteSignup />)
+    await fireEvent.changeText(await screen.findByTestId('phone-input'), '+14155550123')
+    await fireEvent.changeText(screen.getByTestId('password-input'), 'correct-horse')
+    await fireEvent.press(screen.getByTestId('complete-signup-submit'))
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/verify-phone'))
+    expect(mockCompleteProviderSignup).toHaveBeenCalledWith(expect.objectContaining({ phone: '+14155550123' }))
+    expect(mockReplace).not.toHaveBeenCalled()
+  })
+
+  it('sends no number when an optional one is left empty', async () => {
+    mockPhone = 'optional'
+    mockPendingProviderSignup.mockResolvedValue(pending)
+    mockCompleteProviderSignup.mockResolvedValue({ data: { meta: { is_authenticated: true } }, error: undefined })
+    await render(<CompleteSignup />)
+    await fireEvent.changeText(await screen.findByTestId('password-input'), 'correct-horse')
+    await fireEvent.press(screen.getByTestId('complete-signup-submit'))
+    await waitFor(() => expect(mockReplace).toHaveBeenCalled())
+    expect(mockCompleteProviderSignup.mock.calls[0][0]).not.toHaveProperty('phone')
   })
 })

@@ -1,5 +1,7 @@
 import { ProfileTabsList } from '@/components/app-auth/ProfileTabsList'
 
+import type { Phone } from '@/config/phone'
+
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -8,6 +10,12 @@ const push = vi.fn()
 let pathname = '/profile/details'
 const CONFIG = vi.hoisted(() => ({ OAUTH_PROVIDER: { MODE: 'off' } }))
 vi.mock('@/config/public', () => ({ CONFIG }))
+const phone = vi.hoisted(() => ({ current: 'none' as Phone }))
+vi.mock('@/config/phone', () => ({
+  get PHONE() {
+    return phone.current
+  },
+}))
 
 vi.mock('next/navigation', () => ({
   usePathname: () => pathname,
@@ -19,6 +27,7 @@ describe('ProfileTabsList', () => {
     push.mockClear()
     pathname = '/profile/details'
     CONFIG.OAUTH_PROVIDER.MODE = 'off'
+    phone.current = 'none'
   })
 
   it('has no applications tab while the backend is not an OAuth provider', () => {
@@ -35,6 +44,22 @@ describe('ProfileTabsList', () => {
     expect(screen.getByRole('tab', { name: 'Apps' }).getAttribute('aria-selected')).toBe('true')
     await userEvent.click(screen.getByRole('tab', { name: 'Details' }))
     expect(push).toHaveBeenCalledWith('/profile/details')
+  })
+
+  it('has no phone tab while accounts have no numbers', () => {
+    render(<ProfileTabsList />)
+
+    expect(screen.queryByRole('tab', { name: 'Phone' })).toBeNull()
+  })
+
+  it.each(['optional', 'required'] as const)('offers the phone tab, after emails, while numbers are %s', (mode) => {
+    phone.current = mode
+    pathname = '/profile/phone'
+    render(<ProfileTabsList />)
+
+    const labels = screen.getAllByRole('tab').map((tab) => tab.textContent)
+    expect(labels.indexOf('Phone')).toBe(labels.indexOf('Emails') + 1)
+    expect(screen.getByRole('tab', { name: 'Phone' }).getAttribute('aria-selected')).toBe('true')
   })
 
   it('renders every tab, labelled', () => {

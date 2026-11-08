@@ -4,15 +4,21 @@ from allauth.headless import app_settings
 from allauth.headless.constants import Client
 from allauth.headless.urls import build_urlpatterns
 from django.core.exceptions import ImproperlyConfigured
+{%- if cookiecutter.phone == "none" %}
 from django.urls import URLResolver, include, path
+{%- else %}
+from django.urls import include, path
+{%- endif %}
 
 from apps.users.headless_spec import ALLAUTH_VERSION
 
 
 app_name = "headless"
+{%- if cookiecutter.phone == "none" %}
 
 # allauth mounts these whatever the login methods; with no phone number on an account, its adapter raises.
 NOT_SERVED = frozenset({"manage_phone", "verify_phone", "resend_phone_verification_code"})
+{%- endif %}
 
 
 def unversioned(client):
@@ -22,6 +28,7 @@ def unversioned(client):
         raise ImproperlyConfigured(
             f"allauth's headless routes for {client.value} are no longer one {ALLAUTH_VERSION}: {built!r}"
         )
+{%- if cookiecutter.phone == "none" %}
     return served(built[0].url_patterns)
 
 
@@ -41,6 +48,9 @@ def served(patterns):
             continue
         kept.append(pattern)
     return kept
+{%- else %}
+    return built[0].url_patterns
+{%- endif %}
 
 
 def headless_urlpatterns():

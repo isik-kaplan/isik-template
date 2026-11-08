@@ -7,17 +7,23 @@ from allauth.headless.constants import Client
 from allauth.headless.spec.internal import schema
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+{%- if cookiecutter.phone == "none" %}
 from django.urls import Resolver404, URLResolver, path, resolve
 from django.urls.resolvers import RoutePattern
+{%- else %}
+from django.urls import Resolver404, path, resolve
+{%- endif %}
 
 from apps.common.links import auth_path
 from apps.users import headless_urls
 from apps.users.headless_spec import ALLAUTH_VERSION, VERSIONED
 from apps.users.reauthentication.routing import walk
 from apps.users.tests.conftest import AUTH_URLCONF
+{%- if cookiecutter.phone == "none" %}
 
 
 PHONE_VIEWS = {"ManagePhoneView", "VerifyPhoneView", "ResendPhoneVerificationCodeView"}
+{%- endif %}
 
 
 @pytest.mark.parametrize("client", list(Client))
@@ -30,13 +36,18 @@ def test_allauth_still_builds_each_client_under_one_v1(client):
 @pytest.mark.parametrize("client", list(Client))
 def test_what_is_mounted_is_everything_allauth_built(client):
     built = walk(allauth_urls.build_urlpatterns(client))
+{%- if cookiecutter.phone == "none" %}
     unwrapped = [
         (route.removeprefix(ALLAUTH_VERSION), view.view_class)
         for route, view in built
         if view.view_class.__name__ not in PHONE_VIEWS
     ]
+{%- else %}
+    unwrapped = [(route.removeprefix(ALLAUTH_VERSION), view.view_class) for route, view in built]
+{%- endif %}
 
     assert [(route, view.view_class) for route, view in walk(headless_urls.unversioned(client))] == unwrapped
+{%- if cookiecutter.phone == "none" %}
 
 
 @pytest.mark.parametrize("client", list(Client))
@@ -73,6 +84,19 @@ def test_the_phone_page_is_not_found_rather_than_a_server_error(client, signed_i
     response = client.get("/v0/browser/account/phone", HTTP_HOST=f"auth.{settings.PARENT_HOST}")
 
     assert response.status_code == 404
+{%- else %}
+
+
+@pytest.mark.django_db
+def test_the_phone_page_answers_with_the_number_on_the_account(client, signed_in):
+    signed_in.phone, signed_in.phone_verified = "+14155550123", True
+    signed_in.save()
+
+    response = client.get("/v0/browser/account/phone", HTTP_HOST=f"auth.{settings.PARENT_HOST}")
+
+    assert response.status_code == 200
+    assert response.json()["data"] == [{"phone": "+14155550123", "verified": True}]
+{%- endif %}
 
 
 @pytest.mark.parametrize(

@@ -11,12 +11,14 @@ import { Label } from '@/components/base/label'
 import { useClientTranslation } from '@/i18n/client'
 import { authOrigin } from '@/lib/authOrigin'
 import { offeredNames } from '@/lib/names'
+import { VERIFY_PHONE_PATH } from '@/lib/phone'
 import { useAuthValidatedFormState } from '@/lib/submit'
 
-import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
+import { AuthApi, pendingFlow } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
 import { NameFields, nameSchema, shownNames } from './NameFields'
 import { PasswordInput } from './PasswordInput'
+import { PhoneField, phoneOf, phoneSchema } from './PhoneField'
 import { detailOf } from '@isikk/core/allauth'
 import { z } from 'zod'
 
@@ -34,6 +36,7 @@ export function CompleteSignupForm({ email, suggestedUsername = '' }: CompleteSi
     () =>
       z.object({
         ...nameSchema(t),
+        phone: phoneSchema(t),
         password: z.string().min(8, t('auth:validationPasswordMinLength')),
       }),
     [t]
@@ -42,6 +45,7 @@ export function CompleteSignupForm({ email, suggestedUsername = '' }: CompleteSi
     first_name: '',
     last_name: '',
     username: suggestedUsername,
+    phone: '',
     password: '',
   })
 
@@ -50,13 +54,25 @@ export function CompleteSignupForm({ email, suggestedUsername = '' }: CompleteSi
 
     const authApi = new AuthApi(authOrigin())
     await submit(
-      (value) => authApi.completeProviderSignup({ email, password: value.password, ...shownNames(value, shown) }),
+      (value) =>
+        authApi.completeProviderSignup({
+          email,
+          ...phoneOf(value),
+          password: value.password,
+          ...shownNames(value, shown),
+        }),
       {
         // A 401 can mean success: mandatory verification creates the account without logging in.
         isSuccess: ({ data, error }) => Boolean(data) || detailOf(error) === undefined,
         failure: t('auth:completeSignupError'),
         leavesOnSuccess: true,
-        onSuccess: ({ response }) => router.push(response.status === 200 ? '/' : '/auth/login'),
+        onSuccess: ({ error, response }) => {
+          if (pendingFlow(error, 'verify_phone')) {
+            router.push(VERIFY_PHONE_PATH)
+            return
+          }
+          router.push(response.status === 200 ? '/' : '/auth/login')
+        },
       }
     )
   }
@@ -65,6 +81,7 @@ export function CompleteSignupForm({ email, suggestedUsername = '' }: CompleteSi
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <p className="text-muted-foreground text-sm">{t('auth:completeSignupBody', { email })}</p>
       <NameFields shown={shown} values={formState} errors={formErrors} onChange={handleFormStateEvent} />
+      <PhoneField value={formState.phone} error={formErrors?.phone?.[0]} onChange={handleFormStateEvent('phone')} />
       <div className="flex flex-col gap-2">
         <Label htmlFor="password">{t('auth:completeSignupPasswordLabel')}</Label>
         <PasswordInput

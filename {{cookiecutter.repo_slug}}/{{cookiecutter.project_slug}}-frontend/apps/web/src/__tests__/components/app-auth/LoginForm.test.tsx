@@ -2,6 +2,7 @@ import { LoginForm } from '@/components/app-auth/LoginForm'
 
 import { NAME_TABLE } from '@/__tests__/support/names'
 import type { NameRequirement } from '@/config/names'
+import type { Phone } from '@/config/phone'
 import { VERIFY_EMAIL_REQUIRED_PATH } from '@/lib/sessionChannel'
 
 import { expectUniqueAccessibleNames } from '@isikk/core/testing'
@@ -16,6 +17,13 @@ const requirement = vi.hoisted(() => ({ current: 'username_with_optional_full' a
 vi.mock('@/config/names', () => ({
   get NAME_REQUIREMENT() {
     return requirement.current
+  },
+}))
+
+const phone = vi.hoisted(() => ({ current: 'none' as Phone }))
+vi.mock('@/config/phone', () => ({
+  get PHONE() {
+    return phone.current
   },
 }))
 
@@ -38,6 +46,7 @@ describe('LoginForm', () => {
     push.mockClear()
     refresh.mockClear()
     requirement.current = 'username_with_optional_full'
+    phone.current = 'none'
   })
 
   afterEach(() => {
@@ -265,6 +274,103 @@ describe('LoginForm', () => {
       await user.click(screen.getByRole('button', { name: 'Log in' }))
 
       expect(await screen.findByText(missing)).toBeTruthy()
+    })
+  })
+
+  describe.each(NAME_TABLE)('under %s, with numbers that sign in', (name, _offered, required) => {
+    const byHandle = required.includes('username')
+    const label = byHandle ? 'Username, email or phone number' : 'Email or phone number'
+    const missing = byHandle ? 'Enter your username, email or phone number.' : 'Enter your email or phone number.'
+
+    beforeEach(() => {
+      requirement.current = name
+      phone.current = 'required'
+    })
+
+    it(`asks for "${label}"`, () => {
+      render(<LoginForm />)
+
+      expect((screen.getByLabelText(label) as HTMLInputElement).name).toBe('login')
+    })
+
+    it(`says "${missing}" for an empty identifier`, async () => {
+      const user = userEvent.setup()
+      render(<LoginForm />)
+
+      await user.type(screen.getByLabelText('Password'), 'secret123')
+      await user.click(screen.getByRole('button', { name: 'Log in' }))
+
+      expect(await screen.findByText(missing)).toBeTruthy()
+    })
+  })
+
+  describe('with phone numbers', () => {
+    async function logIn(user: ReturnType<typeof userEvent.setup>, login: string) {
+      await user.type(screen.getByLabelText(/^Username, email|^Username or email/), login)
+      await user.type(screen.getByLabelText('Password'), 'secret123')
+      await user.click(screen.getByRole('button', { name: 'Log in' }))
+    }
+
+    async function sentBody() {
+      const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
+      const [request] = calls[calls.length - 1]
+      return (request as Request).json()
+    }
+
+    beforeEach(() => {
+      globalThis.fetch = vi.fn(async () =>
+        jsonResponse(200, { status: 200, data: { user: {} }, meta: { is_authenticated: true } })
+      )
+    })
+
+    it('sends a number as `phone` where numbers sign in', async () => {
+      phone.current = 'required'
+      const user = userEvent.setup()
+      render(<LoginForm />)
+
+      await logIn(user, '+14155550123')
+
+      expect(await sentBody()).toEqual({ phone: '+14155550123', password: 'secret123' })
+    })
+
+    it('sends a number as a handle where numbers never sign in', async () => {
+      phone.current = 'optional'
+      const user = userEvent.setup()
+      render(<LoginForm />)
+
+      await logIn(user, '+14155550123')
+
+      expect(await sentBody()).toEqual({ username: '+14155550123', password: 'secret123' })
+    })
+
+    it('sends a handle as `username` even where numbers sign in', async () => {
+      phone.current = 'required'
+      const user = userEvent.setup()
+      render(<LoginForm />)
+
+      await logIn(user, 'jane')
+
+      expect(await sentBody()).toEqual({ username: 'jane', password: 'secret123' })
+    })
+
+    it('sends a login by a number never verified on to the code step, keeping "next"', async () => {
+      phone.current = 'required'
+      globalThis.fetch = vi.fn(async () =>
+        jsonResponse(401, {
+          status: 401,
+          data: { flows: [{ id: 'verify_phone', is_pending: true }] },
+          meta: { is_authenticated: false },
+        })
+      )
+      const user = userEvent.setup()
+      render(<LoginForm redirectTo="/a b" />)
+
+      await logIn(user, '+14155550123')
+
+      expect(push).toHaveBeenCalledWith('/auth/verify-phone?next=%2Fa%20b')
+      expect(push).toHaveBeenCalledTimes(1)
+      expect(refresh).not.toHaveBeenCalled()
+      expect(screen.queryByText('Could not log you in.')).toBeNull()
     })
   })
 })

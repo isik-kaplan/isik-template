@@ -4,10 +4,12 @@ import { Button, ErrorText, Heading, LegalConsentNotice, NameFields, Screen, Tex
 
 import { useTranslation } from '@/lib/i18n'
 import { type NameField, offeredNames, offeredValues } from '@/lib/names'
+import { phoneOf } from '@/lib/phone'
+import { PHONE } from '@/lib/phoneOption'
 import { getAuthApi } from '@/lib/session'
 import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 
-import { errorsOf } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
+import { errorsOf, pendingFlow } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
 import { router } from 'expo-router'
 import { Text } from 'react-native'
@@ -17,6 +19,7 @@ export default function CompleteSignup() {
   const { t } = useTranslation()
   const [email, setEmail] = useState<string | undefined>()
   const [names, setNames] = useState<Record<NameField, string>>({ first_name: '', last_name: '', username: '' })
+  const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | undefined>()
   const [submitting, setSubmitting] = useState(false)
@@ -43,10 +46,14 @@ export default function CompleteSignup() {
         data,
         error: apiError,
         response: http,
-      } = await getAuthApi().completeProviderSignup({ email, password, ...offeredValues(names) })
+      } = await getAuthApi().completeProviderSignup({ email, ...phoneOf(phone), password, ...offeredValues(names) })
       const throttled = tooManyRequestsMessage(t, http)
       if (throttled) {
         setError(throttled)
+        return
+      }
+      if (pendingFlow(apiError, 'verify_phone')) {
+        router.push('/verify-phone')
         return
       }
       const authErrors = errorsOf(apiError)
@@ -72,6 +79,16 @@ export default function CompleteSignup() {
         values={names}
         onChange={(name, value) => setNames((current) => ({ ...current, [name]: value }))}
       />
+      {PHONE !== 'none' && (
+        <TextField
+          testID="phone-input"
+          placeholder={PHONE === 'required' ? t('phonePlaceholder') : t('phoneOptionalPlaceholder')}
+          keyboardType="phone-pad"
+          autoComplete="tel"
+          value={phone}
+          onChangeText={setPhone}
+        />
+      )}
       <TextField
         testID="password-input"
         placeholder={t('passwordPlaceholder')}

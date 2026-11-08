@@ -1,7 +1,7 @@
 import type { Browser, Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 
-import { OIDC_CONFIGURED, login, signInAtAuthentik, signUpAndVerify } from '../helpers'
+import { LOGIN_LABEL, OIDC_CONFIGURED, login, signInAtAuthentik, signUpAndVerify } from '../helpers'
 
 // Raised and lowered from the admin, as an operator would in an incident.
 const ADMIN = 'http://admin.{{ cookiecutter.domain }}'
@@ -47,7 +47,7 @@ test('raising the ladder signs out and shuts out whoever it excludes, on both do
   await page.goto('/profile/details')
   await expect(page).toHaveURL(/\/auth\/login/)
   // The URL changes before the redirect settles; navigating again any sooner gets aborted.
-  await expect(page.getByLabel('Username or email')).toBeVisible()
+  await expect(page.getByLabel(LOGIN_LABEL)).toBeVisible()
 
   await login(page, username, password)
   await expect(page).toHaveURL(/\/auth\/login/)

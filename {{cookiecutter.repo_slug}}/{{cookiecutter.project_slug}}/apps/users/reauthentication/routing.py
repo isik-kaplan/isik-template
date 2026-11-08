@@ -9,6 +9,9 @@ from apps.users import headless_urls
 from apps.users.reauthentication.gate import ProvesWhoTheyAre
 from apps.users.reauthentication.views.change_password import ChangePasswordView
 from apps.users.reauthentication.views.manage_email import ManageEmailView
+{%- if cookiecutter.phone != "none" %}
+from apps.users.reauthentication.views.manage_phone import ManagePhoneView
+{%- endif %}
 from apps.users.reauthentication.views.manage_providers import ManageProvidersView
 from apps.users.reauthentication.views.manage_recovery_codes import ManageRecoveryCodesView
 from apps.users.reauthentication.views.manage_totp import ManageTOTPView
@@ -21,6 +24,9 @@ from apps.users.reauthentication.views.sessions import SessionsView
 GATED_VIEWS = (
     ChangePasswordView,
     ManageEmailView,
+{%- if cookiecutter.phone != "none" %}
+    ManagePhoneView,
+{%- endif %}
     ManageProvidersView,
     ManageRecoveryCodesView,
     ManageTOTPView,

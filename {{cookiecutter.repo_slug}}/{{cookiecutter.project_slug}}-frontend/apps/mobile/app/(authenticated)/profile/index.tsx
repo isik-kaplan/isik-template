@@ -7,6 +7,9 @@ import { router } from 'expo-router'
 const LINKS = [
   { testID: 'profile-details-link', labelKey: 'profileDetailsLinkLabel', href: '/profile/details' as const },
   { testID: 'profile-emails-link', labelKey: 'profileEmailsLinkLabel', href: '/profile/emails' as const },
+{%- if cookiecutter.phone != "none" %}
+  { testID: 'profile-phone-link', labelKey: 'profilePhoneLinkLabel', href: '/profile/phone' as const },
+{%- endif %}
   { testID: 'profile-password-link', labelKey: 'profilePasswordLinkLabel', href: '/profile/password' as const },
   {
     testID: 'profile-connections-link',

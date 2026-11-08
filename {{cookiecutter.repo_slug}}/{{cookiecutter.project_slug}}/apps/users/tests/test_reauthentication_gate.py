@@ -22,6 +22,9 @@ GATED = {
     # Setting a first password; changing one already demands the current one.
     "ChangePasswordView": {"POST"},
     "ManageEmailView": {"POST", "PATCH", "DELETE"},
+{%- if cookiecutter.phone != "none" %}
+    "ManagePhoneView": {"POST"},
+{%- endif %}
     "ManageProvidersView": {"DELETE"},
     "RedirectToProviderView": {"POST"},
     "ProviderTokenView": {"POST"},

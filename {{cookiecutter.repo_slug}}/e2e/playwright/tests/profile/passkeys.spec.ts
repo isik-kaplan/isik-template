@@ -1,7 +1,7 @@
 import type { CDPSession, Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 
-import { act, signUpAndVerify } from '../helpers'
+import { LOGIN_LABEL, act, signUpAndVerify } from '../helpers'
 import { readRecoveryCodes } from '../mfa'
 
 // WebAuthn needs a secure context, so this spec runs over the self-signed https listener.
@@ -14,7 +14,7 @@ const PASSWORD = 'correct-horse-battery-staple'
 
 async function login(page: Page, username: string, password: string) {
   await page.goto(`${HTTPS}/auth/login`)
-  await page.getByLabel('Username or email').fill(username)
+  await page.getByLabel(LOGIN_LABEL).fill(username)
   await page.getByLabel('Password', { exact: true }).fill(password)
   await page.getByRole('button', { name: 'Log in' }).click()
 }

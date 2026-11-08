@@ -38,6 +38,10 @@ type Session = {
 }
 
 type EmailAddress = { email: string; primary: boolean; verified: boolean }
+{%- if cookiecutter.phone != "none" %}
+// allauth keeps one number per account; a list only because its endpoint answers one.
+type PhoneNumber = { phone: string; verified: boolean }
+{%- endif %}
 type ProviderAccount = { id: number; provider: { id: string; name: string }; uid: string; display: { name: string } }
 
 // `types` only on mfa_authenticate: the factors this user can answer the challenge with.
@@ -85,13 +89,13 @@ export interface paths {
   }
   '/v0/browser/auth/login': {
     post: {
-      requestBody: { content: { 'application/json': { username?: string; email?: string; password: string } } }
+      requestBody: { content: { 'application/json': { username?: string; email?: string; phone?: string; password: string } } }
       responses: { 200: { content: { 'application/json': SessionOk } }; 400: { content: { 'application/json': unknown } } }
     }
   }
   '/v0/browser/auth/signup': {
     post: {
-      requestBody: { content: { 'application/json': { email: string; password: string; username?: string; first_name?: string; last_name?: string } } }
+      requestBody: { content: { 'application/json': { email: string; phone?: string; password: string; username?: string; first_name?: string; last_name?: string } } }
       responses: { 200: { content: { 'application/json': SessionOk } }; 401: { content: { 'application/json': SessionErr } } }
     }
   }
@@ -125,6 +129,34 @@ export interface paths {
       responses: { 200: { content: { 'application/json': SessionOk } }; 401: { content: { 'application/json': SessionErr } } }
     }
   }
+{%- if cookiecutter.phone != "none" %}
+  // A code texted at signup, or after a change of number: verifying it is what saves the new number.
+  '/v0/browser/auth/phone/verify': {
+    post: {
+      requestBody: { content: { 'application/json': { code: string } } }
+      responses: {
+        200: { content: { 'application/json': SessionOk } }
+        400: { content: { 'application/json': ValidationErr } }
+        401: { content: { 'application/json': SessionErr } }
+      }
+    }
+  }
+  // Only at signup's code step, and twice at most (ACCOUNT_PHONE_VERIFICATION_SUPPORTS_RESEND).
+  '/v0/browser/auth/phone/verify/resend': {
+    post: { responses: { 200: { content: { 'application/json': unknown } }; 409: { content: { 'application/json': unknown } } } }
+  }
+  // POST texts the new number a code and answers 202; the account keeps its old one until it's verified.
+  '/v0/browser/account/phone': {
+    get: { responses: { 200: { content: { 'application/json': { data: PhoneNumber[] } } } } }
+    post: {
+      requestBody: { content: { 'application/json': { phone: string } } }
+      responses: {
+        202: { content: { 'application/json': { data: PhoneNumber[] } } }
+        400: { content: { 'application/json': ValidationErr } }
+      }
+    }
+  }
+{%- endif %}
   '/v0/browser/account/password/change': {
     post: {
       requestBody: { content: { 'application/json': { current_password?: string; new_password: string } } }
@@ -187,7 +219,7 @@ export interface paths {
       }
     }
     post: {
-      requestBody: { content: { 'application/json': { email: string; password?: string; username?: string; first_name?: string; last_name?: string } } }
+      requestBody: { content: { 'application/json': { email: string; phone?: string; password?: string; username?: string; first_name?: string; last_name?: string } } }
       // 200 if this also completes login; 401 if the account was created but needs a separate
       // login (mandatory email verification) - same shape as signup itself.
       responses: { 200: { content: { 'application/json': SessionOk } }; 401: { content: { 'application/json': SessionErr } } }
@@ -327,13 +359,13 @@ export interface paths {
   }
   '/v0/app/auth/login': {
     post: {
-      requestBody: { content: { 'application/json': { username?: string; email?: string; password: string } } }
+      requestBody: { content: { 'application/json': { username?: string; email?: string; phone?: string; password: string } } }
       responses: { 200: { content: { 'application/json': AppSessionOk } }; 400: { content: { 'application/json': unknown } } }
     }
   }
   '/v0/app/auth/signup': {
     post: {
-      requestBody: { content: { 'application/json': { email: string; password: string; username?: string; first_name?: string; last_name?: string } } }
+      requestBody: { content: { 'application/json': { email: string; phone?: string; password: string; username?: string; first_name?: string; last_name?: string } } }
       responses: { 200: { content: { 'application/json': AppSessionOk } }; 401: { content: { 'application/json': AppSessionErr } } }
     }
   }
@@ -371,6 +403,34 @@ export interface paths {
       responses: { 200: { content: { 'application/json': AppSessionOk } }; 401: { content: { 'application/json': AppSessionErr } } }
     }
   }
+{%- if cookiecutter.phone != "none" %}
+  // A code texted at signup, or after a change of number: verifying it is what saves the new number.
+  '/v0/app/auth/phone/verify': {
+    post: {
+      requestBody: { content: { 'application/json': { code: string } } }
+      responses: {
+        200: { content: { 'application/json': AppSessionOk } }
+        400: { content: { 'application/json': ValidationErr } }
+        401: { content: { 'application/json': AppSessionErr } }
+      }
+    }
+  }
+  // Only at signup's code step, and twice at most (ACCOUNT_PHONE_VERIFICATION_SUPPORTS_RESEND).
+  '/v0/app/auth/phone/verify/resend': {
+    post: { responses: { 200: { content: { 'application/json': unknown } }; 409: { content: { 'application/json': unknown } } } }
+  }
+  // POST texts the new number a code and answers 202; the account keeps its old one until it's verified.
+  '/v0/app/account/phone': {
+    get: { responses: { 200: { content: { 'application/json': { data: PhoneNumber[] } } } } }
+    post: {
+      requestBody: { content: { 'application/json': { phone: string } } }
+      responses: {
+        202: { content: { 'application/json': { data: PhoneNumber[] } } }
+        400: { content: { 'application/json': ValidationErr } }
+      }
+    }
+  }
+{%- endif %}
   '/v0/app/account/password/change': {
     post: {
       requestBody: { content: { 'application/json': { current_password?: string; new_password: string } } }
@@ -430,7 +490,7 @@ export interface paths {
       }
     }
     post: {
-      requestBody: { content: { 'application/json': { email: string; password?: string; username?: string; first_name?: string; last_name?: string } } }
+      requestBody: { content: { 'application/json': { email: string; phone?: string; password?: string; username?: string; first_name?: string; last_name?: string } } }
       responses: { 200: { content: { 'application/json': AppSessionOk } }; 401: { content: { 'application/json': AppSessionErr } } }
     }
   }

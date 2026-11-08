@@ -51,6 +51,10 @@ LOGIN_FAILED = declare("login.failed", logging.WARNING)
 LOGOUT_SUCCEEDED = declare("logout.succeeded", logging.INFO, ("user",))
 SIGNUP_COMPLETED = declare("signup.completed", logging.INFO, ("user",))
 EMAIL_CONFIRMED = declare("email.confirmed", logging.INFO, ("user",))
+{%- if cookiecutter.phone != "none" %}
+# Never the number: it's the person's. `error` is the exception's class, which says whose side failed.
+SMS_FAILED = declare("sms.failed", logging.WARNING, ("user", "error"))
+{%- endif %}
 
 # Audited: each moves control of an account (its password, or where a reset is sent).
 PASSWORD_CHANGED = declare("password.changed", logging.WARNING, ("user", "how"), audited=True)

@@ -1,5 +1,6 @@
 import Login from '@/app/login'
 import type { NameRequirement } from '@/lib/nameRequirement'
+import type { Phone } from '@/lib/phoneOption'
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native'
 
@@ -7,6 +8,13 @@ let mockRequirement: NameRequirement = 'username_with_optional_full'
 jest.mock('@/lib/nameRequirement', () => ({
   get NAME_REQUIREMENT() {
     return mockRequirement
+  },
+}))
+
+let mockPhone: Phone = 'none'
+jest.mock('@/lib/phoneOption', () => ({
+  get PHONE() {
+    return mockPhone
   },
 }))
 
@@ -27,6 +35,7 @@ describe('Login', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockRequirement = 'full_only'
+    mockPhone = 'none'
   })
 
   it('navigates to the authenticated home on a successful login', async () => {
@@ -252,6 +261,60 @@ describe('Login', () => {
       await fireEvent.press(screen.getByTestId('login-submit'))
       await waitFor(() => expect(mockReplace).toHaveBeenCalled())
       expect(mockLogin).toHaveBeenCalledWith({ email: 'jane@test.test', password: 'correct-horse' })
+    })
+  })
+
+  describe('with phone numbers', () => {
+    async function logIn(login: string) {
+      await render(<Login />)
+      await fireEvent.changeText(screen.getByTestId('email-input'), login)
+      await fireEvent.changeText(screen.getByTestId('password-input'), 'correct-horse')
+      await fireEvent.press(screen.getByTestId('login-submit'))
+    }
+
+    it.each([
+      ['full_only', 'Email or phone number'],
+      ['username_only', 'Username, email or phone number'],
+    ] as const)('names the ways in under %s, on a keypad that types a +', async (requirement, placeholder) => {
+      mockRequirement = requirement
+      mockPhone = 'required'
+      await render(<Login />)
+      const input = screen.getByTestId('email-input')
+      expect([input.props.placeholder, input.props.keyboardType]).toEqual([placeholder, 'default'])
+    })
+
+    it('sends a number as `phone` where numbers sign in', async () => {
+      mockPhone = 'required'
+      mockLogin.mockResolvedValue({ data: { meta: { is_authenticated: true } }, error: undefined })
+      await logIn('+14155550123')
+      await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/(authenticated)/home'))
+      expect(mockLogin).toHaveBeenCalledWith({ phone: '+14155550123', password: 'correct-horse' })
+    })
+
+    it('sends a handle as `username` where numbers sign in too', async () => {
+      mockRequirement = 'username_only'
+      mockPhone = 'required'
+      mockLogin.mockResolvedValue({ data: { meta: { is_authenticated: true } }, error: undefined })
+      await logIn('jane')
+      await waitFor(() => expect(mockLogin).toHaveBeenCalledWith({ username: 'jane', password: 'correct-horse' }))
+    })
+
+    it('sends a number as the address where numbers never sign in', async () => {
+      mockPhone = 'optional'
+      mockLogin.mockResolvedValue({ data: { meta: { is_authenticated: true } }, error: undefined })
+      await logIn('+14155550123')
+      await waitFor(() => expect(mockLogin).toHaveBeenCalledWith({ email: '+14155550123', password: 'correct-horse' }))
+    })
+
+    it('sends a login by a number never verified on to the code step', async () => {
+      mockPhone = 'required'
+      mockLogin.mockResolvedValue({
+        data: undefined,
+        error: { status: 401, data: { flows: [{ id: 'verify_phone', is_pending: true }] } },
+      })
+      await logIn('+14155550123')
+      await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/verify-phone'))
+      expect(screen.queryByTestId('login-error')).toBeNull()
     })
   })
 })

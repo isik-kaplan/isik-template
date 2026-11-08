@@ -93,6 +93,13 @@ would not be. `email` picks the provider outgoing mail goes through; `smtp`, any
 only one so far. No credential is asked at bake time: each provider reads its own env vars, which
 `.env.example` lists for the provider chosen, and development prints mail to the log whichever it is.
 
+`phone` puts a phone number on accounts, through allauth's own phone support: `none` (the default)
+leaves it out; `optional` lets a signup add one, verified by a texted code, that never signs anyone
+in; `required` asks every signup for one, and the number then signs in with the password, like the
+address. Either way the email address stays required, and a number is never a second factor or a way
+to reset a password. `sms` picks the provider those codes go through, `twilio` the only one so far;
+like `email`, it reads its credentials from env vars and prints texts to the log in development.
+
 `name_requirement` picks what a signup asks people to be called: a full name and a handle, each
 required, optional or not asked for, in the five combinations that always leave somebody a name
 (`username_with_optional_full`, the default, asks for a handle and offers the name). Under every

@@ -51,6 +51,11 @@ services:
       - ${E2E_SUBNET_PREFIX:-172.30.0}.11
     # Added to the base .env, not replacing it. "e2e/.env" because env_file resolves against the repo root.
     env_file: [e2e/.env]
+{%- if cookiecutter.phone != "none" %}
+    # SMS__BACKEND=file writes each text here, where the suite reads its codes.
+    volumes:
+      - sms:/sms
+{%- endif %}
 
 {%- if cookiecutter.background_jobs != "inline" %}
 
@@ -99,10 +104,16 @@ services:
       - ./{{ cookiecutter.project_slug }}-frontend/apps/web/src/legal:/legal:ro
       # Only the marker saying this stack had its whole suite; `down -v` and reset.sh clear it.
       - e2e-state:/e2e-state
+{%- if cookiecutter.phone != "none" %}
+      - sms:/sms:ro
+{%- endif %}
 
 volumes:
   certs:
   e2e-state:
+{%- if cookiecutter.phone != "none" %}
+  sms:
+{%- endif %}
 
 networks:
   internal:

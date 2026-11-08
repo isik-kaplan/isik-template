@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { SUPERUSER_PASSWORD, act, asTheSuperuser, login, signUpAndVerify } from '../helpers'
+import { LOGIN_LABEL, SUPERUSER_PASSWORD, act, asTheSuperuser, login, signUpAndVerify } from '../helpers'
 
 const PASSWORD = 'correct-horse-battery-staple'
 const DEVICE_GRANT = 'urn:ietf:params:oauth:grant-type:device_code'
@@ -60,7 +60,7 @@ test('a device shows a code, somebody lets it in, and it gets one token for them
   const visitor = await (await browser.newContext({ ignoreHTTPSErrors: true })).newPage()
   await visitor.goto(codes.verification_uri_complete)
   await expect(visitor).toHaveURL(/\/auth\/login\?next=/)
-  await visitor.getByLabel('Username or email').fill(username)
+  await visitor.getByLabel(LOGIN_LABEL).fill(username)
   await visitor.getByLabel('Password', { exact: true }).fill(PASSWORD)
   await visitor.getByRole('button', { name: 'Log in' }).click()
 

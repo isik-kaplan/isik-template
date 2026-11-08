@@ -123,6 +123,11 @@ set_var "${PREFIX}__SETUP__SUPERUSER__EMAIL" "$superuser_email"
 superuser_username="$(ask "Superuser username" "admin")"
 set_var "${PREFIX}__SETUP__SUPERUSER__USERNAME" "$superuser_username"
 {%- endif %}
+{%- if cookiecutter.phone == "required" %}
+
+superuser_phone="$(ask "Superuser phone number, with its + and country code" "+15555550100")"
+set_var "${PREFIX}__SETUP__SUPERUSER__PHONE" "$superuser_phone"
+{%- endif %}
 
 {%- if cookiecutter.email == "smtp" %}
 
@@ -138,6 +143,19 @@ if [ -n "$smtp_host" ]; then
   set_var "${PREFIX}__EMAIL__DEFAULT_FROM" "$(ask "Default from address" "noreply@${domain}")"
 else
   echo "Skipped - fill in ${PREFIX}__EMAIL__SMTP__* in $ENV_FILE yourself before going live, or no email will send."
+fi
+{%- endif %}
+{%- if cookiecutter.phone != "none" and cookiecutter.sms == "twilio" %}
+
+echo
+echo "DEBUG=false switches SMS from the log to Twilio, which texts the codes that verify phone numbers."
+twilio_sid="$(ask "Twilio account SID" "")"
+if [ -n "$twilio_sid" ]; then
+  set_var "${PREFIX}__SMS__TWILIO__ACCOUNT_SID" "$twilio_sid"
+  set_var "${PREFIX}__SMS__TWILIO__AUTH_TOKEN" "$(ask_secret "Twilio auth token")"
+  set_var "${PREFIX}__SMS__TWILIO__FROM" "$(ask "Twilio number to send from, with its + and country code" "")"
+else
+  echo "Skipped - fill in ${PREFIX}__SMS__TWILIO__* in $ENV_FILE yourself before going live, or startup fails."
 fi
 {%- endif %}
 

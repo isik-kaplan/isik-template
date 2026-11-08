@@ -13,10 +13,12 @@ import {
 
 import { useTranslation } from '@/lib/i18n'
 import { type NameField, offeredNames, offeredValues } from '@/lib/names'
+import { phoneOf } from '@/lib/phone'
+import { PHONE } from '@/lib/phoneOption'
 import { getAuthApi } from '@/lib/session'
 import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 
-import { errorsOf } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
+import { errorsOf, pendingFlow } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
 import { Link, router } from 'expo-router'
 import { Text } from 'react-native'
@@ -25,6 +27,7 @@ export default function Signup() {
   const { t } = useTranslation()
   const [names, setNames] = useState<Record<NameField, string>>({ first_name: '', last_name: '', username: '' })
   const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | undefined>()
   const [submitting, setSubmitting] = useState(false)
@@ -37,7 +40,7 @@ export default function Signup() {
         data,
         error: response,
         response: http,
-      } = await getAuthApi().signup({ email, password, ...offeredValues(names) })
+      } = await getAuthApi().signup({ email, ...phoneOf(phone), password, ...offeredValues(names) })
       const throttled = tooManyRequestsMessage(t, http)
       if (throttled) {
         setError(throttled)
@@ -45,6 +48,10 @@ export default function Signup() {
       }
       if (data?.meta.is_authenticated) {
         router.replace('/(authenticated)/home')
+        return
+      }
+      if (pendingFlow(response, 'verify_phone')) {
+        router.push('/verify-phone')
         return
       }
       const authErrors = errorsOf(response)
@@ -70,6 +77,16 @@ export default function Signup() {
         value={email}
         onChangeText={setEmail}
       />
+      {PHONE !== 'none' && (
+        <TextField
+          testID="phone-input"
+          placeholder={PHONE === 'required' ? t('phonePlaceholder') : t('phoneOptionalPlaceholder')}
+          keyboardType="phone-pad"
+          autoComplete="tel"
+          value={phone}
+          onChangeText={setPhone}
+        />
+      )}
       <TextField
         testID="password-input"
         placeholder={t('passwordPlaceholder')}

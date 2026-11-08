@@ -18,6 +18,12 @@ is and how to run it; [SETUP.md](../SETUP.md) what to do before launch.
   is rendered in the request and sent by the `worker`, which retries an SMTP outage, so under DEBUG
   the console backend prints it in the worker's log rather than the backend's.
 {%- endif %}
+{%- if cookiecutter.phone != "none" %}
+- **A phone number is allauth's**: two columns on `User`, read and written only by `AccountAdapter`'s phone
+  methods, and texted through isik's `send_sms` (`ISIK["DJANGO"]["SMS"]`). Under DEBUG a text is printed in the
+  backend's log; a test reads `isik.django.sms.outbox`, and e2e reads `/sms/messages.jsonl`. A text the provider
+  refuses is logged as `sms.failed` rather than raised, so the code step stays up to resend or correct the number.
+{%- endif %}
 - **Every write (POST, PUT, PATCH, DELETE) takes an `Idempotency-Key` header** (a UUID per attempt, not
   per call). isik's `BaseModelViewSet` carries `IdempotencyMixin`, so a retried request replays the first
   answer rather than doing the work twice; isik's check `isik.E005` refuses a routed write that neither

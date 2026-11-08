@@ -68,13 +68,32 @@ export class AppAuthApi {
     return data?.meta.is_authenticated ?? error?.meta?.is_authenticated ?? false
   }
 
-  async login(credentials: { username?: string; email?: string; password: string }) {
+  async login(credentials: { username?: string; email?: string; phone?: string; password: string }) {
     return this.client.POST('/v0/app/auth/login', { body: credentials })
   }
 
   async signup(data: SignupBody) {
     return this.client.POST('/v0/app/auth/signup', { body: data })
   }
+{%- if cookiecutter.phone != "none" %}
+
+  async verifyPhone(code: string) {
+    return this.client.POST('/v0/app/auth/phone/verify', { body: { code } })
+  }
+
+  async resendPhoneCode() {
+    return this.client.POST('/v0/app/auth/phone/verify/resend')
+  }
+
+  async phone() {
+    return this.client.GET('/v0/app/account/phone')
+  }
+
+  // At signup's code step this corrects the number just texted; signed in, it asks for a proof first.
+  async changePhone(phone: string) {
+    return this.client.POST('/v0/app/account/phone', { body: { phone } })
+  }
+{%- endif %}
 
   async logout() {
     const result = await this.client.DELETE('/v0/app/auth/session')

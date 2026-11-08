@@ -18,6 +18,8 @@
   "storage": ["garage", "s3", "disk"],
   "cache": ["redis", "database"],
   "email": ["smtp"],
+  "phone": ["none", "optional", "required"],
+  "sms": ["twilio"],
   "webhooks": ["none", "staff", "users"],
   "name_requirement": [
     "username_with_optional_full",
@@ -55,6 +57,16 @@
     "email": {
       "__prompt__": "Outgoing email (credentials go in env vars, not here)",
       "smtp": "Any SMTP server; printed to the log in development"
+    },
+    "phone": {
+      "__prompt__": "Phone numbers on accounts",
+      "none": "None: accounts have an email address only",
+      "optional": "Signup may add a number, verified by SMS; it never signs anyone in",
+      "required": "Signup needs a number, verified by SMS; it signs in with the password, like the address"
+    },
+    "sms": {
+      "__prompt__": "Outgoing SMS, used only when accounts have phone numbers (credentials go in env vars, not here)",
+      "twilio": "Twilio; printed to the log in development"
     },
     "webhooks": {
       "__prompt__": "Webhooks, which POST notifications to endpoints",

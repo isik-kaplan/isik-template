@@ -73,9 +73,16 @@ jobs:
         run: scripts/pre-commit/migration_check.sh
       # DEBUG off, so a new deploy warning fails the build; accepted ones are silenced in settings.py.
       - name: Check the production settings
+{%- if cookiecutter.phone != "none" and cookiecutter.sms == "twilio" %}
+        # Stand-in credentials: with DEBUG off the sender is Twilio, and isik.E024 refuses one with none.
+{%- endif %}
         run: >-
-          docker compose run --rm --no-deps -e {{ cookiecutter.config_prefix }}__DEBUG=false backend
-          python manage.py check --deploy --fail-level WARNING
+          docker compose run --rm --no-deps -e {{ cookiecutter.config_prefix }}__DEBUG=false
+{%- if cookiecutter.phone != "none" and cookiecutter.sms == "twilio" %}
+          -e {{ cookiecutter.config_prefix }}__SMS__TWILIO__ACCOUNT_SID=AC-ci -e {{ cookiecutter.config_prefix }}__SMS__TWILIO__AUTH_TOKEN=ci
+          -e {{ cookiecutter.config_prefix }}__SMS__TWILIO__FROM=+15555550100
+{%- endif %}
+          backend python manage.py check --deploy --fail-level WARNING
 
       # Saves every xdist worker migrating its own database. Dumped and restored inside the database
       # container, whose pg_dump matches the server's version.

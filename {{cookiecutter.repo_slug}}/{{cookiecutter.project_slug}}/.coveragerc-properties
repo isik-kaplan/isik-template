@@ -24,3 +24,6 @@ exclude_lines =
     if TYPE_CHECKING:
     if not config\.RATE_LIMITS\.ENABLED:
     if config\.SENTRY\.DSN:
+{%- if cookiecutter.phone != "none" %}
+    if config\.SMS\.BACKEND == "file":
+{%- endif %}

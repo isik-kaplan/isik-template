@@ -19,6 +19,7 @@ TLS_TERMINATION = {{ cookiecutter.tls_termination|tojson }}
 BACKGROUND_JOBS = {{ cookiecutter.background_jobs|tojson }}
 STORAGE = {{ cookiecutter.storage|tojson }}
 WEBHOOKS = {{ cookiecutter.webhooks|tojson }}
+PHONE = {{ cookiecutter.phone|tojson }}
 AUTHOR_NAME = {{ cookiecutter.author_name|tojson }}
 AUTHOR_EMAIL = {{ cookiecutter.author_email|tojson }}
 # "en" first, always (validated in _validate.py).
@@ -276,6 +277,32 @@ def main() -> None:
         for screen in ("app/webhooks", "components/app-webhooks"):
             shutil.rmtree(f"{web}/{screen}")
             shutil.rmtree(f"{web}/__tests__/{screen}")
+    if PHONE == "none":
+        os.remove(f"{PROJECT_SLUG}/apps/users/reauthentication/views/manage_phone.py")
+        os.remove(f"{PROJECT_SLUG}/apps/users/tests/test_phone.py")
+        web = f"{PROJECT_SLUG}-frontend/apps/web/src"
+        for screen in ("app/auth/verify-phone", "app/profile/(tabs)/phone"):
+            shutil.rmtree(f"{web}/{screen}")
+        for module in (
+            "components/app-auth/VerifyPhoneForm.tsx",
+            "components/app-auth/PhoneSection.tsx",
+            "__tests__/components/app-auth/VerifyPhoneForm.test.tsx",
+            "__tests__/components/app-auth/PhoneSection.test.tsx",
+            "__tests__/app/auth/verify-phone.test.tsx",
+            "__tests__/app/profile/(tabs)/phone.test.tsx",
+        ):
+            os.remove(f"{web}/{module}")
+        for module in ("e2e/playwright/tests/sms.ts", "e2e/playwright/tests/profile/phone.spec.ts"):
+            os.remove(module)
+        if INCLUDE_MOBILE:
+            mobile = f"{PROJECT_SLUG}-frontend/apps/mobile"
+            for module in (
+                "app/verify-phone.tsx",
+                "app/(authenticated)/profile/phone.tsx",
+                "__tests__/app/verify-phone.test.tsx",
+                "__tests__/app/(authenticated)/profile/phone.test.tsx",
+            ):
+                os.remove(f"{mobile}/{module}")
     if WEBHOOKS != "staff":
         os.remove(f"{notification_api}/deployment.py")
         shutil.rmtree(f"{notification_api}/permissions")

@@ -87,6 +87,22 @@ class User(AbstractUser, BaseModel):
         help_text="A handle this user chose, or empty if they have none.",
         db_comment="Optional and unique; null for no handle. Never derived from the name or the address.",
     )
+{%- if cookiecutter.phone != "none" %}
+    # Null, not blank, for no number, as with the handle. allauth reads and writes it through AccountAdapter.
+    phone = models.CharField(
+        max_length=16,
+        unique=True,
+        null=True,
+        blank=True,
+        help_text="This user's phone number, or empty if they have none.",
+        db_comment="E.164, as allauth's phone field accepts it; unique, null for no number.",
+    )
+    phone_verified = models.BooleanField(
+        default=False,
+        help_text="Whether this user proved the phone number is theirs with a code sent to it.",
+        db_comment="Set by allauth's phone verification; a changed number starts unverified again.",
+    )
+{%- endif %}
     # The derived CHECK is still a fixed list in the migration: changing LANGUAGES needs a new migration.
     language = models.CharField(
         max_length=15,
@@ -115,7 +131,12 @@ class User(AbstractUser, BaseModel):
 
     USERNAME_FIELD = "email"
     # AbstractUser lists email here, which auth.E002 refuses once it is the identifier.
+{%- if cookiecutter.phone == "required" %}
+    # So createsuperuser asks: allauth turns away a login by an account with no number.
+    REQUIRED_FIELDS = ["phone"]
+{%- else %}
     REQUIRED_FIELDS = []
+{%- endif %}
 
     # The write version covers grants too, so a stale page can't quietly undo an admin grant.
     concurrency_relations = ("groups", "user_permissions")
@@ -127,6 +148,9 @@ class User(AbstractUser, BaseModel):
     def save(self, **kwargs):
         # allauth and forms write "" for no handle.
         self.username = self.username or None
+{%- if cookiecutter.phone != "none" %}
+        self.phone = self.phone or None
+{%- endif %}
         super().save(**kwargs)
 
     @property

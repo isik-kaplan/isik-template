@@ -8,7 +8,7 @@ dependencies = [
     # settings to MAILERS, once a release supports 6.1.
     "django>=6.0,<6.1",
     "psycopg[binary]>=3.2.0",
-    "isik[django,drf,sentry,celery,notifications,push]>={{ cookiecutter.isik_version }}",
+    "isik[django,drf,sentry,celery,notifications,push{{ ",sms" if cookiecutter.phone != "none" }}]>={{ cookiecutter.isik_version }}",
     "pyuwsgi>=2.0.28",
     "python-dotenv>=1.0.0",
     "drf-spectacular>=0.27.0",
@@ -123,6 +123,10 @@ exclude_lines = [
     "if not config\\.RATE_LIMITS\\.ENABLED:",
     # No test environment configures SENTRY__DSN.
     "if config\\.SENTRY\\.DSN:",
+{%- if cookiecutter.phone != "none" %}
+    # Only the e2e stack sends SMS to a file.
+    "if config\\.SMS\\.BACKEND == \"file\":",
+{%- endif %}
 ]
 
 [tool.mutmut]

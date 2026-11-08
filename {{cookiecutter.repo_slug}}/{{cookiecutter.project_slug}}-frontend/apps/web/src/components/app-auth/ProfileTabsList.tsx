@@ -11,12 +11,14 @@ import {
   MonitorSmartphoneIcon,
   ShieldCheckIcon,
   SlidersHorizontalIcon,
+  SmartphoneIcon,
   TerminalIcon,
   UserIcon,
 } from 'lucide-react'
 
 import { Tabs, TabsList, TabsTrigger } from '@/components/base/tabs'
 
+import { PHONE } from '@/config/phone'
 import { CONFIG } from '@/config/public'
 import { useClientTranslation } from '@/i18n/client'
 
@@ -26,6 +28,7 @@ const TABS = [
   { segment: 'settings', icon: SlidersHorizontalIcon },
   { segment: 'password', icon: KeyRoundIcon },
   { segment: 'emails', icon: MailIcon },
+  { segment: 'phone', icon: SmartphoneIcon },
   { segment: 'connections', icon: Link2Icon },
   { segment: 'sessions', icon: MonitorSmartphoneIcon },
   { segment: 'two-factor', icon: ShieldCheckIcon },
@@ -37,8 +40,12 @@ export function ProfileTabsList() {
   const { t } = useClientTranslation(['auth'])
   const pathname = usePathname()
   const router = useRouter()
-  // The applications tab only exists while the backend is an OAuth provider at all.
-  const tabs = TABS.filter((tab) => tab.segment !== 'applications' || CONFIG.OAUTH_PROVIDER.MODE !== 'off')
+  // Applications only while the backend is an OAuth provider at all; phone only while accounts have numbers.
+  const tabs = TABS.filter(
+    (tab) =>
+      (tab.segment !== 'applications' || CONFIG.OAUTH_PROVIDER.MODE !== 'off') &&
+      (tab.segment !== 'phone' || PHONE !== 'none')
+  )
   const active = tabs.find((tab) => pathname.endsWith(`/profile/${tab.segment}`))?.segment ?? tabs[0].segment
 
   // Spelled out: i18next-parser only detects literal keys, and collects them from comments too.
@@ -48,6 +55,7 @@ export function ProfileTabsList() {
     settings: t('auth:profileSettingsTab'),
     password: t('auth:profilePasswordTab'),
     emails: t('auth:profileEmailsTab'),
+    phone: t('auth:profilePhoneTab'),
     connections: t('auth:profileConnectionsTab'),
     sessions: t('auth:profileSessionsTab'),
     'two-factor': t('auth:profileTwoFactorTab'),

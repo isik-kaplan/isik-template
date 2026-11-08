@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { login, signUpAndVerify } from '../helpers'
+import { login, signUpAndVerify, submitSignup } from '../helpers'
 import { extractLinkFromEmail, waitForEmailCount } from '../mailpit'
 
 test('logging in with the wrong password shows an error and does not sign in', async ({ page }) => {
@@ -31,12 +31,7 @@ test('the right password for an unconfirmed address asks for the confirmation, n
   const username = `login-unconfirmed-${Date.now()}`
   const email = `${username}@example.test`
   const password = 'correct-horse-battery-staple'
-  await page.goto('/auth/signup')
-  await page.getByLabel('Username').fill(username)
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Password', { exact: true }).fill(password)
-  await page.getByRole('button', { name: 'Sign up' }).click()
-  await expect(page).toHaveURL('/auth/signup-email-sent')
+  await submitSignup(page, username, email, password)
   await waitForEmailCount(email, 1)
 
   await login(page, username, password)

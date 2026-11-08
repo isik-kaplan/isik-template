@@ -9,5 +9,6 @@
   "background_jobs": "celery-with-beat",
   "storage": "disk",
   "cache": "database",
-  "webhooks": "staff"
+  "webhooks": "staff",
+  "phone": "optional"
 }

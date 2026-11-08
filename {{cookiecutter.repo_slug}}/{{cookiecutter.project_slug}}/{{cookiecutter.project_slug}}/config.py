@@ -55,6 +55,9 @@ CONFIG = config(
                 "USERNAME": string(missing_default=""),
                 "EMAIL": string(),
                 "PASSWORD": string(),
+{%- if cookiecutter.phone == "required" %}
+                "PHONE": string(),
+{%- endif %}
             },
         },
         "RATE_LIMITS": {
@@ -100,6 +103,20 @@ CONFIG = config(
 {%- endif %}
             "DEFAULT_FROM": string(),
         },
+{%- if cookiecutter.phone != "none" %}
+        "SMS": {
+            # Only e2e sets it, forcing the file sender despite DEBUG.
+            "BACKEND": string(missing_default=""),
+{%- if cookiecutter.sms == "twilio" %}
+            # Empty in development, where texts go to the log; isik.E024 refuses a production start without them.
+            "TWILIO": {
+                "ACCOUNT_SID": string(missing_default=""),
+                "AUTH_TOKEN": string(missing_default=""),
+                "FROM": string(missing_default=""),
+            },
+{%- endif %}
+        },
+{%- endif %}
         # Push is off until a service has credentials: see .env.example.
         "PUSH": {
             "APNS": {

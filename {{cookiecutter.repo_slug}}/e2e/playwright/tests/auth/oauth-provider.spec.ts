@@ -2,7 +2,7 @@ import { type Page, expect, test } from '@playwright/test'
 
 import { createHash, randomBytes } from 'node:crypto'
 
-import { SUPERUSER, SUPERUSER_PASSWORD, act, asTheSuperuser, login, signUpAndVerify } from '../helpers'
+import { LOGIN_LABEL, SUPERUSER, SUPERUSER_PASSWORD, act, asTheSuperuser, login, signUpAndVerify } from '../helpers'
 
 // Never served by anything: the spec reads the code off the browser's request to it.
 const REDIRECT_URI = 'https://client.testproject.test/callback'
@@ -83,7 +83,7 @@ test('an application is approved, signs somebody in, acts for them, and is shut 
   const visitor = await (await browser.newContext({ ignoreHTTPSErrors: true })).newPage()
   await visitor.goto(authorize.href)
   await expect(visitor).toHaveURL(/\/auth\/login\?next=/)
-  await visitor.getByLabel('Username or email').fill(username)
+  await visitor.getByLabel(LOGIN_LABEL).fill(username)
   await visitor.getByLabel('Password', { exact: true }).fill(PASSWORD)
   await visitor.getByRole('button', { name: 'Log in' }).click()
 

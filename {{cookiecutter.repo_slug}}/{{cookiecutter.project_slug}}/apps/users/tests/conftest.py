@@ -18,6 +18,10 @@ OIDC_PROVIDER_ID = "test-idp"
 AUTHORIZATION_ENDPOINT = "https://idp.example.test/authorize"
 TOKEN_ENDPOINT = "https://idp.example.test/token"
 CALLBACK_URL = "https://auth.example.test/callback"
+{%- if cookiecutter.phone == "required" %}
+# allauth turns away a login by an account with no number and texts one whose number is unverified.
+SIGNS_IN = {"phone": "+14155550101", "phone_verified": True}
+{%- endif %}
 
 
 class Headless:
@@ -55,7 +59,14 @@ def headless(client):
 
 @pytest.fixture
 def alice(db):
+{%- if cookiecutter.phone == "required" %}
+    # Verified: allauth turns away a login by an account with no number, and texts one with an unverified one.
+    user = User.objects.create_user(
+        username="alice", email="alice@example.test", password=PASSWORD, phone="+14155550100", phone_verified=True
+    )
+{%- else %}
     user = User.objects.create_user(username="alice", email="alice@example.test", password=PASSWORD)
+{%- endif %}
     # Verified, so a password login through allauth signs her straight in.
     EmailAddress.objects.create(user=user, email=user.email, verified=True, primary=True)
     return user

@@ -19,6 +19,11 @@ class Command(BaseCommand):
                 email=config.SETUP.SUPERUSER.EMAIL,
                 password=config.SETUP.SUPERUSER.PASSWORD,
                 username=config.SETUP.SUPERUSER.USERNAME or None,
+{%- if cookiecutter.phone == "required" %}
+                # Verified for the same reason as the address: allauth turns away a login with no number.
+                phone=config.SETUP.SUPERUSER.PHONE,
+                phone_verified=True,
+{%- endif %}
             )
             # Without a verified address the account could sign in only to the admin.
             EmailAddress.objects.create(user=user, email=user.email, verified=True, primary=True)

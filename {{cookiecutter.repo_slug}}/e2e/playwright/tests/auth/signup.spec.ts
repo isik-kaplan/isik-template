@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { login } from '../helpers'
+import { login, submitSignup } from '../helpers'
 import { extractLinkFromEmail } from '../mailpit'
 
 test('signup requires email verification before the account can log in', async ({ page }) => {
@@ -8,12 +8,7 @@ test('signup requires email verification before the account can log in', async (
   const email = `${username}@example.test`
   const password = 'correct-horse-battery-staple'
 
-  await page.goto('/auth/signup')
-  await page.getByLabel('Username').fill(username)
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Password', { exact: true }).fill(password)
-  await page.getByRole('button', { name: 'Sign up' }).click()
-  await expect(page).toHaveURL('/auth/signup-email-sent')
+  await submitSignup(page, username, email, password)
 
   // Not logged in yet: email verification is mandatory.
   await page.goto('/')

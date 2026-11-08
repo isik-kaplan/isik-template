@@ -890,7 +890,7 @@
     },
     {
       "mutator": "ArrayDeclaration",
-      "fingerprint": "2b9f6a4a6bdb",
+      "fingerprint": "18aa9e85be64",
       "reason": [
         "equivalent mutant. t's reference never changes across renders in this single-language app, so this",
         "memo never actually recomputes either way."
@@ -2099,6 +2099,134 @@
       "reason": [
         "equivalent mutant while every person manages their own endpoints: mayManageWebhooks answers true for",
         "anybody, so asking it changes nothing until webhooks are staff's alone."
+      ]
+    }
+  ]{% endif %},
+  "src/components/app-auth/PhoneField.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ]{% if cookiecutter.phone != "none" %},
+  "src/app/auth/verify-phone/page.tsx": [
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "8abfebfaf906",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "8abfebfaf906",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
+  "src/components/app-auth/PhoneSection.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "de3bd8ef1765",
+      "reason": [
+        "equivalent mutant. t's reference never changes across renders in this single-language app, so this",
+        "memo never actually recomputes either way."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "b211a16e20ee",
+      "reason": [
+        "equivalent mutant. t's reference never changes across renders in this single-language app, so this",
+        "memo never actually recomputes either way."
+      ]
+    },
+    {
+      "mutator": "ObjectLiteral",
+      "fingerprint": "0d9539b802a5",
+      "reason": [
+        "equivalent mutant. The number field only ever renders after a reset or a fresh mount - the code step",
+        "unmounts it - so starting it at {} rather than '' never reaches the input."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "fda5f5ca427e",
+      "reason": [
+        "equivalent mutant. cva's own defaultVariants fallback treats an empty-string variant the same as unset,",
+        "so \"\" renders identically to 'default' here (verified directly against class-variance- authority)."
+      ]
+    }
+  ],
+  "src/components/app-auth/VerifyPhoneForm.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "de3bd8ef1765",
+      "reason": [
+        "equivalent mutant. t's reference never changes across renders in this single-language app, so this",
+        "memo never actually recomputes either way."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "b211a16e20ee",
+      "reason": [
+        "equivalent mutant. t's reference never changes across renders in this single-language app, so this",
+        "memo never actually recomputes either way."
+      ]
+    },
+    {
+      "mutator": "ObjectLiteral",
+      "fingerprint": "0d9539b802a5",
+      "reason": [
+        "equivalent mutant. The number field only ever renders after a reset or a fresh mount - the code step",
+        "unmounts it - so starting it at {} rather than '' never reaches the input."
       ]
     }
   ]{% endif %}

@@ -2,15 +2,30 @@ import posixpath
 
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.core import context as allauth_context
+{%- if cookiecutter.phone != "none" %}
+from django.conf import settings
+{%- endif %}
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone, translation
+{%- if cookiecutter.phone != "none" %}
+from django.utils.translation import gettext
+{%- endif %}
 from isik.django.apps.notifications.kinds import raise_notice
+{%- if cookiecutter.phone != "none" %}
+from isik.django.sms import SMSError, send_sms
+{%- endif %}
 
 from apps.common.client_ip import client_ip
 from apps.common.email import mjml_template, text_template
 from apps.common.language import saved_language
+{%- if cookiecutter.phone != "none" %}
+from apps.common.logging import SMS_FAILED, log
+{%- endif %}
 from apps.notifications.kinds import ACCOUNT_CHANGED
 from apps.users.login_policy import admits
+{%- if cookiecutter.phone != "none" %}
+from apps.users.models import User
+{%- endif %}
 from apps.users.models.site_settings import SiteSettings
 from apps.users.tasks.account_mail import send_account_mail
 from apps.users.terms import TERMS_VERSION
@@ -66,3 +81,30 @@ class AccountAdapter(DefaultAccountAdapter):
         variant = posixpath.basename(prefix)
         if user is not None and user.pk and variant in ACCOUNT_CHANGED.variants:
             raise_notice(ACCOUNT_CHANGED, variant=variant, snapshot={"user": str(user.pk)})
+{%- if cookiecutter.phone != "none" %}
+
+    # allauth leaves where a phone number lives to the project; here it's two columns on User.
+    def get_phone(self, user):
+        return (user.phone, user.phone_verified) if user.phone else None
+
+    def set_phone(self, user, phone, verified):
+        user.phone, user.phone_verified = phone, verified
+        user.save(update_fields=["phone", "phone_verified"])
+
+    def set_phone_verified(self, user, phone):
+        # A changed number reaches the account only here, once its code came back: allauth never set_phone()s it.
+        self.set_phone(user, phone, True)
+
+    def get_user_by_phone(self, phone):
+        return User.objects.filter(phone=phone).first()
+
+    def send_verification_code_sms(self, user, phone, code, **kwargs):
+        # In the recipient's language, as their mail is.
+        with translation.override(saved_language(user) or translation.get_language()):
+            body = gettext("%(code)s is your %(project)s code.") % {"code": code, "project": settings.PROJECT_NAME}
+        try:
+            send_sms(phone, body)
+        except SMSError as error:
+            # Not a 500 halfway through a signup: the code step stays up, to resend or change the number.
+            log(SMS_FAILED, user=str(user.pk), error=type(error).__name__)
+{%- endif %}

@@ -9,6 +9,7 @@ import {
   NAME_VALUES,
 } from '@/__tests__/support/names'
 import type { NameRequirement } from '@/config/names'
+import type { Phone } from '@/config/phone'
 
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -21,6 +22,13 @@ const requirement = vi.hoisted(() => ({ current: 'username_with_optional_full' a
 vi.mock('@/config/names', () => ({
   get NAME_REQUIREMENT() {
     return requirement.current
+  },
+}))
+
+const phone = vi.hoisted(() => ({ current: 'none' as Phone }))
+vi.mock('@/config/phone', () => ({
+  get PHONE() {
+    return phone.current
   },
 }))
 
@@ -48,6 +56,7 @@ describe('SignupForm', () => {
     vi.mocked(toast.error).mockClear()
     push.mockClear()
     requirement.current = 'username_with_optional_full'
+    phone.current = 'none'
   })
 
   afterEach(() => {
@@ -294,5 +303,126 @@ describe('SignupForm', () => {
     await user.click(screen.getByRole('button', { name: 'Sign up' }))
 
     expect(await screen.findByText('Use at most 150 characters.')).toBeTruthy()
+  })
+
+  it('asks for no phone number while accounts have none', () => {
+    render(<SignupForm />)
+
+    expect(screen.queryByLabelText(/Phone number/)).toBeNull()
+  })
+
+  describe('with phone numbers', () => {
+    async function signUp(user: ReturnType<typeof userEvent.setup>, number: string) {
+      await user.type(screen.getByLabelText('Username'), 'jane')
+      await user.type(screen.getByLabelText('Email'), 'jane@example.com')
+      if (number) await user.type(screen.getByLabelText(/^Phone number/), number)
+      await user.type(screen.getByLabelText('Password'), 'correct-horse-battery')
+      await user.click(screen.getByRole('button', { name: 'Sign up' }))
+    }
+
+    function sent(fetchMock: ReturnType<typeof vi.fn>) {
+      const postCall = fetchMock.mock.calls.find(([request]) => request instanceof Request)
+      return (postCall?.[0] as Request).clone().json()
+    }
+
+    it('asks for the number between the email and the password, required', () => {
+      phone.current = 'required'
+      const { container } = render(<SignupForm />)
+
+      const inputs = [...container.querySelectorAll('input')]
+      expect(inputs.map((input) => input.name).slice(-3)).toEqual(['email', 'phone', 'password'])
+      const input = screen.getByLabelText('Phone number') as HTMLInputElement
+      expect([input.type, input.autocomplete, input.value]).toEqual(['tel', 'tel', ''])
+      expect(screen.getByText('With its + and country code, like +14155550123.')).toBeTruthy()
+      // No refusal yet, so no empty line held open for one.
+      expect(container.querySelectorAll('.text-destructive')).toHaveLength(0)
+    })
+
+    it('refuses a required number left empty, and one not in E.164', async () => {
+      phone.current = 'required'
+      globalThis.fetch = vi.fn()
+      const user = userEvent.setup()
+      render(<SignupForm />)
+
+      await signUp(user, '')
+      expect(await screen.findByText('Enter the number with its + and country code, like +14155550123.')).toBeTruthy()
+
+      await user.type(screen.getByLabelText('Phone number'), '0415 555 0123')
+      await user.click(screen.getByRole('button', { name: 'Sign up' }))
+      expect(screen.getByText('Enter the number with its + and country code, like +14155550123.')).toBeTruthy()
+      expect(globalThis.fetch).not.toHaveBeenCalled()
+    })
+
+    it('sends the number and goes to the code step allauth says is owed', async () => {
+      phone.current = 'required'
+      const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        jsonResponse(401, {
+          status: 401,
+          data: { flows: [{ id: 'login' }, { id: 'verify_phone', is_pending: true }] },
+          meta: { is_authenticated: false },
+        })
+      )
+      globalThis.fetch = fetchMock
+      const user = userEvent.setup()
+      render(<SignupForm />)
+
+      await signUp(user, '+14155550123')
+
+      await vi.waitFor(() => expect(push).toHaveBeenCalledWith('/auth/verify-phone'))
+      expect(await sent(fetchMock)).toEqual({
+        email: 'jane@example.com',
+        phone: '+14155550123',
+        password: 'correct-horse-battery',
+        username: 'jane',
+        first_name: '',
+        last_name: '',
+      })
+    })
+
+    it('labels an optional number so, and sends none when it is left empty', async () => {
+      phone.current = 'optional'
+      const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        jsonResponse(401, {
+          status: 401,
+          data: { flows: [{ id: 'verify_email', is_pending: true }] },
+          meta: { is_authenticated: false },
+        })
+      )
+      globalThis.fetch = fetchMock
+      const user = userEvent.setup()
+      render(<SignupForm />)
+
+      await signUp(user, '')
+
+      await vi.waitFor(() => expect(push).toHaveBeenCalledWith('/auth/signup-email-sent'))
+      expect(screen.getByLabelText('Phone number (optional)')).toBeTruthy()
+      expect(await sent(fetchMock)).not.toHaveProperty('phone')
+    })
+
+    it('still refuses an optional number that is not in E.164', async () => {
+      phone.current = 'optional'
+      globalThis.fetch = vi.fn()
+      const user = userEvent.setup()
+      render(<SignupForm />)
+
+      await signUp(user, '555-0123')
+
+      expect(await screen.findByText('Enter the number with its + and country code, like +14155550123.')).toBeTruthy()
+      expect(globalThis.fetch).not.toHaveBeenCalled()
+    })
+
+    it("shows allauth's refusal of the number beneath it", async () => {
+      phone.current = 'required'
+      globalThis.fetch = vi.fn(async () =>
+        jsonResponse(400, { status: 400, errors: [{ code: 'phone_taken', param: 'phone', message: 'Taken.' }] })
+      )
+      const user = userEvent.setup()
+      render(<SignupForm />)
+
+      await signUp(user, '+14155550123')
+
+      expect(await screen.findByText('Taken.')).toBeTruthy()
+      expect(push).not.toHaveBeenCalled()
+    })
   })
 })

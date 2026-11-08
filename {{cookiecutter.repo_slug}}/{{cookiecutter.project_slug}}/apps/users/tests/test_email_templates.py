@@ -3,6 +3,9 @@ from types import SimpleNamespace
 import pytest
 from django.conf import settings
 from django.core import mail
+{%- if cookiecutter.phone == "required" %}
+from isik.django import sms
+{%- endif %}
 
 from apps.common.email import mjml_template, text_template
 from apps.users.models.user import User
@@ -107,11 +110,28 @@ def test_signup_sends_a_real_confirmation_email(client):
     client.get("/v0/browser/auth/session", HTTP_HOST=host)
     client.post(
         "/v0/browser/auth/signup",
-        data={"username": "newuser", "email": "newuser@example.test", "password": "correct-horse-battery-staple"},
+        data={
+            "username": "newuser",
+            "email": "newuser@example.test",
+{%- if cookiecutter.phone == "required" %}
+            "phone": "+14155550123",
+{%- endif %}
+            "password": "correct-horse-battery-staple",
+        },
         content_type="application/json",
         HTTP_HOST=host,
         HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
     )
+{%- if cookiecutter.phone == "required" %}
+    # The address is confirmed once the number is.
+    client.post(
+        "/v0/browser/auth/phone/verify",
+        data={"code": sms.outbox[0].body.split(" ")[0]},
+        content_type="application/json",
+        HTTP_HOST=host,
+        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+    )
+{%- endif %}
 
     assert len(mail.outbox) == 1
     sent = mail.outbox[0]

@@ -10,7 +10,11 @@ from apps.users.adapters.account import AccountAdapter
 from apps.users.api.serializers.user import UserSerializer
 from apps.users.models.user import User
 from apps.users.names import NOT_OFFERED, REQUIRED, NameRequirement, label
+{%- if cookiecutter.phone == "required" %}
+from apps.users.tests.conftest import PASSWORD, SIGNS_IN
+{%- else %}
 from apps.users.tests.conftest import PASSWORD
+{%- endif %}
 from conftest import versioned
 
 
@@ -22,7 +26,18 @@ def requirement(request, settings):
 
 
 def _signup(headless, **names):
-    return headless.call("POST", "account:signup", {"email": "new@example.test", "password": PASSWORD, **names})
+    return headless.call(
+        "POST",
+        "account:signup",
+        {
+            "email": "new@example.test",
+{%- if cookiecutter.phone == "required" %}
+            "phone": "+14155550123",
+{%- endif %}
+            "password": PASSWORD,
+            **names,
+        },
+    )
 
 
 def _errors(response):
@@ -71,7 +86,11 @@ def test_a_handle_logs_in_only_where_every_account_has_one(requirement):
 
 
 def test_the_project_signs_in_the_way_its_requirement_says():
+{%- if cookiecutter.phone == "required" %}
+    assert django_settings.ACCOUNT_LOGIN_METHODS == NameRequirement.current().login_methods | {"phone"}
+{%- else %}
     assert django_settings.ACCOUNT_LOGIN_METHODS == NameRequirement.current().login_methods
+{%- endif %}
 
 
 def test_the_requirement_reads_the_setting(settings):
@@ -138,7 +157,7 @@ def test_populating_the_username_leaves_it_as_it_was():
 
 @pytest.mark.django_db
 def test_a_handle_signs_in_where_the_requirement_says_so(headless, requirement):
-    user = User.objects.create_user(email="ada@example.test", username="ada", password=PASSWORD)
+    user = User.objects.create_user(email="ada@example.test", username="ada", password=PASSWORD{{ ", **SIGNS_IN" if cookiecutter.phone == "required" }})
     EmailAddress.objects.create(user=user, email=user.email, verified=True, primary=True)
 
     by_handle = headless.call("POST", "account:login", {"username": "ada", "password": PASSWORD})
@@ -148,7 +167,7 @@ def test_a_handle_signs_in_where_the_requirement_says_so(headless, requirement):
 
 @pytest.mark.django_db
 def test_an_address_signs_in_under_every_requirement(headless, requirement):
-    user = User.objects.create_user(email="ada@example.test", password=PASSWORD)
+    user = User.objects.create_user(email="ada@example.test", password=PASSWORD{{ ", **SIGNS_IN" if cookiecutter.phone == "required" }})
     EmailAddress.objects.create(user=user, email=user.email, verified=True, primary=True)
 
     response = headless.call("POST", "account:login", {"email": "ada@example.test", "password": PASSWORD})
@@ -268,7 +287,13 @@ def test_a_name_the_requirement_never_asks_for_cannot_be_given(client, requireme
 
 @pytest.mark.django_db
 def test_the_session_labels_somebody_with_no_handle_by_name(headless):
+{%- if cookiecutter.phone == "required" %}
+    user = User.objects.create_user(
+        email="ada@example.test", first_name="Ada", last_name="Lovelace", password=PASSWORD, **SIGNS_IN
+    )
+{%- else %}
     user = User.objects.create_user(email="ada@example.test", first_name="Ada", last_name="Lovelace", password=PASSWORD)
+{%- endif %}
     EmailAddress.objects.create(user=user, email=user.email, verified=True, primary=True)
 
     response = headless.call("POST", "account:login", {"email": "ada@example.test", "password": PASSWORD})

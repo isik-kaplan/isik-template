@@ -31,6 +31,9 @@ def test_setup_creates_a_superuser_with_the_configured_credentials():
     assert user.username == (config.SETUP.SUPERUSER.USERNAME or None)
     assert user.email == config.SETUP.SUPERUSER.EMAIL
     assert user.check_password(config.SETUP.SUPERUSER.PASSWORD)
+{%- if cookiecutter.phone == "required" %}
+    assert (user.phone, user.phone_verified) == (config.SETUP.SUPERUSER.PHONE, True)
+{%- endif %}
 
 
 @pytest.mark.django_db

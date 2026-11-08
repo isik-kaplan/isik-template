@@ -2,6 +2,7 @@ import { CompleteSignupForm } from '@/components/app-auth/CompleteSignupForm'
 
 import { NAME_FIELDS, NAME_LABELS, NAME_REQUIRED_MESSAGES, NAME_TABLE, NAME_VALUES } from '@/__tests__/support/names'
 import type { NameRequirement } from '@/config/names'
+import type { Phone } from '@/config/phone'
 
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -20,6 +21,13 @@ vi.mock('@/config/names', () => ({
   },
 }))
 
+const phone = vi.hoisted(() => ({ current: 'none' as Phone }))
+vi.mock('@/config/phone', () => ({
+  get PHONE() {
+    return phone.current
+  },
+}))
+
 function jsonResponse(status: number, body: unknown) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 }
@@ -30,6 +38,7 @@ describe('CompleteSignupForm', () => {
   beforeEach(() => {
     push.mockClear()
     requirement.current = 'username_with_optional_full'
+    phone.current = 'none'
   })
 
   afterEach(() => {
@@ -208,5 +217,54 @@ describe('CompleteSignupForm', () => {
         ...Object.fromEntries(offered.map((field) => [field, NAME_VALUES[field]])),
       })
     })
+  })
+
+  it('asks for no phone number while accounts have none', () => {
+    render(<CompleteSignupForm email="jane@example.com" suggestedUsername="jane" />)
+
+    expect(screen.queryByLabelText(/Phone number/)).toBeNull()
+  })
+
+  it('sends the number a provider signup needs and goes to its code step', async () => {
+    phone.current = 'required'
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+      jsonResponse(401, {
+        status: 401,
+        data: { flows: [{ id: 'verify_phone', is_pending: true }] },
+        meta: { is_authenticated: false },
+      })
+    )
+    globalThis.fetch = fetchMock
+    const user = userEvent.setup()
+    render(<CompleteSignupForm email="jane@example.com" suggestedUsername="jane" />)
+
+    await user.type(screen.getByLabelText('Phone number'), '+14155550123')
+    await user.type(screen.getByLabelText('Password'), 'correct-horse-battery')
+    await user.click(screen.getByRole('button', { name: 'Finish signing up' }))
+
+    await vi.waitFor(() => expect(push).toHaveBeenCalledWith('/auth/verify-phone'))
+    expect(push).toHaveBeenCalledTimes(1)
+    const postCall = fetchMock.mock.calls.find(([request]) => request instanceof Request)
+    expect(await (postCall?.[0] as Request).clone().json()).toEqual({
+      email: 'jane@example.com',
+      phone: '+14155550123',
+      password: 'correct-horse-battery',
+      username: 'jane',
+      first_name: '',
+      last_name: '',
+    })
+  })
+
+  it('refuses a provider signup without the number it needs', async () => {
+    phone.current = 'required'
+    globalThis.fetch = vi.fn()
+    const user = userEvent.setup()
+    render(<CompleteSignupForm email="jane@example.com" suggestedUsername="jane" />)
+
+    await user.type(screen.getByLabelText('Password'), 'correct-horse-battery')
+    await user.click(screen.getByRole('button', { name: 'Finish signing up' }))
+
+    expect(await screen.findByText('Enter the number with its + and country code, like +14155550123.')).toBeTruthy()
+    expect(globalThis.fetch).not.toHaveBeenCalled()
   })
 })

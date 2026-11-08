@@ -21,7 +21,14 @@ def test_signup_via_headless_api_leaves_email_verification_pending(client):
     client.get("/v0/browser/auth/session", HTTP_HOST=host)
     response = client.post(
         "/v0/browser/auth/signup",
-        data={"username": "newuser", "email": "newuser@example.test", "password": "correct-horse-battery-staple"},
+        data={
+            "username": "newuser",
+            "email": "newuser@example.test",
+{%- if cookiecutter.phone == "required" %}
+            "phone": "+14155550123",
+{%- endif %}
+            "password": "correct-horse-battery-staple",
+        },
         content_type="application/json",
         HTTP_HOST=host,
         HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
@@ -29,7 +36,12 @@ def test_signup_via_headless_api_leaves_email_verification_pending(client):
     # Mandatory verification: a 401 with a pending verify_email flow.
     assert response.status_code == 401
     flows = {flow["id"]: flow for flow in response.json()["data"]["flows"]}
+{%- if cookiecutter.phone == "required" %}
+    # The number is verified first; the address follows (test_phone.py).
+    assert flows["verify_phone"]["is_pending"] is True
+{%- else %}
     assert flows["verify_email"]["is_pending"] is True
+{%- endif %}
 
 
 @pytest.mark.django_db

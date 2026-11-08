@@ -206,10 +206,21 @@ AUTHENTICATION_BACKENDS = [
 
 # What a signup asks somebody to be called; chosen when the project was generated.
 NAME_REQUIREMENT = NameRequirement.{{ cookiecutter.name_requirement.upper() }}
+{%- if cookiecutter.phone == "required" %}
+# allauth refuses phone as a login method unless signup requires one.
+ACCOUNT_LOGIN_METHODS = NAME_REQUIREMENT.login_methods | {"phone"}
+{%- else %}
 ACCOUNT_LOGIN_METHODS = NAME_REQUIREMENT.login_methods
+{%- endif %}
 # The handle is listed optional under every requirement, so the API schema never changes;
 # apps.users.signup_form applies the requirement. Unlisted, allauth would drop the field.
+{%- if cookiecutter.phone == "required" %}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "phone*", "username", "password1*"]
+{%- elif cookiecutter.phone == "optional" %}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "phone", "username", "password1*"]
+{%- else %}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "username", "password1*"]
+{%- endif %}
 ACCOUNT_SIGNUP_FORM_CLASS = "apps.users.signup_form.SignupNames"
 # allauth's default is the handle, which somebody may not have. Shown to the person themselves and in their mail.
 ACCOUNT_USER_DISPLAY = "apps.users.names.label"
@@ -219,6 +230,15 @@ SOCIALACCOUNT_ADAPTER = "apps.users.adapters.social_account.SocialAccountAdapter
 SOCIALACCOUNT_AUTO_SIGNUP = False
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_EMAIL_NOTIFICATIONS = True
+{%- if cookiecutter.phone != "none" %}
+# allauth spends its 1/m on every request to the phone page: its GET, and the change the reauthentication
+# gate turns back, so the change after the proof was refused. Each change still costs a fresh proof.
+ACCOUNT_RATE_LIMITS = {"change_phone": "5/m/user"}
+# Both off in allauth, which leaves a mistyped number, or a text that never arrived, an account nobody
+# can sign in to: each login texts the same number again. True allows two of each.
+ACCOUNT_PHONE_VERIFICATION_SUPPORTS_CHANGE = True
+ACCOUNT_PHONE_VERIFICATION_SUPPORTS_RESEND = True
+{%- endif %}
 # False, not {}: allauth .update()s its defaults with this, so {} would disable nothing.
 if not config.RATE_LIMITS.ENABLED:  # see pyproject.toml's coverage exclude_lines for why
     ACCOUNT_RATE_LIMITS = False
@@ -469,6 +489,29 @@ PUSH_CREDENTIALS = push_credentials(
     apns_topic=config.PUSH.APNS.TOPIC,
     fcm_credentials=config.PUSH.FCM.CREDENTIALS,
 )
+{%- if cookiecutter.phone != "none" %}
+SMS_SENDERS = {
+    "console": {"BACKEND": "isik.django.sms.backends.console.SMSBackend"},
+    # e2e reads codes from this file, on a volume its browser container shares.
+    "file": {
+        "BACKEND": "isik.django.sms.backends.filebased.SMSBackend",
+        "OPTIONS": {"file_path": "/sms/messages.jsonl"},
+    },
+{%- if cookiecutter.sms == "twilio" %}
+    "twilio": {
+        "BACKEND": "isik.django.sms.backends.twilio.SMSBackend",
+        "OPTIONS": {
+            "account_sid": config.SMS.TWILIO.ACCOUNT_SID,
+            "auth_token": config.SMS.TWILIO.AUTH_TOKEN,
+            "from_": config.SMS.TWILIO.FROM,
+        },
+    },
+{%- endif %}
+}
+if config.SMS.BACKEND == "file":  # see pyproject.toml's coverage exclude_lines for why
+    # isik warns of a sender that reaches no phone with DEBUG off; e2e's is meant to.
+    SILENCED_SYSTEM_CHECKS = [*SILENCED_SYSTEM_CHECKS, "isik.W010"]
+{%- endif %}
 ISIK = {
     "DJANGO": {
         # Time-ordered ids: rows made later sort later, which keeps index pages filling in order.
@@ -485,6 +528,12 @@ ISIK = {
         # The web app watches for this header to sign a tab out once the backend has dropped a dead session cookie.
         "SESSIONS": {"DEAD_SESSION_HEADER": "X-Session-Cleared"},
         "IDEMPOTENCY": {"CLAIM_MODEL": "common.IdempotencyClaim"},
+{%- if cookiecutter.phone != "none" %}
+        # SMS__BACKEND overrides DEBUG's choice, as EMAIL__BACKEND does; a test run makes it isik's outbox.
+        "SMS": {
+            "default": SMS_SENDERS.get(config.SMS.BACKEND, SMS_SENDERS["console" if DEBUG else "{{ cookiecutter.sms }}"]),
+        },
+{%- endif %}
         "CHECKS": {
             # So the next model added names its own table and indexes too.
             Check.DECLARED_NAMES: {CheckOption.ENABLED: True},

@@ -12,12 +12,14 @@ import { Label } from '@/components/base/label'
 import { useClientTranslation } from '@/i18n/client'
 import { authOrigin } from '@/lib/authOrigin'
 import { offeredNames } from '@/lib/names'
+import { VERIFY_PHONE_PATH } from '@/lib/phone'
 import { useAuthValidatedFormState } from '@/lib/submit'
 
-import { AuthApi, hasPendingVerifyEmail } from '@{{ cookiecutter.repo_slug }}/auth-api'
+import { AuthApi, hasPendingVerifyEmail, pendingFlow } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
 import { NameFields, nameSchema, shownNames } from './NameFields'
 import { PasswordInput } from './PasswordInput'
+import { PhoneField, phoneOf, phoneSchema } from './PhoneField'
 import { z } from 'zod'
 
 export function SignupForm() {
@@ -29,6 +31,7 @@ export function SignupForm() {
       z.object({
         ...nameSchema(t),
         email: z.email(t('auth:validationEmailInvalid')),
+        phone: phoneSchema(t),
         password: z.string().min(8, t('auth:validationPasswordMinLength')),
       }),
     [t]
@@ -38,6 +41,7 @@ export function SignupForm() {
     last_name: '',
     username: '',
     email: '',
+    phone: '',
     password: '',
   })
 
@@ -46,14 +50,22 @@ export function SignupForm() {
 
     const authApi = new AuthApi(authOrigin())
     await submit(
-      (value) => authApi.signup({ email: value.email, password: value.password, ...shownNames(value, shown) }),
+      (value) =>
+        authApi.signup({
+          email: value.email,
+          ...phoneOf(value),
+          password: value.password,
+          ...shownNames(value, shown),
+        }),
       {
-        // With mandatory verification, success is a 401 with a pending verify_email flow.
+        // Mandatory verification answers a 401 naming what is owed: the number's code first, when one was given.
         isSuccess: ({ data, error, response }) =>
-          Boolean(data) || (response.status === 401 && hasPendingVerifyEmail(error)),
+          Boolean(data) ||
+          (response.status === 401 && (hasPendingVerifyEmail(error) || Boolean(pendingFlow(error, 'verify_phone')))),
         failure: t('auth:signupError'),
         leavesOnSuccess: true,
-        onSuccess: () => router.push('/auth/signup-email-sent'),
+        onSuccess: ({ error }) =>
+          router.push(pendingFlow(error, 'verify_phone') ? VERIFY_PHONE_PATH : '/auth/signup-email-sent'),
       }
     )
   }
@@ -73,6 +85,7 @@ export function SignupForm() {
         />
         {formErrors?.email && <p className="text-destructive text-sm">{formErrors.email[0]}</p>}
       </div>
+      <PhoneField value={formState.phone} error={formErrors?.phone?.[0]} onChange={handleFormStateEvent('phone')} />
       <div className="flex flex-col gap-2">
         <Label htmlFor="password">{t('auth:signupPasswordLabel')}</Label>
         <PasswordInput

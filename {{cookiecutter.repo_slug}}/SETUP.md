@@ -124,6 +124,10 @@ the profile's Tokens tab.
 - **Email.** With `DEBUG=true` mail is printed to the backend's log. A deployment needs
   `{{ cookiecutter.config_prefix }}__EMAIL__SMTP__*`, or verification and password reset links go nowhere.
 {%- endif %}
+{%- if cookiecutter.phone != "none" and cookiecutter.sms == "twilio" %}
+- **SMS.** With `DEBUG=true` texts are printed to the backend's log. A deployment needs
+  `{{ cookiecutter.config_prefix }}__SMS__TWILIO__*`; without them the backend refuses to start.
+{%- endif %}
 {%- if cookiecutter.storage == "garage" %}
 - **Object storage.** Uploads go to the bundled Garage, on the `storage_data` volume. Back it up;
   `setup.sh` generated its keys.

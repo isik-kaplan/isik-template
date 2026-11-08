@@ -67,6 +67,9 @@ export const SHARDS = {
     'src/app/auth/verify-email-declined/page.tsx',
     'src/app/auth/verify-email/[key]/page.tsx',
     'src/app/auth/verify-email-required/page.tsx',
+{%- if cookiecutter.phone != "none" %}
+    'src/app/auth/verify-phone/page.tsx',
+{%- endif %}
     'src/components/app-auth/AuthCard.tsx',
     'src/components/app-auth/AutoFormButton.tsx',
     'src/components/app-auth/CompleteSignupForm.tsx',
@@ -74,6 +77,7 @@ export const SHARDS = {
     'src/components/app-auth/LoginForm.tsx',
     'src/components/app-auth/NameFields.tsx',
     'src/components/app-auth/PasswordInput.tsx',
+    'src/components/app-auth/PhoneField.tsx',
     'src/components/app-auth/ProveContent.tsx',
     'src/components/app-auth/ProvePasswordForm.tsx',
     'src/components/app-auth/ProveSetPasswordByEmail.tsx',
@@ -84,9 +88,14 @@ export const SHARDS = {
     'src/components/app-auth/SocialLoginButtons.tsx',
     'src/components/app-auth/SocialLoginSection.tsx',
     'src/components/app-auth/VerifyEmailButton.tsx',
+{%- if cookiecutter.phone != "none" %}
+    'src/components/app-auth/VerifyPhoneForm.tsx',
+{%- endif %}
     'src/components/app-auth/icons/brands.tsx',
     'src/config/names.ts',
+    'src/config/phone.ts',
     'src/lib/names.ts',
+    'src/lib/phone.ts',
   ],
   // The signed-in account pages.
   profile: [
@@ -97,6 +106,9 @@ export const SHARDS = {
     'src/app/profile/(tabs)/layout.tsx',
     'src/app/profile/(tabs)/notifications/page.tsx',
     'src/app/profile/(tabs)/password/page.tsx',
+{%- if cookiecutter.phone != "none" %}
+    'src/app/profile/(tabs)/phone/page.tsx',
+{%- endif %}
     'src/app/profile/(tabs)/sessions/page.tsx',
     'src/app/profile/(tabs)/settings/page.tsx',
     'src/app/profile/(tabs)/tokens/page.tsx',
@@ -112,6 +124,9 @@ export const SHARDS = {
     'src/components/app-auth/NotificationsList.tsx',
     'src/components/app-auth/PersonalAccessTokenForm.tsx',
     'src/components/app-auth/PersonalAccessTokensList.tsx',
+{%- if cookiecutter.phone != "none" %}
+    'src/components/app-auth/PhoneSection.tsx',
+{%- endif %}
     'src/components/app-auth/ProfileDetails.tsx',
     'src/components/app-auth/ProfileNameForm.tsx',
     'src/components/app-auth/ProfileTabsList.tsx',

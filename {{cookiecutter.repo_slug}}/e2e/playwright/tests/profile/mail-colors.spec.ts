@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 
+import { submitSignup } from '../helpers'
 import { waitForLatestEmailTo } from '../mailpit'
 
 // Mail is only ever drawn light, so the page it is held to has to be too.
@@ -41,12 +42,7 @@ async function asPixels(page: Page, values: string[]) {
 test("a mail's button wears the same colors as the app's primary button", async ({ page }) => {
   const username = `mailcolors-${Date.now()}`
   const email = `${username}@example.test`
-  await page.goto('/auth/signup')
-  await page.getByLabel('Username').fill(username)
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Password', { exact: true }).fill('correct-horse-battery-staple')
-  await page.getByRole('button', { name: 'Sign up' }).click()
-  await expect(page).toHaveURL('/auth/signup-email-sent')
+  await submitSignup(page, username, email, 'correct-horse-battery-staple')
 
   const mail = buttonColorsIn((await waitForLatestEmailTo(email)).HTML)
 

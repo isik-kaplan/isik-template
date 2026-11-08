@@ -23,6 +23,9 @@ from apps.common.logging.events import (
     RECOVERY_CODES_REGENERATED,
     REQUEST,
     SIGNUP_COMPLETED,
+{%- if cookiecutter.phone != "none" %}
+    SMS_FAILED,
+{%- endif %}
     UNVERIFIED_ACCOUNTS_REMOVED,
     Event,
     declare,
@@ -53,6 +56,9 @@ __all__ = [
     "RECOVERY_CODES_REGENERATED",
     "REQUEST",
     "SIGNUP_COMPLETED",
+{%- if cookiecutter.phone != "none" %}
+    "SMS_FAILED",
+{%- endif %}
     "UNVERIFIED_ACCOUNTS_REMOVED",
     "Event",
     "ambient",

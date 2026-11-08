@@ -11,6 +11,9 @@ from django.conf import settings
 from django.contrib.auth.signals import user_logged_out
 
 from apps.users.models.user import User
+{%- if cookiecutter.phone == "required" %}
+from apps.users.tests.conftest import SIGNS_IN
+{%- endif %}
 
 
 AUTH_HOST = f"auth.{settings.PARENT_HOST}"
@@ -18,7 +21,7 @@ AUTH_HOST = f"auth.{settings.PARENT_HOST}"
 
 @pytest.fixture
 def alice():
-    user = User.objects.create_user(username="alice", email="alice@example.test", password="the-password")
+    user = User.objects.create_user(username="alice", email="alice@example.test", password="the-password"{{ ", **SIGNS_IN" if cookiecutter.phone == "required" }})
     EmailAddress.objects.create(user=user, email=user.email, verified=True, primary=True)
     return user
 
@@ -80,7 +83,14 @@ def test_signing_up_names_the_new_account(client, logged):
         client,
         "post",
         "auth/signup",
-        {"username": "newuser", "email": "newuser@example.test", "password": "correct-horse-battery-staple"},
+        {
+            "username": "newuser",
+            "email": "newuser@example.test",
+{%- if cookiecutter.phone == "required" %}
+            "phone": "+14155550123",
+{%- endif %}
+            "password": "correct-horse-battery-staple",
+        },
     )
 
     user = User.objects.get(username="newuser")
