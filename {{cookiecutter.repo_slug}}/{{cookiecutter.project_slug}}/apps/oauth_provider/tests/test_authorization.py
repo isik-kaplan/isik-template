@@ -74,6 +74,16 @@ def test_another_prompt_leaves_the_session_alone(client, provider, application, 
 
 
 @pytest.mark.django_db
+def test_asking_without_a_prompt_is_refused_back_to_the_application(client, provider, application, signed_in):
+    response = _authorize(client, application, prompt="none")
+
+    location = urlsplit(response["Location"])
+    assert f"{location.scheme}://{location.netloc}{location.path}" == REDIRECT_URI
+    assert parse_qs(location.query)["error"] == ["login_required"]
+    assert parse_qs(location.query)["state"] == ["the-state"]
+
+
+@pytest.mark.django_db
 def test_consenting_returns_a_code_to_the_application(client, provider, application, signed_in):
     response = consent(client, application)
 

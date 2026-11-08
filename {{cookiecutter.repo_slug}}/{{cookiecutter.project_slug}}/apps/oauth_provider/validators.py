@@ -19,6 +19,11 @@ class OAuth2Validator(_OAuth2Validator):
             and admits_session(access_token.user)
         )
 
+    # oauthlib leaves this to the validator and DOT doesn't fill it, so prompt=none raised NotImplementedError: a 500.
+    # Never silent: the client gets login_required back and asks again with a prompt.
+    def validate_silent_login(self, request):
+        return False
+
     def get_additional_claims(self, request):
         user = request.user
         claims = {}
