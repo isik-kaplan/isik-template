@@ -6,7 +6,8 @@ export function scopeLabel(scope: string, t: Translate, described: Record<string
   if (scope === 'openid') return t('auth:oauthScopeOpenid')
   if (scope === 'profile') return t('auth:oauthScopeProfile')
   if (scope === 'email') return t('auth:oauthScopeEmail')
-  return described[scope] ?? scope
+  // An own-property check: a scope named like an Object member (`constructor`) is still just a scope.
+  return Object.hasOwn(described, scope) ? described[scope] : scope
 }
 
 /** The backend's scope list for `scopeLabel`; none when unreadable. */

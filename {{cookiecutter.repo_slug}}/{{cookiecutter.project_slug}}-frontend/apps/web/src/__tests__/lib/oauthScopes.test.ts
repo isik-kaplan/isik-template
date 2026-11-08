@@ -21,6 +21,11 @@ describe('scopeLabel', () => {
     expect(scopeLabel('read:everything', t)).toBe('read:everything')
     expect(scopeLabel('read:everything', t, { other: 'Other' })).toBe('read:everything')
   })
+
+  it('shows a scope named like an Object member as itself, not what Object inherits', () => {
+    expect(scopeLabel('constructor', t)).toBe('constructor')
+    expect(scopeLabel('toString', t, {})).toBe('toString')
+  })
 })
 
 describe('describedScopes', () => {
