@@ -460,31 +460,8 @@ REST_FRAMEWORK = {
     ),
 }
 
-# The web app watches for this header to sign a tab out once the backend has dropped a dead session cookie.
-DEAD_SESSION_HEADER = "X-Session-Cleared"
-# Each row says which build wrote it.
-HISTORY_CONTEXT_KEYS = ("version", "build", "request_id")
-HISTORY_CONTEXT_VERSION = __version__
-HISTORY_CONTEXT_BUILD = config.BUILD
 # isik's track_events already defaults to it; stated so a model tracked with pghistory.track() gets it too.
 PGHISTORY_APPEND_ONLY = True
-# Time-ordered ids: rows made later sort later, which keeps index pages filling in order.
-ISIK_PRIMARY_KEY = "isik.django.apps.common.db.models.uuid7"
-IDEMPOTENCY_CLAIM_MODEL = "common.IdempotencyClaim"
-ISIK_NOTIFICATIONS_KIND_POLICY_MODEL = "notifications.NoticeKindPolicy"
-ISIK_NOTIFICATIONS_NOTICE_MODEL = "notifications.Notice"
-ISIK_NOTIFICATIONS_FAN_OUT_SHARD_MODEL = "notifications.FanOutShard"
-ISIK_NOTIFICATIONS_DELIVERY_MODEL = "notifications.Delivery"
-ISIK_NOTIFICATIONS_WEBHOOK_DELIVERY_MODEL = "notifications.WebhookDelivery"
-ISIK_NOTIFICATIONS_EMAIL_DELIVERY_MODEL = "notifications.EmailDelivery"
-ISIK_NOTIFICATIONS_INBOX_DELIVERY_MODEL = "notifications.InboxDelivery"
-ISIK_NOTIFICATIONS_DELIVERY_ATTEMPT_MODEL = "notifications.DeliveryAttempt"
-ISIK_NOTIFICATIONS_SUBSCRIPTION_MODEL = "notifications.Subscription"
-ISIK_NOTIFICATIONS_INBOX_ITEM_MODEL = "notifications.InboxItem"
-ISIK_NOTIFICATIONS_ENDPOINT_MODEL = "notifications.Endpoint"
-ISIK_NOTIFICATIONS_ENDPOINT_KIND_MODEL = "notifications.EndpointKind"
-ISIK_NOTIFICATIONS_DEVICE_MODEL = "notifications.Device"
-ISIK_NOTIFICATIONS_PUSH_DELIVERY_MODEL = "notifications.PushDelivery"
 PUSH_CREDENTIALS = push_credentials(
     apns_team_id=config.PUSH.APNS.TEAM_ID,
     apns_key_id=config.PUSH.APNS.KEY_ID,
@@ -492,51 +469,83 @@ PUSH_CREDENTIALS = push_credentials(
     apns_topic=config.PUSH.APNS.TOPIC,
     fcm_credentials=config.PUSH.FCM.CREDENTIALS,
 )
-ISIK_NOTIFICATIONS = {
-    # Every kind is declared in apps/notifications/kinds.py, so a name can't be invented at a call site.
-    "REQUIRE_DECLARED_KINDS": True,
+ISIK = {
+    "DJANGO": {
+        # Time-ordered ids: rows made later sort later, which keeps index pages filling in order.
+        "PRIMARY_KEY": "isik.django.apps.common.db.models.uuid7",
+        # The served document in one language, like the generated one: a caller's Accept-Language would
+        # otherwise get it a document the committed clients do not match.
+        "SCHEMA_LANGUAGE": LANGUAGE_CODE,
+        # Each row says which build wrote it.
+        "HISTORY": {
+            "CONTEXT_KEYS": ("version", "build", "request_id"),
+            "CONTEXT_VERSION": __version__,
+            "CONTEXT_BUILD": config.BUILD,
+        },
+        # The web app watches for this header to sign a tab out once the backend has dropped a dead session cookie.
+        "SESSIONS": {"DEAD_SESSION_HEADER": "X-Session-Cleared"},
+        "IDEMPOTENCY": {"CLAIM_MODEL": "common.IdempotencyClaim"},
+        "CHECKS": {
+            # So the next model added names its own table and indexes too.
+            Check.DECLARED_NAMES: {CheckOption.ENABLED: True},
+            # A warning in isik, since a project may mean it; here ATOMIC_REQUESTS is what idempotency counts on.
+            Check.NOT_ATOMIC: {CheckOption.SEVERITY: Severity.ERROR},
+        },
+        "NOTIFICATIONS": {
+            "KIND_POLICY_MODEL": "notifications.NoticeKindPolicy",
+            "NOTICE_MODEL": "notifications.Notice",
+            "FAN_OUT_SHARD_MODEL": "notifications.FanOutShard",
+            "DELIVERY_MODEL": "notifications.Delivery",
+            "WEBHOOK_DELIVERY_MODEL": "notifications.WebhookDelivery",
+            "EMAIL_DELIVERY_MODEL": "notifications.EmailDelivery",
+            "INBOX_DELIVERY_MODEL": "notifications.InboxDelivery",
+            "DELIVERY_ATTEMPT_MODEL": "notifications.DeliveryAttempt",
+            "SUBSCRIPTION_MODEL": "notifications.Subscription",
+            "INBOX_ITEM_MODEL": "notifications.InboxItem",
+            "ENDPOINT_MODEL": "notifications.Endpoint",
+            "ENDPOINT_KIND_MODEL": "notifications.EndpointKind",
+            "DEVICE_MODEL": "notifications.Device",
+            "PUSH_DELIVERY_MODEL": "notifications.PushDelivery",
+            # Every kind is declared in apps/notifications/kinds.py, so a name can't be invented at a call site.
+            "REQUIRE_DECLARED_KINDS": True,
 {%- if cookiecutter.webhooks == "none" %}
-    "CHANNELS": ("inbox", "email", *(("push",) if PUSH_CREDENTIALS else ())),
+            "CHANNELS": ("inbox", "email", *(("push",) if PUSH_CREDENTIALS else ())),
 {%- else %}
-    "CHANNELS": ("inbox", "email", "webhook", *(("push",) if PUSH_CREDENTIALS else ())),
-    # Names the signature header receivers verify, so it's the slug: renaming the product mustn't move it.
-    "PROJECT_NAME": {{ cookiecutter.project_slug.replace("_", "-")|tojson }},
+            "CHANNELS": ("inbox", "email", "webhook", *(("push",) if PUSH_CREDENTIALS else ())),
+            # Names the signature header receivers verify, so it's the slug: renaming the product mustn't move it.
+            "PROJECT_NAME": {{ cookiecutter.project_slug.replace("_", "-")|tojson }},
 {%- endif %}
 {%- if cookiecutter.webhooks == "users" %}
-    # A user's endpoint is sent only notices meant for them.
-    "ENDPOINT_OWNER_FIELD": "owner",
+            # A user's endpoint is sent only notices meant for them.
+            "ENDPOINT_OWNER_FIELD": "owner",
 {%- endif %}
-    "EMAIL_SENDER": "isik.django.apps.notifications.channels.email.send_from_mjml_templates",
-    "RECIPIENT_LANGUAGE": "apps.common.language.saved_language",
-    "PUSH": PUSH_CREDENTIALS,
-    "SUBSCRIPTION_FORCED_KIND": "notification_settings_forced",
-    "KINDS_VISIBLE": "apps.notifications.visible_kinds.visible_kinds",
+            "EMAIL_SENDER": "isik.django.apps.notifications.channels.email.send_from_mjml_templates",
+            "RECIPIENT_LANGUAGE": "apps.common.language.saved_language",
+            "PUSH": PUSH_CREDENTIALS,
+            "SUBSCRIPTION_FORCED_KIND": "notification_settings_forced",
+            "KINDS_VISIBLE": "apps.notifications.visible_kinds.visible_kinds",
 {%- if cookiecutter.background_jobs != "celery-with-beat" %}
-    "FAN_OUT_AFTER_TASKS": True,
+            "FAN_OUT_AFTER_TASKS": True,
 {%- endif %}
 {%- if cookiecutter.background_jobs == "inline" and cookiecutter.webhooks != "none" %}
-    "SENDS_INLINE": SendsInline(
-        reason="Inline means a task runs in the request that asked for it, and a webhook is one such task."
-    ),
+            "SENDS_INLINE": SendsInline(
+                reason="Inline means a task runs in the request that asked for it, and a webhook is one such task."
+            ),
 {%- endif %}
-}
-ISIK_FEATURES_FEATURE_MODEL = "features.Feature"
-ISIK_FEATURES_GRANT_MODEL = "features.FeatureGrant"
-ISIK_FEATURES_SWEEP_MODEL = "features.SweepCursor"
-ISIK_FEATURES_OVERRIDES_MODEL = "features.UserOverrides"
-ISIK_FEATURES = {
-    "SETTINGS": "apps.features.declarations",
-    "GRANT_SOURCES": ("staff", "trial"),
+        },
+        "FEATURES": {
+            "FEATURE_MODEL": "features.Feature",
+            "GRANT_MODEL": "features.FeatureGrant",
+            "SWEEP_MODEL": "features.SweepCursor",
+            "OVERRIDES_MODEL": "features.UserOverrides",
+            "SETTINGS": "apps.features.declarations",
+            "GRANT_SOURCES": ("staff", "trial"),
 {%- if cookiecutter.background_jobs == "celery-with-beat" %}
-    # One run at the next boundary, rather than a minute's tick that almost always finds nothing.
-    "SWEEP": "next_boundary",
+            # One run at the next boundary, rather than a minute's tick that almost always finds nothing.
+            "SWEEP": "next_boundary",
 {%- endif %}
-}
-ISIK_CHECKS = {
-    # So the next model added names its own table and indexes too.
-    Check.DECLARED_NAMES: {CheckOption.ENABLED: True},
-    # A warning in isik, since a project may mean it; here ATOMIC_REQUESTS is what idempotency counts on.
-    Check.NOT_ATOMIC: {CheckOption.SEVERITY: Severity.ERROR},
+        },
+    },
 }
 
 SPECTACULAR_SETTINGS = {
@@ -556,9 +565,6 @@ SPECTACULAR_SETTINGS = {
     # Labels differ per project; the values are the contract.
     "ENUM_GENERATE_CHOICE_DESCRIPTION": False,
 }
-# The served document in one language, like the generated one: a caller's Accept-Language would otherwise
-# get it a document the committed clients do not match.
-ISIK_SCHEMA_LANGUAGE = LANGUAGE_CODE
 
 {%- if cookiecutter.background_jobs == "inline" %}
 # No broker: a task runs in-process on commit (celery_task.py). Countdown/eta is not waited for.

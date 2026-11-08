@@ -16,7 +16,7 @@ from isik.django.apps.notifications.hooks import MIDDLEWARE
 
 def test_a_write_or_a_task_that_left_a_notice_waiting_starts_its_fan_out():
     assert MIDDLEWARE in settings.MIDDLEWARE
-    assert settings.ISIK_NOTIFICATIONS["FAN_OUT_AFTER_TASKS"] is True
+    assert settings.ISIK["DJANGO"]["NOTIFICATIONS"]["FAN_OUT_AFTER_TASKS"] is True
 
 
 def test_a_cron_runs_what_a_beat_would_for_writes_nobody_watched_and_retries_that_fell_due():

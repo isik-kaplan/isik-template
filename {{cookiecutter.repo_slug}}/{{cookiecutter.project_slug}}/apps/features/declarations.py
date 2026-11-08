@@ -1,5 +1,5 @@
 """Every feature a person can be granted, every setting they choose within them, and who may force one. Named by
-ISIK_FEATURES["SETTINGS"], so a setting's columns on UserOverrides come from here."""
+ISIK["DJANGO"]["FEATURES"]["SETTINGS"], so a setting's columns on UserOverrides come from here."""
 
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
