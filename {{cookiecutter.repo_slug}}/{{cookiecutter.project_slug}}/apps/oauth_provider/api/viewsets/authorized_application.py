@@ -56,6 +56,9 @@ class AuthorizedApplicationViewSet(ProvesWhoTheyAre, IdempotencyMixin, Precondit
     @extend_schema(parameters=[APPLICATION_ID], responses={204: None})
     def destroy(self, request, pk=None):
         """Revokes every token the application holds for this person."""
+        # An id that is no number names no application, and the lookups below would raise on it.
+        if not str(pk).isdecimal():
+            return Response(status=status.HTTP_404_NOT_FOUND)
         refresh_tokens = RefreshToken.objects.filter(user=request.user, application_id=pk, revoked__isnull=True)
         access_tokens = AccessToken.objects.filter(user=request.user, application_id=pk)
         if not refresh_tokens.exists() and not access_tokens.exists():

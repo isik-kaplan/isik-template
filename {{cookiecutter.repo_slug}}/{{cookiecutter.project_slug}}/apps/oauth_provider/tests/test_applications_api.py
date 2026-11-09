@@ -624,6 +624,12 @@ def test_somebody_elses_application_is_not_found(client, proven, application):
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("pk", ["abc", "²", "1\x00"])
+def test_an_id_that_is_no_number_is_not_found(client, proven, pk):
+    assert client.delete(api_path("oauth_provider:applications-detail", pk)).status_code == 404
+
+
+@pytest.mark.django_db
 def test_a_scope_is_the_declared_permission_and_no_namesake(client, proven):
     """A row of the same codename under another content type - a third-party app's, say - is not it."""
     Permission.objects.create(content_type=ContentType.objects.get_for_model(User), codename=MANAGE, name="A namesake")

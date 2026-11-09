@@ -161,6 +161,14 @@ def test_an_application_holding_nothing_is_not_found(client, signed_in, applicat
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("pk", ["abc", "²", "1\x00"])
+def test_an_id_that_is_no_number_is_not_found(client, signed_in, headless, pk):
+    headless.prove()
+
+    assert client.delete(_detail(pk)).status_code == 404
+
+
+@pytest.mark.django_db
 def test_a_revoked_application_can_no_longer_read_the_account(client, signed_in, provider, application, headless):
     tokens = tokens_for(client, application)
     headless.prove()

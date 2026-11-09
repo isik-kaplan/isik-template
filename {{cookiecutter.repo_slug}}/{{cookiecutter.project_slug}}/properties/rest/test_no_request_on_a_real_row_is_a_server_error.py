@@ -7,6 +7,7 @@ and the caller has just proved who they are, so a write reaches the view rather 
 
 import time
 from datetime import timedelta
+from urllib.parse import quote
 
 import pytest
 from django.conf import settings
@@ -52,10 +53,11 @@ SCALARS = (
     | st.lists(st.text(max_size=8), max_size=3)
 )
 # The names the API's own fields go by, so a body reaches validation rather than being ignored whole.
-FIELDS = st.sampled_from(
+FIELD_NAMES = (
     "name url is_active is_staff scopes requested_scopes approved_scopes redirect_uris description revoke value "
     "kinds first_name last_name username language email".split()
 )
+FIELDS = st.sampled_from(FIELD_NAMES)
 BODIES = st.dictionaries(FIELDS | st.text(min_size=1, max_size=12), SCALARS, max_size=5)
 
 
@@ -118,8 +120,23 @@ def test_every_detail_route_found_a_row(caller):
 @pytest.mark.parametrize(("method", "path"), ROUTES)
 @given(body=BODIES)
 def test_no_request_is_a_server_error(body, method, path, caller):
-    cache.clear()
+    _assert_answered(caller, method, path, _an_id(caller, path), body)
+
+
+# Postgres refuses a NUL byte outright, so every route meets one in every run, in its body and in its lookup.
+@pytest.mark.parametrize(("method", "path"), ROUTES)
+@pytest.mark.parametrize("where", ["body", "lookup"])
+def test_a_nul_byte_is_never_a_server_error(where, method, path, caller):
     pk = _an_id(caller, path)
+    for nul in ["\x00", ["\x00"]]:
+        if where == "body":
+            _assert_answered(caller, method, path, pk, dict.fromkeys(FIELD_NAMES, nul))
+    if where == "lookup":
+        _assert_answered(caller, method, path, quote(pk[:4] + "\x00" + pk[4:]), {})
+
+
+def _assert_answered(caller, method, path, pk, body):
+    cache.clear()
     url = path.replace("{pk}", pk)
     with transaction.atomic():
         if method == "get":

@@ -64,8 +64,10 @@ class ApplicationViewSet(ProvesWhoTheyAre, BaseModelViewSet):
 
     def refuse_before_proving(self, request):
         """Before anybody proves themselves for a delete that would be refused anyway."""
+        # An id that is no number is left to the lookup's own 404, as this filter would raise on it.
         if (
             self.action == "destroy"
+            and str(self.kwargs["pk"]).isdecimal()
             and self.get_queryset()
             .filter(pk=self.kwargs["pk"])
             .exclude(approval=Application.Approval.DISABLED)

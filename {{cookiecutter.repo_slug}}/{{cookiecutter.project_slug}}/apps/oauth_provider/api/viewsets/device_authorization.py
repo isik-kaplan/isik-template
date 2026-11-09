@@ -39,6 +39,9 @@ class DeviceAuthorizationViewSet(IdempotencyMixin, PreconditionMixin, viewsets.V
 
     def _waiting(self, user_code):
         """Locked, since an answer is written straight after."""
+        # Postgres refuses to compare a NUL byte at all, and no code holds one.
+        if "\x00" in user_code:
+            raise NotFound(UNKNOWN)
         grant = (
             DeviceGrant.objects.select_for_update()
             .filter(

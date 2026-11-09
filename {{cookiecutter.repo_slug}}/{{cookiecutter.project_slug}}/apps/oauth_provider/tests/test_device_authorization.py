@@ -191,6 +191,16 @@ def test_a_code_nobody_was_given_is_not_found(client, provider, signed_in):
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("action", [None, "approve", "deny"])
+def test_a_code_with_a_nul_byte_is_not_found(client, provider, signed_in, action):
+    code = "BCDF\x00GHJK"
+
+    response = client.post(_detail(code, action)) if action else client.get(_detail(code))
+
+    assert response.status_code == 404
+
+
+@pytest.mark.django_db
 @pytest.mark.parametrize("approval", ["pending", "withdrawn", "disabled"])
 def test_a_device_whose_application_is_not_approved_is_not_found(client, provider, cli, signed_in, approval):
     codes = _ask(cli)

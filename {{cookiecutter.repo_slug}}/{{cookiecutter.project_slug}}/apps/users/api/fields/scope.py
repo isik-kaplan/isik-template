@@ -14,6 +14,12 @@ class ScopeField(serializers.SlugRelatedField):
     def __init__(self, **kwargs):
         super().__init__(slug_field="codename", **kwargs)
 
+    def to_internal_value(self, data):
+        # Postgres refuses to compare a NUL byte at all, so the lookup would raise instead of finding nothing.
+        if isinstance(data, str) and "\x00" in data:
+            self.fail("does_not_exist", slug_name=self.slug_field, value=data)
+        return super().to_internal_value(data)
+
     def get_queryset(self):
         return Permission.objects.filter(
             content_type=ContentType.objects.get_for_model(Permission),
