@@ -59,6 +59,13 @@ def test_a_request_for_claims_is_carried_to_the_consent_page(client, provider, a
 
 
 @pytest.mark.django_db
+def test_a_state_spelled_null_is_still_carried_to_the_consent_page(client, provider, application, signed_in):
+    response = _authorize(client, application, state="null")
+
+    assert parse_qs(urlsplit(response["Location"]).query)["state"] == ["null"]
+
+
+@pytest.mark.django_db
 def test_a_fresh_sign_in_asked_for_ends_the_session_first(client, provider, application, signed_in):
     response = _authorize(client, application, prompt="consent login")
 

@@ -50,7 +50,7 @@ class AuthorizationView(_AuthorizationView):
         }
         for field in CONSENT_FIELDS:
             value = context.get(field)
-            # DOT json-dumps an absent `claims` into the string "null".
-            if value and value != "null":
+            # DOT json-dumps an absent `claims` into the string "null"; a client's own "null" state is kept.
+            if value and not (field == "claims" and value == "null"):
                 params[field] = value
         return HttpResponseRedirect(f"{settings.FRONTEND_ORIGIN}/auth/oauth/authorize?{urlencode(params)}")
