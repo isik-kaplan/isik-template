@@ -1,6 +1,7 @@
 """The project's own wiring: provider credentials read from the environment, a task's build stamp, and the
 admin host's routes."""
 
+import pytest
 from django.urls import resolve
 from hypothesis import given
 from hypothesis import strategies as st
@@ -11,11 +12,12 @@ from {{ cookiecutter.project_slug }}.config import CONFIG
 from {{ cookiecutter.project_slug }}.settings import _social_app_config
 
 
-PROVIDER = st.sampled_from(["google", "github", "openid_connect", "microsoft"])
 ENV = st.none() | st.text(st.characters(codec="ascii", categories=["L", "N"]), max_size=10)
 
 
-@given(provider=PROVIDER, client_id=ENV, secret=ENV, provider_id=ENV, server_url=ENV)
+# One test per provider, so openid_connect's own keys are read in every run.
+@pytest.mark.parametrize("provider", ["google", "github", "openid_connect", "microsoft"])
+@given(client_id=ENV, secret=ENV, provider_id=ENV, server_url=ENV)
 def test_a_providers_app_is_read_from_its_own_environment_keys(
     monkeypatch, provider, client_id, secret, provider_id, server_url
 ):

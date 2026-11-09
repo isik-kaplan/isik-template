@@ -28,10 +28,11 @@ const managed = fc.record({
   email: address,
   first_name: fc.constant(''),
   last_name: fc.constant(''),
-  is_active: fc.option(fc.boolean(), { nil: undefined }),
-  is_staff: fc.option(fc.boolean(), { nil: undefined }),
-  is_superuser: fc.option(fc.boolean(), { nil: undefined }),
-  permissions: fc.option(fc.constant([] as string[]), { nil: undefined }),
+  // Each flag absent as often as set: fc.option leaves one out one time in six.
+  is_active: fc.oneof(fc.constant(undefined), fc.boolean()),
+  is_staff: fc.oneof(fc.constant(undefined), fc.boolean()),
+  is_superuser: fc.oneof(fc.constant(undefined), fc.boolean()),
+  permissions: fc.oneof(fc.constant(undefined), fc.constant([] as string[])),
   last_login: fc.constant(null),
   created_at: fc.constant(''),
   updated_at: fc.constant(''),
@@ -67,7 +68,8 @@ describe('managing somebody', () => {
         expect((document.querySelector(`input[name=${flag}]`) as HTMLInputElement).checked).toBe(held[flag])
       for (const flag of flipped) fireEvent.click(document.querySelector(`input[name=${flag}]`) as HTMLInputElement)
       const granted = offered.slice(0, 1)
-      for (const scope of granted) fireEvent.click(screen.getByRole('checkbox', { name: new RegExp(scope.label) }))
+      for (const scope of granted)
+        fireEvent.click(screen.getByRole('checkbox', { name: new RegExp(`^${scope.label} `) }))
       fireEvent.click(screen.getByRole('button', { name: 'Save' }))
       await vi.waitFor(() => expect(sent).toHaveBeenCalled())
       const request = calls(sent)[0][0] as Request

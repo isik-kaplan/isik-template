@@ -171,12 +171,19 @@ describe('the passkeys', () => {
     )
     .filter((list) => new Set(list.map((passkey) => passkey.name)).size === list.length)
 
-  test.prop([passkeys, fc.boolean(), fc.boolean()])(
-    'are listed, with a way to add one only where this browser can',
-    (list, usable, secure) => {
+  // One property per browser: can, can't, or can't because the page isn't secure.
+  for (const [usable, secure, browserKind] of [
+    [true, true, 'usable'],
+    [false, true, 'unsupported'],
+    [false, false, 'insecure'],
+  ] as const)
+    test.prop([passkeys])(`are listed, with a way to add one only where this browser can: ${browserKind}`, (list) => {
       freshDom()
       browser.secure = secure
-      Object.defineProperty(window, 'PublicKeyCredential', { configurable: true, value: usable ? class {} : undefined })
+      Object.defineProperty(window, 'PublicKeyCredential', {
+        configurable: true,
+        value: usable ? class {} : undefined,
+      })
       render(<PasskeyList passkeys={list} />)
       for (const passkey of list) expect(screen.getByRole('button', { name: `Remove ${passkey.name}` })).toBeTruthy()
       expect(screen.queryByRole('button', { name: 'Add a passkey' }) !== null).toBe(usable)
@@ -186,45 +193,51 @@ describe('the passkeys', () => {
             secure ? "This browser can't use passkeys." : 'Passkeys only work over a secure (https) connection.'
           )
         ).toBeTruthy()
-    }
-  )
+    })
 
   test.prop([passkeys])('are offered for adding on the first paint, before the browser is asked', (list) => {
     // The server pass assumes support and the browser corrects it on hydration; only a markup render reaches it.
     expect(renderToStaticMarkup(<PasskeyList passkeys={list} />)).toContain('Add a passkey')
   })
 
-  test.prop([fc.boolean(), fc.boolean(), fc.boolean(), codes])(
-    'are added through the browser, showing a first set of recovery codes once, and a cancelled prompt adds nothing',
-    async (confirmed, refused, first, recovery) => {
-      freshDom()
-      navigation.refresh.mockClear()
-      Object.defineProperty(window, 'PublicKeyCredential', { configurable: true, value: class {} })
-      browser.credential = confirmed ? { id: 'new' } : null
-      const fetchMock = backend({
-        'GET /v0/browser/account/authenticators/webauthn': json(200, {
-          status: 200,
-          data: { creation_options: { publicKey: { challenge: 'c' } } },
-        }),
-        'POST /v0/browser/account/authenticators/webauthn': refused
-          ? json(400, { status: 400, errors: [{ message: 'Refused.' }] })
-          : json(200, { status: 200, data: {}, meta: { recovery_codes_generated: first } }),
-        'GET /v0/browser/account/authenticators/recovery-codes': json(200, {
-          status: 200,
-          data: { unused_codes: recovery },
-        }),
-      })
-      vi.stubGlobal('fetch', fetchMock)
-      render(<PasskeyList passkeys={[]} />)
-      fireEvent.click(screen.getByRole('button', { name: 'Add a passkey' }))
-      await vi.waitFor(() =>
-        expect((screen.getByRole('button', { name: 'Add a passkey' }) as HTMLButtonElement).disabled).toBe(false)
-      )
-      const added = confirmed && !refused
-      expect(navigation.refresh.mock.calls.length > 0).toBe(added)
-      expect(screen.queryByRole('region', { name: 'Your recovery codes' }) !== null).toBe(added && first)
-    }
-  )
+  // One property per outcome: the first passkey's recovery codes are one draw in eight otherwise.
+  for (const [confirmed, refused, first, outcome] of [
+    [true, false, true, 'added, first'],
+    [true, false, false, 'added'],
+    [true, true, false, 'refused'],
+    [false, false, false, 'cancelled'],
+  ] as const)
+    test.prop([codes])(
+      `are added through the browser, showing a first set of recovery codes once, and a cancelled prompt adds nothing: ${outcome}`,
+      async (recovery) => {
+        freshDom()
+        navigation.refresh.mockClear()
+        Object.defineProperty(window, 'PublicKeyCredential', { configurable: true, value: class {} })
+        browser.credential = confirmed ? { id: 'new' } : null
+        const fetchMock = backend({
+          'GET /v0/browser/account/authenticators/webauthn': json(200, {
+            status: 200,
+            data: { creation_options: { publicKey: { challenge: 'c' } } },
+          }),
+          'POST /v0/browser/account/authenticators/webauthn': refused
+            ? json(400, { status: 400, errors: [{ message: 'Refused.' }] })
+            : json(200, { status: 200, data: {}, meta: { recovery_codes_generated: first } }),
+          'GET /v0/browser/account/authenticators/recovery-codes': json(200, {
+            status: 200,
+            data: { unused_codes: recovery },
+          }),
+        })
+        vi.stubGlobal('fetch', fetchMock)
+        render(<PasskeyList passkeys={[]} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Add a passkey' }))
+        await vi.waitFor(() =>
+          expect((screen.getByRole('button', { name: 'Add a passkey' }) as HTMLButtonElement).disabled).toBe(false)
+        )
+        const added = confirmed && !refused
+        expect(navigation.refresh.mock.calls.length > 0).toBe(added)
+        expect(screen.queryByRole('region', { name: 'Your recovery codes' }) !== null).toBe(added && first)
+      }
+    )
 
   test.prop([passkeys.filter((list) => list.length > 0), fc.boolean()])(
     'are removed one at a time',

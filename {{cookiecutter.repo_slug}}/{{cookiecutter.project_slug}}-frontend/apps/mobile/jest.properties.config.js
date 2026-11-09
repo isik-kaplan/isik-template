@@ -1,6 +1,6 @@
 /**
  * The second suite: every test here states a claim over generated input, and the whole set would reach
- * the app on its own if `__tests__/` did not exist. Its own coverage, gated at the floor already reached.
+ * the app on its own if `__tests__/` did not exist. Its own coverage, gated at 100%.
  * @type {import('jest').Config}
  */
 module.exports = {
@@ -22,6 +22,6 @@ module.exports = {
   ],
   coverageDirectory: 'coverage-properties',
   coverageReporters: ['text', 'json-summary'],
-  // A floor, not the target. A line either runs or it doesn't; a branch can be the one a draw didn't take.
-  coverageThreshold: { global: { lines: 100, functions: 100, branches: 99, statements: 100 } },
+  // Every branch too: a property picks the case it tests and draws only its inputs, so no run misses one.
+  coverageThreshold: { global: { lines: 100, functions: 100, branches: 100, statements: 100 } },
 }

@@ -24,6 +24,11 @@ const options = fc.uniqueArray(fc.record({ value: fc.uuid(), label }), {
   selector: (option) => option.label,
   maxLength: 4,
 })
+const someOptions = fc.uniqueArray(fc.record({ value: fc.uuid(), label }), {
+  selector: (option) => option.label,
+  minLength: 1,
+  maxLength: 4,
+})
 
 describe('a combobox that searches the server', () => {
   test.prop([
@@ -43,59 +48,61 @@ describe('a combobox that searches the server', () => {
   })
 
   // A held value shows its label, else the value itself until a label is known.
-  test.prop([
-    fc.array(fc.stringMatching(/^[a-z]{1,5}$/), { minLength: 1, maxLength: 3 }),
-    options,
-    fc.option(fc.uuid(), { nil: '' }),
-    fc.boolean(),
-  ])(
-    'asks once for what was last typed, says it is searching, shows only that answer, and hands back the one picked',
-    async (typed, found, value, labelled) => {
-      freshDom()
-      // Each answer held until released, so "searching" is read while the search is out however slow the machine.
-      let release = () => {}
-      const out = new Promise<void>((resolve) => (release = resolve))
-      const search = vi.fn(async (term: string): Promise<RemotePage> => {
-        await out
-        return { options: term === typed.at(-1) ? found : [{ value: 'stale', label: 'Stale' }], hasMore: false }
-      })
-      const picked = vi.fn()
-      render(
-        <RemoteCombobox
-          label="Owner"
-          value={value}
-          valueLabel={value && labelled ? 'Chosen' : undefined}
-          anyLabel="Anyone"
-          placeholder="Search"
-          searchingLabel="Searching"
-          emptyLabel="Nobody"
-          moreLabel="More"
-          search={search}
-          onPick={picked}
-          more="button"
-        />
-      )
-      const field = screen.getByRole('combobox') as HTMLInputElement
-      const held = labelled ? 'Chosen' : value
-      expect(field.value).toBe(value ? held : 'Anyone')
-      fireEvent.focus(field)
-      for (const term of typed) fireEvent.change(field, { target: { value: term } })
-      expect(await screen.findByText('Searching')).toBeTruthy()
-      release()
-      await vi.waitFor(() => expect(screen.queryByText('Searching')).toBeNull())
+  // Nothing found leaves only "anyone" to pick; something found picks its first.
+  for (const pick of ['anyone', 'an answer'] as const)
+    test.prop([
+      fc.array(fc.stringMatching(/^[a-z]{1,5}$/), { minLength: 1, maxLength: 3 }),
+      pick === 'anyone' ? fc.constant<RemotePage['options']>([]) : someOptions,
+      fc.option(fc.uuid(), { nil: '' }),
+      fc.boolean(),
+    ])(
+      `asks once for what was last typed, says it is searching, shows only that answer, and hands back the one picked: ${pick}`,
+      async (typed, found, value, labelled) => {
+        freshDom()
+        // Each answer held until released, so "searching" is read while the search is out however slow the machine.
+        let release = () => {}
+        const out = new Promise<void>((resolve) => (release = resolve))
+        const search = vi.fn(async (term: string): Promise<RemotePage> => {
+          await out
+          return { options: term === typed.at(-1) ? found : [{ value: 'stale', label: 'Stale' }], hasMore: false }
+        })
+        const picked = vi.fn()
+        render(
+          <RemoteCombobox
+            label="Owner"
+            value={value}
+            valueLabel={value && labelled ? 'Chosen' : undefined}
+            anyLabel="Anyone"
+            placeholder="Search"
+            searchingLabel="Searching"
+            emptyLabel="Nobody"
+            moreLabel="More"
+            search={search}
+            onPick={picked}
+            more="button"
+          />
+        )
+        const field = screen.getByRole('combobox') as HTMLInputElement
+        const held = labelled ? 'Chosen' : value
+        expect(field.value).toBe(value ? held : 'Anyone')
+        fireEvent.focus(field)
+        for (const term of typed) fireEvent.change(field, { target: { value: term } })
+        expect(await screen.findByText('Searching')).toBeTruthy()
+        release()
+        await vi.waitFor(() => expect(screen.queryByText('Searching')).toBeNull())
 
-      expect(search.mock.calls.map(([term]) => term)).toEqual([typed.at(-1)])
-      expect(screen.queryByText('Stale')).toBeNull()
-      if (found.length === 0) expect(screen.getByText('Nobody')).toBeTruthy()
-      const choices = screen.getAllByRole('option')
-      expect(choices.map((choice) => choice.textContent)).toEqual(['Anyone', ...found.map((option) => option.label)])
-      const index = found.length ? 1 : 0
-      fireEvent.mouseDown(choices[index])
-      fireEvent.click(choices[index])
-      expect(picked).toHaveBeenCalledWith(index ? found[0].value : '')
-      expect(screen.queryByRole('listbox')).toBeNull()
-    }
-  )
+        expect(search.mock.calls.map(([term]) => term)).toEqual([typed.at(-1)])
+        expect(screen.queryByText('Stale')).toBeNull()
+        if (found.length === 0) expect(screen.getByText('Nobody')).toBeTruthy()
+        const choices = screen.getAllByRole('option')
+        expect(choices.map((choice) => choice.textContent)).toEqual(['Anyone', ...found.map((option) => option.label)])
+        const index = pick === 'an answer' ? 1 : 0
+        fireEvent.mouseDown(choices[index])
+        fireEvent.click(choices[index])
+        expect(picked).toHaveBeenCalledWith(index ? found[0].value : '')
+        expect(screen.queryByRole('listbox')).toBeNull()
+      }
+    )
 
   test.prop([
     fc.array(options, { minLength: 1, maxLength: 3 }),
@@ -251,7 +258,8 @@ describe('the command palette', () => {
         at = listed.length ? (at + (key === 'ArrowDown' ? 1 : -1) + listed.length) % listed.length : 0
       }
       if (listed.length === 0) {
-        expect(screen.getByText(new RegExp(needle))).toBeTruthy()
+        // Said in the empty state; the needle may also sit inside a place's name.
+        expect(screen.getAllByText(new RegExp(needle)).length).toBeGreaterThan(0)
         fireEvent.keyDown(field, { key: 'Enter' })
         expect(navigation.push).not.toHaveBeenCalled()
         return

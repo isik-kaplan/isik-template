@@ -231,15 +231,15 @@ cost time:
 
 The frontend has the same second suite in `apps/web/properties/` (fast-check, `npm run test:properties`,
 `vitest.properties.config.mts`){% if cookiecutter.include_mobile %} and `apps/mobile/properties/` (`npm run test:properties`,
-`jest.properties.config.js`){% endif %}, gated at 100% of lines, functions and statements and 99% of branches: a
-branch can be the one a draw didn't take. Where a property lives says where it runs: `properties/server/`
+`jest.properties.config.js`){% endif %}, gated at 100% of everything, branches included. Where a property lives says where it runs: `properties/server/`
 in node, `properties/browser/` in jsdom. What has cost time there:
 
 - The hooks run once per property, not per example. Start each example with `freshDom()` (or reset the
   spies and stores yourself), or 25 renders pile into one document.
-- Draw the deciding outcome rather than independent booleans that have to line up: an outcome that is
-  one in eight is missed by about one run in twenty-five. With more than five outcomes, loop over all of
-  them in each example, or write one property per outcome.
+- Pick the case a property tests, then draw only its inputs: an outcome left to the draw that is one in
+  eight is missed by about one run in twenty-five, and a gate at 100% then fails at random. Write one
+  property per outcome, or loop over every outcome in each example. No seed is pinned: each run draws
+  new inputs within the cases it was told to cover.
 - A bake-time option is a constant in `src/config/`; mock it with a getter over a hoisted holder and draw
   it, so every project's branches run in this one.
 - A field the API document marks optional is drawn absent too, and a refusal is drawn with and without

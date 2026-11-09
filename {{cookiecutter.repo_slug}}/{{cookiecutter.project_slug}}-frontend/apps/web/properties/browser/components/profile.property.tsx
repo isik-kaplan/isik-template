@@ -64,63 +64,78 @@ describe("this person's details", () => {
     }
   )
 
-  test.prop([
-    person.filter((user) => user.username === null),
-    name,
-    name,
-    fc.constantFrom('saved', 'conflict-theirs', 'conflict-mine', 'refused about a name', 'refused about nothing'),
-  ])(
-    'save the names against the version they were read at, offering theirs or mine when somebody else saved first',
-    async (user, first, last, outcome) => {
-      const what = outcome.startsWith('refused') ? 'refused' : outcome
-      const field = outcome === 'refused about a name' ? 'first_name' : undefined
-      freshDom()
-      project.requirement = 'full_only'
-      const theirs = {
-        ...user,
-        first_name: 'Theirs',
-        last_name: 'Theirs',
-        is_staff: false,
-        is_superuser: false,
-        permissions: [],
-        id: crypto.randomUUID(),
-        created_at: '',
-        updated_at: '',
-      }
-      let call = 0
-      const sent = vi.fn(async (input: RequestInfo | URL) => {
-        call++
-        const request = input as Request
-        if (what === 'refused') return drfRefusal('Too odd.', field)
-        if (what.startsWith('conflict') && call === 1)
-          return json(412, { detail: 'stale', code: 'stale', current: theirs }, { ETag: '"2"' })
-        const body = await request.clone().json()
-        return json(200, { ...theirs, ...body }, { ETag: '"3"' })
-      })
-      vi.stubGlobal('fetch', sent)
-      render(<ProfileDetails user={Object.assign({ etag: '"1"' }, user)} />)
-      fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
-      fireEvent.change(screen.getByLabelText('First name'), { target: { value: first } })
-      fireEvent.change(screen.getByLabelText('Last name'), { target: { value: last } })
-      fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-      await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(1))
-      const patch = calls(sent)[0][0] as Request
-      expect(patch.headers.get('If-Match')).toBe('"1"')
-      expect(await patch.json()).toEqual({ first_name: first, last_name: last })
+  // One property per answer: drawn among five, some run would miss one.
+  for (const outcome of ['saved', 'conflict-theirs', 'conflict-mine', 'refused about a name', 'refused about nothing'])
+    // Two different names, so the one saved is found once on the page.
+    test.prop([person.filter((user) => user.username === null), fc.uniqueArray(name, { minLength: 2, maxLength: 2 })])(
+      `save the names against the version they were read at, offering theirs or mine when somebody else saved first: ${outcome}`,
+      async (user, [first, last]) => {
+        const what = outcome.startsWith('refused') ? 'refused' : outcome
+        const field = outcome === 'refused about a name' ? 'first_name' : undefined
+        freshDom()
+        project.requirement = 'full_only'
+        const theirs = {
+          ...user,
+          first_name: 'Theirs',
+          last_name: 'Theirs',
+          is_staff: false,
+          is_superuser: false,
+          permissions: [],
+          id: crypto.randomUUID(),
+          created_at: '',
+          updated_at: '',
+        }
+        let call = 0
+        const sent = vi.fn(async (input: RequestInfo | URL) => {
+          call++
+          const request = input as Request
+          if (what === 'refused') return drfRefusal('Too odd.', field)
+          if (what.startsWith('conflict') && call === 1)
+            return json(412, { detail: 'stale', code: 'stale', current: theirs }, { ETag: '"2"' })
+          const body = await request.clone().json()
+          return json(200, { ...theirs, ...body }, { ETag: '"3"' })
+        })
+        vi.stubGlobal('fetch', sent)
+        render(<ProfileDetails user={Object.assign({ etag: '"1"' }, user)} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+        fireEvent.change(screen.getByLabelText('First name'), { target: { value: first } })
+        fireEvent.change(screen.getByLabelText('Last name'), { target: { value: last } })
+        fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+        await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(1))
+        const patch = calls(sent)[0][0] as Request
+        expect(patch.headers.get('If-Match')).toBe('"1"')
+        expect(await patch.json()).toEqual({ first_name: first, last_name: last })
 
-      if (what === 'saved') expect(await screen.findByText(first)).toBeTruthy()
-      if (what === 'refused') expect(await screen.findByText('Too odd.')).toBeTruthy()
-      if (what === 'conflict-theirs') {
-        fireEvent.click(await screen.findByRole('button', { name: 'Use their version' }))
-        expect((screen.getByLabelText('First name') as HTMLInputElement).value).toBe('Theirs')
+        if (what === 'saved') expect(await screen.findByText(first)).toBeTruthy()
+        if (what === 'refused') expect(await screen.findByText('Too odd.')).toBeTruthy()
+        if (what === 'conflict-theirs') {
+          fireEvent.click(await screen.findByRole('button', { name: 'Use their version' }))
+          expect((screen.getByLabelText('First name') as HTMLInputElement).value).toBe('Theirs')
+        }
+        if (what === 'conflict-mine') {
+          fireEvent.click(await screen.findByRole('button', { name: 'Save mine over it' }))
+          await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(2))
+          expect((calls(sent)[1][0] as Request).headers.get('If-Match')).toBe('"2"')
+        }
       }
-      if (what === 'conflict-mine') {
-        fireEvent.click(await screen.findByRole('button', { name: 'Save mine over it' }))
-        await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(2))
-        expect((calls(sent)[1][0] as Request).headers.get('If-Match')).toBe('"2"')
-      }
-    }
-  )
+    )
+})
+
+describe('proving with a second factor', () => {
+  // With and without the types allauth may leave out, each in every run.
+  for (const flow of [{ id: 'mfa_reauthenticate', types: ['recovery_codes'] }, { id: 'mfa_reauthenticate' }])
+    test.prop([sitePath])(`offers a recovery code: ${flow.types ? 'typed' : 'untyped'}`, (next) => {
+      freshDom()
+      render(
+        <ProveContent
+          flows={[flow] as never}
+          next={next}
+          providerAction="http://auth.test-project.test/x"
+          callbackUrl="http://test-project.test/y"
+        />
+      )
+      expect(screen.getByLabelText('Recovery code')).toBeTruthy()
+    })
 })
 
 describe('signing out', () => {

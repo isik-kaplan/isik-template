@@ -43,12 +43,20 @@ def test_the_plaintext_guard_names_its_column_and_refuses_values_without_the_pre
     assert "RAISE EXCEPTION" in body
 
 
+# Every model guarded, or the first missing a guard: picked first, so a run has both.
+@pytest.mark.parametrize("guarded", [True, False])
 @given(
     models=st.dictionaries(
         NAME, st.sets(st.sampled_from([*APPEND_ONLY_TRIGGERS, "another"]), max_size=3), min_size=1, max_size=4
-    )
+    ),
+    dropped=st.sampled_from(APPEND_ONLY_TRIGGERS),
 )
-def test_every_event_model_missing_a_guard_is_named_and_only_those(monkeypatch, models):
+def test_every_event_model_missing_a_guard_is_named_and_only_those(monkeypatch, guarded, models, dropped):
+    first = next(iter(models))
+    if guarded:
+        models = {name: held | set(APPEND_ONLY_TRIGGERS) for name, held in models.items()}
+    else:
+        models = {**models, first: models[first] - {dropped}}
     stubs = {name: type(name, (), {"_meta": SimpleNamespace(label=f"stub.{name}")}) for name in models}
     with monkeypatch.context() as patched:
         patched.setattr(checks, "event_models", lambda: list(stubs.values()))

@@ -40,8 +40,8 @@ export default defineConfig({
       // Named, not defaulted: a run reports only the files it loaded, so a suite that never imports a
       // module would read as 100% of what it did.
       include: ['src/**/*.{ts,tsx}'],
-      // A floor, not the target. A line either runs or it doesn't; a branch can be the one a draw didn't take.
-      thresholds: { lines: 100, functions: 100, branches: 99, statements: 100 },
+      // Every branch too: a property picks the case it tests and draws only its inputs, so no run misses one.
+      thresholds: { lines: 100, functions: 100, branches: 100, statements: 100 },
       // The example suite's own exclusions, and its test code, which isn't this suite's to cover.
       exclude: ['src/**/*.d.ts', 'src/__tests__/**', 'src/instrumentation*.ts', 'src/sentry.*.config.ts'],
       reportsDirectory: 'coverage-properties',

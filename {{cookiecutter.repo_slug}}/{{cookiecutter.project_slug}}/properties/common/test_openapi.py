@@ -21,17 +21,16 @@ def printed(request):
     return request.param, json.loads(out.getvalue())
 
 
+# Every path, not a drawn one: a host whose drawn paths all filled in would leave the rest unchecked.
 @pytest.mark.parametrize("printed", sorted(DOCUMENTS), indirect=True)
-@given(data=st.data())
-def test_every_printed_path_resolves_on_its_own_host(printed, data):
+def test_every_printed_path_resolves_on_its_own_host(printed):
     host, document = printed
-    path = data.draw(st.sampled_from(sorted(document["paths"])))
-
-    assert "{client}" not in path
-    # A templated id resolves once filled in with anything the converter accepts.
-    concrete = path.replace("{id}", "1").replace("{key}", "k")
-    if "{" not in concrete:
-        resolve(concrete, urlconf=get_host(host).urlconf)
+    for path in sorted(document["paths"]):
+        assert "{client}" not in path
+        # A templated id resolves once filled in with anything the converter accepts.
+        concrete = path.replace("{id}", "1").replace("{key}", "k")
+        if "{" not in concrete:
+            resolve(concrete, urlconf=get_host(host).urlconf)
 
 
 @pytest.mark.parametrize("printed", ["auth"], indirect=True)

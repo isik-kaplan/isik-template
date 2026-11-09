@@ -281,14 +281,18 @@ describe('where signing in returns to', () => {
 })
 
 describe("a person's label", () => {
-  const part = fc.option(fc.oneof(fc.constant(''), fc.stringMatching(/^[A-Z][a-z]{1,8}$/)), { nil: undefined })
-  test.prop([
-    part,
-    part,
-    fc.option(fc.oneof(fc.constant(''), fc.stringMatching(/^[a-z]{2,8}$/)), { nil: null }),
-    fc.emailAddress(),
-  ])('is their name, else their handle, else their address', (first, last, username, email) => {
-    const name = `${first ?? ''} ${last ?? ''}`.trim()
-    expect(personLabel({ first_name: first, last_name: last, username, email })).toBe(name || username || email)
-  })
+  const part = fc.oneof(fc.constant(undefined), fc.constant(''), fc.stringMatching(/^[A-Z][a-z]{1,8}$/))
+  const handle = fc.oneof(fc.constant(null), fc.constant(''), fc.stringMatching(/^[a-z]{2,8}$/))
+  // Each fallback in every run: a name, else a handle, else the address.
+  for (const named of [true, false])
+    test.prop([part, part, handle, fc.emailAddress()])(
+      `is their name, else their handle, else their address: ${named ? 'named' : 'unnamed'}`,
+      (drawnFirst, drawnLast, username, email) => {
+        // Unnamed keeps each part's own way of being empty: absent or blank.
+        const first = named ? 'Ada' : drawnFirst && ''
+        const last = named ? drawnLast : drawnLast && ''
+        const name = `${first ?? ''} ${last ?? ''}`.trim()
+        expect(personLabel({ first_name: first, last_name: last, username, email })).toBe(name || username || email)
+      }
+    )
 })

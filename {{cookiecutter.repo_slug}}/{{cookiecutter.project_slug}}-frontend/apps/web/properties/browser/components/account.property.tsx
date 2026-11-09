@@ -52,45 +52,50 @@ describe("this person's sessions", () => {
     }
   )
 
-  // A refusal that says why, or one that does not, which falls back to the list's own words.
-  test.prop([sessions, fc.boolean(), fc.boolean(), fc.boolean()])(
-    'end the one asked for, or all the others, keeping the list the server answers',
-    async (list, everyOther, refused, saysWhy) => {
-      freshDom()
-      navigation.refresh.mockClear()
-      const remaining = list.filter((session) => session.is_current)
-      const sent = vi.fn(async () =>
-        refused
-          ? json(400, { status: 400, errors: saysWhy ? [{ message: 'Not now.' }] : [] })
-          : json(200, { status: 200, data: remaining })
-      )
-      vi.stubGlobal('fetch', sent)
-      render(<SessionsList initialSessions={list} />)
-      const others = list.filter((session) => !session.is_current)
-      if (everyOther && others.length === 0) return
-      fireEvent.click(
-        everyOther
-          ? screen.getByRole('button', { name: /other device/ })
-          : screen.getAllByRole('button', { name: 'Sign out' })[0]
-      )
-      await vi.waitFor(() => expect(calls(sent).some(([input]) => (input as Request).method === 'DELETE')).toBe(true))
-      const deleted = calls(sent)
-        .map(([input]) => input as Request)
-        .find((request) => request.method === 'DELETE') as Request
-      expect((await deleted.json()).sessions).toEqual(everyOther ? others.map((session) => session.id) : [list[0].id])
-      if (refused) {
-        await vi.waitFor(() =>
-          expect(toast.error).toHaveBeenCalledWith(saysWhy ? 'Not now.' : 'Unable to sign out of that device.')
+  // One property per answer: ended, refused saying why, refused saying nothing, which falls back to the list's own words.
+  for (const [refused, saysWhy, label] of [
+    [false, false, 'ended'],
+    [true, true, 'refused, saying why'],
+    [true, false, 'refused, saying nothing'],
+  ] as const)
+    test.prop([sessions, fc.boolean()])(
+      `end the one asked for, or all the others, keeping the list the server answers: ${label}`,
+      async (list, everyOther) => {
+        freshDom()
+        navigation.refresh.mockClear()
+        const remaining = list.filter((session) => session.is_current)
+        const sent = vi.fn(async () =>
+          refused
+            ? json(400, { status: 400, errors: saysWhy ? [{ message: 'Not now.' }] : [] })
+            : json(200, { status: 200, data: remaining })
         )
-        expect(screen.getAllByRole('button', { name: 'Sign out' })).toHaveLength(list.length)
-      } else {
-        await vi.waitFor(() =>
-          expect(screen.getAllByRole('button', { name: 'Sign out' })).toHaveLength(remaining.length)
+        vi.stubGlobal('fetch', sent)
+        render(<SessionsList initialSessions={list} />)
+        const others = list.filter((session) => !session.is_current)
+        if (everyOther && others.length === 0) return
+        fireEvent.click(
+          everyOther
+            ? screen.getByRole('button', { name: /other device/ })
+            : screen.getAllByRole('button', { name: 'Sign out' })[0]
         )
-        expect(navigation.refresh).toHaveBeenCalled()
+        await vi.waitFor(() => expect(calls(sent).some(([input]) => (input as Request).method === 'DELETE')).toBe(true))
+        const deleted = calls(sent)
+          .map(([input]) => input as Request)
+          .find((request) => request.method === 'DELETE') as Request
+        expect((await deleted.json()).sessions).toEqual(everyOther ? others.map((session) => session.id) : [list[0].id])
+        if (refused) {
+          await vi.waitFor(() =>
+            expect(toast.error).toHaveBeenCalledWith(saysWhy ? 'Not now.' : 'Unable to sign out of that device.')
+          )
+          expect(screen.getAllByRole('button', { name: 'Sign out' })).toHaveLength(list.length)
+        } else {
+          await vi.waitFor(() =>
+            expect(screen.getAllByRole('button', { name: 'Sign out' })).toHaveLength(remaining.length)
+          )
+          expect(navigation.refresh).toHaveBeenCalled()
+        }
       }
-    }
-  )
+    )
 })
 
 const providerId = fc.stringMatching(/^[a-z]{3,8}$/)
@@ -220,36 +225,45 @@ const applications = fc
   .filter((list) => new Set(list.map((application) => application.name)).size === list.length)
 
 describe('the apps this person let in', () => {
-  test.prop([applications, fc.nat(), fc.boolean(), fc.boolean()])(
-    'lose their access only once the server took it, and a retry is the same request',
-    async (list, pick, refused, saysWhy) => {
-      freshDom()
-      const sent = vi.fn(async () =>
-        refused ? json(400, saysWhy ? { detail: 'Not yet.' } : {}) : new Response(null, { status: 204 })
-      )
-      vi.stubGlobal('fetch', sent)
-      const described = { 'users:view:user': 'See people' }
-      render(<AuthorizedApplicationsList initialApplications={list} described={described} />)
-      if (list.length === 0) {
-        expect(screen.getByText('No app can see your account.')).toBeTruthy()
-        return
+  test('say so when there are none', () => {
+    freshDom()
+    const described = {}
+    render(<AuthorizedApplicationsList initialApplications={[]} described={described} />)
+    expect(screen.getByText('No app can see your account.')).toBeTruthy()
+  })
+
+  // One property per answer: a refusal that says nothing is one draw in four beside a list that may be empty.
+  for (const [refused, saysWhy, label] of [
+    [false, false, 'taken'],
+    [true, true, 'refused, saying why'],
+    [true, false, 'refused, saying nothing'],
+  ] as const)
+    test.prop([applications.filter((list) => list.length > 0), fc.nat()])(
+      `lose their access only once the server took it, and a retry is the same request: ${label}`,
+      async (list, pick) => {
+        freshDom()
+        const sent = vi.fn(async () =>
+          refused ? json(400, saysWhy ? { detail: 'Not yet.' } : {}) : new Response(null, { status: 204 })
+        )
+        vi.stubGlobal('fetch', sent)
+        const described = { 'users:view:user': 'See people' }
+        render(<AuthorizedApplicationsList initialApplications={list} described={described} />)
+        const target = list[pick % list.length]
+        const row = () => screen.getByText(target.name).closest('li') as HTMLElement
+        if (target.scopes.includes('users:view:user')) expect(row().textContent).toContain('See people')
+        fireEvent.click(within(row()).getByRole('button', { name: 'Remove access' }))
+        await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(1))
+        if (!refused) {
+          await vi.waitFor(() => expect(screen.queryByText(target.name)).toBeNull())
+          return
+        }
+        await vi.waitFor(() =>
+          expect(toast.error).toHaveBeenCalledWith(saysWhy ? 'Not yet.' : 'Could not remove its access.')
+        )
+        fireEvent.click(within(row()).getByRole('button', { name: 'Remove access' }))
+        await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(2))
+        const keys = calls(sent).map(([input]) => (input as Request).headers.get('Idempotency-Key'))
+        expect(keys[1]).toBe(keys[0])
       }
-      const target = list[pick % list.length]
-      const row = () => screen.getByText(target.name).closest('li') as HTMLElement
-      if (target.scopes.includes('users:view:user')) expect(row().textContent).toContain('See people')
-      fireEvent.click(within(row()).getByRole('button', { name: 'Remove access' }))
-      await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(1))
-      if (!refused) {
-        await vi.waitFor(() => expect(screen.queryByText(target.name)).toBeNull())
-        return
-      }
-      await vi.waitFor(() =>
-        expect(toast.error).toHaveBeenCalledWith(saysWhy ? 'Not yet.' : 'Could not remove its access.')
-      )
-      fireEvent.click(within(row()).getByRole('button', { name: 'Remove access' }))
-      await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(2))
-      const keys = calls(sent).map(([input]) => (input as Request).headers.get('Idempotency-Key'))
-      expect(keys[1]).toBe(keys[0])
-    }
-  )
+    )
 })

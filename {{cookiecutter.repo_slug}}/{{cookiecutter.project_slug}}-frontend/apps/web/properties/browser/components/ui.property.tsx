@@ -190,8 +190,8 @@ describe('cards, avatars and placeholders', () => {
       render(
         <Card>
           <CardHeader>
-            <CardTitle>{title}</CardTitle>
-            <CardDescription>{body}</CardDescription>
+            <CardTitle>{`${title} t`}</CardTitle>
+            <CardDescription>{`${body} b`}</CardDescription>
             <CardAction>act</CardAction>
           </CardHeader>
           <CardContent>
@@ -204,8 +204,8 @@ describe('cards, avatars and placeholders', () => {
           <CardFooter>end</CardFooter>
         </Card>
       )
-      expect(screen.getByText(title)).toBeTruthy()
-      expect(screen.getByText(body)).toBeTruthy()
+      expect(screen.getByText(`${title} t`)).toBeTruthy()
+      expect(screen.getByText(`${body} b`)).toBeTruthy()
       expect(screen.getByText(initials)).toBeTruthy()
       expect(screen.getByTestId('skeleton')).toBeTruthy()
     }
@@ -213,21 +213,28 @@ describe('cards, avatars and placeholders', () => {
 })
 
 describe('a loading overlay', () => {
-  test.prop([fc.boolean(), fc.boolean(), fc.option(words, { nil: undefined })])(
-    'keeps its children mounted, shutting them away while loading or disabled, and says why when disabled',
-    (loading, disabled, message) => {
-      freshDom()
-      const { container } = render(
-        <LoadingOverlay loading={loading} disabled={disabled} message={message}>
-          <p>content</p>
-        </LoadingOverlay>
-      )
-      expect(screen.getByText('content')).toBeTruthy()
-      const shut = loading || disabled
-      expect(container.querySelector('[aria-hidden="true"]') !== null).toBe(shut)
-      expect(message !== undefined && screen.queryByText(message) !== null).toBe(Boolean(message) && shut && !loading)
-    }
-  )
+  // One property per state, the message drawn present as often as absent.
+  for (const [loading, disabled] of [
+    [false, false],
+    [false, true],
+    [true, false],
+    [true, true],
+  ])
+    test.prop([fc.oneof(fc.constant(undefined), words)])(
+      `keeps its children mounted, shutting them away while loading or disabled, and says why when disabled: ${loading ? 'loading' : 'idle'}${disabled ? ', disabled' : ''}`,
+      (message) => {
+        freshDom()
+        const { container } = render(
+          <LoadingOverlay loading={loading} disabled={disabled} message={message}>
+            <p>content</p>
+          </LoadingOverlay>
+        )
+        expect(screen.getByText('content')).toBeTruthy()
+        const shut = loading || disabled
+        expect(container.querySelector('[aria-hidden="true"]') !== null).toBe(shut)
+        expect(message !== undefined && screen.queryByText(message) !== null).toBe(Boolean(message) && shut && !loading)
+      }
+    )
 })
 
 describe('markdown and the editor', () => {
@@ -253,33 +260,36 @@ describe('markdown and the editor', () => {
 
 describe('the paginator', () => {
   // The ends drawn on their own: one page in twenty is the first, and either is the end that has no link.
-  test.prop([
-    fc.oneof(fc.integer({ min: 0, max: 1 }), fc.integer({ min: 2, max: 20 })),
-    fc.oneof(fc.constant(1), fc.constant(20), fc.integer({ min: 1, max: 20 })),
-    fc.dictionary(fc.stringMatching(/^[a-z]{1,5}$/), fc.stringMatching(/^[a-z0-9]{1,5}$/), { maxKeys: 2 }),
-  ])(
-    'links the pages either side that exist, keeping the query, and is nothing for one page',
-    async (total, at, query) => {
-      freshDom()
-      const page = Math.min(at, Math.max(total, 1))
-      const node = await Paginator({ queryParams: query, currentPage: page, totalPages: total })
-      if (total <= 1) {
-        expect(node).toBeNull()
-        return
+  // One property per place in the pages: nothing to page, the first, one between, the last.
+  for (const place of ['single', 'first', 'between', 'last'] as const)
+    test.prop([
+      fc.integer({ min: 3, max: 20 }),
+      fc.nat(),
+      fc.dictionary(fc.stringMatching(/^[a-z]{1,5}$/), fc.stringMatching(/^[a-z0-9]{1,5}$/), { maxKeys: 2 }),
+    ])(
+      `links the pages either side that exist, keeping the query, and is nothing for one page: ${place}`,
+      async (pages, pick, query) => {
+        freshDom()
+        const total = place === 'single' ? pick % 2 : pages
+        const page = { single: 1, first: 1, between: 2 + (pick % (pages - 2)), last: pages }[place]
+        const node = await Paginator({ queryParams: query, currentPage: page, totalPages: total })
+        if (total <= 1) {
+          expect(node).toBeNull()
+          return
+        }
+        render(node as React.ReactElement)
+        const previous = screen.getByLabelText('Previous page')
+        const next = screen.getByLabelText('Next page')
+        expect(previous.tagName === 'A').toBe(page > 1)
+        expect(next.tagName === 'A').toBe(page < total)
+        if (page < total) {
+          const href = new URL(next.getAttribute('href') as string, 'http://x')
+          expect(href.searchParams.get('page')).toBe(String(page + 1))
+          for (const [key, value] of Object.entries(query))
+            if (key !== 'page') expect(href.searchParams.get(key)).toBe(value)
+        }
       }
-      render(node as React.ReactElement)
-      const previous = screen.getByLabelText('Previous page')
-      const next = screen.getByLabelText('Next page')
-      expect(previous.tagName === 'A').toBe(page > 1)
-      expect(next.tagName === 'A').toBe(page < total)
-      if (page < total) {
-        const href = new URL(next.getAttribute('href') as string, 'http://x')
-        expect(href.searchParams.get('page')).toBe(String(page + 1))
-        for (const [key, value] of Object.entries(query))
-          if (key !== 'page') expect(href.searchParams.get(key)).toBe(value)
-      }
-    }
-  )
+    )
 })
 
 describe('the session watcher', () => {

@@ -13,32 +13,38 @@ const PLATFORMS: Record<string, string> = { ios: 'apns', android: 'fcm' }
 const development = globalThis as unknown as { __DEV__: boolean }
 
 describe('push registration', () => {
-  it("registers only an allowed phone's own token, for its platform and build, and keeps the id the server gave", async () => {
-    await fc.assert(
-      fc.asyncProperty(
-        fc.boolean(),
-        fc.constantFrom('ios', 'android', 'web'),
-        fc.stringMatching(/^[a-f0-9]{16,64}$/),
-        fc.boolean(),
-        fc.oneof(fc.constant(undefined), fc.uuid()),
-        async (granted, type, token, dev, device) => {
-          kept.clear()
-          development.__DEV__ = dev
-          jest.mocked(ExpoNotifications.requestPermissionsAsync).mockResolvedValue({ granted } as Permission)
-          jest.mocked(ExpoNotifications.getDevicePushTokenAsync).mockResolvedValue({ type, data: token } as Token)
-          const calls = serve(() => (device ? json(201, { id: device }) : json(400, { platform: ['Not valid.'] })))
-          await registerForPush()
-          const registers = granted && type in PLATFORMS
-          expect(calls.map((call) => call.body)).toEqual(
-            registers ? [{ platform: PLATFORMS[type], token, environment: dev ? 'sandbox' : 'production' }] : []
-          )
-          if (registers) expect(calls[0]).toMatchObject({ method: 'POST', path: DEVICES })
-          expect(kept.get('push_device')).toBe(registers ? device : undefined)
-        }
+  // One property per case: refused permission, a platform with no push, kept by the server, refused by it.
+  it.each(['denied', 'web', 'kept', 'refused'])(
+    "registers only an allowed phone's own token, for its platform and build, and keeps the id the server gave: %s",
+    async (situation) => {
+      await fc.assert(
+        fc.asyncProperty(
+          fc.constantFrom('ios', 'android'),
+          fc.stringMatching(/^[a-f0-9]{16,64}$/),
+          fc.boolean(),
+          fc.uuid(),
+          async (mobile, token, dev, id) => {
+            const granted = situation !== 'denied'
+            const type = situation === 'web' ? 'web' : mobile
+            const device = situation === 'refused' ? undefined : id
+            kept.clear()
+            development.__DEV__ = dev
+            jest.mocked(ExpoNotifications.requestPermissionsAsync).mockResolvedValue({ granted } as Permission)
+            jest.mocked(ExpoNotifications.getDevicePushTokenAsync).mockResolvedValue({ type, data: token } as Token)
+            const calls = serve(() => (device ? json(201, { id: device }) : json(400, { platform: ['Not valid.'] })))
+            await registerForPush()
+            const registers = granted && type in PLATFORMS
+            expect(calls.map((call) => call.body)).toEqual(
+              registers ? [{ platform: PLATFORMS[type], token, environment: dev ? 'sandbox' : 'production' }] : []
+            )
+            if (registers) expect(calls[0]).toMatchObject({ method: 'POST', path: DEVICES })
+            expect(kept.get('push_device')).toBe(registers ? device : undefined)
+          }
+        )
       )
-    )
-    development.__DEV__ = true
-  })
+      development.__DEV__ = true
+    }
+  )
 
   it('forgets the kept phone with the server and locally, and asks nothing when none is kept', async () => {
     await fc.assert(

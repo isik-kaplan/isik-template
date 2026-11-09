@@ -5,7 +5,7 @@ import { ProveSetPasswordByEmail } from '@/components/app-auth/ProveSetPasswordB
 import { ResetPasswordForm } from '@/components/app-auth/ResetPasswordForm'
 import { VerifyEmailButton } from '@/components/app-auth/VerifyEmailButton'
 
-import { about, address, allauthRefusal, sitePath } from '../../support/arbitraries'
+import { address, allauthRefusal, sitePath } from '../../support/arbitraries'
 import { freshDom } from '../../support/dom'
 import { calls, navigation, toast } from '../../support/requests'
 import { test } from '@fast-check/vitest'
@@ -28,8 +28,6 @@ function answering(response: () => Response) {
   return posted
 }
 
-// 200 signs in; 401 with no `errors` is a valid key that still needs a login; 400 carries why not.
-const answer = fc.constantFrom(200, 401, 400)
 const respond = (status: number, field?: string) => () => {
   if (status === 200) return json(200, { status: 200, data: { user: {} }, meta: { is_authenticated: true } })
   if (status === 401)
@@ -69,88 +67,110 @@ describe('forgetting a password', () => {
 })
 
 describe('a reset link', () => {
-  test.prop([key, password, answer, about('key', 'password')])(
-    'sets the new password with its key, and goes home or to login, or says it expired',
-    async (resetKey, secret, status, field) => {
-      freshDom()
-      navigation.push.mockClear()
-      const posted = answering(respond(status, field))
-      render(<ResetPasswordForm resetKey={resetKey} />)
-      fireEvent.change(screen.getByLabelText('New password'), { target: { value: secret } })
-      fireEvent.click(screen.getByRole('button', { name: 'Set new password' }))
-      await vi.waitFor(() => expect(posted()).toBeDefined())
-      expect(await (posted() as Request).json()).toEqual({ key: resetKey, password: secret })
-      if (status === 400) expect(await screen.findByText('Expired.')).toBeTruthy()
-      else await vi.waitFor(() => expect(navigation.push).toHaveBeenCalledWith(status === 200 ? '/' : '/auth/login'))
-    }
-  )
+  // One property per answer: a refusal about the password is one draw in twelve otherwise.
+  for (const [status, field] of [
+    [200, undefined],
+    [401, undefined],
+    [400, 'key'],
+    [400, 'password'],
+    [400, undefined],
+  ] as const)
+    test.prop([key, password])(
+      `sets the new password with its key, and goes home or to login, or says it expired: ${status}${field ? ` about the ${field}` : ''}`,
+      async (resetKey, secret) => {
+        freshDom()
+        navigation.push.mockClear()
+        const posted = answering(respond(status, field))
+        render(<ResetPasswordForm resetKey={resetKey} />)
+        fireEvent.change(screen.getByLabelText('New password'), { target: { value: secret } })
+        fireEvent.click(screen.getByRole('button', { name: 'Set new password' }))
+        await vi.waitFor(() => expect(posted()).toBeDefined())
+        expect(await (posted() as Request).json()).toEqual({ key: resetKey, password: secret })
+        if (status === 400) expect(await screen.findByText('Expired.')).toBeTruthy()
+        else await vi.waitFor(() => expect(navigation.push).toHaveBeenCalledWith(status === 200 ? '/' : '/auth/login'))
+      }
+    )
 })
 
 describe('an email confirmation link', () => {
-  test.prop([key, fc.constantFrom(200, 401, 400, 429)])(
-    'confirms with its key, saying beside the button why when it cannot',
-    async (verificationKey, status) => {
-      freshDom()
-      navigation.push.mockClear()
-      const posted = answering(status === 429 ? () => json(429, {}, { 'Retry-After': '9' }) : respond(status, 'key'))
-      render(<VerifyEmailButton verificationKey={verificationKey} />)
-      fireEvent.click(screen.getByRole('button', { name: 'Confirm email address' }))
-      await vi.waitFor(() => expect(posted()).toBeDefined())
-      expect(await (posted() as Request).json()).toEqual({ key: verificationKey })
-      if (status === 400) expect(await screen.findByText('That verification link is no longer valid.')).toBeTruthy()
-      else if (status === 429) expect(await screen.findByText(/9/)).toBeTruthy()
-      else await vi.waitFor(() => expect(navigation.push).toHaveBeenCalledWith(status === 200 ? '/' : '/auth/login'))
-    }
-  )
+  for (const status of [200, 401, 400, 429])
+    test.prop([key])(
+      `confirms with its key, saying beside the button why when it cannot: ${status}`,
+      async (verificationKey) => {
+        freshDom()
+        navigation.push.mockClear()
+        const posted = answering(status === 429 ? () => json(429, {}, { 'Retry-After': '9' }) : respond(status, 'key'))
+        render(<VerifyEmailButton verificationKey={verificationKey} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Confirm email address' }))
+        await vi.waitFor(() => expect(posted()).toBeDefined())
+        expect(await (posted() as Request).json()).toEqual({ key: verificationKey })
+        if (status === 400) expect(await screen.findByText('That verification link is no longer valid.')).toBeTruthy()
+        else if (status === 429) expect(await screen.findByText(/9/)).toBeTruthy()
+        else await vi.waitFor(() => expect(navigation.push).toHaveBeenCalledWith(status === 200 ? '/' : '/auth/login'))
+      }
+    )
 })
 
 describe('changing a password', () => {
-  test.prop([password, password, fc.boolean(), about('current_password', 'new_password')])(
-    'sends both, and empties the form once it changed',
-    async (current, next, refused, field) => {
-      freshDom()
-      const posted = answering(() =>
-        refused ? allauthRefusal('Not your password.', field) : json(200, { status: 200 })
-      )
-      render(<ChangePasswordForm />)
-      fireEvent.change(screen.getByLabelText('Current password'), { target: { value: current } })
-      fireEvent.change(screen.getByLabelText('New password'), { target: { value: next } })
-      fireEvent.click(screen.getByRole('button', { name: 'Change password' }))
-      await vi.waitFor(() => expect(posted()).toBeDefined())
-      expect(await (posted() as Request).json()).toEqual({ current_password: current, new_password: next })
-      if (refused) {
-        expect(await screen.findByText('Not your password.')).toBeTruthy()
-        expect((screen.getByLabelText('New password') as HTMLInputElement).value).toBe(next)
-      } else {
-        await vi.waitFor(() => expect(toast.success).toHaveBeenCalledWith('Password changed.'))
-        expect((screen.getByLabelText('New password') as HTMLInputElement).value).toBe('')
+  // One property per answer, each refusal about each field or none.
+  for (const [refused, field] of [
+    [false, undefined],
+    [true, 'current_password'],
+    [true, 'new_password'],
+    [true, undefined],
+  ] as const)
+    test.prop([password, password])(
+      `sends both, and empties the form once it changed: ${refused ? `refused about ${field ?? 'nothing'}` : 'changed'}`,
+      async (current, next) => {
+        freshDom()
+        const posted = answering(() =>
+          refused ? allauthRefusal('Not your password.', field) : json(200, { status: 200 })
+        )
+        render(<ChangePasswordForm />)
+        fireEvent.change(screen.getByLabelText('Current password'), { target: { value: current } })
+        fireEvent.change(screen.getByLabelText('New password'), { target: { value: next } })
+        fireEvent.click(screen.getByRole('button', { name: 'Change password' }))
+        await vi.waitFor(() => expect(posted()).toBeDefined())
+        expect(await (posted() as Request).json()).toEqual({ current_password: current, new_password: next })
+        if (refused) {
+          expect(await screen.findByText('Not your password.')).toBeTruthy()
+          expect((screen.getByLabelText('New password') as HTMLInputElement).value).toBe(next)
+        } else {
+          await vi.waitFor(() => expect(toast.success).toHaveBeenCalledWith('Password changed.'))
+          expect((screen.getByLabelText('New password') as HTMLInputElement).value).toBe('')
+        }
       }
-    }
-  )
+    )
 })
 
 describe('proving who you are', () => {
-  test.prop([password, sitePath, fc.boolean(), about('password')])(
-    'goes back to what asked for the proof once the password is right',
-    async (secret, next, refused, field) => {
-      freshDom()
-      navigation.replace.mockClear()
-      const posted = answering(() =>
-        refused
-          ? allauthRefusal('Wrong.', field)
-          : json(200, { status: 200, data: { user: {} }, meta: { is_authenticated: true } })
-      )
-      render(<ProvePasswordForm next={next} />)
-      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
-      expect(await screen.findByText('Enter your password.')).toBeTruthy()
-      fireEvent.change(screen.getByLabelText('Password'), { target: { value: secret } })
-      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
-      await vi.waitFor(() => expect(posted()).toBeDefined())
-      expect(await (posted() as Request).json()).toEqual({ password: secret })
-      if (refused) expect(await screen.findByText('Wrong.')).toBeTruthy()
-      else await vi.waitFor(() => expect(navigation.replace).toHaveBeenCalledWith(next))
-    }
-  )
+  // One property per answer, a refusal about the password and about nothing each its own.
+  for (const [refused, field] of [
+    [false, undefined],
+    [true, 'password'],
+    [true, undefined],
+  ] as const)
+    test.prop([password, sitePath])(
+      `goes back to what asked for the proof once the password is right: ${refused ? `refused about ${field ?? 'nothing'}` : 'proved'}`,
+      async (secret, next) => {
+        freshDom()
+        navigation.replace.mockClear()
+        const posted = answering(() =>
+          refused
+            ? allauthRefusal('Wrong.', field)
+            : json(200, { status: 200, data: { user: {} }, meta: { is_authenticated: true } })
+        )
+        render(<ProvePasswordForm next={next} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+        expect(await screen.findByText('Enter your password.')).toBeTruthy()
+        fireEvent.change(screen.getByLabelText('Password'), { target: { value: secret } })
+        fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+        await vi.waitFor(() => expect(posted()).toBeDefined())
+        expect(await (posted() as Request).json()).toEqual({ password: secret })
+        if (refused) expect(await screen.findByText('Wrong.')).toBeTruthy()
+        else await vi.waitFor(() => expect(navigation.replace).toHaveBeenCalledWith(next))
+      }
+    )
 
   test.prop([address])('emails a link to set a first password, and says where it went', async (email) => {
     freshDom()

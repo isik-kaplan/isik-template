@@ -76,28 +76,29 @@ describe('edit mode', () => {
     expect(() => render(<Outside />)).toThrow('within an EditModeProvider')
   })
 
-  test.prop([fc.boolean(), fc.option(words, { nil: undefined }), fc.boolean()])(
-    'offers editing unless held back, saying why when it says, and while saving says so',
-    (disabled, reason, saving) => {
-      freshDom()
-      render(
-        <EditModeProvider>
-          <EditAction disabled={disabled} disabledReason={reason} />
-          <WhileReading>reading</WhileReading>
-          <WhileEditing>
-            <SaveActions isSubmitting={saving} />
-          </WhileEditing>
-        </EditModeProvider>
-      )
-      expect(screen.queryByText(reason ?? '\u0000') !== null).toBe(disabled && reason !== undefined)
-      const edit = screen.getByRole('button', { name: 'Edit' }) as HTMLButtonElement
-      expect(edit.disabled).toBe(disabled)
-      if (disabled) return
-      fireEvent.click(edit)
-      expect(screen.queryByText('reading')).toBeNull()
-      expect(screen.getByRole('button', { name: saving ? 'Saving…' : 'Save' })).toBeTruthy()
-    }
-  )
+  for (const saving of [false, true])
+    test.prop([fc.boolean(), fc.option(words, { nil: undefined })])(
+      `offers editing unless held back, saying why when it says, and while saving says so: ${saving ? 'saving' : 'idle'}`,
+      (disabled, reason) => {
+        freshDom()
+        render(
+          <EditModeProvider>
+            <EditAction disabled={disabled} disabledReason={reason} />
+            <WhileReading>reading</WhileReading>
+            <WhileEditing>
+              <SaveActions isSubmitting={saving} />
+            </WhileEditing>
+          </EditModeProvider>
+        )
+        expect(screen.queryByText(reason ?? '\u0000') !== null).toBe(disabled && reason !== undefined)
+        const edit = screen.getByRole('button', { name: 'Edit' }) as HTMLButtonElement
+        expect(edit.disabled).toBe(disabled)
+        if (disabled) return
+        fireEvent.click(edit)
+        expect(screen.queryByText('reading')).toBeNull()
+        expect(screen.getByRole('button', { name: saving ? 'Saving…' : 'Save' })).toBeTruthy()
+      }
+    )
 })
 
 const TABS: [string, string][] = [
@@ -244,28 +245,35 @@ describe('a drawer', () => {
     expect(() => render(<DrawerContent>x</DrawerContent>)).toThrow('within a Drawer')
   })
 
-  test.prop([
-    fc.constantFrom(...(['down', 'up', 'left', 'right'] as const)),
-    fc.boolean(),
-    fc.boolean(),
-    fc.option(fc.constantFrom([], [0.5, 1]), { nil: undefined }),
-  ])(
-    'slides from the side it is told, with a handle and a backdrop only when asked, marking its snap points',
-    async (side, handle, modal, snapPoints) => {
-      freshDom()
-      render(
-        <Drawer open swipeDirection={side} showSwipeHandle={handle} modal={modal} snapPoints={snapPoints}>
-          <DrawerContent>inside</DrawerContent>
-        </Drawer>
-      )
-      await settle()
-      const popup = document.querySelector('[data-slot=drawer-popup]') as HTMLElement
-      expect(popup.getAttribute('data-swipe-axis')).toBe(side === 'down' || side === 'up' ? 'y' : 'x')
-      expect(popup.hasAttribute('data-snap-points')).toBe((snapPoints?.length ?? 0) > 0)
-      expect(document.querySelector('[data-slot=drawer-swipe-handle]') !== null).toBe(handle)
-      expect(document.querySelector('[data-slot=drawer-overlay]') !== null).toBe(modal)
-    }
-  )
+  // One property per backdrop and snap points: a backdrop marking snap points is one draw in six otherwise.
+  for (const [modal, snapPoints, label] of [
+    [true, [0.5, 1], 'modal, snapping'],
+    [true, undefined, 'modal'],
+    [false, [], 'not modal, no snap points'],
+  ] as const)
+    test.prop([fc.constantFrom(...(['down', 'up', 'left', 'right'] as const)), fc.boolean()])(
+      `slides from the side it is told, with a handle and a backdrop only when asked, marking its snap points: ${label}`,
+      async (side, handle) => {
+        freshDom()
+        render(
+          <Drawer
+            open
+            swipeDirection={side}
+            showSwipeHandle={handle}
+            modal={modal}
+            snapPoints={snapPoints && [...snapPoints]}
+          >
+            <DrawerContent>inside</DrawerContent>
+          </Drawer>
+        )
+        await settle()
+        const popup = document.querySelector('[data-slot=drawer-popup]') as HTMLElement
+        expect(popup.getAttribute('data-swipe-axis')).toBe(side === 'down' || side === 'up' ? 'y' : 'x')
+        expect(popup.hasAttribute('data-snap-points')).toBe((snapPoints?.length ?? 0) > 0)
+        expect(document.querySelector('[data-slot=drawer-swipe-handle]') !== null).toBe(handle)
+        expect(document.querySelector('[data-slot=drawer-overlay]') !== null).toBe(modal)
+      }
+    )
 })
 
 describe('the language switcher', () => {

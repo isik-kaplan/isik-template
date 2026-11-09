@@ -1,3 +1,4 @@
+import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
@@ -22,16 +23,27 @@ def test_nobody_can_be_left_without_a_name(requirement):
     assert {"first_name", "last_name"} <= required or "username" in required
 
 
-@given(requirement=REQUIREMENTS, values=VALUES)
-def test_a_field_is_refused_exactly_when_missing_and_required_or_given_and_not_offered(requirement, values):
+def _refusals(requirement, values):
     expected = {}
     for name, value in values.items():
         if name in requirement.required and value == "":
             expected[name] = REQUIRED
         if name not in requirement.offered and value != "":
             expected[name] = NOT_OFFERED
+    return expected
 
-    assert requirement.refusals(values) == expected
+
+@given(requirement=REQUIREMENTS, values=VALUES)
+def test_a_field_is_refused_exactly_when_missing_and_required_or_given_and_not_offered(requirement, values):
+    assert requirement.refusals(values) == _refusals(requirement, values)
+
+
+# Each requirement, name and value on its own too, so every kind of refusal is met in every run.
+@pytest.mark.parametrize("requirement", list(NameRequirement))
+@pytest.mark.parametrize("name", NAMES)
+@pytest.mark.parametrize("value", ["", "a", " "])
+def test_a_single_field_is_refused_the_same_way(requirement, name, value):
+    assert requirement.refusals({name: value}) == _refusals(requirement, {name: value})
 
 
 @given(requirement=REQUIREMENTS)

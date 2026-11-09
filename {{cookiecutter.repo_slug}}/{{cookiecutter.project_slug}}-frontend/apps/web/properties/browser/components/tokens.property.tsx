@@ -107,65 +107,66 @@ describe("this person's tokens", () => {
     }
   )
 
-  test.prop([
-    scopes,
-    fc.stringMatching(/^[A-Za-z][a-z]{2,8}$/),
-    fc.constantFrom('7', '30', '90', '365', 'lifetime'),
-    fc.stringMatching(/^[a-z0-9]{20,30}$/),
-    // The API document types the secret optional, so an answer without one is drawn too.
-    fc.constantFrom('made', 'refused about its name', 'refused about nothing', 'made, no secret'),
-  ])('makes one with what was chosen, showing its secret once', async (offered, name, expiry, secret, outcome) => {
-    freshDom()
-    const refused = outcome.startsWith('refused')
-    const field = outcome === 'refused about its name' ? 'name' : undefined
-    const sent = vi.fn(async (input: RequestInfo | URL) => {
-      const body = await (input as Request).clone().json()
-      return refused
-        ? drfRefusal('Taken.', field)
-        : json(201, {
-            id: crypto.randomUUID(),
-            ...body,
-            ...(outcome === 'made' ? { token: secret } : {}),
-            last_used_at: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-    })
-    vi.stubGlobal('fetch', sent)
-    render(<PersonalAccessTokensList initialTokens={[]} scopes={offered} />)
-    fireEvent.click(screen.getByRole('button', { name: 'New token' }))
+  // One property per answer; the API document types the secret optional, so an answer without one is one of them.
+  for (const outcome of ['made', 'refused about its name', 'refused about nothing', 'made, no secret'])
+    test.prop([
+      scopes,
+      fc.stringMatching(/^[A-Za-z][a-z]{2,8}$/),
+      fc.constantFrom('7', '30', '90', '365', 'lifetime'),
+      fc.stringMatching(/^[a-z0-9]{20,30}$/),
+    ])(`makes one with what was chosen, showing its secret once: ${outcome}`, async (offered, name, expiry, secret) => {
+      freshDom()
+      const refused = outcome.startsWith('refused')
+      const field = outcome === 'refused about its name' ? 'name' : undefined
+      const sent = vi.fn(async (input: RequestInfo | URL) => {
+        const body = await (input as Request).clone().json()
+        return refused
+          ? drfRefusal('Taken.', field)
+          : json(201, {
+              id: crypto.randomUUID(),
+              ...body,
+              ...(outcome === 'made' ? { token: secret } : {}),
+              last_used_at: null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+      })
+      vi.stubGlobal('fetch', sent)
+      render(<PersonalAccessTokensList initialTokens={[]} scopes={offered} />)
+      fireEvent.click(screen.getByRole('button', { name: 'New token' }))
 
-    fireEvent.click(screen.getByRole('button', { name: 'Make token' }))
-    expect(await screen.findByText('Give the token a name.')).toBeTruthy()
-    expect(sent).not.toHaveBeenCalled()
+      fireEvent.click(screen.getByRole('button', { name: 'Make token' }))
+      expect(await screen.findByText('Give the token a name.')).toBeTruthy()
+      expect(sent).not.toHaveBeenCalled()
 
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: `  ${name} ` } })
-    const chosen = offered.filter((_, index) => index % 2 === 0)
-    for (const scope of chosen) fireEvent.click(screen.getByRole('checkbox', { name: new RegExp(scope.label) }))
-    fireEvent.change(screen.getByLabelText('Expires'), { target: { value: expiry } })
-    fireEvent.click(screen.getByRole('button', { name: 'Make token' }))
-    await vi.waitFor(() => expect(sent).toHaveBeenCalled())
-    const body = await (calls(sent)[0][0] as Request).json()
-    expect(body.name).toBe(name)
-    expect(body.scopes).toEqual(chosen.map((scope) => scope.name).sort())
-    expect('expires_at' in body).toBe(expiry !== 'lifetime')
+      fireEvent.change(screen.getByLabelText('Name'), { target: { value: `  ${name} ` } })
+      const chosen = offered.filter((_, index) => index % 2 === 0)
+      for (const scope of chosen)
+        fireEvent.click(screen.getByRole('checkbox', { name: new RegExp(`^${scope.label} `) }))
+      fireEvent.change(screen.getByLabelText('Expires'), { target: { value: expiry } })
+      fireEvent.click(screen.getByRole('button', { name: 'Make token' }))
+      await vi.waitFor(() => expect(sent).toHaveBeenCalled())
+      const body = await (calls(sent)[0][0] as Request).json()
+      expect(body.name).toBe(name)
+      expect(body.scopes).toEqual(chosen.map((scope) => scope.name).sort())
+      expect('expires_at' in body).toBe(expiry !== 'lifetime')
 
-    if (refused) {
-      expect(await screen.findByText('Taken.')).toBeTruthy()
-      return
-    }
-    if (outcome === 'made, no secret') {
-      expect(await screen.findByText(name)).toBeTruthy()
+      if (refused) {
+        expect(await screen.findByText('Taken.')).toBeTruthy()
+        return
+      }
+      if (outcome === 'made, no secret') {
+        expect(await screen.findByText(name)).toBeTruthy()
+        expect(screen.queryByRole('status')).toBeNull()
+        return
+      }
+      const issued = await screen.findByRole('status')
+      expect(issued.textContent).toContain(secret)
+      fireEvent.click(within(issued).getByRole('button', { name: 'Done' }))
       expect(screen.queryByRole('status')).toBeNull()
-      return
-    }
-    const issued = await screen.findByRole('status')
-    expect(issued.textContent).toContain(secret)
-    fireEvent.click(within(issued).getByRole('button', { name: 'Done' }))
-    expect(screen.queryByRole('status')).toBeNull()
-    expect(screen.queryByText(secret)).toBeNull()
-    expect(screen.getByText(name)).toBeTruthy()
-  })
+      expect(screen.queryByText(secret)).toBeNull()
+      expect(screen.getByText(name)).toBeTruthy()
+    })
 
   test('cancels making one', () => {
     freshDom()

@@ -30,30 +30,32 @@ const SAID: Record<(typeof ACTS)[number], [string, string, string]> = {
 }
 
 describe("an address's own actions", () => {
-  test.prop([emails, fc.constantFrom(...ACTS), fc.boolean()])(
-    'each send their request for that address, and keep the list the server answers',
-    async (rows, act_, works) => {
-      freshDom()
-      const sent = vi.fn(async () =>
-        works ? json(200, { status: 200, data: rows }) : json(400, { status: 400, errors: [] })
-      )
-      vi.stubGlobal('fetch', sent)
-      const kept = vi.fn()
-      const { result } = renderHook(() => useEmailRowActions(t, kept))
-      await act(() => result.current[act_](rows[0].email))
-      // The first call may be the session read that hands out a CSRF cookie.
-      const requests = (sent.mock.calls as unknown as [RequestInfo, RequestInit | undefined][]).map(
-        ([input, init]) => new Request(input, init)
-      )
-      const request = requests.find((each) => each.method !== 'GET') as Request
-      const [method, success, failure] = SAID[act_]
-      expect(request.method).toBe(method)
-      expect(await request.json()).toMatchObject({ email: rows[0].email })
-      if (works) expect(toast.success).toHaveBeenCalledWith(success)
-      else expect(toast.error).toHaveBeenCalledWith(failure)
-      expect(kept).toHaveBeenCalledTimes(works && act_ !== 'resendVerification' ? 1 : 0)
-    }
-  )
+  // One property per act: drawn among three beside whether it worked, one is missed by some runs.
+  for (const act_ of ACTS)
+    test.prop([emails, fc.boolean()])(
+      `each send their request for that address, and keep the list the server answers: ${act_}`,
+      async (rows, works) => {
+        freshDom()
+        const sent = vi.fn(async () =>
+          works ? json(200, { status: 200, data: rows }) : json(400, { status: 400, errors: [] })
+        )
+        vi.stubGlobal('fetch', sent)
+        const kept = vi.fn()
+        const { result } = renderHook(() => useEmailRowActions(t, kept))
+        await act(() => result.current[act_](rows[0].email))
+        // The first call may be the session read that hands out a CSRF cookie.
+        const requests = (sent.mock.calls as unknown as [RequestInfo, RequestInit | undefined][]).map(
+          ([input, init]) => new Request(input, init)
+        )
+        const request = requests.find((each) => each.method !== 'GET') as Request
+        const [method, success, failure] = SAID[act_]
+        expect(request.method).toBe(method)
+        expect(await request.json()).toMatchObject({ email: rows[0].email })
+        if (works) expect(toast.success).toHaveBeenCalledWith(success)
+        else expect(toast.error).toHaveBeenCalledWith(failure)
+        expect(kept).toHaveBeenCalledTimes(works && act_ !== 'resendVerification' ? 1 : 0)
+      }
+    )
 })
 
 describe("this person's addresses", () => {
@@ -104,32 +106,34 @@ describe("this person's addresses", () => {
       for (const name of offered) fireEvent.click(screen.getAllByRole('button', { name })[0])
     })
 
-  test.prop([
-    emails,
-    fc.oneof(address, fc.stringMatching(/^[a-z]{2,8}$/)),
-    fc.constantFrom('added', 'refused about it', 'refused about nothing'),
-  ])('add one only when it is an address, keeping the list the server answers', async (rows, typed, outcome) => {
-    const works = outcome === 'added'
-    const field = outcome === 'refused about it' ? 'email' : undefined
-    freshDom()
-    const sent = vi.fn(async () =>
-      works
-        ? json(200, { status: 200, data: [...rows, { email: typed, primary: false, verified: false }] })
-        : allauthRefusal('Already yours.', field)
+  // One property per case: an address that was added is one draw in six otherwise.
+  for (const outcome of ['added', 'refused about it', 'refused about nothing', 'not an address'])
+    test.prop([emails, address, fc.stringMatching(/^[a-z]{2,8}$/)])(
+      `add one only when it is an address, keeping the list the server answers: ${outcome}`,
+      async (rows, valid, invalid) => {
+        const typed = outcome === 'not an address' ? invalid : valid
+        const works = outcome === 'added'
+        const field = outcome === 'refused about it' ? 'email' : undefined
+        freshDom()
+        const sent = vi.fn(async () =>
+          works
+            ? json(200, { status: 200, data: [...rows, { email: typed, primary: false, verified: false }] })
+            : allauthRefusal('Already yours.', field)
+        )
+        vi.stubGlobal('fetch', sent)
+        render(<EmailsList initialEmails={rows} />)
+        fireEvent.change(screen.getByPlaceholderText('Email'), { target: { value: typed } })
+        // Submitted past the browser's own check of an email field, which jsdom applies to a click too.
+        fireEvent.submit(screen.getByRole('button', { name: 'Add email' }).closest('form') as HTMLFormElement)
+        if (!typed.includes('@')) {
+          expect(await screen.findByText('Enter a valid email address.')).toBeTruthy()
+          expect(sent).not.toHaveBeenCalled()
+          return
+        }
+        if (works) {
+          expect(await screen.findByText(typed)).toBeTruthy()
+          expect((screen.getByPlaceholderText('Email') as HTMLInputElement).value).toBe('')
+        } else expect(await screen.findByText('Already yours.')).toBeTruthy()
+      }
     )
-    vi.stubGlobal('fetch', sent)
-    render(<EmailsList initialEmails={rows} />)
-    fireEvent.change(screen.getByPlaceholderText('Email'), { target: { value: typed } })
-    // Submitted past the browser's own check of an email field, which jsdom applies to a click too.
-    fireEvent.submit(screen.getByRole('button', { name: 'Add email' }).closest('form') as HTMLFormElement)
-    if (!typed.includes('@')) {
-      expect(await screen.findByText('Enter a valid email address.')).toBeTruthy()
-      expect(sent).not.toHaveBeenCalled()
-      return
-    }
-    if (works) {
-      expect(await screen.findByText(typed)).toBeTruthy()
-      expect((screen.getByPlaceholderText('Email') as HTMLInputElement).value).toBe('')
-    } else expect(await screen.findByText('Already yours.')).toBeTruthy()
-  })
 })

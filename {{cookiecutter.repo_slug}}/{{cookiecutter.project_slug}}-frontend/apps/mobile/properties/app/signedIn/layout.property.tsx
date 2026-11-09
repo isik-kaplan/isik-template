@@ -21,13 +21,12 @@ const session = (signedIn: boolean) =>
     : json(401, { status: 401, data: { flows: [] }, meta: { is_authenticated: false } })
 
 describe('the signed-in area', () => {
-  it('lets in only a signed-in visitor, who then asks for pushes and is taken to a tapped one', async () => {
-    await fc.assert(
-      fc.asyncProperty(
-        fc.boolean(),
-        fc.boolean(),
-        fc.constantFrom('allowed', 'denied', 'no token to give'),
-        async (signedIn, tapped, permission) => {
+  // One property per answer to the permission prompt: a failure to get a token is one draw in six otherwise.
+  it.each(['allowed', 'denied', 'no token to give'])(
+    'lets in only a signed-in visitor, who then asks for pushes and is taken to a tapped one: %s',
+    async (permission) => {
+      await fc.assert(
+        fc.asyncProperty(fc.boolean(), fc.boolean(), async (signedIn, tapped) => {
           forgetNavigation()
           kept.clear()
           jest.clearAllMocks()
@@ -53,10 +52,10 @@ describe('the signed-in area', () => {
           expect(jest.mocked(ExpoNotifications.setNotificationHandler).mock.calls).toHaveLength(signedIn ? 1 : 0)
           expect(navigation.push.mock.calls).toEqual(signedIn && tapped ? [['/notifications']] : [])
           await view.unmount()
-        }
+        })
       )
-    )
-  })
+    }
+  )
 
   it('stays loading, and decides nothing, when the screen goes before the session answers', async () => {
     await fc.assert(

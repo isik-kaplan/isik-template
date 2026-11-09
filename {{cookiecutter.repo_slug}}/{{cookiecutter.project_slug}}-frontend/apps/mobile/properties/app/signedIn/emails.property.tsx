@@ -65,15 +65,12 @@ describe('the email addresses screen', () => {
     )
   })
 
-  it('takes the new list when an address is added, and otherwise says why and keeps what was typed', async () => {
-    await fc.assert(
-      fc.asyncProperty(
-        addresses,
-        email,
-        addresses,
-        fc.constantFrom<'saved' | Refused>('saved', ...REFUSED),
-        refusalDetails,
-        async (before, typed, after, outcome, details) => {
+  // One property per answer, so each refusal is met in every run.
+  it.each<'saved' | Refused>(['saved', ...REFUSED])(
+    'takes the new list when an address is added, and otherwise says why and keeps what was typed: %s',
+    async (outcome) => {
+      await fc.assert(
+        fc.asyncProperty(addresses, email, addresses, refusalDetails, async (before, typed, after, details) => {
           kept.clear()
           const calls = serve(({ method }) => {
             if (method === 'GET') return ok(before)
@@ -97,10 +94,10 @@ describe('the email addresses screen', () => {
             )
           }
           await view.unmount()
-        }
+        })
       )
-    )
-  })
+    }
+  )
 
   // One property per act: drawn among three beside whether it was accepted, one is missed by some runs.
   it.each(['make primary', 'resend', 'remove'] as const)(

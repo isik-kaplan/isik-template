@@ -28,7 +28,8 @@ describe('a legal document', () => {
   const language = fc.constantFrom(...languages)
   const written = fc.stringMatching(/^\S[\s\S]{0,40}$/)
 
-  test.prop([slug, language, fc.option(written, { nil: null }), fc.option(written, { nil: null })])(
+  // Absent drawn as often as present: fc.option leaves a file out one time in six, and both out seldom.
+  test.prop([slug, language, fc.oneof(fc.constant(null), written), fc.oneof(fc.constant(null), written)])(
     "is read in the visitor's language, else in English, else is not written yet",
     async (document, wanted, inTheirs, inEnglish) => {
       files.clear()

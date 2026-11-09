@@ -81,31 +81,29 @@ describe("an application's lifecycle", () => {
     if (app.approval === 'withdrawn') expect(screen.getByText(/withdrew it/)).toBeTruthy()
   })
 
-  test.prop([
-    application.filter((app) => app.approval === 'approved' || app.approval === 'disabled'),
-    fc.constantFrom(200, 204, 412, 400),
-    fc.boolean(),
-  ])(
-    'switches it off or on under a key, deletes it against its version, and shows it afresh when it changed meanwhile',
-    async (app, status, deleting) => {
-      freshDom()
-      const answers: Record<number, unknown> = { 412: { detail: 'stale', current: app }, 400: { detail: 'No.' } }
-      const sent = serving(status, answers[status] ?? app)
-      render(<ApplicationLifecycle application={app as never} etag='"1"' />)
-      const offOrDelete = deleting ? 'Delete it' : 'Switch it back on'
-      const act = app.approval === 'approved' ? 'Switch it off' : offOrDelete
-      fireEvent.click(screen.getByRole('button', { name: act }))
-      await vi.waitFor(() => expect(sent).toHaveBeenCalled())
-      const request = last(sent)
-      expect(request.headers.get('Idempotency-Key')).toBeTruthy()
-      if (act === 'Delete it') expect([request.method, request.headers.get('If-Match')]).toEqual(['DELETE', '"1"'])
-      if (status === 412 || (status < 300 && act !== 'Delete it'))
-        await vi.waitFor(() => expect(navigation.refresh).toHaveBeenCalled())
-      if (status < 300 && act === 'Delete it')
-        await vi.waitFor(() => expect(navigation.push).toHaveBeenCalledWith('/applications'))
-      if (status === 400) await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('No.'))
-    }
-  )
+  // One property per answer: drawn among four beside the act, a delete that went through is one in eight.
+  for (const status of [200, 204, 412, 400])
+    test.prop([application.filter((app) => app.approval === 'approved' || app.approval === 'disabled'), fc.boolean()])(
+      `switches it off or on under a key, deletes it against its version, and shows it afresh when it changed meanwhile: ${status}`,
+      async (app, deleting) => {
+        freshDom()
+        const answers: Record<number, unknown> = { 412: { detail: 'stale', current: app }, 400: { detail: 'No.' } }
+        const sent = serving(status, answers[status] ?? app)
+        render(<ApplicationLifecycle application={app as never} etag='"1"' />)
+        const offOrDelete = deleting ? 'Delete it' : 'Switch it back on'
+        const act = app.approval === 'approved' ? 'Switch it off' : offOrDelete
+        fireEvent.click(screen.getByRole('button', { name: act }))
+        await vi.waitFor(() => expect(sent).toHaveBeenCalled())
+        const request = last(sent)
+        expect(request.headers.get('Idempotency-Key')).toBeTruthy()
+        if (act === 'Delete it') expect([request.method, request.headers.get('If-Match')]).toEqual(['DELETE', '"1"'])
+        if (status === 412 || (status < 300 && act !== 'Delete it'))
+          await vi.waitFor(() => expect(navigation.refresh).toHaveBeenCalled())
+        if (status < 300 && act === 'Delete it')
+          await vi.waitFor(() => expect(navigation.push).toHaveBeenCalledWith('/applications'))
+        if (status === 400) await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('No.'))
+      }
+    )
 })
 
 describe("a superuser's review", () => {

@@ -71,7 +71,7 @@ const when = fc
   .map((date) => date.toISOString())
 const feature = fc.record({
   name,
-  label: fc.option(word, { nil: null }),
+  label: fc.oneof(fc.constant(null), word),
   description: fc.constant(''),
   held: fc.boolean(),
   // Every grant ending, drawn on its own: field by field, a feature with an end is seldom drawn.
@@ -96,14 +96,16 @@ describe('a setting', () => {
   })
 
   // Blank drawn on its own: fc.string() makes one too seldom for a number setting to meet it.
-  test.prop([
-    fc.constantFrom('int', 'float', 'text', 'bool'),
-    fc.oneof(fc.integer().map(String), fc.constantFrom('', '  '), fc.string()),
-  ])('is sent as a number only where it is one, and empty text is left for the backend to refuse', (type, draft) => {
-    const value = parsed({ type } as never, draft)
-    if ((type === 'int' || type === 'float') && draft.trim() !== '') expect(value).toBe(Number(draft))
-    else expect(value).toBe(draft)
-  })
+  // One property per type, so every type meets a blank draft in every run.
+  for (const type of ['int', 'float', 'text', 'bool'])
+    test.prop([fc.oneof(fc.integer().map(String), fc.constantFrom('', '  '), fc.string())])(
+      `is sent as a number only where it is one, and empty text is left for the backend to refuse: ${type}`,
+      (draft) => {
+        const value = parsed({ type } as never, draft)
+        if ((type === 'int' || type === 'float') && draft.trim() !== '') expect(value).toBe(Number(draft))
+        else expect(value).toBe(draft)
+      }
+    )
 
   test.prop([feature])('lasts until its last grant ends, and has no end while any grant never does', (each) => {
     const ends = each.grants.map((grant) => grant.expires_at)
@@ -116,80 +118,99 @@ describe('a setting', () => {
 })
 
 describe("this person's settings", () => {
-  test.prop([settings, fc.array(feature, { maxLength: 3 })])(
-    'show each setting by its type, shut where it may not change, and the features held',
-    (list, features) => {
-      freshDom()
-      render(<SettingsList initialSettings={list as never} initialEtag='"1"' features={features as never} />)
-      for (const each of list) {
-        const control = document.getElementById(`setting_${each.name}`) as HTMLInputElement
-        expect(control.disabled).toBe(!each.may_change)
-        expect(control.tagName).toBe(each.type === 'choice' ? 'SELECT' : 'INPUT')
-        if (each.type === 'bool') expect(control.checked).toBe(each.value)
+  // With one held feature that ends and one that never does beside the drawn ones, and with none held at all.
+  for (const holding of [true, false])
+    test.prop([settings, fc.array(feature, { maxLength: 3 })])(
+      `show each setting by its type, shut where it may not change, and the features held: ${holding ? 'some held' : 'none held'}`,
+      (list, drawn) => {
+        freshDom()
+        const ending = {
+          name: 'ending_x',
+          label: null,
+          description: '',
+          held: true,
+          grants: [{ expires_at: '2030-01-01T00:00:00.000Z' }],
+        }
+        const lasting = {
+          name: 'lasting_x',
+          label: 'Lasting',
+          description: '',
+          held: true,
+          grants: [{ expires_at: null }],
+        }
+        const others = drawn.filter((each) => !each.name.endsWith('_x'))
+        const features = holding ? [...others, ending, lasting] : others.map((each) => ({ ...each, held: false }))
+        render(<SettingsList initialSettings={list as never} initialEtag='"1"' features={features as never} />)
+        for (const each of list) {
+          const control = document.getElementById(`setting_${each.name}`) as HTMLInputElement
+          expect(control.disabled).toBe(!each.may_change)
+          expect(control.tagName).toBe(each.type === 'choice' ? 'SELECT' : 'INPUT')
+          if (each.type === 'bool') expect(control.checked).toBe(each.value)
+        }
+        const held = features.filter((each) => each.held)
+        expect(screen.queryByText('No extra features.') !== null).toBe(held.length === 0)
       }
-      const held = features.filter((each) => each.held)
-      expect(screen.queryByText('No extra features.') !== null).toBe(held.length === 0)
-    }
-  )
+    )
 
   // A refusal naming the value, one saying why, or one saying nothing; and others beside it that stay as they were.
-  test.prop([
-    setting.filter((each) => each.may_change),
-    // Each refusal its own outcome: drawn beside the status, any one of them is one example in nine.
-    fc.constantFrom('saved', 'stale', 'refused naming the value', 'refused saying why', 'refused saying nothing'),
-    settings,
-  ])(
-    'save a change against the version they were read at, reading them again when somebody else got there first',
-    async (each, outcome, others) => {
-      const status = { saved: 200, stale: 412 }[outcome as string] ?? 400
-      const refusal =
-        { 'refused naming the value': 'value', 'refused saying why': 'detail' }[outcome as string] ?? 'nothing'
-      freshDom()
-      const changed = { ...each, value: each.type === 'bool' ? !each.value : each.value }
-      const sent = vi.fn(async (input: RequestInfo | URL) => {
-        const request = input as Request
-        if (request.method === 'GET') return json(200, [changed], { ETag: '"3"' })
-        if (status === 200) return json(200, changed, { ETag: '"2"' })
-        if (status === 412) return json(412, { detail: 'stale' })
-        return json(
-          400,
-          { value: { value: ['Not allowed.'] }, detail: { detail: 'Not allowed.' }, nothing: {} }[refusal]
-        )
-      })
-      vi.stubGlobal('fetch', sent)
-      const beside = others.filter((other) => other.name !== each.name)
-      render(<SettingsList initialSettings={[each, ...beside] as never} initialEtag='"1"' features={[]} />)
-      const control = document.getElementById(`setting_${each.name}`) as HTMLInputElement
-      if (each.type === 'bool') fireEvent.click(control)
-      else if (each.type === 'choice') fireEvent.change(control, { target: { value: 'a' } })
-      else {
-        // A value other than the one held, which would leave nothing to save.
-        fireEvent.change(control, {
-          target: { value: each.type === 'int' ? String(Number(each.value) + 1) : `${each.value}x` },
-        })
-        fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-      }
-      await vi.waitFor(() =>
-        expect(sent.mock.calls.some(([input]) => (input as Request).method === 'PATCH')).toBe(true)
-      )
-      const patch = sent.mock.calls
-        .map(([input]) => input as Request)
-        .find((request) => request.method === 'PATCH') as Request
-      expect(patch.headers.get('If-Match')).toBe('"1"')
-      expect((await patch.json()).type).toBe(each.type)
-      if (status === 200) await vi.waitFor(() => expect(toast.success).toHaveBeenCalledWith('Saved.'))
-      if (status === 400)
-        await vi.waitFor(() =>
-          expect(toast.error).toHaveBeenCalledWith(
-            refusal === 'nothing' ? 'That setting could not be saved.' : 'Not allowed.'
+  // One property per answer, each refusal its own.
+  for (const outcome of ['saved', 'stale', 'refused naming the value', 'refused saying why', 'refused saying nothing'])
+    test.prop([setting.filter((each) => each.may_change), settings])(
+      `save a change against the version they were read at, reading them again when somebody else got there first: ${outcome}`,
+      async (each, others) => {
+        const status = { saved: 200, stale: 412 }[outcome as string] ?? 400
+        const refusal =
+          { 'refused naming the value': 'value', 'refused saying why': 'detail' }[outcome as string] ?? 'nothing'
+        freshDom()
+        const changed = { ...each, value: each.type === 'bool' ? !each.value : each.value }
+        const sent = vi.fn(async (input: RequestInfo | URL) => {
+          const request = input as Request
+          if (request.method === 'GET') return json(200, [changed], { ETag: '"3"' })
+          if (status === 200) return json(200, changed, { ETag: '"2"' })
+          if (status === 412) return json(412, { detail: 'stale' })
+          return json(
+            400,
+            { value: { value: ['Not allowed.'] }, detail: { detail: 'Not allowed.' }, nothing: {} }[refusal]
           )
-        )
-      if (status === 412)
+        })
+        vi.stubGlobal('fetch', sent)
+        // Always one other, which a save must leave as it was.
+        const beside = [
+          ...others.filter((other) => other.name !== each.name && other.name !== `${each.name}x`),
+          { ...each, name: `${each.name}x` },
+        ]
+        render(<SettingsList initialSettings={[each, ...beside] as never} initialEtag='"1"' features={[]} />)
+        const control = document.getElementById(`setting_${each.name}`) as HTMLInputElement
+        if (each.type === 'bool') fireEvent.click(control)
+        else if (each.type === 'choice') fireEvent.change(control, { target: { value: 'a' } })
+        else {
+          // A value other than the one held, which would leave nothing to save.
+          fireEvent.change(control, {
+            target: { value: each.type === 'int' ? String(Number(each.value) + 1) : `${each.value}x` },
+          })
+          fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+        }
         await vi.waitFor(() =>
-          expect(sent.mock.calls.some(([input]) => (input as Request).method === 'GET')).toBe(true)
+          expect(sent.mock.calls.some(([input]) => (input as Request).method === 'PATCH')).toBe(true)
         )
-    }
-  )
+        const patch = sent.mock.calls
+          .map(([input]) => input as Request)
+          .find((request) => request.method === 'PATCH') as Request
+        expect(patch.headers.get('If-Match')).toBe('"1"')
+        expect((await patch.json()).type).toBe(each.type)
+        if (status === 200) await vi.waitFor(() => expect(toast.success).toHaveBeenCalledWith('Saved.'))
+        if (status === 400)
+          await vi.waitFor(() =>
+            expect(toast.error).toHaveBeenCalledWith(
+              refusal === 'nothing' ? 'That setting could not be saved.' : 'Not allowed.'
+            )
+          )
+        if (status === 412)
+          await vi.waitFor(() =>
+            expect(sent.mock.calls.some(([input]) => (input as Request).method === 'GET')).toBe(true)
+          )
+      }
+    )
 
   test.prop([setting.filter((each) => each.may_change && each.type === 'bool')])(
     'save nothing without a version to save against',
@@ -255,35 +276,40 @@ describe("this person's notifications", () => {
   )
 
   // The API document types read_at optional, so an answer without one is drawn too.
-  test.prop([items.filter((list) => list.some((each) => !each.read_at)), fc.boolean(), fc.boolean(), fc.boolean()])(
-    'stay read once the server says so, one or all, and tell the bell',
-    async (list, all, ok, stamped) => {
-      freshDom()
-      const told = vi.fn()
-      window.addEventListener(NOTIFICATIONS_READ, told)
-      vi.stubGlobal(
-        'fetch',
-        vi.fn(async () => (ok ? json(200, stamped ? { read_at: new Date().toISOString() } : {}) : json(500, {})))
-      )
-      render(<NotificationsList initialItems={list as never} initialKinds={[]} />)
-      const unread = list.filter((each) => !each.read_at).length
-      fireEvent.click(
-        all
-          ? screen.getByRole('button', { name: 'Mark all read' })
-          : screen.getAllByRole('button', { name: 'Mark read' })[0]
-      )
-      if (ok) {
-        await vi.waitFor(() =>
-          expect(screen.queryAllByRole('button', { name: 'Mark read' })).toHaveLength(all ? 0 : unread - 1)
+  for (const [ok, stamped] of [
+    [true, true],
+    [true, false],
+    [false, false],
+  ] as const)
+    test.prop([items.filter((list) => list.some((each) => !each.read_at)), fc.boolean()])(
+      `stay read once the server says so, one or all, and tell the bell: ${ok ? `answered${stamped ? '' : ' without a time'}` : 'failed'}`,
+      async (list, all) => {
+        freshDom()
+        const told = vi.fn()
+        window.addEventListener(NOTIFICATIONS_READ, told)
+        vi.stubGlobal(
+          'fetch',
+          vi.fn(async () => (ok ? json(200, stamped ? { read_at: new Date().toISOString() } : {}) : json(500, {})))
         )
-        expect(told).toHaveBeenCalled()
-      } else {
-        await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith("Couldn't mark it read. Try again."))
-        expect(screen.getAllByRole('button', { name: 'Mark read' })).toHaveLength(unread)
+        render(<NotificationsList initialItems={list as never} initialKinds={[]} />)
+        const unread = list.filter((each) => !each.read_at).length
+        fireEvent.click(
+          all
+            ? screen.getByRole('button', { name: 'Mark all read' })
+            : screen.getAllByRole('button', { name: 'Mark read' })[0]
+        )
+        if (ok) {
+          await vi.waitFor(() =>
+            expect(screen.queryAllByRole('button', { name: 'Mark read' })).toHaveLength(all ? 0 : unread - 1)
+          )
+          expect(told).toHaveBeenCalled()
+        } else {
+          await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith("Couldn't mark it read. Try again."))
+          expect(screen.getAllByRole('button', { name: 'Mark read' })).toHaveLength(unread)
+        }
+        window.removeEventListener(NOTIFICATIONS_READ, told)
       }
-      window.removeEventListener(NOTIFICATIONS_READ, told)
-    }
-  )
+    )
 
   test.prop([kind.filter((each) => each.may_change && !each.forced), fc.boolean(), kinds])(
     'keep a kind turned on or off only once the server took it, and leave the others be',
@@ -327,21 +353,23 @@ describe('a kind staff decided', () => {
 })
 
 describe('the notification bell', () => {
-  test.prop([fc.integer({ min: 0, max: 500 }), fc.boolean()])(
-    'counts what is unread, capped, and counts again when something is read',
-    async (count, answered) => {
-      freshDom()
-      const sent = vi.fn(async () => (answered ? json(200, { count, results: [] }) : json(500, {})))
-      vi.stubGlobal('fetch', sent)
-      render(<NotificationBell />)
-      await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(1))
-      const shown = answered ? count : 0
-      const link = screen.getByRole('link')
-      const badge = shown > 99 ? '99+' : String(shown)
-      await vi.waitFor(() => expect(link.textContent).toBe(shown === 0 ? '' : badge))
-      expect(link.getAttribute('href')).toBe('/profile/notifications')
-      await act(async () => window.dispatchEvent(new Event(NOTIFICATIONS_READ)))
-      expect(sent).toHaveBeenCalledTimes(2)
-    }
-  )
+  // None, some and more than shown each drawn, and an answer and a failure each a property.
+  for (const answered of [true, false])
+    test.prop([fc.oneof(fc.constant(0), fc.integer({ min: 1, max: 99 }), fc.integer({ min: 100, max: 500 }))])(
+      `counts what is unread, capped, and counts again when something is read: ${answered ? 'answered' : 'failed'}`,
+      async (count) => {
+        freshDom()
+        const sent = vi.fn(async () => (answered ? json(200, { count, results: [] }) : json(500, {})))
+        vi.stubGlobal('fetch', sent)
+        render(<NotificationBell />)
+        await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(1))
+        const shown = answered ? count : 0
+        const link = screen.getByRole('link')
+        const badge = shown > 99 ? '99+' : String(shown)
+        await vi.waitFor(() => expect(link.textContent).toBe(shown === 0 ? '' : badge))
+        expect(link.getAttribute('href')).toBe('/profile/notifications')
+        await act(async () => window.dispatchEvent(new Event(NOTIFICATIONS_READ)))
+        expect(sent).toHaveBeenCalledTimes(2)
+      }
+    )
 })

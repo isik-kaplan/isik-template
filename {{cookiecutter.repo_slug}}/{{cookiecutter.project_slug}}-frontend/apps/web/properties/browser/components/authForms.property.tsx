@@ -59,7 +59,7 @@ function answering(response: () => Response) {
   return { sent, posted }
 }
 
-const outcome = fc.constantFrom('signed in', 'verify_email', 'verify_phone', 'refused', 'refused about nothing')
+const OUTCOMES = ['signed in', 'verify_email', 'verify_phone', 'refused', 'refused about nothing']
 const responseFor = (what: string, field?: string) => () => {
   if (what === 'signed in') return json(200, { status: 200, data: { user: {} }, meta: { is_authenticated: true } })
   if (what === 'refused') return allauthRefusal('Already taken.', field)
@@ -68,59 +68,62 @@ const responseFor = (what: string, field?: string) => () => {
 }
 
 describe('signing up', () => {
-  test.prop([
-    requirement,
-    phoneOption,
-    fc.record({ first_name: name, last_name: name, username: name }),
-    address,
-    fc.option(number, { nil: '' }),
-    password,
-    outcome,
-    about('email', 'password'),
-  ])(
-    'asks for exactly the names and number this project asks for, sends only those, and goes where the answer says',
-    async (req, phone, names, email, given, secret, what, field) => {
-      freshDom()
-      project.requirement = req
-      project.phone = phone
-      navigation.push.mockClear()
-      const { posted } = answering(responseFor(what, field))
-      const { container } = render(<SignupForm />)
+  // One property per answer: drawn among five, some run would miss one.
+  for (const what of OUTCOMES)
+    test.prop([
+      requirement,
+      phoneOption,
+      fc.record({ first_name: name, last_name: name, username: name }),
+      address,
+      fc.option(number, { nil: '' }),
+      password,
+      about('email', 'password'),
+    ])(
+      `asks for exactly the names and number this project asks for, sends only those, and goes where the answer says: ${what}`,
+      async (req, phone, names, email, given, secret, field) => {
+        freshDom()
+        project.requirement = req
+        project.phone = phone
+        navigation.push.mockClear()
+        const { posted } = answering(responseFor(what, field))
+        const { container } = render(<SignupForm />)
 
-      const shown = offeredNames(req)
-      const expected = [...shown, 'email', ...(phone === 'none' ? [] : ['phone']), 'password']
-      expect([...container.querySelectorAll('input')].map((input) => input.name)).toEqual(expected)
+        const shown = offeredNames(req)
+        const expected = [...shown, 'email', ...(phone === 'none' ? [] : ['phone']), 'password']
+        expect([...container.querySelectorAll('input')].map((input) => input.name)).toEqual(expected)
 
-      for (const field of shown)
-        fireEvent.change(screen.getByLabelText(LABELS[field]), { target: { value: names[field] } })
-      fireEvent.change(screen.getByLabelText('Email'), { target: { value: email } })
-      if (phone !== 'none')
-        fireEvent.change(container.querySelector('input[name=phone]') as HTMLInputElement, { target: { value: given } })
-      fireEvent.change(screen.getByLabelText('Password'), { target: { value: secret } })
-      fireEvent.click(screen.getByRole('button', { name: 'Sign up' }))
+        for (const field of shown)
+          fireEvent.change(screen.getByLabelText(LABELS[field]), { target: { value: names[field] } })
+        fireEvent.change(screen.getByLabelText('Email'), { target: { value: email } })
+        if (phone !== 'none')
+          fireEvent.change(container.querySelector('input[name=phone]') as HTMLInputElement, {
+            target: { value: given },
+          })
+        fireEvent.change(screen.getByLabelText('Password'), { target: { value: secret } })
+        fireEvent.click(screen.getByRole('button', { name: 'Sign up' }))
 
-      if (phone === 'required' && !given) {
-        await new Promise((resolve) => setTimeout(resolve, 0))
-        expect(posted()).toBeUndefined()
-        return
-      }
-      await vi.waitFor(() => expect(posted()).toBeDefined())
-      const body = await (posted() as Request).json()
-      expect(body).toEqual({
-        email,
-        password: secret,
-        ...Object.fromEntries(shown.map((field) => [field, names[field]])),
-        ...(phone !== 'none' && given ? { phone: given } : {}),
-      })
-      if (what.startsWith('refused')) expect(await screen.findByText('Already taken.')).toBeTruthy()
-      else
-        await vi.waitFor(() =>
-          expect(navigation.push).toHaveBeenCalledWith(
-            what === 'verify_phone' ? '/auth/verify-phone' : '/auth/signup-email-sent'
+        if (phone === 'required' && !given) {
+          await new Promise((resolve) => setTimeout(resolve, 0))
+          expect(posted()).toBeUndefined()
+          return
+        }
+        await vi.waitFor(() => expect(posted()).toBeDefined())
+        const body = await (posted() as Request).json()
+        expect(body).toEqual({
+          email,
+          password: secret,
+          ...Object.fromEntries(shown.map((field) => [field, names[field]])),
+          ...(phone !== 'none' && given ? { phone: given } : {}),
+        })
+        if (what.startsWith('refused')) expect(await screen.findByText('Already taken.')).toBeTruthy()
+        else
+          await vi.waitFor(() =>
+            expect(navigation.push).toHaveBeenCalledWith(
+              what === 'verify_phone' ? '/auth/verify-phone' : '/auth/signup-email-sent'
+            )
           )
-        )
-    }
-  )
+      }
+    )
 
   test.prop([requirement, phoneOption])(
     'refuses exactly the required names left empty, and sends nothing',
@@ -235,74 +238,79 @@ describe('logging in', () => {
 })
 
 describe('finishing a signup through a provider', () => {
-  test.prop([
-    requirement,
-    phoneOption,
-    address,
-    fc.option(name, { nil: undefined }),
-    fc.record({ first_name: name, last_name: name }),
-    fc.option(number, { nil: '' }),
-    password,
-    fc.constantFrom(
-      'signed in',
-      'created',
-      'verify_phone',
-      'refused about the password',
-      'refused about the number',
-      'refused about nothing'
-    ),
-  ])(
-    "asks for this project's names and number, keeps the provider's address, and goes where the answer says",
-    async (req, phone, email, suggested, names, given, secret, outcome) => {
-      const what = outcome.startsWith('refused') ? 'refused' : outcome
-      const drawn = { 'refused about the password': 'password', 'refused about the number': 'phone' }[outcome as string]
-      // A refusal about the number only where there is a number field to show it under.
-      const field = drawn === 'phone' && phone === 'none' ? undefined : drawn
-      freshDom()
-      project.requirement = req
-      project.phone = phone
-      navigation.push.mockClear()
-      const answers: Record<string, () => Response> = {
-        'signed in': () => json(200, { status: 200, data: { user: {} }, meta: { is_authenticated: true } }),
-        created: () =>
-          json(401, { status: 401, data: { flows: [{ id: 'login' }] }, meta: { is_authenticated: false } }),
-        refused: () => allauthRefusal('Taken.', field),
-      }
-      const response = () => (answers[what] ?? (() => pending('verify_phone')))()
-      const { posted } = answering(response)
-      const { container } = render(<CompleteSignupForm email={email} suggestedUsername={suggested} />)
-      expect(screen.getByText(new RegExp(email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))).toBeTruthy()
+  // One property per answer: drawn among six, some run would miss one.
+  for (const outcome of [
+    'signed in',
+    'created',
+    'verify_phone',
+    'refused about the password',
+    'refused about the number',
+    'refused about nothing',
+  ])
+    test.prop([
+      requirement,
+      phoneOption,
+      address,
+      fc.option(name, { nil: undefined }),
+      fc.record({ first_name: name, last_name: name }),
+      fc.option(number, { nil: '' }),
+      password,
+    ])(
+      `asks for this project's names and number, keeps the provider's address, and goes where the answer says: ${outcome}`,
+      async (req, phone, email, suggested, names, given, secret) => {
+        const what = outcome.startsWith('refused') ? 'refused' : outcome
+        const drawn = { 'refused about the password': 'password', 'refused about the number': 'phone' }[
+          outcome as string
+        ]
+        // A refusal about the number only where there is a number field to show it under.
+        const field = drawn === 'phone' && phone === 'none' ? undefined : drawn
+        freshDom()
+        project.requirement = req
+        project.phone = phone
+        navigation.push.mockClear()
+        const answers: Record<string, () => Response> = {
+          'signed in': () => json(200, { status: 200, data: { user: {} }, meta: { is_authenticated: true } }),
+          created: () =>
+            json(401, { status: 401, data: { flows: [{ id: 'login' }] }, meta: { is_authenticated: false } }),
+          refused: () => allauthRefusal('Taken.', field),
+        }
+        const response = () => (answers[what] ?? (() => pending('verify_phone')))()
+        const { posted } = answering(response)
+        const { container } = render(<CompleteSignupForm email={email} suggestedUsername={suggested} />)
+        expect(screen.getByText(new RegExp(email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))).toBeTruthy()
 
-      const shown = offeredNames(req)
-      if (shown.includes('username'))
-        expect((screen.getByLabelText('Username') as HTMLInputElement).value).toBe(suggested ?? '')
-      const values: Record<string, string> = { ...names, username: suggested || 'handle' }
-      for (const field of shown)
-        fireEvent.change(screen.getByLabelText(LABELS[field]), { target: { value: values[field] } })
-      if (phone !== 'none')
-        fireEvent.change(container.querySelector('input[name=phone]') as HTMLInputElement, { target: { value: given } })
-      fireEvent.change(screen.getByLabelText('Password'), { target: { value: secret } })
-      fireEvent.click(screen.getByRole('button', { name: 'Finish signing up' }))
+        const shown = offeredNames(req)
+        if (shown.includes('username'))
+          expect((screen.getByLabelText('Username') as HTMLInputElement).value).toBe(suggested ?? '')
+        const values: Record<string, string> = { ...names, username: suggested || 'handle' }
+        for (const field of shown)
+          fireEvent.change(screen.getByLabelText(LABELS[field]), { target: { value: values[field] } })
+        if (phone !== 'none')
+          fireEvent.change(container.querySelector('input[name=phone]') as HTMLInputElement, {
+            target: { value: given },
+          })
+        fireEvent.change(screen.getByLabelText('Password'), { target: { value: secret } })
+        fireEvent.click(screen.getByRole('button', { name: 'Finish signing up' }))
 
-      if (phone === 'required' && !given) {
-        await new Promise((resolve) => setTimeout(resolve, 0))
-        expect(posted()).toBeUndefined()
-        return
+        if (phone === 'required' && !given) {
+          await new Promise((resolve) => setTimeout(resolve, 0))
+          expect(posted()).toBeUndefined()
+          return
+        }
+        await vi.waitFor(() => expect(posted()).toBeDefined())
+        expect(await (posted() as Request).json()).toEqual({
+          email,
+          password: secret,
+          ...Object.fromEntries(shown.map((field) => [field, values[field]])),
+          ...(phone !== 'none' && given ? { phone: given } : {}),
+        })
+        const destinations: Record<string, string> = {
+          'signed in': '/',
+          created: '/auth/login',
+          verify_phone: '/auth/verify-phone',
+        }
+        if (what === 'refused') expect(await screen.findByText('Taken.')).toBeTruthy()
+        else await vi.waitFor(() => expect(navigation.push).toHaveBeenCalledWith(destinations[what]))
       }
-      await vi.waitFor(() => expect(posted()).toBeDefined())
-      expect(await (posted() as Request).json()).toEqual({
-        email,
-        password: secret,
-        ...Object.fromEntries(shown.map((field) => [field, values[field]])),
-        ...(phone !== 'none' && given ? { phone: given } : {}),
-      })
-      const destinations: Record<string, string> = {
-        'signed in': '/',
-        created: '/auth/login',
-        verify_phone: '/auth/verify-phone',
-      }
-      if (what === 'refused') expect(await screen.findByText('Taken.')).toBeTruthy()
-      else await vi.waitFor(() => expect(navigation.push).toHaveBeenCalledWith(destinations[what]))
-    }
-  )
+    )
 })

@@ -124,39 +124,39 @@ describe('the webhook endpoints', () => {
       }
     )
 
-  test.prop([
-    kinds,
-    fc.oneof(fc.webUrl({ validSchemes: ['https'] }), fc.stringMatching(/^[a-z]{1,10}$/)),
-    fc.boolean(),
-    fc.boolean(),
-  ])(
-    'register one only with a whole URL and at least one kind, showing its secret once',
-    async (offered, url, choosing, works) => {
-      freshDom()
-      const sent = vi.fn(async () =>
-        works ? json(201, { id: 'new', url, secret: 'whsec_first' }) : json(400, { url: ['Unreachable.'] })
-      )
-      vi.stubGlobal('fetch', sent)
-      render(<WebhookEndpoints endpoints={[]} kinds={offered} />)
-      fireEvent.change(screen.getByLabelText('URL'), { target: { value: url } })
-      if (choosing) fireEvent.click(screen.getAllByRole('checkbox')[0])
-      fireEvent.click(screen.getByRole('button', { name: 'Add endpoint' }))
-      const whole = url.startsWith('https://')
-      if (!whole || !choosing) {
-        if (!whole) expect(await screen.findByText(/Enter a full URL/)).toBeTruthy()
-        if (!choosing) expect(await screen.findByText('Choose at least one kind of notification.')).toBeTruthy()
-        expect(sent).not.toHaveBeenCalled()
-        return
+  // One property per case: a registration that went through is one draw in eight otherwise.
+  for (const situation of ['registered', 'refused', 'no URL', 'no kind'])
+    test.prop([kinds, fc.webUrl({ validSchemes: ['https'] }), fc.stringMatching(/^[a-z]{1,10}$/)])(
+      `register one only with a whole URL and at least one kind, showing its secret once: ${situation}`,
+      async (offered, wholeUrl, broken) => {
+        const url = situation === 'no URL' ? broken : wholeUrl
+        const choosing = situation !== 'no kind'
+        const works = situation === 'registered'
+        freshDom()
+        const sent = vi.fn(async () =>
+          works ? json(201, { id: 'new', url, secret: 'whsec_first' }) : json(400, { url: ['Unreachable.'] })
+        )
+        vi.stubGlobal('fetch', sent)
+        render(<WebhookEndpoints endpoints={[]} kinds={offered} />)
+        fireEvent.change(screen.getByLabelText('URL'), { target: { value: url } })
+        if (choosing) fireEvent.click(screen.getAllByRole('checkbox')[0])
+        fireEvent.click(screen.getByRole('button', { name: 'Add endpoint' }))
+        const whole = url.startsWith('https://')
+        if (!whole || !choosing) {
+          if (!whole) expect(await screen.findByText(/Enter a full URL/)).toBeTruthy()
+          if (!choosing) expect(await screen.findByText('Choose at least one kind of notification.')).toBeTruthy()
+          expect(sent).not.toHaveBeenCalled()
+          return
+        }
+        await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(1))
+        expect(await (sent.mock.calls[0] as unknown as [Request])[0].json()).toEqual({
+          url,
+          kinds: [{ kind: offered[0].kind }],
+        })
+        if (works) {
+          expect(await screen.findByText('whsec_first')).toBeTruthy()
+          expect(screen.queryByRole('button', { name: 'Stop signing with the old secret' })).toBeNull()
+        } else expect(await screen.findByText('Unreachable.')).toBeTruthy()
       }
-      await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(1))
-      expect(await (sent.mock.calls[0] as unknown as [Request])[0].json()).toEqual({
-        url,
-        kinds: [{ kind: offered[0].kind }],
-      })
-      if (works) {
-        expect(await screen.findByText('whsec_first')).toBeTruthy()
-        expect(screen.queryByRole('button', { name: 'Stop signing with the old secret' })).toBeNull()
-      } else expect(await screen.findByText('Unreachable.')).toBeTruthy()
-    }
-  )
+    )
 })

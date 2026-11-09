@@ -3,7 +3,10 @@ import ApplicationsLayout from '@/app/applications/layout'
 import ApplicationsPage from '@/app/applications/page'
 import CallbackCompletePage from '@/app/auth/callback-complete/page'
 import CompleteSignupPage from '@/app/auth/complete-signup/page'
+import OAuthAuthorizePage from '@/app/auth/oauth/authorize/page'
+import ProvePage from '@/app/auth/prove/page'
 import ProviderErrorPage from '@/app/auth/provider-error/page'
+import TwoFactorPage from '@/app/auth/two-factor/page'
 import DevicePage from '@/app/device/page'
 import LegalDocumentPage from '@/app/legal/[doc]/page'
 import HomePage from '@/app/page'
@@ -52,10 +55,10 @@ const webhookPages = Object.values(
 
 const answered = world.map((w) => ({ ...w, me: { ...w.me, language: 'en' as const }, down: [] as number[] }))
 
-async function open(page: (props: never) => unknown, props: object, fetcher: typeof fetch) {
+async function open(page: (props: never) => unknown, props: object, fetcher: typeof fetch, cookie = true) {
   freshDom()
-  requestHeaders.value = new Headers({ host: 'test-project.test', cookie: 'sessionid=abc' })
-  requestCookies.value = { sessionid: 'abc' }
+  requestHeaders.value = new Headers({ host: 'test-project.test', ...(cookie ? { cookie: 'sessionid=abc' } : {}) })
+  requestCookies.value = cookie ? { sessionid: 'abc' } : {}
   vi.stubGlobal('fetch', fetcher)
   try {
     const node = await page(props as never)
@@ -78,22 +81,32 @@ const without = (served: typeof fetch, failing: RegExp | null) =>
       : served(input)) as typeof fetch
 
 describe('the device page', () => {
-  test.prop([
-    answered,
-    fc.option(
+  // One property per case: no code yet, a code nobody knows, a code a device showed.
+  for (const situation of ['no code', 'unknown', 'known'] as const)
+    test.prop([
+      answered,
       fc.oneof(
         fc.stringMatching(/^[A-Z]{4}-[A-Z]{4}$/),
         fc.array(fc.stringMatching(/^[A-Z]{4}-[A-Z]{4}$/), { minLength: 1, maxLength: 2 })
       ),
-      { nil: undefined }
-    ),
-  ])("asks for a code, says when one is unknown, and asks the device's question for a known one", async (w, code) => {
-    project.applications = true
-    expect(await open(DevicePage, { searchParams: Promise.resolve({ code }) }, staff(w))).toBe('shown')
-    const given = Array.isArray(code) ? code[0] : code
-    if (given && w.device) expect(screen.getByText(new RegExp(w.device.user_code))).toBeTruthy()
-    else expect(screen.queryByText(/That code is wrong/) !== null).toBe(Boolean(given))
-  })
+    ])(
+      `asks for a code, says when one is unknown, and asks the device's question for a known one: ${situation}`,
+      async (drawn, typed) => {
+        const code = situation === 'no code' ? undefined : typed
+        const shown = drawn.device ?? {
+          application_name: 'Notes',
+          application_description: '',
+          scopes: [],
+          user_code: 'ABCD-EFGH',
+        }
+        const w = { ...drawn, device: situation === 'unknown' ? null : shown }
+        project.applications = true
+        expect(await open(DevicePage, { searchParams: Promise.resolve({ code }) }, staff(w))).toBe('shown')
+        const given = Array.isArray(code) ? code[0] : code
+        if (given && w.device) expect(screen.getByText(new RegExp(w.device.user_code))).toBeTruthy()
+        else expect(screen.queryByText(/That code is wrong/) !== null).toBe(Boolean(given))
+      }
+    )
 
   test('is not there without applications', async () => {
     project.applications = false
@@ -123,32 +136,57 @@ describe('the home page', () => {
 
 describe('the staff pages', () => {
   // The side reads failing too: the listing, the scopes and the permissions, each shown as none.
-  test.prop([answered, fc.uuid(), fc.constantFrom('manages them', 'reads them', 'is them'), fc.boolean()])(
-    'show the applications to review, one of them, the people, and a person, each by what came back',
-    async (w, id, relation, sideReadsDown) => {
-      project.applications = true
-      const failing = sideReadsDown ? /oauth-application-reviews\/$|delegatable-scopes|users\/permissions/ : null
-      expect(await open(ReviewsPage, { searchParams: Promise.resolve({}) }, without(staff(w), failing))).toBe('shown')
-      for (const review of sideReadsDown ? [] : w.reviews)
-        expect(screen.getAllByText(review.name).length).toBeGreaterThan(0)
-      expect(await open(ReviewPage, { params: Promise.resolve({ id: '1' }) }, without(staff(w), failing))).toBe('shown')
-      expect(await open(ApplicationPage, { params: Promise.resolve({ id: '1' }) }, staff(w))).toBe('shown')
-      // Somebody else, managed or only read, or the one looking, who never manages their own account.
-      const person = w.people[0] ?? { ...w.me, id }
-      const me = {
-        ...w.me,
-        id: relation === 'is them' ? person.id : w.me.id,
-        permissions: (relation === 'reads them' ? [] : ['users:manage:user']) as World['me']['permissions'],
-      }
-      expect(await open(PeoplePage, { searchParams: Promise.resolve({}) }, staff(w))).toBe('shown')
-      for (const each of w.people) expect(screen.getAllByText(each.email).length).toBeGreaterThan(0)
-      const asked = staff({ ...w, people: [person], me })
-      expect(await open(PersonPage, { params: Promise.resolve({ id }) }, without(asked, failing))).toBe('shown')
-      const said = { 'manages them': null, 'reads them': /not change it/, 'is them': /This is you/ }[relation]
-      if (said) expect(screen.getByText(said)).toBeTruthy()
-      else expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy()
-    }
-  )
+  // One property per relation, with the side reads answering and failing.
+  for (const relation of ['manages them', 'reads them', 'is them'] as const)
+    for (const sideReadsDown of [false, true])
+      test.prop([answered, fc.uuid()])(
+        `show the applications to review, one of them, the people, and a person, each by what came back: ${relation}${sideReadsDown ? ', side reads down' : ''}`,
+        async (w, id) => {
+          project.applications = true
+          const failing = sideReadsDown
+            ? /oauth-application-reviews\/$|delegatable-scopes|users\/permissions|\/v0\/users\/$/
+            : null
+          expect(await open(ReviewsPage, { searchParams: Promise.resolve({}) }, without(staff(w), failing))).toBe(
+            'shown'
+          )
+          for (const review of sideReadsDown ? [] : w.reviews)
+            expect(screen.getAllByText(review.name).length).toBeGreaterThan(0)
+          expect(await open(ReviewPage, { params: Promise.resolve({ id: '1' }) }, without(staff(w), failing))).toBe(
+            'shown'
+          )
+          expect(
+            await open(ApplicationPage, { params: Promise.resolve({ id: '1' }) }, without(staff(w), failing))
+          ).toBe('shown')
+          // And one that left out what the API document lets it leave out.
+          const bare = w.applications.map(
+            ({ requested_scopes: _scopes, authorization_grant_type: _grant, ...rest }) => rest
+          )
+          expect(
+            await open(
+              ApplicationPage,
+              { params: Promise.resolve({ id: '1' }) },
+              staff({ ...w, applications: bare as World['applications'] })
+            )
+          ).toBe('shown')
+          // Somebody else, managed or only read, or the one looking, who never manages their own account.
+          const person = w.people[0] ?? { ...w.me, id }
+          const me = {
+            ...w.me,
+            id: relation === 'is them' ? person.id : w.me.id,
+            permissions: (relation === 'reads them' ? [] : ['users:manage:user']) as World['me']['permissions'],
+          }
+          expect(await open(PeoplePage, { searchParams: Promise.resolve({}) }, without(staff(w), failing))).toBe(
+            'shown'
+          )
+          for (const each of sideReadsDown ? [] : w.people)
+            expect(screen.getAllByText(each.email).length).toBeGreaterThan(0)
+          const asked = staff({ ...w, people: [person], me })
+          expect(await open(PersonPage, { params: Promise.resolve({ id }) }, without(asked, failing))).toBe('shown')
+          const said = { 'manages them': null, 'reads them': /not change it/, 'is them': /This is you/ }[relation]
+          if (said) expect(screen.getByText(said)).toBeTruthy()
+          else expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy()
+        }
+      )
 })
 
 describe('a legal document', () => {
@@ -231,6 +269,46 @@ describe('a failed provider sign-in', () => {
   })
 })
 
+describe('the consent question', () => {
+  // The backend's wording as a list for some scopes, for all, or as nothing usable at all.
+  for (const described of ['["Read people"]', '["Read people", "Change people", "Who you are"]', 'not json', '{}'])
+    test.prop([fc.stringMatching(/^[A-Z][a-z]{2,8}$/), fc.boolean()])(
+      `words each scope as the backend does, else by its name: ${described}`,
+      async (application, signedIn) => {
+        const asked = {
+          application_name: application,
+          client_id: 'CID',
+          scope: 'users:view:user users:manage:user openid',
+          scopes_descriptions: described,
+        }
+        const served = backend(
+          fc.sample(answered, 1)[0],
+          signedIn ? 'member' : 'anonymous',
+          'everything'
+        ) as unknown as typeof fetch
+        expect(await open(OAuthAuthorizePage, { searchParams: Promise.resolve(asked) }, served)).toBe('shown')
+        expect(screen.getAllByRole('listitem')).toHaveLength(3)
+      }
+    )
+})
+
+describe('the proof page', () => {
+  // The ways to prove read answering or failing, each with a cookie and without.
+  for (const reads of [true, false])
+    test.prop([fc.boolean(), fc.constantFrom(undefined, '1')])(
+      `asks for proof, cookie or none, and goes back once proved: ${reads ? 'ways read' : 'ways unread'}`,
+      async (cookie, proved) => {
+        const served = without(
+          backend(fc.sample(answered, 1)[0], 'member', 'everything') as unknown as typeof fetch,
+          reads ? null : /reauthentication\/$/
+        )
+        expect(
+          await open(ProvePage, { searchParams: Promise.resolve({ next: '/profile', proved }) }, served, cookie)
+        ).toBe(proved ? 'redirected' : 'shown')
+      }
+    )
+})
+
 describe('the two-factor tab', () => {
   test.prop([answered])(
     'sets up an authenticator, asks for proof first, or says why it cannot, as the backend answers',
@@ -244,16 +322,32 @@ describe('the two-factor tab', () => {
 })
 
 describe("this person's history", () => {
-  test.prop([answered])('lists what happened, naming the fields an update changed', async (w) => {
-    expect(
-      await open(
-        ProfileDetailsPage,
-        { searchParams: Promise.resolve({}) },
-        backend(w, 'member', 'everything') as unknown as typeof fetch
-      )
-    ).toBe('shown')
-    expect(screen.queryByText('Nothing to show yet.') === null).toBe(w.history.length > 0)
-  })
+  // The history read answering and failing, each in every run.
+  // Everything read, the history unread, and the account itself unread, each in every run.
+  for (const [answering, failing, label] of [
+    [true, null, 'read'],
+    [false, /\/history\/$/, 'history unread'],
+    [true, /\/users\/me\/$/, 'account unread'],
+  ] as const)
+    test.prop([answered])(`lists what happened, naming the fields an update changed: ${label}`, async (w) => {
+      const served = without(backend(w, 'member', 'everything') as unknown as typeof fetch, failing)
+      expect(await open(ProfileDetailsPage, { searchParams: Promise.resolve({}) }, served)).toBe('shown')
+      expect(screen.queryByText('Nothing to show yet.') === null).toBe(answering && w.history.length > 0)
+    })
+})
+
+describe('the second-factor page', () => {
+  // Owing a factor shows the challenge; signed in goes on, and signed out has nothing to answer.
+  for (const visitor of ['owing a factor', 'member', 'anonymous'] as const)
+    test.prop([answered, fc.constantFrom(undefined, '/profile')])(
+      `asks for the factor only of a login that owes one: ${visitor}`,
+      async (w, next) => {
+        const served = backend(w, visitor, 'everything') as unknown as typeof fetch
+        expect(await open(TwoFactorPage, { searchParams: Promise.resolve({ next }) }, served)).toBe(
+          visitor === 'owing a factor' ? 'shown' : 'redirected'
+        )
+      }
+    )
 })
 
 // Session answers allauth gives a signed-out visitor: with flows, or with none at all.
