@@ -1,13 +1,13 @@
 import { expect, test } from '@playwright/test'
 
-import { OIDC_CONFIGURED } from '../helpers'
+import { AWAITING_MAIL, OIDC_CONFIGURED, finishSocialSignup } from '../helpers'
 
 test.skip(!OIDC_CONFIGURED, 'SOCIAL_LOGIN__PROVIDERS does not name openid_connect, so there is no button to press')
 
 const AUTHORIZE_PATH = '/application/o/authorize/'
 
 // allauth nondeterministically either provisions the account directly or goes through
-// /auth/complete-signup first; both end on /auth/login, so the spec follows whichever happens.
+// /auth/complete-signup first; both end awaiting the address's mail, so the spec follows whichever happens.
 test('logging in with the OIDC test IdP provisions an account pending email verification', async ({ page }) => {
   await page.goto('/auth/login')
   const scheme = new URL(page.url()).protocol
@@ -26,10 +26,9 @@ test('logging in with the OIDC test IdP provisions an account pending email veri
 
   await page.waitForURL((url) => url.pathname === '/auth/login' || url.pathname === '/auth/complete-signup')
   if (new URL(page.url()).pathname === '/auth/complete-signup') {
-    await page.getByLabel('Username').fill(`oidc-e2e-${Date.now()}`)
-    await page.getByLabel('Password', { exact: true }).fill('correct-horse-battery-staple-2')
-    await page.getByRole('button', { name: 'Finish signing up' }).click()
+    await finishSocialSignup(page, `oidc-e2e-${Date.now()}`, 'correct-horse-battery-staple-2')
+    await expect(page).toHaveURL(AWAITING_MAIL)
+  } else {
+    await expect(page).toHaveURL('/auth/login')
   }
-
-  await expect(page).toHaveURL('/auth/login')
 })

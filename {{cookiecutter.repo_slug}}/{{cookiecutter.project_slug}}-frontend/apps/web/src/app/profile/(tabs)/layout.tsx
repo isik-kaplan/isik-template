@@ -28,7 +28,7 @@ export default async function ProfileTabsLayout({ children }: { children: React.
     // An explicit width: the centered <main> doesn't stretch this column, so the card would
     // shrink to each tab's content and change size per tab.
     <div className="flex w-full max-w-sm flex-col items-center gap-6">
-      <div className="fixed top-4 right-4 flex items-center gap-2">
+      <div className="fixed top-4 right-4 z-10 flex items-center gap-2">
         <CommandPalette />
         <NotificationBell />
         <LanguageSwitcher />

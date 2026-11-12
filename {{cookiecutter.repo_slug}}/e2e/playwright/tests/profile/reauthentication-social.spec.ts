@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { OIDC_CONFIGURED, login, proveWithPassword, signInAtAuthentik } from '../helpers'
+import { AWAITING_MAIL, OIDC_CONFIGURED, finishSocialSignup, login, proveWithPassword, signInAtAuthentik } from '../helpers'
 import { extractLinkFromEmail } from '../mailpit'
 
 // A passwordless account proves itself by signing in again at the IdP, whose auth_time must postdate the gate.
@@ -19,12 +19,10 @@ test('somebody with no password proves it at their provider, and can set a passw
   const landed = (...paths: string[]) => page.waitForURL((url) => paths.includes(url.pathname))
   await landed('/', '/auth/login', '/auth/complete-signup')
   if (new URL(page.url()).pathname === '/auth/complete-signup') {
-    await page.getByLabel('Username').fill(`oidc-reauth-${Date.now()}`)
-    await page.getByLabel('Password', { exact: true }).fill('ignored-by-a-social-signup')
-    await page.getByRole('button', { name: 'Finish signing up' }).click()
-    await landed('/', '/auth/login')
+    await finishSocialSignup(page, `oidc-reauth-${Date.now()}`, 'ignored-by-a-social-signup')
+    await landed('/', AWAITING_MAIL)
   }
-  if (new URL(page.url()).pathname === '/auth/login') {
+  if (new URL(page.url()).pathname === AWAITING_MAIL) {
     const verifyLink = await extractLinkFromEmail(IDENTITY_EMAIL, '/auth/verify-email/')
     await page.goto(verifyLink)
     await page.getByRole('button', { name: 'Confirm email address' }).click()

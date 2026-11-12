@@ -37,6 +37,26 @@ export async function submitSignup(page: Page, username: string, email: string, 
 {%- endif %}
 }
 
+/** The form a social signup may stop at, through to wherever allauth sends it once the form is done. */
+export async function finishSocialSignup(page: Page, username: string, password: string) {
+  await page.getByLabel('Username').fill(username)
+{%- if cookiecutter.phone == "required" %}
+  const number = aNumber()
+  await page.getByLabel('Phone number').fill(number)
+{%- endif %}
+  await page.getByLabel('Password', { exact: true }).fill(password)
+  await page.getByRole('button', { name: 'Finish signing up' }).click()
+{%- if cookiecutter.phone == "required" %}
+  // The provider vouches for no number, so its code comes first here too.
+  await expect(page).toHaveURL('/auth/verify-phone')
+  await page.getByLabel('Code').fill(await codeTextedTo(number))
+  await page.getByRole('button', { name: 'Verify' }).click()
+{%- endif %}
+}
+
+/** Where a social signup that still owes its address's mail ends up. */
+export const AWAITING_MAIL = '{{ "/auth/signup-email-sent" if cookiecutter.phone == "required" else "/auth/login" }}'
+
 /** Through the real UI rather than seeded, so a broken signup fails every spec that needs a user. */
 export async function signUpAndVerify(page: Page, username: string, email: string, password: string) {
   await submitSignup(page, username, email, password)

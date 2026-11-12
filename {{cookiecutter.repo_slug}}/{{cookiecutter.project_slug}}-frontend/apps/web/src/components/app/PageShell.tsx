@@ -23,7 +23,7 @@ export function PageShell({
 }) {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 p-6 pt-16">
-      <div className="fixed top-4 right-4 flex items-center gap-2">
+      <div className="fixed top-4 right-4 z-10 flex items-center gap-2">
         <CommandPalette />
         <NotificationBell />
         <LanguageSwitcher />
