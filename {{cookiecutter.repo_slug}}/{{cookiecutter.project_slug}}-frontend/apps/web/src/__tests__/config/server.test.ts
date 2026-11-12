@@ -25,6 +25,14 @@ describe('serverConfig', () => {
     expect(serverConfig().SENTRY.DSN).toBe('')
   })
 
+  it('samples no traces when the backend passes no rate', async () => {
+    vi.stubEnv('{{ cookiecutter.config_prefix }}_SERVER__SENTRY__TRACES_SAMPLE_RATE', undefined)
+
+    const { serverConfig } = await import('@/config/server')
+
+    expect(serverConfig().SENTRY.TRACES_SAMPLE_RATE).toBe('0')
+  })
+
   it("reads the key nginx checks the frontend's fetches with from its own env var", async () => {
     vi.stubEnv('{{ cookiecutter.config_prefix }}_SERVER__FRONTEND_KEY', 'the-key')
 

@@ -111,3 +111,13 @@ def test_a_caller_that_saves_the_account_itself_gets_it_unsaved_with_the_accepta
 
     assert (user.username, user.terms_version) == ("later", VERSION)
     assert not User.objects.filter(username="later").exists()
+
+
+@pytest.mark.django_db
+def test_a_caller_that_leaves_saving_to_the_adapter_gets_the_account_saved_with_the_acceptance(published):
+    """With phone numbers on, allauth's set_phone() saves too; a form with no number shows save_user()'s own."""
+    form = SimpleNamespace(cleaned_data={"username": "now", "email": "now@example.test", "password1": PASSWORD})
+
+    AccountAdapter().save_user(RequestFactory().get("/"), User(), form)
+
+    assert User.objects.get(username="now").terms_version == VERSION

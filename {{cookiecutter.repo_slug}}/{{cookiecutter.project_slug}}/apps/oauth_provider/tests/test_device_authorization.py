@@ -198,6 +198,9 @@ def test_a_code_with_a_nul_byte_is_not_found(client, provider, signed_in, action
     response = client.post(_detail(code, action)) if action else client.get(_detail(code))
 
     assert response.status_code == 404
+    assert response.json()["detail"] == (
+        "That code is wrong, has expired or was already answered. Start again on the device."
+    )
 
 
 @pytest.mark.django_db

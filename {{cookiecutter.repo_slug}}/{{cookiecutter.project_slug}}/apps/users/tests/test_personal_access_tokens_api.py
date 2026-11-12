@@ -91,7 +91,7 @@ def test_a_scope_with_a_nul_byte_is_refused_as_unknown(client, proven):
     response = _make(client, scopes=["\x00"])
 
     assert response.status_code == 400
-    assert "scopes" in response.json()
+    assert response.json()["scopes"] == ["Object with codename=\x00 does not exist."]
 
 
 @pytest.mark.django_db
