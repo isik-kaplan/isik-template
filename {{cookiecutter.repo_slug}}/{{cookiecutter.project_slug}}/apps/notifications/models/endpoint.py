@@ -1,3 +1,4 @@
+from django.utils.translation import gettext_lazy as _
 from isik.django.apps.common.db import track_events
 from isik.django.apps.notifications.audience import bases
 
@@ -12,8 +13,10 @@ from apps.notifications.keys import user_key
 class Endpoint(bases.AbstractEndpoint):
     id = primary_key()
 {%- if cookiecutter.webhooks == "users" %}
-    owner = user_key("who registered it, and whose notices it receives")
+    owner = user_key("who registered it, and whose notices it receives", verbose_name=_("owner"))
 {%- endif %}
 
     class Meta(bases.AbstractEndpoint.Meta):
         db_table = "notifications_endpoint"
+        verbose_name = _("endpoint")
+        verbose_name_plural = _("endpoints")

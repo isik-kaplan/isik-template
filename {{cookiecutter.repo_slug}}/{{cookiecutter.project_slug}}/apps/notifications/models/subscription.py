@@ -1,3 +1,4 @@
+from django.utils.translation import gettext_lazy as _
 from isik.django.apps.common.db.history import track_events
 from isik.django.apps.notifications.audience import bases
 
@@ -14,3 +15,5 @@ class Subscription(bases.AbstractForceableSubscription):
 
     class Meta(bases.AbstractForceableSubscription.Meta):
         db_table = "notifications_subscription"
+        verbose_name = _("subscription")
+        verbose_name_plural = _("subscriptions")

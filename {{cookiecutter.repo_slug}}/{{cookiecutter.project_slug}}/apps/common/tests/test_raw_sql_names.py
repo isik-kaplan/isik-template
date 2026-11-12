@@ -129,10 +129,11 @@ def test_every_exemption_gives_a_reason():
 
 
 def test_the_tables_include_the_join_tables_a_many_to_many_creates():
-    """`users_user_groups` has no model of its own to ask, and a trigger reaches it all the same."""
-    from apps.users.models import User
+    """`auth_group_permissions` has no model of its own to ask, and a trigger reaches it all the same."""
+    from django.contrib.auth.models import Group
 
-    assert model_db_name(User.groups.through) in project_tables()
+    assert Group.permissions.through._meta.auto_created
+    assert model_db_name(Group.permissions.through) in project_tables()
 
 
 @pytest.mark.parametrize(

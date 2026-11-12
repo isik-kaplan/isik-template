@@ -3,6 +3,7 @@ from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import AbstractUser, UserManager, _user_has_module_perms, _user_has_perm
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 from isik.django.apps.common.db import if_unset, redeclare, track_events
 
 from apps.common.models.base import BaseModel
@@ -72,12 +73,14 @@ class User(AbstractUser, BaseModel):
     # created_at, from BaseModel and set by the database, already says when the account was made.
     date_joined = None
     email = models.EmailField(
+        verbose_name=_("email"),
         unique=True,
         help_text="The address this user signs in with and is written to at.",
         db_comment="The identifier: unique, and never absent.",
     )
     # Null, not blank, for no handle: many people may have none, and an empty string is unique once.
     username = models.CharField(
+        verbose_name=_("username"),
         max_length=150,
         unique=True,
         null=True,
@@ -90,6 +93,7 @@ class User(AbstractUser, BaseModel):
 {%- if cookiecutter.phone != "none" %}
     # Null, not blank, for no number, as with the handle. allauth reads and writes it through AccountAdapter.
     phone = models.CharField(
+        verbose_name=_("phone"),
         max_length=16,
         unique=True,
         null=True,
@@ -98,6 +102,7 @@ class User(AbstractUser, BaseModel):
         db_comment="E.164, as allauth's phone field accepts it; unique, null for no number.",
     )
     phone_verified = models.BooleanField(
+        verbose_name=_("phone verified"),
         default=False,
         help_text="Whether this user proved the phone number is theirs with a code sent to it.",
         db_comment="Set by allauth's phone verification; a changed number starts unverified again.",
@@ -105,6 +110,7 @@ class User(AbstractUser, BaseModel):
 {%- endif %}
     # The derived CHECK is still a fixed list in the migration: changing LANGUAGES needs a new migration.
     language = models.CharField(
+        verbose_name=_("language"),
         max_length=15,
         choices=language_choices,
         blank=True,
@@ -114,6 +120,7 @@ class User(AbstractUser, BaseModel):
     )
     # A column despite the history log: a terms change re-asks whoever accepted an older version.
     terms_version = models.CharField(
+        verbose_name=_("terms version"),
         max_length=64,
         blank=True,
         default="",
@@ -121,6 +128,7 @@ class User(AbstractUser, BaseModel):
         db_comment="apps.users.terms.TERMS_VERSION when the account was created; empty if no documents existed.",
     )
     terms_accepted_at = models.DateTimeField(
+        verbose_name=_("terms accepted at"),
         null=True,
         blank=True,
         help_text="When this user agreed to the legal documents, or empty if none were published at signup.",
@@ -137,6 +145,9 @@ class User(AbstractUser, BaseModel):
 {%- else %}
     REQUIRED_FIELDS = []
 {%- endif %}
+
+    groups = redeclare(AbstractUser.groups, through="users.UserGroup")
+    user_permissions = redeclare(AbstractUser.user_permissions, through="users.UserPermission")
 
     # The write version covers grants too, so a stale page can't quietly undo an admin grant.
     concurrency_relations = ("groups", "user_permissions")

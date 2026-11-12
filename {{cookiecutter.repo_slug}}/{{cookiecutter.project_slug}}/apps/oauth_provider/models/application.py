@@ -53,6 +53,7 @@ class Application(VersionedModel, AbstractApplication):
 
     id = redeclare(
         AbstractApplication.id,
+        verbose_name=_("ID"),
         help_text="Identifies this application here; what it presents to sign people in is client_id.",
         db_comment="Internal key; OAuth requests and tokens name the application by client_id instead.",
     )
@@ -63,6 +64,7 @@ class Application(VersionedModel, AbstractApplication):
     )
     user = redeclare(
         AbstractApplication.user,
+        related_query_name="oauth_provider_application",
         help_text="Who registered this application and manages it, never whose account it acts in.",
         db_comment="The owner; deleting them deletes the applications they registered.",
     )
@@ -145,11 +147,13 @@ class Application(VersionedModel, AbstractApplication):
         DISABLED = "disabled", "Disabled by its owner"
 
     description = models.TextField(
+        verbose_name=_("description"),
         blank=True,
         help_text="What it does, shown to everybody asked to let it in.",
         db_comment="Shown on the consent page beside the scopes it asks for.",
     )
     approval = models.CharField(
+        verbose_name=_("approval"),
         max_length=32,
         choices=Approval.choices,
         default=Approval.PENDING,
@@ -159,13 +163,19 @@ class Application(VersionedModel, AbstractApplication):
     # Permissions, not strings: the foreign key refuses a bogus scope and cascades a retired one.
     requested_scopes = models.ManyToManyField(
         "auth.Permission",
+        through="oauth_provider.RequestedScope",
         related_name="requested_by_applications",
+        related_query_name="requested_by_applications",
+        verbose_name=_("requested scopes"),
         blank=True,
         help_text="What it asks to be able to do on somebody's behalf.",
     )
     approved_scopes = models.ManyToManyField(
         "auth.Permission",
+        through="oauth_provider.ApprovedScope",
         related_name="approved_for_applications",
+        related_query_name="approved_for_applications",
+        verbose_name=_("approved scopes"),
         blank=True,
         help_text="What of that a superuser let it ask anybody for - never more than it requested.",
     )
@@ -173,6 +183,8 @@ class Application(VersionedModel, AbstractApplication):
     class Meta(AbstractApplication.Meta):
         swappable = "OAUTH2_PROVIDER_APPLICATION_MODEL"
         db_table = "oauth_provider_application"
+        verbose_name = _("application")
+        verbose_name_plural = _("applications")
         triggers = [
             # A state machine constrains UPDATE only, so a row's birth state needs its own guard.
             pgtrigger.FSM(

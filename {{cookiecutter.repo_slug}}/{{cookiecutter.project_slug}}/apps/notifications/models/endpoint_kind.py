@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 from isik.django.apps.common.db import track_events
 from isik.django.apps.notifications.audience import bases
 
@@ -15,6 +16,8 @@ class EndpointKind(bases.AbstractEndpointKind):
         Endpoint,
         on_delete=models.CASCADE,
         related_name="kinds",
+        related_query_name="kinds",
+        verbose_name=_("endpoint"),
         help_text="The endpoint wanting the kind.",
         db_comment="The endpoint wanting the kind.",
     )
@@ -22,3 +25,5 @@ class EndpointKind(bases.AbstractEndpointKind):
 
     class Meta(bases.AbstractEndpointKind.Meta):
         db_table = "notifications_endpoint_kind"
+        verbose_name = _("endpoint kind")
+        verbose_name_plural = _("endpoint kinds")

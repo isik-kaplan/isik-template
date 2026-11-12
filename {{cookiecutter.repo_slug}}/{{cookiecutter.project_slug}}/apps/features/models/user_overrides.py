@@ -1,3 +1,4 @@
+from django.utils.translation import gettext_lazy as _
 from isik.django.apps.common.db.history import track_events
 from isik.django.apps.features import bases
 
@@ -9,3 +10,5 @@ class UserOverrides(bases.AbstractOverrides):
 
     class Meta(bases.AbstractOverrides.Meta):
         db_table = "features_user_overrides"
+        verbose_name = _("user overrides")
+        verbose_name_plural = _("user overrides")

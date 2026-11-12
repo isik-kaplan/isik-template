@@ -1,3 +1,4 @@
+from django.utils.translation import gettext_lazy as _
 from isik.django.apps.common.db import track_events
 from isik.django.apps.features import bases
 
@@ -11,3 +12,5 @@ class FeatureGrant(bases.AbstractFeatureGrant):
 
     class Meta(bases.AbstractFeatureGrant.Meta):
         db_table = "features_feature_grant"
+        verbose_name = _("feature grant")
+        verbose_name_plural = _("feature grants")

@@ -36,6 +36,7 @@ class SiteSettings(BaseModel):
         db_comment="Who may still sign in: everyone, staff (and superusers) or superusers only.",
     )
     singleton = models.BooleanField(
+        verbose_name=_("singleton"),
         default=True,
         editable=False,
         unique=True,

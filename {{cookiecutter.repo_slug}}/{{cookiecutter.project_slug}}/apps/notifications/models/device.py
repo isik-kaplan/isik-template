@@ -1,3 +1,4 @@
+from django.utils.translation import gettext_lazy as _
 from isik.django.apps.notifications.audience import bases
 
 from apps.common.models.base import primary_key
@@ -10,3 +11,5 @@ class Device(bases.AbstractDevice):
 
     class Meta(bases.AbstractDevice.Meta):
         db_table = "notifications_device"
+        verbose_name = _("device")
+        verbose_name_plural = _("devices")

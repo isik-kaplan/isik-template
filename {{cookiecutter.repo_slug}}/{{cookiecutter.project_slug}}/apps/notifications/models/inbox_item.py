@@ -1,3 +1,4 @@
+from django.utils.translation import gettext_lazy as _
 from isik.django.apps.common.db import track_events
 from isik.django.apps.notifications.audience import bases
 
@@ -15,3 +16,5 @@ class InboxItem(bases.AbstractInboxItem):
 
     class Meta(bases.AbstractInboxItem.Meta):
         db_table = "notifications_inbox_item"
+        verbose_name = _("inbox item")
+        verbose_name_plural = _("inbox items")

@@ -3,6 +3,7 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Q
 from django.db.models.functions import Now
+from django.utils.translation import gettext_lazy as _
 from isik.django.apps.common.db import track_events
 from isik.django.apps.notifications.audiences import Field
 from isik.django.apps.notifications.choices import Policy
@@ -46,15 +47,19 @@ class PersonalAccessToken(BaseModel):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="personal_access_tokens",
+        related_query_name="personal_access_tokens",
+        verbose_name=_("user"),
         help_text="Whose it is, and whom it acts as.",
         db_comment="The account the token acts as; its tokens go with it.",
     )
     name = models.CharField(
+        verbose_name=_("name"),
         max_length=100,
         help_text="What its owner called it, to tell it from their others.",
         db_comment="Free text from its owner.",
     )
     token_checksum = models.CharField(
+        verbose_name=_("token checksum"),
         max_length=64,
         unique=True,
         help_text="The SHA-256 of the token, which is how a request presenting it is matched.",
@@ -62,17 +67,22 @@ class PersonalAccessToken(BaseModel):
     )
     scopes = models.ManyToManyField(
         "auth.Permission",
+        through="users.PersonalAccessTokenScope",
         related_name="personal_access_tokens",
+        related_query_name="personal_access_tokens",
+        verbose_name=_("scopes"),
         blank=True,
         help_text="What it may do, of what its owner holds.",
     )
     expires_at = models.DateTimeField(
+        verbose_name=_("expires at"),
         null=True,
         blank=True,
         help_text="When it stops working, or empty if it works until it is deleted.",
         db_comment="Null for a token that never expires.",
     )
     last_used_at = models.DateTimeField(
+        verbose_name=_("last used at"),
         null=True,
         blank=True,
         help_text="When a request last presented it, or empty if none has.",
@@ -83,3 +93,5 @@ class PersonalAccessToken(BaseModel):
 
     class Meta:
         db_table = "users_personal_access_token"
+        verbose_name = _("personal access token")
+        verbose_name_plural = _("personal access tokens")
