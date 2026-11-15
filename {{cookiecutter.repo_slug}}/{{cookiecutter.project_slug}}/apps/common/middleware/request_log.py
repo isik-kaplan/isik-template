@@ -4,10 +4,8 @@ import time
 
 from django.db import connection
 from isik.django.apps.common.middleware import Middleware
-from isik.django.apps.common.middleware.history import REQUEST_ID_HEADER
 
 from apps.common.logging import REQUEST, log
-from apps.common.logging.emit import ambient
 from apps.common.logging.redaction import body_of, client_ip_of, headers_of, query_of, worth_logging
 
 
@@ -28,10 +26,6 @@ class RequestLogMiddleware(Middleware):
 
         with connection.execute_wrapper(count):
             response = self.get_response(request)
-        # Handed back, so somebody on an error page can quote the id every log of the request carries.
-        request_id = ambient().get("request_id")
-        if request_id:
-            response[REQUEST_ID_HEADER] = request_id
         elapsed_ms = round((time.monotonic() - started) * 1000)
         if worth_logging(response.status_code, elapsed_ms):
             log(

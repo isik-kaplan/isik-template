@@ -416,7 +416,7 @@ CSRF_TRUSTED_ORIGINS = _origins(
 CORS_ALLOWED_ORIGINS = _origins([config.DOMAIN], DEBUG)
 CORS_ALLOW_CREDENTIALS = True
 # Response headers the frontend reads; cross-origin JS sees no custom header unless named here.
-CORS_EXPOSE_HEADERS = ["X-Reauthentication-Required", "X-Session-Cleared", "ETag"]
+CORS_EXPOSE_HEADERS = ["X-Reauthentication-Required", "X-Session-Cleared", "ETag", "X-Request-ID"]
 # A custom request header not listed here is refused at the preflight.
 CORS_ALLOW_HEADERS = (*default_headers, "idempotency-key", "if-match", "if-none-match")
 

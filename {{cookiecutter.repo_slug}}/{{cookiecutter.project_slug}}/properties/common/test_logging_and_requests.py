@@ -12,7 +12,6 @@ from django.test import RequestFactory
 from django.utils.translation import gettext_lazy
 from hypothesis import given
 from hypothesis import strategies as st
-from isik.django.apps.common.middleware.history import REQUEST_ID_HEADER
 
 from apps.common.api.renderers import enc_hook
 from apps.common.api.throttling import AnonymousRateThrottle
@@ -24,7 +23,6 @@ from apps.common.logging.redaction import LOGGABLE, LOGGABLE_HEADERS, REDACTED, 
 from apps.common.logging.scrub import scrub_event
 from apps.common.middleware.content_length import ContentLengthMiddleware
 from apps.common.middleware.health_check import HealthCheckMiddleware
-from apps.common.middleware.request_log import RequestLogMiddleware
 
 from {{ cookiecutter.project_slug }}.config import CONFIG
 
@@ -228,22 +226,6 @@ def test_the_health_check_answers_its_exact_path_and_nothing_else(path):
     response = HealthCheckMiddleware(get_response=lambda request: passed)(RequestFactory().get(path))
 
     assert (response.content == b"ok") is (path == "/health/")
-
-
-@pytest.mark.django_db
-@pytest.mark.parametrize("request_id", [None, "01JB4F"])
-@given(status=st.integers(200, 599))
-def test_the_request_id_is_handed_back_only_when_there_is_one(request_id, status):
-    response = HttpResponse(status=status)
-    middleware = RequestLogMiddleware(get_response=lambda request: response)
-
-    if request_id:
-        with pghistory.context(request_id=request_id):
-            answered = middleware(RequestFactory().get("/"))
-    else:
-        answered = middleware(RequestFactory().get("/"))
-
-    assert answered.get(REQUEST_ID_HEADER) == request_id
 
 
 @given(remote=st.from_regex(r"[a-z]{1,10}", fullmatch=True))

@@ -1,6 +1,7 @@
 import itertools
 import json
 import os
+import re
 import shutil
 import subprocess
 
@@ -128,6 +129,27 @@ def test_nginx_sends_stored_files_only_from_an_internal_location_on_the_backend_
     assert "add_header X-Content-Type-Options nosniff always;" in found
     assert nginx.count(location) == 1
     assert absent not in nginx
+
+
+@pytest.mark.parametrize("context_name", ["default", "self-tls", "minimal"])
+def test_nginx_hands_back_the_request_id_from_every_block_that_sets_headers(cookies, context_name):
+    """A block with its own add_header inherits none from above, so one without the id would drop it."""
+    result = cookies.bake(extra_context=load_context(context_name))
+    assert result.exit_code == 0
+    nginx = (result.project_path / f"{result.context['project_slug']}-server" / "template.nginx.conf").read_text()
+    # envsubst's ${...} aren't blocks.
+    text = re.sub(r"\$\{\w+\}", "VAR", nginx)
+
+    header_blocks = 0
+    while innermost := list(re.finditer(r"\{([^{}]*)\}", text)):
+        for block in innermost:
+            if "add_header" in block[1]:
+                header_blocks += 1
+                assert "add_header X-Request-ID $request_id always;" in block[1], block[1]
+        text = re.sub(r"\{[^{}]*\}", "", text)
+    assert header_blocks >= 4
+    upstreams = nginx.count("proxy_pass http://frontend_app;") + nginx.count("proxy_pass http://backend_api;")
+    assert nginx.count("proxy_set_header X-Request-ID $request_id;") == upstreams
 
 
 @pytest.mark.parametrize("context_name", ["default", "self-tls", "minimal"])

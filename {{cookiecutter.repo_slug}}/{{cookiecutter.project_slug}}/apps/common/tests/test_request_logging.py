@@ -375,19 +375,16 @@ class TestSentryKeepsTheSameRule:
 
 
 @pytest.mark.django_db
-def test_the_response_carries_the_id_back_to_whoever_asked():
-    """Somebody on an error page can quote one id that every log of the request carries."""
+def test_the_id_is_left_to_nginx_to_hand_back():
+    """nginx adds it to every response, and its add_header appends: a second setter here sends it twice."""
     middleware = RequestLogMiddleware(get_response=lambda _: HttpResponse(status=500))
 
     with pghistory.context(request_id="01JB4F"):
         response = middleware(RequestFactory().get("/x/"))
 
-    # As sent, not as looked up: a header lookup ignores case.
-    assert ("X-Request-ID", "01JB4F") in response.items()
-
-
-@pytest.mark.django_db
-def test_a_response_outside_any_context_carries_no_id():
-    response = RequestLogMiddleware(get_response=lambda _: HttpResponse())(RequestFactory().get("/x/"))
-
     assert "X-Request-ID" not in response
+
+
+def test_a_cross_origin_frontend_can_read_the_id():
+    """The frontend calls the API from another origin, where an unexposed header reads as absent."""
+    assert "X-Request-ID" in settings.CORS_EXPOSE_HEADERS
