@@ -32,7 +32,8 @@ def test_a_forced_kind_is_locked_says_why_and_the_person_is_told(client, signed_
     deliver_waiting_notices()
 
     (entry,) = [entry for entry in client.get(KINDS).json() if entry["kind"] == "account_changed"]
-    assert (entry["may_change"], entry["forced"], entry["forced_reason"]) == (False, True, REASON)
+    inbox = entry["channels"]["inbox"]
+    assert (inbox["may_change"], inbox["forced"], inbox["forced_reason"]) == (False, True, REASON)
     assert _kinds_in_inbox(signed_in) == ["notification_settings_forced"]
     _account_changed(signed_in)
     assert _kinds_in_inbox(signed_in) == ["notification_settings_forced"]
@@ -60,5 +61,5 @@ def test_letting_go_gives_the_person_their_own_choice_back(client, signed_in):
 
 @pytest.mark.django_db
 def test_a_mandatory_kind_cannot_be_forced_off(signed_in):
-    with pytest.raises(ValueError, match="mandatory|MANDATORY"):
+    with pytest.raises(ValueError, match="leaves no choice"):
         force_subscription(signed_in, TOKEN_CREATED, enabled=False, source=STAFF, reason=REASON)

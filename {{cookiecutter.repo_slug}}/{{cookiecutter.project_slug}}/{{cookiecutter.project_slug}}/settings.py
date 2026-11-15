@@ -6,6 +6,7 @@ import sentry_sdk
 from corsheaders.defaults import default_headers
 from django.conf.locale import LANG_INFO
 from isik.django.apps.common.checks import Check, CheckOption, Severity
+from isik.django.apps.notifications.channels import Channel
 {%- if cookiecutter.background_jobs == "inline" and cookiecutter.webhooks != "none" %}
 from isik.django.apps.notifications.exemptions import SendsInline
 {%- endif %}
@@ -524,7 +525,10 @@ ISIK = {
         "SCHEMA_LANGUAGE": LANGUAGE_CODE,
         # Each row says which build wrote it.
         "HISTORY": {
-            "CONTEXT_KEYS": ("version", "build", "request_id"),
+            # request_id is this request's own; correlation_id is nginx's, shared by what one page load caused.
+            "CONTEXT_KEYS": ("version", "build", "request_id", "correlation_id"),
+            # nginx hands it back on every response, and its add_header appends: a second setter sends it twice.
+            "RETURN_REQUEST_ID": False,
             "CONTEXT_VERSION": __version__,
             "CONTEXT_BUILD": config.BUILD,
         },
@@ -561,9 +565,9 @@ ISIK = {
             # Every kind is declared in apps/notifications/kinds.py, so a name can't be invented at a call site.
             "REQUIRE_DECLARED_KINDS": True,
 {%- if cookiecutter.webhooks == "none" %}
-            "CHANNELS": ("inbox", "email", *(("push",) if PUSH_CREDENTIALS else ())),
+            "CHANNELS": (Channel.INBOX, Channel.EMAIL, *((Channel.PUSH,) if PUSH_CREDENTIALS else ())),
 {%- else %}
-            "CHANNELS": ("inbox", "email", "webhook", *(("push",) if PUSH_CREDENTIALS else ())),
+            "CHANNELS": (Channel.INBOX, Channel.EMAIL, Channel.WEBHOOK, *((Channel.PUSH,) if PUSH_CREDENTIALS else ())),
             # Names the signature header receivers verify, so it's the slug: renaming the product mustn't move it.
             "PROJECT_NAME": {{ cookiecutter.project_slug.replace("_", "-")|tojson }},
 {%- endif %}

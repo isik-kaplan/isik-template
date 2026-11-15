@@ -1,6 +1,6 @@
 import { NotificationsList, messageOf } from '@/components/app-auth/NotificationsList'
 
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -31,14 +31,11 @@ function item(fields: Partial<Item>): Item {
 
 type Kind = Props['initialKinds'][number]
 
-function kind(fields: Partial<Kind>): Kind {
+type State = Kind['channels'][string]
+
+function state(fields: Partial<State> = {}): State {
   return {
-    kind: 'account_changed',
-    label: 'Changes to your account, in your inbox',
-    description: null,
     policy: 'default_on',
-    variants: [],
-    channels: ['inbox'],
     may_change: true,
     enabled: true,
     enabled_variants: {},
@@ -47,11 +44,28 @@ function kind(fields: Partial<Kind>): Kind {
     forced_variants: [],
     forced_reason: null,
     ...fields,
-  } as Kind
+  }
 }
 
-const ACCOUNT = kind({})
+// Sent to the inbox, which the person chooses on, and never by webhook, which nobody does.
+function kind(fields: Partial<Kind> = {}, inbox: Partial<State> = {}): Kind {
+  return {
+    kind: 'account_changed',
+    label: 'Changes to your account, in your inbox',
+    description: null,
+    variants: [],
+    channels: { inbox: state(inbox), webhook: state({ policy: 'never', may_change: false, enabled: false }) },
+    ...fields,
+  }
+}
+
+const ACCOUNT = kind()
 const REVIEWS = kind({ kind: 'application_reviewed', label: 'Your applications being approved or withdrawn' })
+
+/** One kind's checkbox on one channel. */
+function box(kindLabel: string, channel = 'In your inbox') {
+  return within(screen.getByRole('group', { name: kindLabel })).getByLabelText(channel) as HTMLInputElement
+}
 
 function jsonResponse(status: number, body: unknown) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
@@ -193,12 +207,15 @@ describe('NotificationsList', () => {
   })
 
   it('shows each kind as what the person gets now', () => {
-    render(<NotificationsList initialItems={[]} initialKinds={[ACCOUNT, { ...REVIEWS, enabled: false }]} />)
-
-    expect((screen.getByLabelText('Changes to your account, in your inbox') as HTMLInputElement).checked).toBe(true)
-    expect((screen.getByLabelText('Your applications being approved or withdrawn') as HTMLInputElement).checked).toBe(
-      false
+    render(
+      <NotificationsList
+        initialItems={[]}
+        initialKinds={[ACCOUNT, kind({ kind: REVIEWS.kind, label: REVIEWS.label }, { enabled: false })]}
+      />
     )
+
+    expect(box('Changes to your account, in your inbox').checked).toBe(true)
+    expect(box('Your applications being approved or withdrawn').checked).toBe(false)
   })
 
   it('turns a kind off, keeping the choice the server answered with', async () => {
@@ -208,22 +225,22 @@ describe('NotificationsList', () => {
     globalThis.fetch = fetchMock as never
     render(<NotificationsList initialItems={[]} initialKinds={[ACCOUNT]} />)
 
-    await userEvent.click(screen.getByLabelText('Changes to your account, in your inbox'))
+    await userEvent.click(box('Changes to your account, in your inbox'))
 
-    expect((screen.getByLabelText('Changes to your account, in your inbox') as HTMLInputElement).checked).toBe(false)
+    expect(box('Changes to your account, in your inbox').checked).toBe(false)
     expect(toast.success).toHaveBeenCalledWith('Saved.')
     const [request] = fetchMock.mock.calls[0] as unknown as [Request]
-    expect(await request.json()).toEqual({ kind: 'account_changed', enabled: false })
+    expect(await request.json()).toEqual({ kind: 'account_changed', enabled: false, channel: 'inbox' })
   })
 
   it('says so when a choice could not be saved, and keeps the box as it was', async () => {
     globalThis.fetch = vi.fn(async () => jsonResponse(400, {})) as never
     render(<NotificationsList initialItems={[]} initialKinds={[ACCOUNT]} />)
 
-    await userEvent.click(screen.getByLabelText('Changes to your account, in your inbox'))
+    await userEvent.click(box('Changes to your account, in your inbox'))
 
     expect(toast.error).toHaveBeenCalledWith("Couldn't save that. Try again.")
-    expect((screen.getByLabelText('Changes to your account, in your inbox') as HTMLInputElement).checked).toBe(true)
+    expect(box('Changes to your account, in your inbox').checked).toBe(true)
   })
 
   it('names the inbox and, when something may be turned off, what is chosen there', () => {
@@ -274,11 +291,11 @@ describe('NotificationsList', () => {
     answer(jsonResponse(200, { marked: 1 }))
     await vi.waitFor(() => expect(screen.queryByText('Mark all read')).toBeNull())
 
-    const box = screen.getByLabelText('Changes to your account, in your inbox') as HTMLInputElement
-    await userEvent.click(box)
-    expect(box.disabled).toBe(true)
+    const inbox = box('Changes to your account, in your inbox')
+    await userEvent.click(inbox)
+    expect(inbox.disabled).toBe(true)
     answer(jsonResponse(201, { id: 's1', kind: 'account_changed', variant: null, enabled: false }))
-    await vi.waitFor(() => expect(box.disabled).toBe(false))
+    await vi.waitFor(() => expect(inbox.disabled).toBe(false))
   })
 
   it('turns on only the kind chosen', async () => {
@@ -289,18 +306,16 @@ describe('NotificationsList', () => {
       <NotificationsList
         initialItems={[]}
         initialKinds={[
-          { ...ACCOUNT, enabled: false },
-          { ...REVIEWS, enabled: false },
+          kind({}, { enabled: false }),
+          kind({ kind: REVIEWS.kind, label: REVIEWS.label }, { enabled: false }),
         ]}
       />
     )
 
-    await userEvent.click(screen.getByLabelText('Changes to your account, in your inbox'))
+    await userEvent.click(box('Changes to your account, in your inbox'))
 
-    expect((screen.getByLabelText('Changes to your account, in your inbox') as HTMLInputElement).checked).toBe(true)
-    expect((screen.getByLabelText('Your applications being approved or withdrawn') as HTMLInputElement).checked).toBe(
-      false
-    )
+    expect(box('Changes to your account, in your inbox').checked).toBe(true)
+    expect(box('Your applications being approved or withdrawn').checked).toBe(false)
   })
 
   it('shows a kind staff decided as it is now, locked, with the reason when it may be read', () => {
@@ -308,22 +323,28 @@ describe('NotificationsList', () => {
       <NotificationsList
         initialItems={[]}
         initialKinds={[
-          kind({
-            may_change: false,
-            forced: true,
-            enabled: false,
-            forced_enabled: false,
-            forced_reason: 'Paused during the investigation.',
-          }),
-          kind({ kind: 'application_reviewed', label: null, may_change: false, forced: true, forced_enabled: true }),
+          kind(
+            {},
+            {
+              may_change: false,
+              forced: true,
+              enabled: false,
+              forced_enabled: false,
+              forced_reason: 'Paused during the investigation.',
+            }
+          ),
+          kind(
+            { kind: 'application_reviewed', label: null },
+            { may_change: false, forced: true, forced_enabled: true }
+          ),
         ]}
       />
     )
 
-    const paused = screen.getByLabelText('Changes to your account, in your inbox') as HTMLInputElement
+    const paused = box('Changes to your account, in your inbox')
     expect(paused.disabled).toBe(true)
     expect(paused.checked).toBe(false)
-    expect((screen.getByLabelText('application_reviewed') as HTMLInputElement).checked).toBe(true)
+    expect(box('application_reviewed').checked).toBe(true)
     expect(screen.getByText('Decided for you by staff: Paused during the investigation.')).toBeTruthy()
     expect(screen.getByText('Decided for you by staff.')).toBeTruthy()
   })
@@ -332,7 +353,7 @@ describe('NotificationsList', () => {
     render(
       <NotificationsList
         initialItems={[]}
-        initialKinds={[kind({ kind: 'token_created', label: 'New tokens', may_change: false })]}
+        initialKinds={[kind({ kind: 'token_created', label: 'New tokens' }, { may_change: false })]}
       />
     )
 
@@ -343,6 +364,54 @@ describe('NotificationsList', () => {
   it('names a kind by its name when the backend gave it no label', () => {
     render(<NotificationsList initialItems={[]} initialKinds={[kind({ label: null })]} />)
 
-    expect(screen.getByLabelText('account_changed')).toBeTruthy()
+    expect(box('account_changed')).toBeTruthy()
+  })
+
+  it('offers each channel the person chooses on, in the order they read, and never the webhook', () => {
+    const channels = {
+      push: state(),
+      webhook: state({ policy: 'mandatory', may_change: false }),
+      telex: state(),
+      fax: state(),
+      email: state({ enabled: false }),
+      inbox: state(),
+    }
+    render(<NotificationsList initialItems={[]} initialKinds={[kind({ channels })]} />)
+
+    const group = within(screen.getByRole('group', { name: 'Changes to your account, in your inbox' }))
+    expect(group.getAllByRole('checkbox').map((each) => each.parentElement?.textContent)).toEqual([
+      'In your inbox',
+      'By email',
+      'On your phone',
+      'fax',
+      'telex',
+    ])
+    expect(box('Changes to your account, in your inbox', 'By email').checked).toBe(false)
+  })
+
+  it('changes one channel of one kind, and leaves the rest as they were', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse(201, { id: 's1', kind: 'account_changed', channel: 'email' }))
+    globalThis.fetch = fetchMock as never
+    const channels = { inbox: state(), email: state() }
+    render(<NotificationsList initialItems={[]} initialKinds={[kind({ channels }), { ...REVIEWS, channels }]} />)
+
+    await userEvent.click(box('Changes to your account, in your inbox', 'By email'))
+
+    expect(box('Changes to your account, in your inbox', 'By email').checked).toBe(false)
+    expect(box('Changes to your account, in your inbox').checked).toBe(true)
+    expect(box('Your applications being approved or withdrawn', 'By email').checked).toBe(true)
+    const [request] = fetchMock.mock.calls[0] as unknown as [Request]
+    expect(await request.json()).toEqual({ kind: 'account_changed', enabled: false, channel: 'email' })
+  })
+
+  it('says what staff decided once, however many channels they decided it on, and nothing of the rest', () => {
+    const forced = state({ may_change: false, forced: true, forced_reason: 'Paused.' })
+    const channels = { inbox: forced, email: forced, push: state() }
+    render(<NotificationsList initialItems={[]} initialKinds={[kind({ channels })]} />)
+
+    expect(screen.getAllByText('Decided for you by staff: Paused.')).toHaveLength(1)
+    expect(screen.queryByText('Decided for you by staff.')).toBeNull()
+    expect(box('Changes to your account, in your inbox', 'By email').disabled).toBe(true)
+    expect(box('Changes to your account, in your inbox', 'On your phone').disabled).toBe(false)
   })
 })

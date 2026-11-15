@@ -10,7 +10,7 @@ from isik.django.apps.notifications.choices import Policy
 from isik.django.apps.notifications.kinds import notifies
 
 from apps.common.models.base import BaseModel
-from apps.notifications.kinds import OWNER_CHANNELS, PRIVATE_PUSH, TOKEN_CREATED, TOKEN_REVOKED
+from apps.notifications.kinds import OWNER_CHANNELS, PRIVATE_PUSH, TOKEN_CREATED, TOKEN_REVOKED, sent_on
 
 
 class PersonalAccessTokenQuerySet(models.QuerySet):
@@ -25,8 +25,7 @@ class PersonalAccessTokenQuerySet(models.QuerySet):
     on=pgtrigger.Insert,
     snapshot=["user", "name"],
     audience=Field("user"),
-    policy=Policy.MANDATORY,
-    channels=OWNER_CHANNELS,
+    channels=sent_on(Policy.MANDATORY, *OWNER_CHANNELS),
     push=PRIVATE_PUSH,
 )
 # A revoked token is deleted, so the notice carries what it was.
@@ -35,8 +34,7 @@ class PersonalAccessTokenQuerySet(models.QuerySet):
     on=pgtrigger.Delete,
     snapshot=["user", "name"],
     audience=Field("user"),
-    policy=Policy.MANDATORY,
-    channels=OWNER_CHANNELS,
+    channels=sent_on(Policy.MANDATORY, *OWNER_CHANNELS),
     push=PRIVATE_PUSH,
 )
 class PersonalAccessToken(BaseModel):

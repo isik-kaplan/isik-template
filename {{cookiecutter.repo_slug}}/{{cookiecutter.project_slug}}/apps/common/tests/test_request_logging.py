@@ -373,6 +373,13 @@ class TestSentryKeepsTheSameRule:
 
         assert event["tags"] == {"request_id": "01JB4F"}
 
+    def test_an_event_is_tagged_with_what_its_request_was_part_of(self):
+        """nginx's id, which the access log names the page load and every request under it by."""
+        with pghistory.context(request_id="01JB4F", correlation_id="8a25d505"):
+            event = scrub_event({"exception": {"values": []}}, hint=None)
+
+        assert event["tags"] == {"request_id": "01JB4F", "correlation_id": "8a25d505"}
+
 
 @pytest.mark.django_db
 def test_the_id_is_left_to_nginx_to_hand_back():

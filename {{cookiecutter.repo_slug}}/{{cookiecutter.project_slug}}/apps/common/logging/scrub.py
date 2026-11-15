@@ -10,10 +10,11 @@ from apps.common.logging.redaction import LOGGABLE_HEADERS, REDACTED, values_of
 
 
 def scrub_event(event, hint):
-    # Tagged so an event leads to the access log, the request line and the history rows of its request.
-    request_id = ambient().get("request_id")
-    if request_id:
-        event.setdefault("tags", {}).setdefault("request_id", request_id)
+    # Tagged so an event leads to its request's line and history rows, and to the access log of what it was part of.
+    opened = ambient()
+    for key in ("request_id", "correlation_id"):
+        if opened.get(key):
+            event.setdefault("tags", {}).setdefault(key, opened[key])
     request = event.get("request")
     if not request:
         return event

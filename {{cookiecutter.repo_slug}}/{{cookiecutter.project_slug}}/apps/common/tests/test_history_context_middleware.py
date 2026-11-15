@@ -10,27 +10,33 @@ from {{ cookiecutter.project_slug }} import __version__
 from {{ cookiecutter.project_slug }}.config import CONFIG as config
 
 
-def test_a_served_request_records_the_version_that_served_it():
+# What nginx's $request_id looks like.
+NGINX_ID = "8a25d505ac73f1e04d49ce32aa71969b"
+
+
+def _context_of(request):
     seen = {}
 
     def view(request):
         seen.update(open_history_context())
 
-    HistoryContextMiddleware(get_response=view)(RequestFactory().post("/", HTTP_X_REQUEST_ID="01JB4F"))
+    HistoryContextMiddleware(get_response=view)(request)
+    return seen
 
-    assert (seen["version"], seen["build"], seen["request_id"]) == (__version__, config.BUILD, "01JB4F")
+
+def test_a_served_request_records_the_version_that_served_it_and_what_it_was_part_of():
+    """The request's own id is Django's; nginx's groups it with whatever else one page load caused."""
+    seen = _context_of(RequestFactory().post("/", HTTP_X_REQUEST_ID=NGINX_ID))
+
+    assert (seen["version"], seen["build"], seen["correlation_id"]) == (__version__, config.BUILD, NGINX_ID)
+    assert seen["request_id"] != NGINX_ID
 
 
-def test_a_request_nginx_never_named_still_gets_an_id():
+def test_a_request_nginx_never_named_is_its_own_correlation():
     """Tests and anything else reaching Django directly; a row with no id would lead nowhere."""
-    seen = {}
+    seen = _context_of(RequestFactory().post("/"))
 
-    def view(request):
-        seen.update(open_history_context())
-
-    HistoryContextMiddleware(get_response=view)(RequestFactory().post("/"))
-
-    assert len(seen["request_id"]) == 32
+    assert seen["correlation_id"] == seen["request_id"]
 
 
 @pytest.mark.django_db

@@ -21,9 +21,11 @@ const kinds = fc
     fc.record({
       kind: fc.stringMatching(/^[a-z]{3,10}$/),
       label: fc.option(fc.stringMatching(/^[A-Z][a-z]{3,10}$/), { nil: null }),
+      // Every kind drawn goes out by webhook: one that doesn't is never offered, which a test of its own shows.
+      channels: fc.constant({ webhook: { policy: 'mandatory' } }),
     }),
     { minLength: 1, maxLength: 3, selector: (kind) => kind.kind }
-    // Only the name and label are read here; the rest of a kind is the inbox's business.
+    // Only the name, label and webhook policy are read here; the rest of a kind is the inbox's business.
   )
   .map((list) => list as unknown as Props['kinds'])
 

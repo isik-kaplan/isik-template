@@ -5,19 +5,30 @@ renders it from the API alone."""
 from django.utils.translation import gettext_lazy as _
 from isik.django.apps.notifications import conf
 from isik.django.apps.notifications.audiences import Field
+from isik.django.apps.notifications.channels import Channel
 from isik.django.apps.notifications.choices import Policy
 from isik.django.apps.notifications.kinds import PushContent, Source, declare_kind
 
 
-# On once a push service has credentials ({{ cookiecutter.project_slug }}.settings.PUSH_CREDENTIALS): a kind
-# sent on push without them won't start.
-PUSH = ("push",) if "push" in conf.setting("CHANNELS") else ()
+def sent_on(policy, *channels):
+    """`policy` on `channels` and NEVER on every other channel turned on: a kind names each one. An endpoint has
+    nobody to choose for it, so the webhook is MANDATORY wherever it's sent. A channel that isn't turned on, push
+    without {{ cookiecutter.project_slug }}.settings.PUSH_CREDENTIALS say, is left out."""
+
+    def on(channel):
+        if channel not in channels:
+            return Policy.NEVER
+        return Policy.MANDATORY if channel == Channel.WEBHOOK else policy
+
+    return {channel: on(channel) for channel in conf.setting("CHANNELS")}
+
+
 # Names people typed stay off lock screens and Apple's and Google's servers: a push says what kind of thing
 # happened, and the app shows the rest.
 PRIVATE_PUSH = PushContent(private=True, badge=True)
 
 # What an owner hears of their own tokens and applications{% if cookiecutter.webhooks != "none" %}, which an endpoint may also be sent{% endif %}.
-OWNER_CHANNELS = ("inbox", "email"{% if cookiecutter.webhooks != "none" %}, "webhook"{% endif %}, *PUSH)
+OWNER_CHANNELS = (Channel.INBOX, Channel.EMAIL, Channel.WEBHOOK, Channel.PUSH)
 
 # Trigger-sourced: the database writes these, on the models that declare them.
 TOKEN_CREATED = declare_kind(
@@ -63,8 +74,7 @@ REVIEWER_KINDS = {APPLICATION_TAKEN_DOWN}
 SIGNED_OUT_BY_POLICY = declare_kind(
     "signed_out_by_policy",
     audience=Field("user"),
-    policy=Policy.MANDATORY,
-    channels=("inbox", "email", *PUSH),
+    channels=sent_on(Policy.MANDATORY, Channel.INBOX, Channel.EMAIL, Channel.PUSH),
     push=PushContent(badge=True),
     label=_("Signed out by policy"),
     description=_("When signing in is restricted and you are signed out."),
@@ -73,8 +83,7 @@ SIGNED_OUT_BY_POLICY = declare_kind(
 NOTIFICATION_SETTINGS_FORCED = declare_kind(
     "notification_settings_forced",
     audience=Field("user"),
-    policy=Policy.MANDATORY,
-    channels=("inbox",),
+    channels=sent_on(Policy.MANDATORY, Channel.INBOX),
     label=_("Notification settings changed by staff"),
     description=_("When staff turn one of your notifications on or off for you, or let you choose again."),
     message=_("Staff changed one of your notification settings."),
@@ -97,8 +106,7 @@ ACCOUNT_CHANGED = declare_kind(
     "account_changed",
     variants=tuple(ACCOUNT_CHANGES),
     audience=Field("user"),
-    policy=Policy.DEFAULT_ON,
-    channels=("inbox", *PUSH),
+    channels=sent_on(Policy.DEFAULT_ON, Channel.INBOX, Channel.PUSH),
     push=PushContent(badge=True),
     label=_("Changes to your account, in your inbox"),
     description=_("Password, email, two-factor and sign-in provider changes."),

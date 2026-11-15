@@ -27,10 +27,12 @@ function endpoint(fields: Partial<Endpoint> = {}): Endpoint {
   }
 }
 
+const BY_WEBHOOK = { webhook: { policy: 'mandatory' } }
+
 const KINDS = [
-  { kind: 'account_changed', label: 'Changes to an account' },
-  { kind: 'token_created', label: null },
-] as Kind[]
+  { kind: 'account_changed', label: 'Changes to an account', channels: BY_WEBHOOK },
+  { kind: 'token_created', label: null, channels: BY_WEBHOOK },
+] as unknown as Kind[]
 
 function jsonResponse(status: number, body: unknown) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
@@ -74,6 +76,14 @@ describe('WebhookEndpoints', () => {
     expect(screen.getByRole('checkbox', { name: /Changes to an account/ })).toBeTruthy()
     expect(screen.getAllByText('token_created')).toHaveLength(2)
     expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('offers only the kinds that go out by webhook', () => {
+    const inboxOnly = { kind: 'settings_forced', label: 'Settings forced', channels: { webhook: { policy: 'never' } } }
+    render(<WebhookEndpoints endpoints={[]} kinds={[...KINDS, inboxOnly] as unknown as Kind[]} />)
+
+    expect(screen.getByRole('checkbox', { name: /Changes to an account/ })).toBeTruthy()
+    expect(screen.queryByRole('checkbox', { name: /Settings forced/ })).toBeNull()
   })
 
   it('shows each endpoint with what it is sent, by label where there is one', () => {

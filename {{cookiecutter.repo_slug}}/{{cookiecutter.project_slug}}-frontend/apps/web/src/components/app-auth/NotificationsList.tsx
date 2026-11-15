@@ -16,6 +16,25 @@ import { toast } from 'sonner'
 
 type Item = ApiType<'InboxItem'>
 type Kind = ApiType<'NoticeKind'>
+type ChannelState = Kind['channels'][string]
+
+// The order a person reads them in. A channel the project added sorts after, by its name.
+const CHANNEL_ORDER = ['inbox', 'email', 'push']
+
+/** A kind's channels this person decides on, or staff decided for them: the webhook is neither. */
+export function offeredChannels(kind: Kind): [string, ChannelState][] {
+  const rank = (channel: string) => CHANNEL_ORDER.indexOf(channel) + 1 || CHANNEL_ORDER.length + 1
+  return Object.entries(kind.channels)
+    .filter(([, state]) => state.may_change || state.forced)
+    .sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b))
+}
+
+function channelLabel(channel: string, t: Translate): string {
+  if (channel === 'inbox') return t('auth:profileNotificationsChannelInbox')
+  if (channel === 'email') return t('auth:profileNotificationsChannelEmail')
+  if (channel === 'push') return t('auth:profileNotificationsChannelPush')
+  return channel
+}
 
 /** What a notification says: the backend renders it, in the request's language, from what its notice carried. */
 export function messageOf(item: Item, t: Translate): string {
@@ -69,13 +88,19 @@ export function NotificationsList({ initialItems, initialKinds }: { initialItems
     toast.error(t('auth:profileNotificationsMarkError'))
   }
 
-  async function choose(kind: Kind, on: boolean) {
-    setPending(kind.kind)
-    const { data } = await createApi(apiOrigin()).chooseNotifications(kind.kind, on)
+  async function choose(kind: Kind, channel: string, on: boolean) {
+    setPending(`${kind.kind}:${channel}`)
+    const { data } = await createApi(apiOrigin()).chooseNotifications(kind.kind, on, channel)
     setPending(null)
     if (data) {
-      // What they get now is what they chose: a kind they may change isn't forced.
-      setKinds((current) => current.map((each) => (each.kind === kind.kind ? { ...each, enabled: on } : each)))
+      // What they get there now is what they chose: a channel they may change isn't forced.
+      setKinds((current) =>
+        current.map((each) =>
+          each.kind === kind.kind
+            ? { ...each, channels: { ...each.channels, [channel]: { ...each.channels[channel], enabled: on } } }
+            : each
+        )
+      )
       toast.success(t('auth:profileNotificationsSaved'))
       return
     }
@@ -84,7 +109,7 @@ export function NotificationsList({ initialItems, initialKinds }: { initialItems
 
   const unread = items.some((item) => !item.read_at)
   // What a person decides, and what staff decided for them; the rest are neither theirs nor shown.
-  const offered = kinds.filter((kind) => kind.may_change || kind.forced)
+  const offered = kinds.filter((kind) => offeredChannels(kind).length > 0)
 
   return (
     <section className="flex flex-col gap-3">
@@ -124,26 +149,44 @@ export function NotificationsList({ initialItems, initialKinds }: { initialItems
         <div className="flex flex-col gap-2 border-t border-border pt-4">
           <h3 className="text-sm font-semibold">{t('auth:profileNotificationsSettingsTitle')}</h3>
           <p className="text-sm text-muted-foreground">{t('auth:profileNotificationsSettingsHint')}</p>
-          {offered.map((kind) => (
-            <div key={kind.kind} className="flex flex-col gap-0.5">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={kind.enabled}
-                  disabled={kind.forced || pending === kind.kind}
-                  onChange={(event) => choose(kind, event.target.checked)}
-                />
-                {kind.label ?? kind.kind}
-              </label>
-              {kind.forced && (
-                <span className="text-sm text-muted-foreground">
-                  {kind.forced_reason
-                    ? t('auth:profileNotificationsForcedBecause', { reason: kind.forced_reason })
-                    : t('auth:profileNotificationsForced')}
-                </span>
-              )}
-            </div>
-          ))}
+          {offered.map((kind) => {
+            const channels = offeredChannels(kind)
+            // One line per thing staff said, however many channels they said it of.
+            const forced = [
+              ...new Set(
+                channels
+                  .filter(([, state]) => state.forced)
+                  .map(([, state]) =>
+                    state.forced_reason
+                      ? t('auth:profileNotificationsForcedBecause', { reason: state.forced_reason })
+                      : t('auth:profileNotificationsForced')
+                  )
+              ),
+            ]
+            return (
+              <fieldset key={kind.kind} className="flex flex-col gap-1">
+                <legend className="text-sm">{kind.label ?? kind.kind}</legend>
+                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                  {channels.map(([channel, state]) => (
+                    <label key={channel} className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={state.enabled}
+                        disabled={state.forced || pending === `${kind.kind}:${channel}`}
+                        onChange={(event) => choose(kind, channel, event.target.checked)}
+                      />
+                      {channelLabel(channel, t)}
+                    </label>
+                  ))}
+                </div>
+                {forced.map((said) => (
+                  <span key={said} className="text-sm text-muted-foreground">
+                    {said}
+                  </span>
+                ))}
+              </fieldset>
+            )
+          })}
         </div>
       )}
     </section>

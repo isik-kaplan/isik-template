@@ -239,15 +239,28 @@ const item = fc.record({
   created_at: when,
 })
 const items = fc.uniqueArray(item, { selector: (each) => each.id, maxLength: 4 })
-const kind = fc.record({
-  kind: name,
-  label: fc.option(word, { nil: null }),
+const channelState = fc.record({
   may_change: fc.boolean(),
   forced: fc.boolean(),
   forced_reason: fc.option(word, { nil: null }),
   enabled: fc.boolean(),
 })
+const CHANNEL_LABELS: Record<string, string> = { inbox: 'In your inbox', email: 'By email', push: 'On your phone' }
+const kind = fc.record({
+  kind: name,
+  label: fc.option(word, { nil: null }),
+  // The webhook comes as the backend sends it: nobody chooses on it, and staff never force it.
+  channels: fc
+    .record({ inbox: channelState, email: channelState, push: channelState }, { requiredKeys: [] })
+    .map((chosen) => ({
+      ...chosen,
+      webhook: { may_change: false, forced: false, forced_reason: null, enabled: true },
+    })),
+})
 const kinds = fc.uniqueArray(kind, { selector: (each) => each.kind, maxLength: 3 })
+type DrawnKind = typeof kind extends fc.Arbitrary<infer K> ? K : never
+const offeredOf = (each: DrawnKind) =>
+  Object.entries(each.channels).filter(([, state]) => state.may_change || state.forced)
 
 describe("this person's notifications", () => {
   test.prop([item])('say what the notice carried, or that something changed', (each) => {
@@ -264,13 +277,15 @@ describe("this person's notifications", () => {
       )
       expect(screen.queryByRole('button', { name: 'Mark all read' }) !== null).toBe(list.some((each) => !each.read_at))
       expect(screen.queryAllByRole('checkbox')).toHaveLength(
-        offered.filter((each) => each.may_change || each.forced).length
+        offered.reduce((count, each) => count + offeredOf(each).length, 0)
       )
       for (const box of screen.queryAllByRole('checkbox') as HTMLInputElement[]) {
-        const each = offered.find(
-          (candidate) => box.parentElement?.textContent === (candidate.label ?? candidate.kind)
-        ) as (typeof offered)[number]
-        expect(box.disabled).toBe(each.forced)
+        const legend = box.closest('fieldset')?.querySelector('legend')?.textContent
+        const each = offered.find((candidate) => legend === (candidate.label ?? candidate.kind)) as DrawnKind
+        const [, state] = offeredOf(each).find(
+          ([channel]) => CHANNEL_LABELS[channel] === box.parentElement?.textContent
+        ) as [string, { forced: boolean }]
+        expect(box.disabled).toBe(state.forced)
       }
     }
   )
@@ -311,39 +326,39 @@ describe("this person's notifications", () => {
       }
     )
 
-  test.prop([kind.filter((each) => each.may_change && !each.forced), fc.boolean(), kinds])(
-    'keep a kind turned on or off only once the server took it, and leave the others be',
-    async (each, ok, others) => {
+  test.prop([channelState, fc.boolean(), kinds])(
+    'keep one channel of a kind turned on or off only once the server took it, and leave every other box be',
+    async (inbox, ok, others) => {
       freshDom()
       vi.stubGlobal(
         'fetch',
-        vi.fn(async () => (ok ? json(200, { kind: each.kind }) : json(500, {})))
+        vi.fn(async () => (ok ? json(200, { kind: 'chosen' }) : json(500, {})))
       )
-      const beside = others
-        .filter((other) => other.kind !== each.kind)
-        .map((other) => ({ ...other, may_change: true, forced: false }))
+      const each = { kind: 'chosen', label: null, channels: { inbox: { ...inbox, may_change: true, forced: false } } }
+      const beside = others.filter((other) => other.kind !== each.kind)
       render(<NotificationsList initialItems={[]} initialKinds={[each, ...beside] as never} />)
       const boxes = () => screen.getAllByRole('checkbox') as HTMLInputElement[]
+      const before = boxes().map((box) => box.checked)
       fireEvent.click(boxes()[0])
-      if (ok) await vi.waitFor(() => expect(boxes()[0].checked).toBe(!each.enabled))
+      if (ok) await vi.waitFor(() => expect(boxes()[0].checked).toBe(!inbox.enabled))
       else await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith("Couldn't save that. Try again."))
-      if (!ok) expect(boxes()[0].checked).toBe(each.enabled)
-      beside.forEach((other, index) => expect(boxes()[index + 1].checked).toBe(other.enabled))
+      if (!ok) expect(boxes()[0].checked).toBe(inbox.enabled)
+      expect(
+        boxes()
+          .slice(1)
+          .map((box) => box.checked)
+      ).toEqual(before.slice(1))
     }
   )
 })
 
 describe('a kind staff decided', () => {
-  test.prop([kind, fc.option(word, { nil: null })])(
+  test.prop([kind, channelState, fc.option(word, { nil: null })])(
     'says it was decided for them, and why when staff said',
-    (each, reason) => {
+    (each, inbox, reason) => {
       freshDom()
-      render(
-        <NotificationsList
-          initialItems={[]}
-          initialKinds={[{ ...each, forced: true, forced_reason: reason }] as never}
-        />
-      )
+      const forced = { ...each, channels: { inbox: { ...inbox, forced: true, forced_reason: reason } } }
+      render(<NotificationsList initialItems={[]} initialKinds={[forced] as never} />)
       expect(
         screen.getByText(reason ? `Decided for you by staff: ${reason}` : 'Decided for you by staff.')
       ).toBeTruthy()

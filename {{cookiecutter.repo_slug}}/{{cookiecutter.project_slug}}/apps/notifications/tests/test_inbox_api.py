@@ -91,9 +91,14 @@ def test_an_item_reads_as_a_sentence_from_its_own_data(client, signed_in):
     }
 
 
+def _may_change(entry):
+    """Whether the person chooses on any channel the kind is sent on."""
+    return any(channel["may_change"] for channel in entry["channels"].values())
+
+
 @pytest.mark.django_db
 def test_every_kind_but_allauths_own_mail_is_listed_and_only_some_may_be_turned_off(client, signed_in):
-    kinds = {entry["kind"]: entry["may_change"] for entry in client.get(KINDS).json()}
+    kinds = {entry["kind"]: _may_change(entry) for entry in client.get(KINDS).json()}
 
     assert {kind for kind, may_change in kinds.items() if may_change} == {"account_changed", "application_reviewed"}
     assert not any(kind.startswith("mail_") for kind in kinds)
@@ -125,6 +130,6 @@ def test_a_reviewer_may_choose_whether_to_hear_of_applications_taken_down(client
     signed_in.is_superuser = True
     signed_in.save()
 
-    kinds = {entry["kind"]: entry["may_change"] for entry in client.get(KINDS).json()}
+    kinds = {entry["kind"]: _may_change(entry) for entry in client.get(KINDS).json()}
 
     assert kinds["application_taken_down"] is True

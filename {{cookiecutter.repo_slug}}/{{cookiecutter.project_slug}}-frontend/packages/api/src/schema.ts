@@ -1050,6 +1050,27 @@ export interface components {
             /** @description Your own choice, or none yet. */
             chosen: boolean | null;
         };
+        /** @description What a person gets of a kind on one channel, and what they may do about it. */
+        ChannelState: {
+            /** @description Who gets it here by default - never: it isn't available on this channel. */
+            policy: components["schemas"]["Policy"];
+            /** @description Whether you may turn it on or off here. */
+            may_change: boolean;
+            /** @description Whether you get it here now, every variant - forced, your own choice, or its policy. */
+            enabled: boolean;
+            /** @description Whether you get each variant of it here now. */
+            enabled_variants: {
+                [key: string]: boolean;
+            };
+            /** @description Whether staff forced it for you here, every variant. */
+            forced: boolean;
+            /** @description What staff forced it to for you here, every variant - else none. */
+            forced_enabled: boolean | null;
+            /** @description The variants staff forced for you here, one by one. */
+            forced_variants: string[];
+            /** @description Why it was forced here, if you may read it. */
+            forced_reason: string | null;
+        };
         Choice: {
             /** @description What's stored. */
             value: unknown;
@@ -1511,7 +1532,7 @@ export interface components {
         Marked: {
             marked: number;
         };
-        /** @description A kind of notification as a person sees it: what it is, what it's sent on, and what they may do about it. */
+        /** @description A kind of notification as a person sees it: what it is, and on each channel what they get and may do. */
         NoticeKind: {
             /** @description The kind's name - the key everything else names it by. */
             kind: string;
@@ -1519,31 +1540,13 @@ export interface components {
             label: string | null;
             /** @description What it's about. */
             description: string | null;
-            /** @description What a person gets by default. */
-            policy: components["schemas"]["NoticeKindPolicyPolicy"];
             /** @description Its variants, if any. */
             variants: string[];
-            /** @description What it's sent on. */
-            channels: string[];
-            /** @description Whether you may turn it on or off. */
-            may_change: boolean;
-            /** @description Whether you get it now, every variant - forced, your own choice, or its policy. */
-            enabled: boolean;
-            /** @description Whether you get each variant of it now. */
-            enabled_variants: {
-                [key: string]: boolean;
+            /** @description Each channel, and what you get of it there - those it never goes out on too. */
+            channels: {
+                [key: string]: components["schemas"]["ChannelState"];
             };
-            /** @description Whether staff forced it for you, every variant. */
-            forced: boolean;
-            /** @description What staff forced it to for you, every variant - else none. */
-            forced_enabled: boolean | null;
-            /** @description The variants staff forced for you, one by one. */
-            forced_variants: string[];
-            /** @description Why it was forced, if you may read it. */
-            forced_reason: string | null;
         };
-        /** @enum {string} */
-        NoticeKindPolicyPolicy: "mandatory" | "default_on" | "default_off";
         /** @enum {string} */
         Origin: "forced" | "feature_missing" | "limited" | "own" | "default";
         PaginatedApplicationList: {
@@ -1921,6 +1924,8 @@ export interface components {
              */
             expires_at?: string;
         };
+        /** @enum {string} */
+        Policy: "mandatory" | "default_on" | "default_off" | "never";
         PreconditionRequired: {
             detail: string;
             /** @description Always precondition_required. */
@@ -2030,6 +2035,8 @@ export interface components {
             kind: string;
             /** @description The kind's one variant this is for, or none for every one. */
             variant?: string | null;
+            /** @description The one channel this is for, or none for every channel the kind leaves to you. */
+            channel?: string | null;
             /** @description Whether the user gets the kind. */
             enabled?: boolean;
             /** @description Whether staff forced it, so it can't be changed - always False on a model that can't be forced. */
@@ -2043,6 +2050,8 @@ export interface components {
             kind: string;
             /** @description The kind's one variant this is for, or none for every one. */
             variant?: string | null;
+            /** @description The one channel this is for, or none for every channel the kind leaves to you. */
+            channel?: string | null;
             /** @description Whether the user gets the kind. */
             enabled?: boolean;
         };

@@ -62,8 +62,12 @@ export function WebhookEndpoints({ endpoints, kinds }: { endpoints: Endpoint[]; 
   )
   const { formState, formErrors, handleFormStateEvent, handleFormStateValue, isSubmitting, resetFormState, submit } =
     useValidatedFormState(schema, { url: '', kinds: [] as string[] })
-  const choices = kinds.map((kind) => ({ name: kind.kind, label: kind.label ?? kind.kind }))
-  const labelOf = (name: string) => choices.find((choice) => choice.name === name)?.label ?? name
+  // An endpoint may ask only for kinds that go out by webhook; the backend refuses the rest. Every kind names
+  // the webhook, as it names every channel turned on.
+  const choices = kinds
+    .filter((kind) => kind.channels.webhook.policy === 'mandatory')
+    .map((kind) => ({ name: kind.kind, label: kind.label ?? kind.kind }))
+  const labelOf = (name: string) => kinds.find((kind) => kind.kind === name)?.label ?? name
   const api = () => createApi(apiOrigin())
 
   async function register(event: React.FormEvent) {

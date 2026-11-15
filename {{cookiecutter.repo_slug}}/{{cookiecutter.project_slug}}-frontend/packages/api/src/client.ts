@@ -224,13 +224,14 @@ export class Api {
     return this.client.POST('/v0/notifications/inbox/read-all/')
   }
 
-  /** Every kind there is: `may_change` says which a person chooses, `forced` which staff chose for them. */
+  /** Every kind there is and, on each channel, whether a person chooses (`may_change`) or staff chose for them (`forced`). */
   async notificationKinds() {
     return this.client.GET('/v0/notifications/kinds/')
   }
 
-  async chooseNotifications(kind: string, enabled: boolean) {
-    return this.client.POST('/v0/notifications/subscriptions/', { body: { kind, enabled } })
+  /** On one `channel`, or with none on every channel the kind leaves to the person. */
+  async chooseNotifications(kind: string, enabled: boolean, channel?: string) {
+    return this.client.POST('/v0/notifications/subscriptions/', { body: { kind, enabled, channel } })
   }
 
   /** The phones this person's notifications are pushed to. */

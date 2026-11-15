@@ -4,6 +4,7 @@ from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from isik.django.apps.common.db import VersionedModel, if_unset, redeclare, track_events
 from isik.django.apps.notifications.audiences import Field
+from isik.django.apps.notifications.channels import Channel
 from isik.django.apps.notifications.choices import Policy
 from isik.django.apps.notifications.kinds import notifies
 from oauth2_provider.models import AbstractApplication
@@ -14,7 +15,7 @@ from apps.notifications.kinds import (
     APPLICATION_TAKEN_DOWN,
     OWNER_CHANNELS,
     PRIVATE_PUSH,
-    PUSH,
+    sent_on,
 )
 
 
@@ -28,8 +29,7 @@ from apps.notifications.kinds import (
     },
     snapshot=["user", "name", "approval"],
     audience=Field("user"),
-    policy=Policy.DEFAULT_ON,
-    channels=OWNER_CHANNELS,
+    channels=sent_on(Policy.DEFAULT_ON, *OWNER_CHANNELS),
     push=PRIVATE_PUSH,
 )
 # The other reviewers, so a withdrawal is known beyond whoever made it. DEFAULT_ON: watching every application is a
@@ -43,8 +43,7 @@ from apps.notifications.kinds import (
     },
     snapshot=["name", "approval"],
     audience=Reviewers(),
-    policy=Policy.DEFAULT_ON,
-    channels=("inbox", "email", *PUSH),
+    channels=sent_on(Policy.DEFAULT_ON, Channel.INBOX, Channel.EMAIL, Channel.PUSH),
     push=PRIVATE_PUSH,
 )
 class Application(VersionedModel, AbstractApplication):
