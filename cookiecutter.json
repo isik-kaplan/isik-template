@@ -29,7 +29,7 @@
     "username_only"
   ],
   "isik_version": "0.55.0",
-  "isikk_core_version": "0.21.0",
+  "isikk_core_version": "0.25.0",
   "_copy_without_render": [
     "*/e2e/authentik-blueprints/*",
     "*/packages/brand/icon.png"
