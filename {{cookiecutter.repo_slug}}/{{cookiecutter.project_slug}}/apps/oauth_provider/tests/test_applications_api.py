@@ -141,7 +141,9 @@ def test_a_device_is_never_sent_back_anywhere(client, proven):
     response = client.post(LIST, {**DEVICE, "redirect_uris": [REDIRECT_URI]}, content_type="application/json")
 
     assert response.status_code == 400
-    assert response.json() == {"redirect_uris": ["A device is never sent back anywhere."]}
+    assert response.json() == {
+        "redirect_uris": [{"message": "A device is never sent back anywhere.", "code": "invalid"}]
+    }
 
 
 @pytest.mark.django_db
@@ -149,7 +151,9 @@ def test_a_device_keeps_no_secret(client, proven):
     response = client.post(LIST, {**DEVICE, "client_type": "confidential"}, content_type="application/json")
 
     assert response.status_code == 400
-    assert response.json() == {"client_type": ["A device keeps no secret: register it as public."]}
+    assert response.json() == {
+        "client_type": [{"message": "A device keeps no secret: register it as public.", "code": "invalid"}]
+    }
 
 
 @pytest.mark.django_db
@@ -162,7 +166,9 @@ def test_signing_people_in_by_redirect_needs_somewhere_to_return_to(client, prov
     response = client.post(LIST, body, content_type="application/json")
 
     assert response.status_code == 400
-    assert response.json() == {"redirect_uris": ["Give at least one place to return to."]}
+    assert response.json() == {
+        "redirect_uris": [{"message": "Give at least one place to return to.", "code": "invalid"}]
+    }
 
 
 @pytest.mark.django_db
@@ -178,7 +184,9 @@ def test_a_device_given_somewhere_to_return_to_later_is_refused_too(client, prov
     )
 
     assert response.status_code == 400
-    assert response.json() == {"redirect_uris": ["A device is never sent back anywhere."]}
+    assert response.json() == {
+        "redirect_uris": [{"message": "A device is never sent back anywhere.", "code": "invalid"}]
+    }
 
 
 @pytest.mark.django_db
@@ -190,7 +198,9 @@ def test_an_application_taking_away_everywhere_it_returns_to_is_refused(client, 
         _detail(application), {"redirect_uris": []}, content_type="application/json", headers=versioned(application)
     )
 
-    assert response.json() == {"redirect_uris": ["Give at least one place to return to."]}
+    assert response.json() == {
+        "redirect_uris": [{"message": "Give at least one place to return to.", "code": "invalid"}]
+    }
 
 
 @pytest.mark.django_db
@@ -255,7 +265,12 @@ def test_a_redirect_uri_names_its_scheme_problem(client, proven):
     )
 
     assert response.json() == {
-        "redirect_uris": ["redirect uri URI Validation error. invalid_scheme: ftp://client.example.test/cb"]
+        "redirect_uris": [
+            {
+                "message": "redirect uri URI Validation error. invalid_scheme: ftp://client.example.test/cb",
+                "code": "invalid",
+            }
+        ]
     }
 
 
@@ -309,7 +324,9 @@ def test_nobody_registers_more_than_their_share(client, signed_in, provider, hea
     response = client.post(LIST, NEW, content_type="application/json")
 
     assert response.status_code == 400
-    assert response.json() == {"non_field_errors": ["You can register at most 2 applications."]}
+    assert response.json() == {
+        "non_field_errors": [{"message": "You can register at most 2 applications.", "code": "invalid"}]
+    }
     assert Application.objects.count() == 2
 
 

@@ -76,14 +76,18 @@ def test_nobody_gives_a_token_what_they_do_not_hold(client, manager):
     response = _make(client, scopes=[MANAGE, GRANT])
 
     assert response.status_code == 400
-    assert response.json()["scopes"] == [f"You cannot give a token what you do not hold: {GRANT}."]
+    assert response.json()["scopes"] == [
+        {"message": f"You cannot give a token what you do not hold: {GRANT}.", "code": "invalid"}
+    ]
 
 
 @pytest.mark.django_db
 def test_every_scope_not_held_is_named(client, proven):
     response = _make(client, scopes=[MANAGE, GRANT])
 
-    assert response.json()["scopes"] == [f"You cannot give a token what you do not hold: {GRANT}, {MANAGE}."]
+    assert response.json()["scopes"] == [
+        {"message": f"You cannot give a token what you do not hold: {GRANT}, {MANAGE}.", "code": "invalid"}
+    ]
 
 
 @pytest.mark.django_db
@@ -91,7 +95,9 @@ def test_a_scope_with_a_nul_byte_is_refused_as_unknown(client, proven):
     response = _make(client, scopes=["\x00"])
 
     assert response.status_code == 400
-    assert response.json()["scopes"] == ["Object with codename=\x00 does not exist."]
+    assert response.json()["scopes"] == [
+        {"message": "Object with codename=\x00 does not exist.", "code": "does_not_exist"}
+    ]
 
 
 @pytest.mark.django_db
@@ -101,7 +107,7 @@ def test_an_expiry_of_this_very_moment_has_already_come(client, proven, monkeypa
 
     response = _make(client, expires_at=moment.isoformat())
 
-    assert response.json()["expires_at"] == ["Pick a moment still to come."]
+    assert response.json()["expires_at"] == [{"message": "Pick a moment still to come.", "code": "invalid"}]
 
 
 @pytest.mark.django_db
@@ -117,7 +123,7 @@ def test_an_expiry_must_be_still_to_come(client, proven):
     response = _make(client, expires_at=(timezone.now() - timedelta(minutes=1)).isoformat())
 
     assert response.status_code == 400
-    assert response.json()["expires_at"] == ["Pick a moment still to come."]
+    assert response.json()["expires_at"] == [{"message": "Pick a moment still to come.", "code": "invalid"}]
 
 
 @pytest.mark.django_db
@@ -146,7 +152,7 @@ def test_there_is_a_ceiling_on_how_many_one_person_keeps(client, proven, headles
 
     assert response.status_code == 400
     assert response.json()["non_field_errors"] == [
-        f"You can have at most {TOKENS_PER_USER} tokens. Delete one you no longer use."
+        {"message": f"You can have at most {TOKENS_PER_USER} tokens. Delete one you no longer use.", "code": "invalid"}
     ]
 
 

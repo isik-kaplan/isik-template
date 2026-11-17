@@ -1,5 +1,5 @@
 """isik's handler, which puts a refusal's `code` beside its `detail` so two 403s differ by more than prose, and
-answers Django's own ValidationError as a 400. Field validation keeps its `{"field": ["sentence"]}` shape."""
+answers Django's own ValidationError as a 400. A field's messages come as `{"field": [{"message", "code"}]}`."""
 
 from isik.django.drf.error_handling import exception_handler as isik_exception_handler
 

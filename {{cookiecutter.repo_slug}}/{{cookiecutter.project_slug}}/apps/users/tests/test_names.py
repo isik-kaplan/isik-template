@@ -282,7 +282,9 @@ def test_a_name_the_requirement_never_asks_for_cannot_be_given(client, requireme
     offered = "first_name" in requirement.offered
     assert response.status_code == (200 if offered else 400)
     if not offered:
-        assert response.json() == {"first_name": ["This project does not ask for one."]}
+        assert response.json() == {
+            "first_name": [{"message": "This project does not ask for one.", "code": "not_offered"}]
+        }
 
 
 @pytest.mark.django_db

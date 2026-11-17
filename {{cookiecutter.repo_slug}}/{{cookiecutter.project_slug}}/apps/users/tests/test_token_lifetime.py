@@ -42,7 +42,9 @@ def test_without_long_lived_tokens_ninety_days_is_the_most(client, signed_in, he
     assert _lifetime_of(_make(client, headless)) == 90
     response = _make(client, headless, days=91)
     assert response.status_code == 400
-    assert response.json()["expires_at"] == ["A token of yours can work for at most 90 days."]
+    assert response.json()["expires_at"] == [
+        {"message": "A token of yours can work for at most 90 days.", "code": "invalid"}
+    ]
 
 
 @pytest.mark.django_db

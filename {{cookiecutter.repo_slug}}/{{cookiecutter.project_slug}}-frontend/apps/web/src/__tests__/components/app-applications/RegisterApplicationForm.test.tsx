@@ -144,7 +144,9 @@ describe('RegisterApplicationForm', () => {
   })
 
   it("shows the backend's word on a redirect URI it cannot return to", async () => {
-    globalThis.fetch = vi.fn(async () => jsonResponse(400, { redirect_uris: ['Enter a valid URL.'] }))
+    globalThis.fetch = vi.fn(async () =>
+      jsonResponse(400, { redirect_uris: [{ message: 'Enter a valid URL.', code: 'invalid' }] })
+    )
     render(<RegisterApplicationForm scopes={SCOPES} onRegistered={onRegistered} />)
 
     await userEvent.type(name(), 'Acme')
@@ -159,7 +161,9 @@ describe('RegisterApplicationForm', () => {
 
   it('shows a refusal about the whole application', async () => {
     globalThis.fetch = vi.fn(async () =>
-      jsonResponse(400, { non_field_errors: ['You can register at most 10 applications.'] })
+      jsonResponse(400, {
+        non_field_errors: [{ message: 'You can register at most 10 applications.', code: 'invalid' }],
+      })
     )
     render(<RegisterApplicationForm scopes={SCOPES} onRegistered={onRegistered} />)
 

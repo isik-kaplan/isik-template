@@ -29,7 +29,7 @@ def test_a_built_in_refusal_carries_its_default_code_and_keeps_its_detail():
 def test_field_validation_is_left_in_the_shape_its_readers_expect():
     response = exception_handler(ValidationError({"name": ["This field may not be blank."]}), CONTEXT)
 
-    assert response.data == {"name": ["This field may not be blank."]}
+    assert response.data == {"name": [{"message": "This field may not be blank.", "code": "invalid"}]}
 
 
 def test_a_not_found_django_raised_carries_a_code_too():
@@ -44,7 +44,7 @@ def test_a_row_django_refused_is_a_400_in_the_field_shape_not_a_500():
     response = exception_handler(DjangoValidationError({"name": ["Taken."]}), CONTEXT)
 
     assert response.status_code == 400
-    assert response.data == {"name": ["Taken."]}
+    assert response.data == {"name": [{"message": "Taken.", "code": "invalid"}]}
 
 
 def test_an_exception_drf_does_not_handle_is_still_not_handled():

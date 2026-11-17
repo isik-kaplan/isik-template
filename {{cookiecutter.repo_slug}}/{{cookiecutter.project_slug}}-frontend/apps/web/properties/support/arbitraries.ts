@@ -26,7 +26,7 @@ export const allauthRefusal = (message: string, param: string | undefined) =>
   })
 // A DRF refusal: under the field it is about, else under non_field_errors.
 export const drfRefusal = (message: string, field: string | undefined) =>
-  new Response(JSON.stringify({ [field ?? 'non_field_errors']: [message] }), {
+  new Response(JSON.stringify({ [field ?? 'non_field_errors']: [{ message, code: 'invalid' }] }), {
     status: 400,
     headers: { 'Content-Type': 'application/json' },
   })

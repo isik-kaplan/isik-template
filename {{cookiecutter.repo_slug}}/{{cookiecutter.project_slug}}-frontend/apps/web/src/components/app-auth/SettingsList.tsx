@@ -11,7 +11,7 @@ import type { Translate } from '@/i18n/config'
 import { createApi } from '@/lib/apiClients'
 import { apiOrigin } from '@/lib/apiOrigin'
 
-import { type ApiType, etagOf } from '@{{ cookiecutter.repo_slug }}/api'
+import { type ApiType, detailOf, etagOf, messagesOf, toFormErrors } from '@{{ cookiecutter.repo_slug }}/api'
 
 import { ifMatch } from '@isikk/core'
 import { toast } from 'sonner'
@@ -91,8 +91,7 @@ export function SettingsList({
       return
     }
     // A refused value names it on `value`; any other refusal says why in `detail`.
-    const detail = error as { value?: string[]; detail?: string }
-    toast.error(detail.value?.[0] ?? detail.detail ?? t('auth:profileSettingsSaveError'))
+    toast.error(messagesOf(toFormErrors(error)) ?? detailOf(error) ?? t('auth:profileSettingsSaveError'))
   }
 
   function control(setting: Setting) {

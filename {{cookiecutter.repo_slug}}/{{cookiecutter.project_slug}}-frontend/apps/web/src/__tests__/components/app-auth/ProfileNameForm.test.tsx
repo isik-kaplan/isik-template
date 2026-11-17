@@ -191,7 +191,7 @@ describe('ProfileNameForm', () => {
 
   it("shows the server's refusal beside the field it names, and stays editing", async () => {
     globalThis.fetch = vi.fn(async () =>
-      jsonResponse(400, { first_name: ['That name is not allowed.'] })
+      jsonResponse(400, { first_name: [{ message: 'That name is not allowed.', code: 'invalid' }] })
     ) as unknown as typeof fetch
     const onSaved = renderForm()
 
@@ -204,7 +204,7 @@ describe('ProfileNameForm', () => {
 
   it('shows a refusal about the whole form under it', async () => {
     globalThis.fetch = vi.fn(async () =>
-      jsonResponse(400, { non_field_errors: ['Try again later.'] })
+      jsonResponse(400, { non_field_errors: [{ message: 'Try again later.', code: 'invalid' }] })
     ) as unknown as typeof fetch
     renderForm()
 

@@ -157,7 +157,11 @@ def test_nothing_it_did_not_ask_for_is_approved(client, reviewer, pending):
     )
 
     assert response.status_code == 400
-    assert response.json() == {"approved_scopes": ["An application cannot be approved for a scope it never asked for."]}
+    assert response.json() == {
+        "approved_scopes": [
+            {"message": "An application cannot be approved for a scope it never asked for.", "code": "invalid"}
+        ]
+    }
 
 
 @pytest.mark.django_db

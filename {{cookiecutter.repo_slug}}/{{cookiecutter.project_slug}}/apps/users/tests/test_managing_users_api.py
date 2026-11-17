@@ -114,7 +114,9 @@ def test_nobody_changes_their_own_access(client, granter):
     response = _patch(client, granter, {"is_superuser": True})
 
     assert response.status_code == 400
-    assert response.json() == {"non_field_errors": ["Somebody else changes what you may do."]}
+    assert response.json() == {
+        "non_field_errors": [{"message": "Somebody else changes what you may do.", "code": "invalid"}]
+    }
 
 
 @pytest.mark.django_db
@@ -125,7 +127,9 @@ def test_only_a_superuser_changes_a_superuser(client, manager, bob):
     response = _patch(client, bob, {"is_active": False})
 
     assert response.status_code == 400
-    assert response.json() == {"non_field_errors": ["Only a superuser changes a superuser's account."]}
+    assert response.json() == {
+        "non_field_errors": [{"message": "Only a superuser changes a superuser's account.", "code": "invalid"}]
+    }
 
 
 @pytest.mark.django_db
@@ -161,7 +165,9 @@ def test_the_grant_permission_goes_only_to_staff(client, granter, bob):
     refused = _patch(client, bob, {"permissions": [GRANT]})
     granted = _patch(client, bob, {"is_staff": True, "permissions": [GRANT]})
 
-    assert refused.json() == {"permissions": ["Changing what people may do takes effect for staff only."]}
+    assert refused.json() == {
+        "permissions": [{"message": "Changing what people may do takes effect for staff only.", "code": "invalid"}]
+    }
     assert granted.status_code == 200
 
 
@@ -256,7 +262,9 @@ def test_lowering_somebodys_rank_is_not_a_grant(client, manager, bob):
 def test_only_a_superuser_makes_a_superuser(client, granter, bob):
     response = _patch(client, bob, {"is_superuser": True})
 
-    assert response.json() == {"is_superuser": ["You cannot make somebody a superuser."]}
+    assert response.json() == {
+        "is_superuser": [{"message": "You cannot make somebody a superuser.", "code": "invalid"}]
+    }
 
 
 @pytest.mark.django_db

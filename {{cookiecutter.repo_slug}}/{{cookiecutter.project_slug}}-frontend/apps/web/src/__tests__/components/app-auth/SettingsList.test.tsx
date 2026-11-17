@@ -259,7 +259,10 @@ describe('SettingsList', () => {
   })
 
   it.each([
-    [{ value: ['Ensure this value is less than or equal to 365.'] }, 'Ensure this value is less than or equal to 365.'],
+    [
+      { value: [{ message: 'Ensure this value is less than or equal to 365.', code: 'max_value' }] },
+      'Ensure this value is less than or equal to 365.',
+    ],
     [{ detail: 'Staff set this for you.' }, 'Staff set this for you.'],
     [{}, 'That setting could not be saved.'],
     [null, 'That setting could not be saved.'],

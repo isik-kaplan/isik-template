@@ -70,7 +70,9 @@ describe('PersonalAccessTokenForm', () => {
 
   it("says how long the backend lets a token last when it's asked for longer", async () => {
     globalThis.fetch = vi.fn(async () =>
-      jsonResponse(400, { expires_at: ['A token of yours can work for at most 90 days.'] })
+      jsonResponse(400, {
+        expires_at: [{ message: 'A token of yours can work for at most 90 days.', code: 'invalid' }],
+      })
     )
     render(<PersonalAccessTokenForm scopes={SCOPES} onMade={onMade} onCancel={onCancel} />)
 
@@ -132,7 +134,11 @@ describe('PersonalAccessTokenForm', () => {
 
   it("shows the backend's word on what it could not do", async () => {
     globalThis.fetch = vi.fn(async () =>
-      jsonResponse(400, { non_field_errors: ['You can have at most 50 tokens. Delete one you no longer use.'] })
+      jsonResponse(400, {
+        non_field_errors: [
+          { message: 'You can have at most 50 tokens. Delete one you no longer use.', code: 'invalid' },
+        ],
+      })
     )
     render(<PersonalAccessTokenForm scopes={SCOPES} onMade={onMade} onCancel={onCancel} />)
 
