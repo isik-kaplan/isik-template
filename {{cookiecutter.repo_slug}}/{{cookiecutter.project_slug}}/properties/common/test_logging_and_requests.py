@@ -17,7 +17,7 @@ from apps.common.api.renderers import enc_hook
 from apps.common.api.throttling import AnonymousRateThrottle
 from apps.common.logging import REQUEST, log
 from apps.common.logging.emit import audit
-from apps.common.logging.events import DECLARED, PAYLOAD, Event
+from apps.common.logging.events import DECLARED, PAYLOAD, RESERVED, Event
 from apps.common.logging.formatters import ConsoleFormatter, JSONFormatter
 from apps.common.logging.redaction import LOGGABLE, LOGGABLE_HEADERS, REDACTED, body_of, size_of, worth_logging
 from apps.common.logging.scrub import scrub_event
@@ -172,6 +172,25 @@ def test_a_line_names_its_required_fields_and_carries_its_note(logged, note, fie
     log(REQUEST, note=note, status=200, duration_ms=1, **fields)
     (line,) = logged
     assert line.get("note") == note
+
+
+# Any identifier a call site could pass, the reserved ones among them.
+FIELD_NAME = st.from_regex(r"[a-z][a-z_]{0,9}", fullmatch=True) | st.sampled_from(sorted(RESERVED - {"note"}))
+
+
+@given(fields=st.dictionaries(FIELD_NAME, VALUE, max_size=4))
+def test_a_field_is_carried_as_given_unless_every_line_already_has_one_by_that_name(logged, fields):
+    logged.clear()
+    complete = {"method": "GET", "path": "/", "status": 200, "duration_ms": 1, **fields}
+    if RESERVED.intersection(fields):
+        with pytest.raises((ValueError, TypeError)):
+            log(REQUEST, **complete)
+        assert logged == []
+        return
+    log(REQUEST, **complete)
+    (line,) = logged
+    assert {name: line[name] for name in complete} == complete
+    assert line["event"] == "request"
 
 
 @given(event=st.sampled_from(sorted(DECLARED)))

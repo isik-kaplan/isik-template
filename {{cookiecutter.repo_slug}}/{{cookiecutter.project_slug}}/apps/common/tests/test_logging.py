@@ -12,7 +12,7 @@ from django.conf import settings
 
 from apps.common.logging import DECLARED, REQUEST, Event, ambient, audit, declare, emit, log
 from apps.common.logging.emit import AUDIT_LOGGER, LOGGER
-from apps.common.logging.events import NAME_SHAPE, PAYLOAD
+from apps.common.logging.events import NAME_SHAPE, PAYLOAD, RESERVED
 from apps.common.logging.formatters import ConsoleFormatter, JSONFormatter
 
 
@@ -66,6 +66,11 @@ class TestTheVocabulary:
 
     def test_every_event_the_project_declares_is_shaped_alike(self):
         assert all(NAME_SHAPE.fullmatch(name) for name in DECLARED)
+
+    def test_an_event_cannot_require_a_name_every_line_already_carries(self):
+        with pytest.raises(ValueError, match=r"^code, ts is written on every line"):
+            declare("test.clashing", logging.INFO, ("what", "ts", "code"))
+        assert "test.clashing" not in DECLARED
 
 
 class TestTheCall:
@@ -135,6 +140,21 @@ class TestTheCall:
         assert logged == [
             {"event": "test.happened", "code": __name__, "what": "a thing", "note": "for a person to read"}
         ]
+
+    @pytest.mark.parametrize("name", sorted(RESERVED - {"event", "note"}))
+    def test_a_field_named_like_what_every_line_carries_is_refused(self, an_event, logged, name):
+        """`event` and `note` are the call's own arguments, so Python refuses those first."""
+        with pytest.raises(ValueError, match=f"^{name} is written on every line"):
+            log(an_event, what="a thing", **{name: "x"})
+        assert logged == []
+
+    def test_a_context_key_named_like_what_every_line_carries_is_left_out_not_raised(self, an_event, logged):
+        """The context is read while a request runs, and its line must not fail it."""
+        with pghistory.context(code="from.the.context", severity="LOUD"):
+            log(an_event, what="a thing")
+
+        assert logged[0]["code"] == __name__
+        assert "severity" not in logged[0]
 
     def test_a_line_outside_any_context_still_gets_written(self, an_event, logged):
         """A command, a check, a shell: no request is no reason to refuse a line."""

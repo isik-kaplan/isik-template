@@ -1,7 +1,7 @@
 import logging
 import sys
 
-from apps.common.logging.events import DECLARED, PAYLOAD, Event
+from apps.common.logging.events import DECLARED, PAYLOAD, RESERVED, Event, refuse_reserved
 
 
 LOGGER = logging.getLogger("{{ cookiecutter.project_slug }}")
@@ -40,10 +40,13 @@ def _written(event: Event, logger: logging.Logger, note: str | None, fields: dic
     missing = tuple(name for name in event.requires if name not in fields)
     if missing:
         raise TypeError(f"{event.name!r} needs {', '.join(missing)}.")
+    refuse_reserved(fields)
+    # Dropped, not refused: the context is read at runtime, and a log line must not fail the request it describes.
+    context = {name: value for name, value in ambient().items() if name not in RESERVED}
     payload = {
         "event": event.name,
         "code": _caller(),
-        **ambient(),
+        **context,
         **fields,
     }
     if note is not None:

@@ -25,7 +25,17 @@ PAYLOAD = "{{ cookiecutter.project_slug }}"
 
 NAME_SHAPE = re.compile(r"[a-z][a-z_]*(\.[a-z][a-z_]*)*")
 
+# What the writer and the formatter put on every line, so a field of the same name would be lost or win.
+# Only the writers' names: the context's own keys, such as a schema, are fields an event may override.
+RESERVED = frozenset({"ts", "severity", "exception", "message", "event", "code", "note"})
+
 DECLARED: dict[str, Event] = {}
+
+
+def refuse_reserved(names) -> None:
+    taken = sorted(RESERVED.intersection(names))
+    if taken:
+        raise ValueError(f"{', '.join(taken)} is written on every line, so no field may be called that.")
 
 
 def declare(name: str, severity: int, requires: tuple[str, ...] = (), *, audited: bool = False) -> Event:
@@ -34,6 +44,7 @@ def declare(name: str, severity: int, requires: tuple[str, ...] = (), *, audited
         raise ValueError(f"{name!r} is not a dotted lowercase name like 'permission.refused'.")
     if name in DECLARED:
         raise ValueError(f"{name!r} is declared twice - an event name is how it is searched for.")
+    refuse_reserved(requires)
     DECLARED[name] = Event(name=name, severity=severity, requires=tuple(requires), audited=audited)
     return DECLARED[name]
 
