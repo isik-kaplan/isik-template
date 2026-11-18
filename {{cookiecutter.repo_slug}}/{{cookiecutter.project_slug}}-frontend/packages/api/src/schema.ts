@@ -1293,6 +1293,8 @@ export interface components {
             /** @description Whether deliveries are sent to it. */
             is_active?: boolean;
             kinds?: components["schemas"]["EndpointKind"][];
+            /** @description The endpoint's subscriptions its kind isn't sent on webhook now: kept, inert, and sent again when it is. */
+            readonly inert_kinds: components["schemas"]["InertKind"][];
             /** @description How many deliveries in a row have failed. */
             readonly consecutive_failures: number;
             /**
@@ -1442,6 +1444,14 @@ export interface components {
              */
             readonly created_at: string;
             readonly actor: components["schemas"]["Actor"] | null;
+{%- if cookiecutter.webhooks != "none" %}
+        };
+        /** @description One of an endpoint's subscriptions its kind's policy leaves inert: the kind isn't sent on webhook now. */
+        InertKind: {
+            readonly kind: string;
+            readonly label: string | null;
+            readonly variant: string | null;
+{%- endif %}
         };
         /** @description A setting holding a int value. */
         IntSetting: {

@@ -245,13 +245,23 @@ const channelState = fc.record({
   forced_reason: fc.option(word, { nil: null }),
   enabled: fc.boolean(),
 })
-const CHANNEL_LABELS: Record<string, string> = { inbox: 'In your inbox', email: 'By email', push: 'On your phone' }
+// `fax` and `telex` stand for channels the project added, which are shown by their names.
+const CHANNEL_LABELS: Record<string, string> = {
+  inbox: 'In your inbox',
+  email: 'By email',
+  push: 'On your phone',
+  fax: 'fax',
+  telex: 'telex',
+}
 const kind = fc.record({
   kind: name,
   label: fc.option(word, { nil: null }),
   // The webhook comes as the backend sends it: nobody chooses on it, and staff never force it.
   channels: fc
-    .record({ inbox: channelState, email: channelState, push: channelState }, { requiredKeys: [] })
+    .record(
+      { inbox: channelState, email: channelState, push: channelState, telex: channelState, fax: channelState },
+      { requiredKeys: [] }
+    )
     .map((chosen) => ({
       ...chosen,
       webhook: { may_change: false, forced: false, forced_reason: null, enabled: true },

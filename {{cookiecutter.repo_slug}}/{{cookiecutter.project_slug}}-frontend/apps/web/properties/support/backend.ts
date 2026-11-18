@@ -120,6 +120,7 @@ const endpoint = fc.record({
   url: fc.webUrl(),
   is_active: fc.boolean(),
   kinds: fc.constant([]),
+  inert_kinds: fc.constant([]),
   consecutive_failures: fc.nat(10),
   parked_at: fc.option(when, { nil: null }),
   secret: fc.constant(null),

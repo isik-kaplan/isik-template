@@ -39,6 +39,7 @@ const endpoint = (offered: Props['kinds']) =>
       fc.subarray([...offered.map(({ kind }) => kind), 'retired']).map((names) => names.map((kind) => ({ kind }))),
       { nil: undefined }
     ),
+    inert_kinds: fc.constant([]),
     consecutive_failures: fc.integer({ min: 1, max: 9 }),
     parked_at: fc.option(fc.constant('2026-01-01T00:00:00Z'), { nil: null }),
     secret: fc.constant(null),

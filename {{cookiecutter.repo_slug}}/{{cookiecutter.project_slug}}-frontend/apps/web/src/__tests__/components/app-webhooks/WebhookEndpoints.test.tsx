@@ -19,6 +19,7 @@ function endpoint(fields: Partial<Endpoint> = {}): Endpoint {
     url: 'https://a.test/hook',
     is_active: true,
     kinds: [{ kind: 'account_changed' }],
+    inert_kinds: [],
     consecutive_failures: 0,
     parked_at: null,
     secret: null,
