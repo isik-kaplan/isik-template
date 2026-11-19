@@ -1552,6 +1552,8 @@ export interface components {
             description: string | null;
             /** @description Its variants, if any. */
             variants: string[];
+            /** @description Whether you could ever get it - false: it's sent to people you aren't among; null: that can't be told. */
+            in_audience: boolean | null;
             /** @description Each channel, and what you get of it there - those it never goes out on too. */
             channels: {
                 [key: string]: components["schemas"]["ChannelState"];

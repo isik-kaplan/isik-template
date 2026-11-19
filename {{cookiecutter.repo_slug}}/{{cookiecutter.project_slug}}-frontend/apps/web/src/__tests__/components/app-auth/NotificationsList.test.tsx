@@ -54,6 +54,7 @@ function kind(fields: Partial<Kind> = {}, inbox: Partial<State> = {}): Kind {
     label: 'Changes to your account, in your inbox',
     description: null,
     variants: [],
+    in_audience: null,
     channels: { inbox: state(inbox), webhook: state({ policy: 'never', may_change: false, enabled: false }) },
     ...fields,
   }

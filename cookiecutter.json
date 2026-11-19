@@ -28,7 +28,7 @@
     "full_with_optional_username",
     "username_only"
   ],
-  "isik_version": "0.57.0",
+  "isik_version": "0.58.0",
   "isikk_core_version": "0.26.0",
   "_copy_without_render": [
     "*/e2e/authentik-blueprints/*",
