@@ -5,6 +5,11 @@ import path from 'path'
 import { configDefaults, defineConfig } from 'vitest/config'
 import { BaseSequencer, type TestSpecification } from 'vitest/node'
 
+// A date renders in the machine's own language and time zone. Pinned here, before any worker starts, so a test
+// reads it as CI's container does on every machine. vitest.properties.config.mts imports this file too.
+process.env.TZ = 'UTC'
+process.env.LC_ALL = 'en_US.UTF-8'
+
 // Smallest test files first: a mutant usually dies to its own file's unit test, and run last that
 // test can outlast Stryker's timeout, counting the mutant alive.
 class NarrowestFirst extends BaseSequencer {
