@@ -9,6 +9,7 @@ from isik.django import sms
 
 from apps.common.email import mjml_template, text_template
 from apps.users.models.user import User
+from apps.users.tests.conftest import signup_names
 
 
 # Every flow, including ones current settings never reach (login_code, password_reset_code).
@@ -111,7 +112,7 @@ def test_signup_sends_a_real_confirmation_email(client):
     client.post(
         "/v0/browser/auth/signup",
         data={
-            "username": "newuser",
+            **signup_names("newuser"),
             "email": "newuser@example.test",
 {%- if cookiecutter.phone == "required" %}
             "phone": "+14155550123",

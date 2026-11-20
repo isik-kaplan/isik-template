@@ -12,7 +12,9 @@ from django.contrib.auth.signals import user_logged_out
 
 from apps.users.models.user import User
 {%- if cookiecutter.phone == "required" %}
-from apps.users.tests.conftest import SIGNS_IN
+from apps.users.tests.conftest import SIGNS_IN, signup_names
+{%- else %}
+from apps.users.tests.conftest import signup_names
 {%- endif %}
 
 
@@ -43,7 +45,7 @@ def events(lines):
 
 @pytest.mark.django_db
 def test_signing_in_names_who_signed_in(client, alice, logged):
-    response = headless(client, "post", "auth/login", {"username": "alice", "password": "the-password"})
+    response = headless(client, "post", "auth/login", {"email": "alice@example.test", "password": "the-password"})
 
     assert response.status_code == 200
     (line,) = events(logged)
@@ -52,7 +54,7 @@ def test_signing_in_names_who_signed_in(client, alice, logged):
 
 @pytest.mark.django_db
 def test_a_failed_sign_in_names_nobody(client, alice, logged):
-    response = headless(client, "post", "auth/login", {"username": "alice", "password": "wrong"})
+    response = headless(client, "post", "auth/login", {"email": "alice@example.test", "password": "wrong"})
 
     assert response.status_code == 400
     (line,) = events(logged)
@@ -84,7 +86,7 @@ def test_signing_up_names_the_new_account(client, logged):
         "post",
         "auth/signup",
         {
-            "username": "newuser",
+            **signup_names("newuser"),
             "email": "newuser@example.test",
 {%- if cookiecutter.phone == "required" %}
             "phone": "+14155550123",
@@ -93,7 +95,7 @@ def test_signing_up_names_the_new_account(client, logged):
         },
     )
 
-    user = User.objects.get(username="newuser")
+    user = User.objects.get(email="newuser@example.test")
     assert [(line["event"], line["user"]) for line in events(logged)] == [("signup.completed", str(user.pk))]
 
 
@@ -158,7 +160,7 @@ def _current_code(secret):
 
 @pytest.fixture
 def alice_signed_in(client, alice):
-    headless(client, "post", "auth/login", {"username": "alice", "password": "the-password"})
+    headless(client, "post", "auth/login", {"email": "alice@example.test", "password": "the-password"})
     return alice
 
 

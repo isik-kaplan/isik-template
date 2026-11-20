@@ -1,6 +1,6 @@
 {
   "project_name": "Celery Disk Project",
-  "description": "Pairs a worker with no scheduler with files on disk, behind external TLS.",
+  "description": "Pairs a worker with no scheduler with files on disk, behind external TLS; names with no handle.",
   "author_name": "Test Author",
   "author_email": "test@example.test",
   "domain": "celerydisk.test",
@@ -8,5 +8,6 @@
   "background_jobs": "celery",
   "storage": "disk",
   "cache": "redis",
-  "webhooks": "none"
+  "webhooks": "none",
+  "name_requirement": "full_only"
 }

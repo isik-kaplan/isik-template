@@ -103,7 +103,7 @@ def test_an_act_refused_for_another_reason_is_refused_first_and_keeps_the_proof(
 @pytest.mark.django_db
 def test_signing_in_with_a_password_is_not_a_proof(headless, alice):
     """A login is not a re-authentication (allauth since 65.20)."""
-    signed_in = headless.call("POST", "account:login", {"username": "alice", "password": PASSWORD})
+    signed_in = headless.call("POST", "account:login", {"email": "alice@example.test", "password": PASSWORD})
 
     assert signed_in.status_code == 200
     assert _refused(_add_email(headless))
@@ -281,7 +281,7 @@ def test_the_app_client_is_gated_and_spends_its_proof_on_its_own_session(client,
 
     login = client.post(
         url("account:login"),
-        json.dumps({"username": "alice", "password": PASSWORD}),
+        json.dumps({"email": "alice@example.test", "password": PASSWORD}),
         content_type="application/json",
         **host,
     )

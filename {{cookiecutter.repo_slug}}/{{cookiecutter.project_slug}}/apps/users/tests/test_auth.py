@@ -5,6 +5,7 @@ from django.conf import settings
 
 from apps.users.headless import EXAMPLE_USER_ID
 from apps.users.models.user import User
+from apps.users.tests.conftest import signup_names
 
 
 @pytest.mark.django_db
@@ -22,7 +23,7 @@ def test_signup_via_headless_api_leaves_email_verification_pending(client):
     response = client.post(
         "/v0/browser/auth/signup",
         data={
-            "username": "newuser",
+            **signup_names("newuser"),
             "email": "newuser@example.test",
 {%- if cookiecutter.phone == "required" %}
             "phone": "+14155550123",

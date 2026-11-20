@@ -10,6 +10,7 @@ from isik.django.apps.idempotency.drf import IdempotencyMixin
 
 from apps.common.models import IdempotencyClaim
 from apps.users.models import User
+from apps.users.tests.conftest import signup_names
 
 
 KEY = IdempotencyMixin.idempotency_header
@@ -28,8 +29,8 @@ def _path():
     return reverse("writable-users-list")
 
 
-def _create(client, key, username="bob"):
-    body = {"username": username, "email": f"{username}@example.test"}
+def _create(client, key, handle="bob"):
+    body = {**signup_names(handle), "email": f"{handle}@example.test"}
     return client.post(_path(), body, content_type="application/json", headers={KEY: str(key)})
 
 
@@ -51,7 +52,7 @@ def test_the_same_key_and_body_answers_again_without_doing_the_work(writer):
     assert replayed.status_code == 201
     assert replayed.json() == created.json()
     assert replayed[REPLAYED] == "true"
-    assert User.objects.filter(username="bob").count() == 1
+    assert User.objects.filter(email="bob@example.test").count() == 1
 
 
 @pytest.mark.django_db
@@ -62,34 +63,34 @@ def test_a_first_answer_does_not_claim_to_be_a_replay(writer):
 @pytest.mark.django_db
 def test_the_same_key_for_a_different_body_is_refused(writer):
     key = uuid.uuid4()
-    _create(writer, key, username="first")
+    _create(writer, key, handle="first")
 
-    reused = _create(writer, key, username="second")
+    reused = _create(writer, key, handle="second")
 
     assert reused.status_code == 422
-    assert not User.objects.filter(username="second").exists()
+    assert not User.objects.filter(email="second@example.test").exists()
 
 
 @pytest.mark.django_db
 def test_a_post_without_a_key_is_refused(writer):
     """`generic`, since conftest gives every `post` a key."""
-    body = json.dumps({"username": "keyless", "email": "keyless@example.test"})
+    body = json.dumps({**signup_names("keyless"), "email": "keyless@example.test"})
 
     refused = writer.generic("POST", _path(), body, content_type="application/json")
 
     assert refused.status_code == 400
     assert KEY in refused.json()
-    assert not User.objects.filter(username="keyless").exists()
+    assert not User.objects.filter(email="keyless@example.test").exists()
 
 
 @pytest.mark.django_db
 def test_a_key_that_is_not_a_uuid_is_refused(writer):
-    refused = writer.post(
-        _path(), {"username": "bob", "email": "bob@example.test"}, content_type="application/json", headers={KEY: "1"}
-    )
+    body = {**signup_names("bob"), "email": "bob@example.test"}
+
+    refused = writer.post(_path(), body, content_type="application/json", headers={KEY: "1"})
 
     assert refused.status_code == 400
-    assert not User.objects.filter(username="bob").exists()
+    assert not User.objects.filter(email="bob@example.test").exists()
 
 
 @pytest.mark.django_db
@@ -100,7 +101,8 @@ def test_a_method_no_key_guards_needs_none(writer):
 @pytest.mark.django_db
 def test_a_refused_request_leaves_its_key_unspent(writer):
     key = uuid.uuid4()
-    body = {"username": "not a username!", "email": "bob@example.test"}
+    # Refused whatever names the project asks for.
+    body = {**signup_names("bob"), "email": "not an address"}
 
     refused = writer.post(_path(), body, content_type="application/json", headers={KEY: str(key)})
 

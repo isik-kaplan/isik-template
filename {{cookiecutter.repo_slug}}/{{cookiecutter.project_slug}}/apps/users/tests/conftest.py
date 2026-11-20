@@ -10,6 +10,7 @@ from django.conf import settings
 
 from apps.common.links import auth_path
 from apps.users.models.user import User
+from apps.users.names import NameRequirement
 
 
 AUTH_URLCONF = "{{ cookiecutter.project_slug }}.urls.auth"
@@ -22,6 +23,12 @@ CALLBACK_URL = "https://auth.example.test/callback"
 # allauth turns away a login by an account with no number and texts one whose number is unverified.
 SIGNS_IN = {"phone": "+14155550101", "phone_verified": True}
 {%- endif %}
+
+
+def signup_names(handle):
+    """What signup must be told under the generated name requirement, no more: `handle` is the username."""
+    given = {"username": handle, "first_name": handle.capitalize(), "last_name": "Tester"}
+    return {name: given[name] for name in NameRequirement.current().required}
 
 
 class Headless:

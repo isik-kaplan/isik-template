@@ -10,7 +10,7 @@ from django.utils import timezone
 from apps.users.adapters.account import AccountAdapter
 from apps.users.adapters.social_account import SocialAccountAdapter
 from apps.users.models.user import User
-from apps.users.tests.conftest import PASSWORD
+from apps.users.tests.conftest import PASSWORD, signup_names
 
 
 VERSION = "0123456789ab"
@@ -32,7 +32,7 @@ def _sign_up(client, username):
     client.post(
         "/v0/browser/auth/signup",
         data={
-            "username": username,
+            **signup_names(username),
             "email": f"{username}@example.test",
 {%- if cookiecutter.phone == "required" %}
             "phone": "+14155550123",
@@ -43,7 +43,7 @@ def _sign_up(client, username):
         HTTP_HOST=host,
         HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
     )
-    return User.objects.get(username=username)
+    return User.objects.get(email=f"{username}@example.test")
 
 
 def _social_sign_up(username, form=None):

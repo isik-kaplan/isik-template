@@ -249,17 +249,17 @@ def test_the_password_backend_refuses_whoever_the_ladder_shuts_out(alice):
     staff = User.objects.create_user(username="staff", email="staff@example.test", password=PASSWORD, is_staff=True)
     SiteSettings.objects.create(login_policy=LoginPolicy.STAFF)
 
-    assert AuthenticationBackend().authenticate(None, username="alice", password=PASSWORD) is None
-    assert AuthenticationBackend().authenticate(None, username="staff", password=PASSWORD) == staff
+    assert AuthenticationBackend().authenticate(None, username=alice.email, password=PASSWORD) is None
+    assert AuthenticationBackend().authenticate(None, username=staff.email, password=PASSWORD) == staff
 
 
 @pytest.mark.django_db
 def test_signing_in_is_refused_through_every_configured_backend(alice):
-    assert authenticate(None, username="alice", password=PASSWORD) == alice
+    assert authenticate(None, username="alice@example.test", password=PASSWORD) == alice
 
     SiteSettings.objects.create(login_policy=LoginPolicy.SUPERUSERS)
 
-    assert authenticate(None, username="alice", password=PASSWORD) is None
+    assert authenticate(None, username="alice@example.test", password=PASSWORD) is None
 
 
 @pytest.mark.django_db
@@ -281,7 +281,7 @@ def test_the_backend_is_listed_under_the_path_a_login_records():
 def test_a_password_sign_in_through_allauth_is_refused_rather_than_let_into_a_dead_session(headless, alice):
     SiteSettings.objects.create(login_policy=LoginPolicy.STAFF)
 
-    response = headless.call("POST", "account:login", {"username": "alice", "password": PASSWORD})
+    response = headless.call("POST", "account:login", {"email": "alice@example.test", "password": PASSWORD})
 
     assert response.status_code == 400
     assert headless.call("GET", "account:current_session").status_code == 401
@@ -289,7 +289,9 @@ def test_a_password_sign_in_through_allauth_is_refused_rather_than_let_into_a_de
 
 @pytest.mark.django_db
 def test_a_password_sign_in_the_ladder_admits_goes_through(headless, alice):
-    assert headless.call("POST", "account:login", {"username": "alice", "password": PASSWORD}).status_code == 200
+    response = headless.call("POST", "account:login", {"email": "alice@example.test", "password": PASSWORD})
+
+    assert response.status_code == 200
 
 
 @pytest.mark.django_db
