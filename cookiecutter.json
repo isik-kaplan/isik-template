@@ -34,7 +34,7 @@
     "*/e2e/authentik-blueprints/*",
     "*/packages/brand/icon.png"
   ],
-  "_extensions": ["jinja2_time.TimeExtension"],
+  "_extensions": ["cookiecutter.extensions.TimeExtension"],
   "__prompts__": {
     "icon": "Absolute path to a square PNG icon, 512px or larger (empty for a placeholder)",
     "background_jobs": {

@@ -5,8 +5,9 @@ import sys
 from pathlib import Path
 
 
-# This runs from a tempfile with the new project as cwd, so neither __file__ nor cwd reaches hooks/.
-sys.path.insert(0, str(Path({{ cookiecutter._template|tojson }}) / "hooks"))
+# This runs from a tempfile with the new project as cwd, so neither __file__ nor cwd reaches hooks/. _repo_dir, not
+# _template: for gh:/git/zip sources _template is the address as typed, _repo_dir the checkout on disk.
+sys.path.insert(0, str(Path({{ cookiecutter._repo_dir|tojson }}) / "hooks"))
 
 from _validate import AnswersInvalid, validate_answers  # noqa: E402
 
