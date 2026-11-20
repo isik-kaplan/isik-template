@@ -25,6 +25,7 @@ next-env.d.ts
 .stryker-tmp/
 reports/mutation/
 coverage/
+coverage-properties/
 
 # Expo
 .expo/

@@ -2,6 +2,7 @@ node_modules
 .next
 dist
 coverage
+coverage-properties
 reports
 .stryker-tmp
 package-lock.json

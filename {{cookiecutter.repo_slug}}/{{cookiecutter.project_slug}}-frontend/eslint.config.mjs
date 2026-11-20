@@ -34,6 +34,7 @@ export default defineConfig([
     '**/out/**',
     '**/build/**',
     '**/coverage/**',
+    '**/coverage-properties/**',
     'apps/web/next-env.d.ts',
     // Neither is hand-written: vendored shadcn primitives, and openapi-typescript output.
     'apps/web/src/components/base/**',
