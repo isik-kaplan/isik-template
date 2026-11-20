@@ -293,6 +293,18 @@ def test_ci_checks_the_production_settings(cookies):
     assert "--fail-level WARNING" in deploy_check
 
 
+def test_the_workspace_holds_react_native_at_the_mobile_apps_own_pin(cookies):
+    """Peers with open ranges (expo-*, google-signin) would otherwise hoist a newer one that jest-expo resolves."""
+    result = cookies.bake(extra_context=load_context("default"))
+    assert result.exit_code == 0
+
+    frontend = result.project_path / f"{result.context['project_slug']}-frontend"
+    root = json.loads((frontend / "package.json").read_text())
+    mobile = json.loads((frontend / "apps" / "mobile" / "package.json").read_text())
+
+    assert root["overrides"]["react-native"] == mobile["dependencies"]["react-native"]
+
+
 @pytest.mark.parametrize(
     ("context_name", "default_count", "env_example_line", "setup_writes_count"),
     [
