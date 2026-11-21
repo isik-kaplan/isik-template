@@ -4,13 +4,19 @@ import { Button, ErrorText, Heading, Screen, TextField } from '@/components'
 
 import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
+import { passwordsSignIn } from '@/lib/socialProviders'
 import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 
 import { errorsOf } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
+import { Redirect } from 'expo-router'
 import { Text } from 'react-native'
 
 export default function ProfilePassword() {
+  return passwordsSignIn() ? <ChangePasswordForm /> : <Redirect href="/profile" />
+}
+
+function ChangePasswordForm() {
   const { t } = useTranslation()
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')

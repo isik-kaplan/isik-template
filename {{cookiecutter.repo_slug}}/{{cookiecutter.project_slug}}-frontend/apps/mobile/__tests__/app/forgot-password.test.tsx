@@ -11,6 +11,7 @@ jest.mock('expo-router', () => {
   const { Text } = jest.requireActual('react-native')
   return {
     Link: ({ children, testID }: { children: unknown; testID?: string }) => <Text testID={testID}>{children}</Text>,
+    Redirect: ({ href }: { href: string }) => <Text testID="redirect">{href}</Text>,
   }
 })
 
@@ -108,5 +109,21 @@ describe('ForgotPassword', () => {
     await waitFor(() => expect(screen.getByTestId('forgot-password-sent')).toBeTruthy())
     expect(screen.getByTestId('login-link')).toBeTruthy()
     expect(screen.getByText('Back to log in')).toBeTruthy()
+  })
+})
+
+describe('ForgotPassword without passwords', () => {
+  beforeEach(() => {
+    process.env.EXPO_PUBLIC_SOCIAL_LOGIN_ONLY = 'true'
+  })
+  afterEach(() => {
+    process.env.EXPO_PUBLIC_SOCIAL_LOGIN_ONLY = 'false'
+  })
+
+  it('sends anybody who reaches it back to log in', async () => {
+    await render(<ForgotPassword />)
+
+    expect(screen.getByTestId('redirect').props.children).toBe('/login')
+    expect(screen.queryByTestId('forgot-password-form')).toBeNull()
   })
 })

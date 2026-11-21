@@ -32,6 +32,12 @@ allauth's DefaultSocialAccountAdapter.populate_user() never reads its request pa
 touches `data` and `sociallogin.user` - so no test can observe which one was passed."""
 verified_by = "apps/common/tests/test_library_assumptions.py::test_populate_user_never_reads_the_request"
 
+["apps.users.backends.superusers_only_without_passwords.xǁSuperusersOnlyWithoutPasswordsMixinǁauthenticate__mutmut__56dc372f008c"]
+reason = """Passes None instead of the request to super().authenticate(request, **credentials). allauth's
+AuthenticationBackend.authenticate() hands its request only to _authenticate(), which looks the account up by
+the credentials alone and never reads it, so no test can observe which one was passed."""
+verified_by = "apps/common/tests/test_library_assumptions.py::test_the_password_backend_never_reads_the_request"
+
 ["apps.users.adapters.account.xǁAccountAdapterǁsave_user__mutmut__70a6420569e2"]
 reason = """Passes None instead of the request to super().save_user(request, user, form, commit=commit).
 allauth's DefaultAccountAdapter.save_user() only hands its request to populate_username(), which never

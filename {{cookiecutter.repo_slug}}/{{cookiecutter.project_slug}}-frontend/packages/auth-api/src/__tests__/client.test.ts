@@ -54,6 +54,20 @@ describe('AuthApi', () => {
       { credential: { id: 'c' } },
     ],
     ['reauthenticateWithCode', () => ['123456'], 'POST', '/v0/browser/auth/2fa/reauthenticate', { code: '123456' }],
+    [
+      'requestReauthenticationCode',
+      () => [{ email: 'a@example.test' }],
+      'POST',
+      '/v0/browser/auth/reauthenticate/code/request',
+      { email: 'a@example.test' },
+    ],
+    [
+      'confirmReauthenticationCode',
+      () => ['AB12CD'],
+      'POST',
+      '/v0/browser/auth/reauthenticate/code/confirm',
+      { code: 'AB12CD' },
+    ],
     ['webauthnReauthenticationOptions', () => [], 'GET', '/v0/browser/auth/webauthn/reauthenticate', undefined],
     [
       'reauthenticateWithWebauthn',

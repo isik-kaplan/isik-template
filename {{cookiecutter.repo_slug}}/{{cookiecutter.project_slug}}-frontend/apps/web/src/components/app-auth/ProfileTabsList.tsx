@@ -21,6 +21,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/base/tabs'
 import { PHONE } from '@/config/phone'
 import { CONFIG } from '@/config/public'
 import { useClientTranslation } from '@/i18n/client'
+import { passwordsSignIn } from '@/lib/passwords'
 
 const TABS = [
   { segment: 'details', icon: UserIcon },
@@ -40,11 +41,13 @@ export function ProfileTabsList() {
   const { t } = useClientTranslation(['auth'])
   const pathname = usePathname()
   const router = useRouter()
-  // Applications only while the backend is an OAuth provider at all; phone only while accounts have numbers.
+  // Applications only while the backend is an OAuth provider at all; phone only while accounts have numbers;
+  // password only while one signs in.
   const tabs = TABS.filter(
     (tab) =>
       (tab.segment !== 'applications' || CONFIG.OAUTH_PROVIDER.MODE !== 'off') &&
-      (tab.segment !== 'phone' || PHONE !== 'none')
+      (tab.segment !== 'phone' || PHONE !== 'none') &&
+      (tab.segment !== 'password' || passwordsSignIn())
   )
   const active = tabs.find((tab) => pathname.endsWith(`/profile/${tab.segment}`))?.segment ?? tabs[0].segment
 

@@ -26,6 +26,7 @@ from isik.django.apps.notifications.swapping import get_delivery_model
 from apps.common.logging.emit import AUDIT_LOGGER, LOGGER
 from apps.common.logging.events import PAYLOAD
 from apps.users.models.user import User
+from apps.users.social_login import reauthentication_methods
 
 from {{ cookiecutter.project_slug }}.celery import app as celery_app
 {%- if cookiecutter.storage != "disk" %}
@@ -43,6 +44,21 @@ def _a_cache_of_its_own():
 
     with override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}):
         yield
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _passwords_sign_in():
+    """Whatever SOCIAL_LOGIN__ONLY the environment holds: a test without passwords asks for `social_login_only`."""
+    from django.test import override_settings
+
+    with override_settings(SOCIAL_LOGIN_ONLY=False, ACCOUNT_REAUTHENTICATION_METHODS=reauthentication_methods(False)):
+        yield
+
+
+@pytest.fixture
+def social_login_only(settings):
+    settings.SOCIAL_LOGIN_ONLY = True
+    settings.ACCOUNT_REAUTHENTICATION_METHODS = reauthentication_methods(True)
 
 
 @pytest.fixture(autouse=True)

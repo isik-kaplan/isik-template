@@ -305,6 +305,29 @@ def test_the_workspace_holds_react_native_at_the_mobile_apps_own_pin(cookies):
     assert root["overrides"]["react-native"] == mobile["dependencies"]["react-native"]
 
 
+@pytest.mark.parametrize(("context_name", "only"), [("default", False), ("self-tls", True)])
+def test_the_answer_on_signing_in_through_providers_only_is_each_readers_default(cookies, context_name, only):
+    result = cookies.bake(extra_context=load_context(context_name))
+    assert result.exit_code == 0
+
+    prefix = result.context["config_prefix"]
+    backend = result.project_path / result.context["project_slug"]
+    config_py = (backend / result.context["project_slug"] / "config.py").read_text()
+    compose = yaml.safe_load((result.project_path / "docker-compose.yml").read_text())
+    env_example = (result.project_path / ".env.example").read_text().splitlines()
+    ci = yaml.safe_load((result.project_path / ".github" / "workflows" / "ci.yml").read_text())
+    (deploy_check,) = [
+        step["run"] for step in ci["jobs"]["backend"]["steps"] if "check --deploy" in step.get("run", "")
+    ]
+
+    assert f'"ONLY": boolean(missing_default={only})' in config_py
+    frontend_env = compose["services"]["frontend"]["environment"]
+    assert frontend_env[f"{prefix}__SOCIAL_LOGIN__ONLY"] == f"${{{prefix}__SOCIAL_LOGIN__ONLY:-{str(only).lower()}}}"
+    assert f"#{prefix}__SOCIAL_LOGIN__ONLY={str(only).lower()}" in env_example
+    # With DEBUG off, SOCIAL_LOGIN__ONLY refuses to start with no provider.
+    assert (f"-e {prefix}__SOCIAL_LOGIN__PROVIDERS=" in deploy_check) is only
+
+
 @pytest.mark.parametrize(
     ("context_name", "default_count", "env_example_line", "setup_writes_count"),
     [

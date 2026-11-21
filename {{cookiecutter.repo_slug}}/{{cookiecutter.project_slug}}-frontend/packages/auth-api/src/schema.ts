@@ -99,6 +99,24 @@ export interface paths {
       responses: { 200: { content: { 'application/json': SessionOk } }; 401: { content: { 'application/json': SessionErr } } }
     }
   }
+  // A code sent to a verified address or number: the reauthenticate_by_code flow, offered with SOCIAL_LOGIN__ONLY.
+  '/v0/browser/auth/reauthenticate/code/request': {
+    post: {
+      requestBody: { content: { 'application/json': { email: string } | { phone: string } } }
+      responses: { 200: { content: { 'application/json': unknown } }; 400: { content: { 'application/json': ValidationErr } } }
+    }
+  }
+  '/v0/browser/auth/reauthenticate/code/confirm': {
+    post: {
+      requestBody: { content: { 'application/json': { code: string } } }
+      responses: {
+        200: { content: { 'application/json': SessionOk } }
+        400: { content: { 'application/json': ValidationErr } }
+        // No code was asked for in this session, or it ran out of attempts.
+        409: { content: { 'application/json': unknown } }
+      }
+    }
+  }
   '/v0/browser/auth/reauthenticate': {
     post: {
       requestBody: { content: { 'application/json': { password: string } } }
@@ -376,6 +394,24 @@ export interface paths {
         200: { content: { 'application/json': AppSessionOk } }
         400: { content: { 'application/json': ValidationErr } }
         401: { content: { 'application/json': AppSessionErr } }
+      }
+    }
+  }
+  // A code sent to a verified address or number: the reauthenticate_by_code flow, offered with SOCIAL_LOGIN__ONLY.
+  '/v0/app/auth/reauthenticate/code/request': {
+    post: {
+      requestBody: { content: { 'application/json': { email: string } | { phone: string } } }
+      responses: { 200: { content: { 'application/json': unknown } }; 400: { content: { 'application/json': ValidationErr } } }
+    }
+  }
+  '/v0/app/auth/reauthenticate/code/confirm': {
+    post: {
+      requestBody: { content: { 'application/json': { code: string } } }
+      responses: {
+        200: { content: { 'application/json': AppSessionOk } }
+        400: { content: { 'application/json': ValidationErr } }
+        // No code was asked for in this session, or it ran out of attempts.
+        409: { content: { 'application/json': unknown } }
       }
     }
   }

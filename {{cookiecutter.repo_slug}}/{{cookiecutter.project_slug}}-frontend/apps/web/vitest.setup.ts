@@ -1,6 +1,9 @@
 import { cleanup } from '@testing-library/react'
 import { afterEach } from 'vitest'
 
+// Whatever SOCIAL_LOGIN__ONLY the environment holds; a test without passwords mocks @/lib/passwords.
+process.env.{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__ONLY = 'false'
+
 // With globals: false testing-library's auto-cleanup never registers, so it is wired up here.
 afterEach(() => {
   cleanup()

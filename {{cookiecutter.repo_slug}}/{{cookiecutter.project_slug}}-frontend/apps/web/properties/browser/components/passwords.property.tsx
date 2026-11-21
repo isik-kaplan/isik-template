@@ -1,5 +1,6 @@
 import { ChangePasswordForm } from '@/components/app-auth/ChangePasswordForm'
 import { ForgotPasswordForm } from '@/components/app-auth/ForgotPasswordForm'
+import { ProveByCodeForm } from '@/components/app-auth/ProveByCodeForm'
 import { ProvePasswordForm } from '@/components/app-auth/ProvePasswordForm'
 import { ProveSetPasswordByEmail } from '@/components/app-auth/ProveSetPasswordByEmail'
 import { ResetPasswordForm } from '@/components/app-auth/ResetPasswordForm'
@@ -17,6 +18,11 @@ const json = (status: number, body: unknown, headers: Record<string, string> = {
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...headers } })
 const password = fc.stringMatching(/^[A-Za-z0-9]{8,20}$/)
 const key = fc.stringMatching(/^[A-Za-z0-9:_-]{6,30}$/)
+const code = fc.stringMatching(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/)
+const recipient = fc.oneof(
+  address.map((email) => ({ email })),
+  fc.stringMatching(/^\+1[0-9]{10}$/).map((phone) => ({ phone }))
+)
 
 function answering(response: () => Response) {
   const sent = vi.fn(async () => response())
@@ -180,5 +186,57 @@ describe('proving who you are', () => {
     expect(await screen.findByText(new RegExp(email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))).toBeTruthy()
     expect(await (posted() as Request).json()).toEqual({ email })
     expect(screen.queryByRole('button')).toBeNull()
+  })
+})
+
+describe('proving with a code', () => {
+  // One property per answer to the code, a refusal about the code and about nothing each its own.
+  for (const [refused, field] of [
+    [false, undefined],
+    [true, 'code'],
+    [true, undefined],
+  ] as const)
+    test.prop([recipient, code, sitePath])(
+      `sends a code where it was asked for, then takes it: ${refused ? `refused about ${field ?? 'nothing'}` : 'proved'}`,
+      async (to, typed, next) => {
+        freshDom()
+        navigation.replace.mockClear()
+        const proved = () => json(200, { status: 200, data: { user: {} }, meta: { is_authenticated: true } })
+        const sent = vi.fn(async (input: Request) => {
+          if (input.url.endsWith('/code/request')) return json(200, { status: 200 })
+          return refused ? allauthRefusal('Wrong.', field) : proved()
+        })
+        vi.stubGlobal('fetch', sent)
+        // The client may prime its CSRF cookie with a GET first; only the two POSTs are the flow.
+        const posts = () =>
+          calls(sent)
+            .map(([input]) => input as Request)
+            .filter((input) => input.method === 'POST')
+        const where = 'email' in to ? to.email : to.phone
+        render(<ProveByCodeForm recipients={[to]} next={next} />)
+        fireEvent.click(screen.getByRole('button', { name: `Send a code to ${where}` }))
+        fireEvent.click(await screen.findByRole('button', { name: 'Confirm' }))
+        expect(await screen.findByText('Enter the code we sent you.')).toBeTruthy()
+        fireEvent.change(screen.getByLabelText('Code'), { target: { value: typed } })
+        fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+        await vi.waitFor(() => expect(posts()).toHaveLength(2))
+        const [asked, answered] = posts()
+        expect(await asked.json()).toEqual(to)
+        expect(await answered.json()).toEqual({ code: typed })
+        if (refused) expect(await screen.findByText('Wrong.')).toBeTruthy()
+        else await vi.waitFor(() => expect(navigation.replace).toHaveBeenCalledWith(next))
+      }
+    )
+
+  test.prop([recipient])('stays on the choice and says so when no code could be sent', async (to) => {
+    freshDom()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => json(429, {}))
+    )
+    render(<ProveByCodeForm recipients={[to]} next="/profile" />)
+    fireEvent.click(screen.getByRole('button', { name: /^Send a code to / }))
+    expect(await screen.findByText('We could not send a code. Wait a moment and try again.')).toBeTruthy()
+    expect(screen.queryByLabelText('Code')).toBeNull()
   })
 })

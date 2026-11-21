@@ -194,7 +194,15 @@ fi
 {%- endif %}
 
 echo
+{%- if cookiecutter.social_login_only %}
+social_login_providers="$(ask "Social login providers, as comma-separated allauth ids (sign-in is through them only)" "")"
+if [ -z "$social_login_providers" ]; then
+  echo "  With ${PREFIX}__SOCIAL_LOGIN__ONLY on, the backend refuses to start until"
+  echo "  ${PREFIX}__SOCIAL_LOGIN__PROVIDERS names one - set it in $ENV_FILE."
+fi
+{%- else %}
 social_login_providers="$(ask "Social login providers, as comma-separated allauth ids (blank for none)" "")"
+{%- endif %}
 if [ -n "$social_login_providers" ]; then
   set_var "${PREFIX}__SOCIAL_LOGIN__PROVIDERS" "$social_login_providers"
   echo "Their credentials (leave blank to configure later - that provider's button just won't"

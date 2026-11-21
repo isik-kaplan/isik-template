@@ -6,6 +6,9 @@ import { afterEach, beforeEach, vi } from 'vitest'
 // reason about, and a counterexample found only in a deeper run is one the gate never had.
 fc.configureGlobal({ numRuns: 25 })
 
+// Whatever SOCIAL_LOGIN__ONLY the environment holds; a test without passwords mocks @/lib/passwords.
+process.env.{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__ONLY = 'false'
+
 // With globals: false testing-library's auto-cleanup never registers. Once per property, not per example.
 afterEach(() => {
   cleanup()

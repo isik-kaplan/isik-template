@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 const getSession = vi.fn()
 vi.mock('@/config/public', () => ({ CONFIG: { OAUTH_PROVIDER: { MODE: 'off' } } }))
+vi.mock('@/lib/passwords', () => ({ passwordsSignIn: () => true }))
 vi.mock('@/lib/getSession', () => ({ getSession: () => getSession(), getLanguage: async () => 'en' }))
 vi.mock('@/components/app-auth/NotificationBell', () => ({ NotificationBell: () => <p>bell</p> }))
 vi.mock('@/components/app-search/CommandPalette', () => ({ CommandPalette: () => <p>palette</p> }))

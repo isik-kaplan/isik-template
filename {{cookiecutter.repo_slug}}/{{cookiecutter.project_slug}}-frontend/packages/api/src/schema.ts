@@ -1950,10 +1950,17 @@ export interface components {
             providers?: components["schemas"]["ReauthenticationProvider"][];
             /** Format: email */
             email?: string;
+            recipients?: components["schemas"]["ReauthenticationRecipient"][];
         };
         ReauthenticationProvider: {
             id: string;
             name: string;
+        };
+        /** @description Where a code may be sent: one of the two. */
+        ReauthenticationRecipient: {
+            /** Format: email */
+            email?: string;
+            phone?: string;
         };
         /**
          * @description An application as a superuser reviewing it sees it: whose it is, where it signs people in to, and

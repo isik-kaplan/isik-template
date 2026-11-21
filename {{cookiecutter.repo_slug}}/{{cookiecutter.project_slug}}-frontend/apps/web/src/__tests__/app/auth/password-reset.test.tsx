@@ -11,6 +11,13 @@ vi.mock('@/components/app-auth/ResetPasswordForm', () => ({
   },
 }))
 vi.mock('@/lib/getSession', () => ({ getLanguage: async () => 'en' }))
+vi.mock('next/navigation', () => ({
+  notFound: () => {
+    throw new Error('not found')
+  },
+}))
+const passwords = vi.hoisted(() => ({ signIn: true }))
+vi.mock('@/lib/passwords', () => ({ passwordsSignIn: () => passwords.signIn }))
 
 describe('PasswordResetPage', () => {
   it('renders the title', async () => {
@@ -23,5 +30,13 @@ describe('PasswordResetPage', () => {
     render(await PasswordResetPage({ params: Promise.resolve({ key: 'abc%3Adef' }) }))
 
     expect(resetKeyProp).toHaveBeenCalledWith('abc:def')
+  })
+
+  it('is not found when nobody signs in with a password', async () => {
+    passwords.signIn = false
+
+    await expect(PasswordResetPage({ params: Promise.resolve({ key: 'abc123' }) })).rejects.toThrow('not found')
+
+    passwords.signIn = true
   })
 })

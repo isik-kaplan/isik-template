@@ -5,6 +5,11 @@ function configured(id: string): boolean {
   return providers?.some((provider) => provider.trim() === id) ?? false
 }
 
+// EXPO_PUBLIC_SOCIAL_LOGIN_ONLY, the backend's SOCIAL_LOGIN__ONLY: off, a password signs in, signs up and resets here.
+export function passwordsSignIn(): boolean {
+  return (process.env.EXPO_PUBLIC_SOCIAL_LOGIN_ONLY ?? '{{ cookiecutter.social_login_only|lower }}') !== 'true'
+}
+
 export function googleSignInEnabled(): boolean {
   return configured('google')
 }

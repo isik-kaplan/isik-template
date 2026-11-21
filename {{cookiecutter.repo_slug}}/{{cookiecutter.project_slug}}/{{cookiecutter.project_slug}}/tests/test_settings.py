@@ -152,7 +152,16 @@ def test_outside_debug_browsers_stay_on_https_for_a_year_across_subdomains(debug
         "print(settings.SECURE_HSTS_SECONDS, settings.SECURE_HSTS_INCLUDE_SUBDOMAINS, "
         "getattr(settings, 'SECURE_HSTS_PRELOAD', False))"
     )
+{%- if cookiecutter.social_login_only %}
+    # Outside DEBUG, SOCIAL_LOGIN__ONLY refuses to start with no provider.
+    env = {
+        **os.environ,
+        "{{ cookiecutter.config_prefix }}__DEBUG": debug,
+        "{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS": "github",
+    }
+{%- else %}
     env = {**os.environ, "{{ cookiecutter.config_prefix }}__DEBUG": debug}
+{%- endif %}
 
     result = subprocess.run([sys.executable, "-c", script], env=env, capture_output=True, text=True, check=True)
 

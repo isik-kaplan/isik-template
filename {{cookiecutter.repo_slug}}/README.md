@@ -240,7 +240,9 @@ physical device or the Android emulator doesn't - point at this machine's LAN IP
 
 The native Google/Apple sign-in buttons show when `EXPO_PUBLIC_SOCIAL_LOGIN_PROVIDERS` (inlined at
 build time, like the two origins above) names `google` or `apple` - set it to the backend's own
-`{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS`. They (`apps/mobile/lib/nativeSignIn.ts`)
+`{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS`; `EXPO_PUBLIC_SOCIAL_LOGIN_ONLY` mirrors `..._SOCIAL_LOGIN__ONLY`
+the same way. With sign-in through providers only, the app signs in only through these two, so a project
+whose providers are all OpenID Connect signs in on the web alone. They (`apps/mobile/lib/nativeSignIn.ts`)
 need a custom dev client, not Expo Go - `npx expo run:ios` / `npx expo run:android` (or an EAS development build) after adding
 your own real credentials: a Google OAuth iOS client ID (its reversed form as `iosUrlScheme` in
 `app.config.ts`'s `@react-native-google-signin/google-signin` plugin entry) and, for Apple, a
@@ -271,7 +273,8 @@ is them again first: the API answers with `X-Reauthentication-Required: 1`, and 
 them to `/auth/prove` and back. A proof is spent by the one act it was asked for. Somebody with a
 password types it; somebody who signed up through an OpenID Connect provider signs in there again
 (it has to report a fresh `auth_time`); anybody without a password can also set one from an emailed
-link. `apps/users/tests/test_reauthentication_gate.py` fails until every routed write is classified
+link. With `{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__ONLY` (sign-in through providers only, see SETUP.md) nobody has a
+password here, so a code emailed to a verified address takes the password's place and no link sets one. `apps/users/tests/test_reauthentication_gate.py` fails until every routed write is classified
 as gated or not an act.
 
 For an incident, **Site settings** in the admin holds a "who may sign in" ladder (everyone, staff,

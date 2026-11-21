@@ -5,12 +5,16 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 const mockSession = jest.fn()
 const mockReauthenticate = jest.fn()
 const mockRequestPasswordReset = jest.fn()
+const mockRequestCode = jest.fn()
+const mockConfirmCode = jest.fn()
 const mockBack = jest.fn()
 jest.mock('@/lib/session', () => ({
   getAuthApi: () => ({
     session: () => mockSession(),
     reauthenticate: (...args: unknown[]) => mockReauthenticate(...args),
     requestPasswordReset: (...args: unknown[]) => mockRequestPasswordReset(...args),
+    requestReauthenticationCode: (...args: unknown[]) => mockRequestCode(...args),
+    confirmReauthenticationCode: (...args: unknown[]) => mockConfirmCode(...args),
   }),
 }))
 jest.mock('expo-router', () => ({ router: { back: () => mockBack() } }))
@@ -185,5 +189,101 @@ describe('Prove', () => {
       expect(screen.getByTestId('prove-error').props.children).toBe('Too many requests. Wait a moment, then try again.')
     )
     expect(mockBack).not.toHaveBeenCalled()
+  })
+})
+
+describe('Prove without passwords', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    process.env.EXPO_PUBLIC_SOCIAL_LOGIN_ONLY = 'true'
+    signedIn({ email: 'alice@example.test', has_usable_password: false })
+  })
+  afterEach(() => {
+    process.env.EXPO_PUBLIC_SOCIAL_LOGIN_ONLY = 'false'
+  })
+
+  async function sendTheCode() {
+    await render(<Prove />)
+    await waitFor(() => expect(screen.getByTestId('prove-code')).toBeTruthy())
+    await fireEvent.press(screen.getByTestId('prove-code-send'))
+  }
+
+  it('sends a code to the address, then goes back once it proves it', async () => {
+    mockRequestCode.mockResolvedValue({ data: {}, error: undefined })
+    mockConfirmCode.mockResolvedValue({ data: {}, error: undefined })
+    await render(<Prove />)
+    await waitFor(() => expect(screen.getByTestId('prove-code')).toBeTruthy())
+    expect(screen.getByTestId('prove-code-send-label').props.children).toBe('Send a code to alice@example.test')
+
+    await fireEvent.press(screen.getByTestId('prove-code-send'))
+    await waitFor(() =>
+      expect(screen.getByTestId('prove-code-sent').props.children).toBe(
+        'We sent a code to alice@example.test. Enter it below.'
+      )
+    )
+    expect(screen.getByTestId('prove-code-input').props.placeholder).toBe('Code')
+    await fireEvent.changeText(screen.getByTestId('prove-code-input'), ' BCDF-GHJK ')
+    await fireEvent.press(screen.getByTestId('prove-code-submit'))
+
+    await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1))
+    expect(mockRequestCode).toHaveBeenCalledWith({ email: 'alice@example.test' })
+    expect(mockConfirmCode).toHaveBeenCalledWith('BCDF-GHJK')
+    expect(mockReauthenticate).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['the server says why', { errors: [{ message: 'Address not verified.' }] }, 'Address not verified.'],
+    ['the server gives no reason', {}, 'We could not send a code. Wait a moment and try again.'],
+  ])('stays on the offer when the code is not sent and %s', async (_label, error, shown) => {
+    mockRequestCode.mockResolvedValue({ data: undefined, error, response: new Response(null, { status: 400 }) })
+
+    await sendTheCode()
+
+    await waitFor(() => expect(screen.getByTestId('prove-error').props.children).toBe(shown))
+    expect(screen.getByTestId('prove-code-send')).toBeTruthy()
+    expect(screen.queryByTestId('prove-code-input')).toBeNull()
+  })
+
+  it.each([
+    ['the server says why', { errors: [{ message: 'Incorrect code.' }] }, 'Incorrect code.'],
+    ['the server gives no reason', {}, 'That code is not right, or it expired. Ask for a new one.'],
+  ])('stays put on a code that proves nothing when %s', async (_label, error, shown) => {
+    mockRequestCode.mockResolvedValue({ data: {}, error: undefined })
+    mockConfirmCode.mockResolvedValue({ data: undefined, error, response: new Response(null, { status: 400 }) })
+
+    await sendTheCode()
+    await waitFor(() => expect(screen.getByTestId('prove-code-input')).toBeTruthy())
+    await fireEvent.changeText(screen.getByTestId('prove-code-input'), 'WRONG')
+    await fireEvent.press(screen.getByTestId('prove-code-submit'))
+
+    await waitFor(() => expect(screen.getByTestId('prove-error').props.children).toBe(shown))
+    expect(mockBack).not.toHaveBeenCalled()
+  })
+
+  it('says to wait when the code is asked for too often', async () => {
+    mockRequestCode.mockResolvedValue({
+      data: undefined,
+      error: {},
+      response: new Response(null, { status: 429, headers: { 'Retry-After': '30' } }),
+    })
+
+    await sendTheCode()
+
+    await waitFor(() =>
+      expect(screen.getByTestId('prove-error').props.children).toBe('Too many requests. Try again in 30 seconds.')
+    )
+  })
+
+  it('says to wait when codes are tried too often', async () => {
+    mockRequestCode.mockResolvedValue({ data: {}, error: undefined })
+    mockConfirmCode.mockResolvedValue({ data: undefined, error: {}, response: new Response(null, { status: 429 }) })
+
+    await sendTheCode()
+    await waitFor(() => expect(screen.getByTestId('prove-code-input')).toBeTruthy())
+    await fireEvent.press(screen.getByTestId('prove-code-submit'))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('prove-error').props.children).toBe('Too many requests. Wait a moment, then try again.')
+    )
   })
 })

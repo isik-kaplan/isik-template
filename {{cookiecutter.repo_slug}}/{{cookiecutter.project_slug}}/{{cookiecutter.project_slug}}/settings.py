@@ -16,7 +16,7 @@ from apps.notifications.push import push_credentials
 from apps.oauth_provider import device_codes
 from apps.oauth_provider.mode import oauth_provider_mode
 from apps.users.names import NameRequirement
-from apps.users.social_login import social_login_provider_ids
+from apps.users.social_login import reauthentication_methods, social_login_only, social_login_provider_ids
 
 from . import __version__
 from .config import CONFIG as config  # Django thinks CONFIG is a setting if it is all caps  # NOQA
@@ -40,6 +40,7 @@ ALLOWED_HOSTS = [
 
 
 SOCIAL_LOGIN_PROVIDER_IDS = social_login_provider_ids(config.SOCIAL_LOGIN.PROVIDERS)
+SOCIAL_LOGIN_ONLY = social_login_only(config.SOCIAL_LOGIN.ONLY, SOCIAL_LOGIN_PROVIDER_IDS, DEBUG)
 
 INSTALLED_APPS = [
     "django_hosts",
@@ -231,9 +232,7 @@ SOCIALACCOUNT_ADAPTER = "apps.users.adapters.social_account.SocialAccountAdapter
 SOCIALACCOUNT_AUTO_SIGNUP = False
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_EMAIL_NOTIFICATIONS = True
-# allauth 65.22 adds a code by email or text to its default; no screen here asks for one, and a proof counts
-# whatever its method.
-ACCOUNT_REAUTHENTICATION_METHODS = ["password", "mfa"]
+ACCOUNT_REAUTHENTICATION_METHODS = reauthentication_methods(SOCIAL_LOGIN_ONLY)
 {%- if cookiecutter.phone != "none" %}
 # allauth spends its 1/m on every request to the phone page: its GET, and the change the reauthentication
 # gate turns back, so the change after the proof was refused. Each change still costs a fresh proof.

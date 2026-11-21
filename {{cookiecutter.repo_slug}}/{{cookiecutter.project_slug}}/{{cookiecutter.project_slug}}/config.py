@@ -77,6 +77,8 @@ CONFIG = config(
         "SOCIAL_LOGIN": {
             # The frontend reads the same variable. Credentials are OAUTH__<ID>__*.
             "PROVIDERS": comma_separated_list(missing_default=[]),
+            # Nobody signs in with a password but a superuser, in the admin. The frontend reads it too.
+            "ONLY": boolean(missing_default={{ cookiecutter.social_login_only }}),
         },
         "SENTRY": {
             "DSN": string(missing_default=None),

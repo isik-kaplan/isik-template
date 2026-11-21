@@ -30,6 +30,23 @@ describe('CONFIG (public)', () => {
     vi.resetModules()
   })
 
+  it.each([
+    ['true', true],
+    ['false', false],
+    [undefined, {{ cookiecutter.social_login_only|lower }}],
+  ])('reads SOCIAL_LOGIN__ONLY=%s, defaulting to the answer given at generation', async (value, only) => {
+    vi.stubEnv('{{ cookiecutter.config_prefix }}__DOMAIN', 'example.test')
+    vi.stubEnv('{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__ONLY', value)
+    vi.resetModules()
+
+    const { CONFIG } = await import('@/config/public')
+
+    expect(CONFIG.SOCIAL_LOGIN.ONLY).toBe(only)
+
+    vi.unstubAllEnvs()
+    vi.resetModules()
+  })
+
   it('reads the OAuth provider mode from its own variable', async () => {
     vi.stubEnv('{{ cookiecutter.config_prefix }}__DOMAIN', 'example.test')
     vi.stubEnv('{{ cookiecutter.config_prefix }}__OAUTH_PROVIDER__MODE', 'auto')

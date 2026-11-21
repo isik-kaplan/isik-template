@@ -6,6 +6,7 @@ import { useTranslation } from '@/lib/i18n'
 import { handleLogsIn } from '@/lib/names'
 import { PHONE } from '@/lib/phoneOption'
 import { getAuthApi } from '@/lib/session'
+import { passwordsSignIn } from '@/lib/socialProviders'
 import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 
 import { errorsOf, hasPendingVerifyEmail, pendingFlow, pendingMfaTypes } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
@@ -83,36 +84,44 @@ export default function Login() {
   return (
     <Screen testID="login-form">
       <Heading testID="login-heading">{t('loginHeading')}</Heading>
-      <TextField
-        testID="email-input"
-        placeholder={placeholder}
-        autoCapitalize="none"
-        keyboardType={byHandle || byPhone ? 'default' : 'email-address'}
-        value={login}
-        onChangeText={setLogin}
-      />
-      <TextField
-        testID="password-input"
-        placeholder={t('passwordPlaceholder')}
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
+      {passwordsSignIn() && (
+        <>
+          <TextField
+            testID="email-input"
+            placeholder={placeholder}
+            autoCapitalize="none"
+            keyboardType={byHandle || byPhone ? 'default' : 'email-address'}
+            value={login}
+            onChangeText={setLogin}
+          />
+          <TextField
+            testID="password-input"
+            placeholder={t('passwordPlaceholder')}
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+          />
+        </>
+      )}
       {error && <ErrorText testID="login-error">{error}</ErrorText>}
-      <Button
-        testID="login-submit"
-        labelTestID="login-submit-label"
-        disabled={submitting}
-        onPress={submit}
-        label={submitting ? t('loginSubmitting') : t('loginSubmit')}
-      />
+      {passwordsSignIn() && (
+        <Button
+          testID="login-submit"
+          labelTestID="login-submit-label"
+          disabled={submitting}
+          onPress={submit}
+          label={submitting ? t('loginSubmitting') : t('loginSubmit')}
+        />
+      )}
       <SocialLoginButtons onError={setError} />
       <Link href="/signup" testID="signup-link">
         <Text>{t('loginSignupLink')}</Text>
       </Link>
-      <Link href="/forgot-password" testID="forgot-password-link">
-        <Text>{t('loginForgotPasswordLink')}</Text>
-      </Link>
+      {passwordsSignIn() && (
+        <Link href="/forgot-password" testID="forgot-password-link">
+          <Text>{t('loginForgotPasswordLink')}</Text>
+        </Link>
+      )}
     </Screen>
   )
 }

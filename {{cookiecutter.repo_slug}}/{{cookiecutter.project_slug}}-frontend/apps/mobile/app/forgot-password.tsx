@@ -4,11 +4,17 @@ import { Button, Heading, Screen, TextField } from '@/components'
 
 import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
+import { passwordsSignIn } from '@/lib/socialProviders'
 
-import { Link } from 'expo-router'
+import { Link, Redirect } from 'expo-router'
 import { Text } from 'react-native'
 
+// Reached by a link or a stale route even when nobody signs in with a password.
 export default function ForgotPassword() {
+  return passwordsSignIn() ? <ForgotPasswordForm /> : <Redirect href="/login" />
+}
+
+function ForgotPasswordForm() {
   const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [submitting, setSubmitting] = useState(false)

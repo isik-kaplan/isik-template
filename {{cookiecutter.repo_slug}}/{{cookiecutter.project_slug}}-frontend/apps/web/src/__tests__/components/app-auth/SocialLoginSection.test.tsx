@@ -17,6 +17,13 @@ describe('SocialLoginSection', () => {
     expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeTruthy()
     expect(screen.getByText('or')).toBeTruthy()
   })
+
+  it('renders the buttons without a divider when nothing follows them', () => {
+    const { container } = render(<SocialLoginSection action={action} callbackUrl={callbackUrl} />)
+
+    expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeTruthy()
+    expect(container.querySelector('[data-slot="separator"]')).toBeNull()
+  })
 })
 
 describe('SocialLoginSection with no providers configured', () => {

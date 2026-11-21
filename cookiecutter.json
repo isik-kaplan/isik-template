@@ -14,6 +14,7 @@
   "python_version": "3.14",
   "node_version": "22",
   "include_mobile": false,
+  "social_login_only": false,
   "background_jobs": ["celery-with-beat", "celery", "inline"],
   "storage": ["garage", "s3", "disk"],
   "cache": ["redis", "database"],
@@ -37,6 +38,7 @@
   "_extensions": ["cookiecutter.extensions.TimeExtension"],
   "__prompts__": {
     "icon": "Absolute path to a square PNG icon, 512px or larger (empty for a placeholder)",
+    "social_login_only": "Sign in only through social login providers? No passwords, except a superuser's in the admin (SOCIAL_LOGIN__ONLY; changeable later)",
     "background_jobs": {
       "__prompt__": "Background jobs",
       "celery-with-beat": "Celery worker and beat scheduler, over RabbitMQ",

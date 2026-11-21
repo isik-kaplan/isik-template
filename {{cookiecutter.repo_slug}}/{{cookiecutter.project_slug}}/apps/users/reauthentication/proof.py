@@ -1,8 +1,8 @@
 """Proving again that somebody is who the session says.
 
-Not allauth's `did_recently_authenticate`, which answers True outright for a social-only account. A proof
-is a real re-authentication in this session (not a sign-in) younger than `ACCOUNT_REAUTHENTICATION_TIMEOUT`,
-and is single-use.
+Not allauth's `did_recently_reauthenticate`, which knows nothing of a provider's own re-login. A proof is a
+real re-authentication in this session (not a sign-in) younger than `ACCOUNT_REAUTHENTICATION_TIMEOUT`, and
+is single-use.
 """
 
 import math
@@ -15,6 +15,7 @@ from allauth.account.internal.flows.login import record_authentication
 from allauth.account.internal.flows.reauthentication import get_reauthentication_flows
 from allauth.socialaccount.models import SocialAccount
 from allauth.socialaccount.providers.openid_connect.provider import OpenIDConnectProvider
+from django.conf import settings
 
 from apps.common.logging import REAUTHENTICATION_PROVED, REAUTHENTICATION_SPENT, log
 
@@ -115,7 +116,7 @@ def spend_the_proof(request, act):
 
 def ways_to_prove(request):
     """In allauth's flow vocabulary. Without a password, setting one by email is offered, so nobody is
-    left with no way through."""
+    left with no way through; with SOCIAL_LOGIN_ONLY allauth's code by email is that way instead."""
     user = request.user
     flows = get_reauthentication_flows(user)
     providers = []
@@ -125,6 +126,6 @@ def ways_to_prove(request):
             providers.append({"id": account.provider, "name": provider.name})
     if providers:
         flows.append({"id": PROVIDER_FLOW, "providers": providers})
-    if not user.has_usable_password():
+    if not (settings.SOCIAL_LOGIN_ONLY or user.has_usable_password()):
         flows.append({"id": SET_PASSWORD_BY_EMAIL_FLOW, "email": user.email})
     return flows

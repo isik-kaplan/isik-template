@@ -311,3 +311,21 @@ describe('Signup', () => {
     })
   })
 })
+
+describe('Signup without passwords', () => {
+  beforeEach(() => {
+    process.env.EXPO_PUBLIC_SOCIAL_LOGIN_ONLY = 'true'
+  })
+  afterEach(() => {
+    process.env.EXPO_PUBLIC_SOCIAL_LOGIN_ONLY = 'false'
+  })
+
+  it('asks for no details or password, only the providers and the way to log in', async () => {
+    await render(<Signup />)
+
+    for (const testID of ['email-input', 'password-input', 'signup-submit']) {
+      expect(screen.queryByTestId(testID)).toBeNull()
+    }
+    expect(screen.getByTestId('login-link')).toBeTruthy()
+  })
+})

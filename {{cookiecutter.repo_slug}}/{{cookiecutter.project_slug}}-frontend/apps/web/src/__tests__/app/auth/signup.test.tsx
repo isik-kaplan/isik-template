@@ -13,10 +13,23 @@ vi.mock('next/headers', () => ({ headers: async () => new Headers({ host: 'test-
 vi.mock('@/config/public', () => ({ CONFIG: { DOMAIN: 'test-project.test' } }))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }))
 vi.mock('@/lib/socialProviders', () => ({ socialProviders: () => [{ id: 'google', name: 'Google', icon: '' }] }))
+const passwords = vi.hoisted(() => ({ signIn: true }))
+vi.mock('@/lib/passwords', () => ({ passwordsSignIn: () => passwords.signIn }))
 
 describe('SignupPage', () => {
   afterEach(() => {
     document.querySelectorAll('form').forEach((form) => form.remove())
+    passwords.signIn = true
+  })
+
+  it('offers only the providers, and no divider, when nobody signs up with a password', async () => {
+    passwords.signIn = false
+    render(await SignupPage())
+
+    expect(screen.getByRole('button', { name: /Continue with Google/ })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Sign up' })).toBeNull()
+    expect(screen.queryByText('Or')).toBeNull()
+    expect(screen.getByRole('link', { name: 'Log in' }).getAttribute('href')).toBe('/auth/login')
   })
 
   it('checks whether the visitor is already logged in', async () => {

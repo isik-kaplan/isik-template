@@ -1,4 +1,4 @@
-import { appleSignInEnabled, googleSignInEnabled } from '@/lib/socialProviders'
+import { appleSignInEnabled, googleSignInEnabled, passwordsSignIn } from '@/lib/socialProviders'
 
 describe('socialProviders', () => {
   afterEach(() => {
@@ -28,5 +28,22 @@ describe('socialProviders', () => {
     process.env.EXPO_PUBLIC_SOCIAL_LOGIN_PROVIDERS = 'google'
 
     expect(googleSignInEnabled()).toBe(true)
+  })
+})
+
+describe('passwordsSignIn', () => {
+  afterEach(() => {
+    process.env.EXPO_PUBLIC_SOCIAL_LOGIN_ONLY = 'false'
+  })
+
+  it.each([
+    ['false', true],
+    ['true', false],
+    [undefined, {{ 'false' if cookiecutter.social_login_only else 'true' }}],
+  ])('reads EXPO_PUBLIC_SOCIAL_LOGIN_ONLY=%s, defaulting to the generated answer', (value, signIn) => {
+    if (value === undefined) delete process.env.EXPO_PUBLIC_SOCIAL_LOGIN_ONLY
+    else process.env.EXPO_PUBLIC_SOCIAL_LOGIN_ONLY = value
+
+    expect(passwordsSignIn()).toBe(signIn)
   })
 })

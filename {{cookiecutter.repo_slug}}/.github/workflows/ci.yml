@@ -76,8 +76,14 @@ jobs:
 {%- if cookiecutter.phone != "none" and cookiecutter.sms == "twilio" %}
         # Stand-in credentials: with DEBUG off the sender is Twilio, and isik.E024 refuses one with none.
 {%- endif %}
+{%- if cookiecutter.social_login_only %}
+        # A stand-in provider: with DEBUG off, SOCIAL_LOGIN__ONLY refuses to start without one.
+{%- endif %}
         run: >-
           docker compose run --rm --no-deps -e {{ cookiecutter.config_prefix }}__DEBUG=false
+{%- if cookiecutter.social_login_only %}
+          -e {{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS=github
+{%- endif %}
 {%- if cookiecutter.phone != "none" and cookiecutter.sms == "twilio" %}
           -e {{ cookiecutter.config_prefix }}__SMS__TWILIO__ACCOUNT_SID=AC-ci -e {{ cookiecutter.config_prefix }}__SMS__TWILIO__AUTH_TOKEN=ci
           -e {{ cookiecutter.config_prefix }}__SMS__TWILIO__FROM=+15555550100

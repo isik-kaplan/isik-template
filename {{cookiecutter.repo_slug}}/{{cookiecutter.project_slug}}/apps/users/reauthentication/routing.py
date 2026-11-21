@@ -50,8 +50,11 @@ def walk(patterns, prefix=""):
 def gated_headless_urlpatterns():
     # Each gated view's other base is the allauth view it replaces.
     replacing = {next(base for base in view.__bases__ if base is not ProvesWhoTheyAre): view for view in GATED_VIEWS}
-    return [
-        path(route, replacing[callback.view_class].as_api_view(**callback.view_initkwargs))
-        for route, callback in walk(headless_urls.urlpatterns)
-        if callback.view_class in replacing
-    ]
+    patterns = []
+    for route, callback in walk(headless_urls.urlpatterns):
+        if callback.view_class in replacing:
+            view = replacing[callback.view_class].as_api_view(**callback.view_initkwargs)
+            if vars(callback).get("needs_passwords"):
+                view = headless_urls.with_passwords_only(view)
+            patterns.append(path(route, view))
+    return patterns

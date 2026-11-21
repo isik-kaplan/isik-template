@@ -7,6 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 from allauth.account.adapter import DefaultAccountAdapter
+from allauth.account.auth_backends import AuthenticationBackend
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from celery.local import Proxy
 from django.apps import apps
@@ -71,6 +72,21 @@ def test_populate_user_never_reads_the_request():
 
     assert object.__getattribute__(watched, "reads") == []
     assert users[0] == users[1] == ("ada", "ada@example.test", "Ada", "Lovelace")
+
+
+@pytest.mark.django_db
+def test_the_password_backend_never_reads_the_request():
+    """allauth's AuthenticationBackend.authenticate hands the request to _authenticate, which never reads it."""
+    user = get_user_model().objects.create_user(username="ada", email="ada@example.test", password="horse-battery")
+    watched = _Watched()
+
+    found = [
+        AuthenticationBackend().authenticate(request, username="ada@example.test", password="horse-battery")
+        for request in (watched, None)
+    ]
+
+    assert object.__getattribute__(watched, "reads") == []
+    assert found == [user, user]
 
 
 def test_save_user_never_reads_the_request():

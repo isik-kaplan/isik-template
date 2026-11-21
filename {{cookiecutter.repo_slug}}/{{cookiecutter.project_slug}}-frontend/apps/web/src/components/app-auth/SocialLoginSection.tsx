@@ -10,7 +10,8 @@ import { SocialLoginButtons } from './SocialLoginButtons'
 export type SocialLoginSectionProps = {
   action: string
   callbackUrl: string
-  dividerText: React.ReactNode
+  // Left out when nothing follows the buttons.
+  dividerText?: React.ReactNode
 }
 
 // No providers means no divider either.
@@ -20,7 +21,7 @@ export function SocialLoginSection({ action, callbackUrl, dividerText }: SocialL
   return (
     <>
       <SocialLoginButtons action={action} callbackUrl={callbackUrl} />
-      <SeparatorWithText>{dividerText}</SeparatorWithText>
+      {dividerText && <SeparatorWithText>{dividerText}</SeparatorWithText>}
     </>
   )
 }

@@ -50,15 +50,18 @@ def test_the_backend_suite_passes(cookies, context_name):
         compose("run", "--rm", "--no-deps", "backend", "python", "manage.py", "migrate")
         compose("run", "--rm", "--no-deps", "backend", "python", "manage.py", "makemigrations", "--check", "--dry-run")
         # A deployment sets these; empty, isik.E024 refuses to start the texting backend DEBUG off picks.
-        texting = []
+        stand_ins = []
         if result.context["phone"] != "none" and result.context["sms"] == "twilio":
-            texting = [
+            stand_ins = [
                 "-e", f"{prefix}__SMS__TWILIO__ACCOUNT_SID=AC{'0' * 32}",
                 "-e", f"{prefix}__SMS__TWILIO__AUTH_TOKEN={'0' * 32}",
                 "-e", f"{prefix}__SMS__TWILIO__FROM=+15005550006",
             ]  # fmt: skip
+        # With DEBUG off, SOCIAL_LOGIN__ONLY refuses to start with no provider.
+        if result.context["social_login_only"]:
+            stand_ins += ["-e", f"{prefix}__SOCIAL_LOGIN__PROVIDERS=github"]
         compose(
-            "run", "--rm", "--no-deps", "-e", f"{prefix}__DEBUG=false", *texting, "backend",
+            "run", "--rm", "--no-deps", "-e", f"{prefix}__DEBUG=false", *stand_ins, "backend",
             "python", "manage.py", "check", "--deploy", "--fail-level", "WARNING",
         )  # fmt: skip
         compose("run", "--rm", "--no-deps", "backend", "python", "-m", "pytest")

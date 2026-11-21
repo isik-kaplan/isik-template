@@ -29,3 +29,19 @@ describe('Profile', () => {
     expect(mockPush).toHaveBeenCalledWith(href)
   })
 })
+
+describe('Profile without passwords', () => {
+  beforeEach(() => {
+    process.env.EXPO_PUBLIC_SOCIAL_LOGIN_ONLY = 'true'
+  })
+  afterEach(() => {
+    process.env.EXPO_PUBLIC_SOCIAL_LOGIN_ONLY = 'false'
+  })
+
+  it('offers no password to change', async () => {
+    await render(<Profile />)
+
+    expect(screen.queryByTestId('profile-password-link')).toBeNull()
+    expect(screen.getByTestId('profile-emails-link')).toBeTruthy()
+  })
+})

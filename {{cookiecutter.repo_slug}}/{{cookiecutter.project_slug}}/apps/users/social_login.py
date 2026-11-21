@@ -16,3 +16,15 @@ def social_login_provider_ids(requested: list[str]) -> list[str]:
     if repeated:
         raise ImproperlyConfigured(f"SOCIAL_LOGIN__PROVIDERS names a provider more than once: {', '.join(repeated)}")
     return ids
+
+
+def social_login_only(only: bool, provider_ids: list[str], debug: bool) -> bool:
+    """Fails startup when nobody could sign in at all; in development a superuser still can, in the admin."""
+    if only and not provider_ids and not debug:
+        raise ImproperlyConfigured("SOCIAL_LOGIN__ONLY needs at least one provider in SOCIAL_LOGIN__PROVIDERS")
+    return only
+
+
+def reauthentication_methods(only: bool) -> list[str]:
+    """A proof counts whatever its method. Without passwords a code by email takes the password's place."""
+    return ["code", "mfa"] if only else ["password", "mfa"]

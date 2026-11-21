@@ -35,6 +35,22 @@ describe('ProveContent', () => {
     ])
   })
 
+  it('offers a code to each verified address or number when no password signs in', () => {
+    const recipients = [{ email: 'alice@example.test' }, { phone: '+14155550100' }]
+    render(<ProveContent {...props} flows={[{ id: 'reauthenticate_by_code', recipients }]} />)
+
+    expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual([
+      'Send a code to alice@example.test',
+      'Send a code to +14155550100',
+    ])
+  })
+
+  it('offers no code button for a code flow that names nobody to send it to', () => {
+    render(<ProveContent {...props} flows={[{ id: 'reauthenticate_by_code' }]} />)
+
+    expect(screen.queryAllByRole('button')).toEqual([])
+  })
+
   it('offers no provider button for a provider flow that names none', () => {
     render(<ProveContent {...props} flows={[{ id: 'provider_reauthenticate' }]} />)
 

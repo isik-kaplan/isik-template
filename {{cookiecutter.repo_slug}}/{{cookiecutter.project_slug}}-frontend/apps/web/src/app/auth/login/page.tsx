@@ -7,6 +7,7 @@ import { SocialLoginSection } from '@/components/app-auth/SocialLoginSection'
 import { sUseTranslation } from '@/i18n'
 import { afterSignIn } from '@/lib/afterSignIn'
 import { redirectIfAuthenticated } from '@/lib/getSession'
+import { passwordsSignIn } from '@/lib/passwords'
 import { requestOrigin } from '@/lib/requestOrigin'
 
 import { PROVIDER_REDIRECT_PATH } from '@{{ cookiecutter.repo_slug }}/auth-api'
@@ -16,6 +17,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   await redirectIfAuthenticated(next)
   const { t } = await sUseTranslation(['auth'])
   const origin = requestOrigin(await headers())
+  const passwords = passwordsSignIn()
 
   return (
     <AuthCard
@@ -30,12 +32,16 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <SocialLoginSection
         action={`${origin.replace('://', '://auth.')}${PROVIDER_REDIRECT_PATH}`}
         callbackUrl={`${origin}/auth/callback-complete?next=${encodeURIComponent(next)}`}
-        dividerText={t('auth:orDivider')}
+        dividerText={passwords ? t('auth:orDivider') : undefined}
       />
-      <LoginForm redirectTo={next} />
-      <AuthCardFooterLink href="/auth/forgot-password" className="block text-center">
-        {t('auth:forgotPasswordLink')}
-      </AuthCardFooterLink>
+      {passwords && (
+        <>
+          <LoginForm redirectTo={next} />
+          <AuthCardFooterLink href="/auth/forgot-password" className="block text-center">
+            {t('auth:forgotPasswordLink')}
+          </AuthCardFooterLink>
+        </>
+      )}
     </AuthCard>
   )
 }

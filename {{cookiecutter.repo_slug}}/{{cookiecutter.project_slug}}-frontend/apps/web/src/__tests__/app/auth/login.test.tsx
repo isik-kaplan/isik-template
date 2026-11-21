@@ -17,6 +17,8 @@ vi.mock('@/config/phone', () => ({ PHONE: 'none' }))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }))
 vi.mock('@/config/public', () => ({ CONFIG: { DOMAIN: 'test-project.test' } }))
 vi.mock('@/lib/socialProviders', () => ({ socialProviders: () => [{ id: 'google', name: 'Google', icon: '' }] }))
+const passwords = vi.hoisted(() => ({ signIn: true }))
+vi.mock('@/lib/passwords', () => ({ passwordsSignIn: () => passwords.signIn }))
 
 function jsonResponse(status: number, body: unknown) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
@@ -29,6 +31,18 @@ describe('LoginPage', () => {
     globalThis.fetch = originalFetch
     push.mockClear()
     document.querySelectorAll('form').forEach((form) => form.remove())
+    passwords.signIn = true
+  })
+
+  it('offers only the providers, with no divider or reset link, when nobody signs in with a password', async () => {
+    passwords.signIn = false
+    render(await LoginPage({ searchParams: Promise.resolve({}) }))
+
+    expect(screen.getByRole('button', { name: /Continue with Google/ })).toBeTruthy()
+    expect(screen.queryByLabelText('Password')).toBeNull()
+    expect(screen.queryByText('Or')).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Forgot your password?' })).toBeNull()
+    expect(screen.getByRole('link', { name: 'Sign up' }).getAttribute('href')).toBe('/auth/signup')
   })
 
   it('checks whether the visitor is already logged in, redirecting to "next" if given', async () => {

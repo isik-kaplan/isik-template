@@ -1,6 +1,7 @@
 import { Button, Heading, Screen } from '@/components'
 
 import { useTranslation } from '@/lib/i18n'
+import { passwordsSignIn } from '@/lib/socialProviders'
 
 import { router } from 'expo-router'
 
@@ -25,7 +26,7 @@ export default function Profile() {
   return (
     <Screen testID="profile-menu">
       <Heading testID="profile-heading">{t('profileMenuHeading')}</Heading>
-      {LINKS.map((link) => (
+      {LINKS.filter((link) => link.href !== '/profile/password' || passwordsSignIn()).map((link) => (
         <Button key={link.href} testID={link.testID} label={t(link.labelKey)} onPress={() => router.push(link.href)} />
       ))}
     </Screen>

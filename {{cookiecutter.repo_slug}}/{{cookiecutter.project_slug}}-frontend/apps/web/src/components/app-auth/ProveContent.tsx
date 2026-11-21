@@ -6,6 +6,7 @@ import type { components } from '@{{ cookiecutter.repo_slug }}/api'
 
 import { AutoFormButton } from './AutoFormButton'
 import { MfaChallengeForm } from './MfaChallengeForm'
+import { ProveByCodeForm } from './ProveByCodeForm'
 import { ProvePasswordForm } from './ProvePasswordForm'
 import { ProveSetPasswordByEmail } from './ProveSetPasswordByEmail'
 
@@ -43,6 +44,8 @@ export function ProveContent({ flows, next, error, providerAction, callbackUrl }
             })}
           </div>
         )
+      case 'reauthenticate_by_code':
+        return <ProveByCodeForm key={flow.id} recipients={flow.recipients ?? []} next={next} />
       case 'mfa_reauthenticate':
         return <MfaChallengeForm key={flow.id} purpose="prove" types={flow.types ?? []} redirectTo={next} />
       case 'set_password_by_email':

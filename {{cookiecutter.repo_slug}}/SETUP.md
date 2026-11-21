@@ -77,7 +77,13 @@ passkeys with `scripts/dev-tls.sh`.
 
 ## 5. Social login providers
 
-Optional: with none configured, sign-in is email and password only. To offer some, list their allauth
+{% if cookiecutter.social_login_only -%}
+Required: this project signs in through providers only
+(`{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__ONLY`, on when it was generated), and outside DEBUG the backend
+refuses to start until one is listed.
+{%- else -%}
+Optional: with none configured, sign-in is email and password only.
+{%- endif %} To offer some, list their allauth
 provider ids in `{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS`, e.g. `google,github`. The backend and the web
 frontend both read it at startup, so adding one later is a change to `.env` and a restart, not to the
 code. Startup refuses an id allauth doesn't ship.
@@ -92,6 +98,13 @@ asks for both). A provider without credentials still shows its button, but its f
   `https://auth.{{ cookiecutter.domain }}/v0/provider-callback/oidc/<PROVIDER_ID>/login/callback/`. The frontend
   has no brand icon for it; `{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__ICONS=openid_connect=<url or path>`
   gives it one.
+
+`{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__ONLY=true` turns passwords off: no password login, signup, reset or
+change, on the web or in the app (whose build reads `EXPO_PUBLIC_SOCIAL_LOGIN_ONLY`). Proving it is you before a
+sensitive act takes a code emailed to a verified address instead. A superuser still signs in to the admin with a
+password, and only there, so a provider outage never locks the deployment out. Turning it on later, an existing
+account signs in only through a provider it already connected (Profile, Connections): an address match alone
+connects nothing, by allauth's default.
 
 Use `http://` in the redirect URI for a local stack without TLS. A first sign-in through a provider lands on a
 "finish signing up" page, where the person gives the names this project asks for and sees the legal documents

@@ -142,4 +142,22 @@ describe('AppAuthApi', () => {
     expect(request.url).toBe('https://auth.example.test/v0/app/auth/2fa/authenticate')
     expect(await request.json()).toEqual({ code: '123456' })
   })
+
+  it.each([
+    [
+      'requestReauthenticationCode',
+      [{ phone: '+14155550100' }],
+      '/v0/app/auth/reauthenticate/code/request',
+      { phone: '+14155550100' },
+    ],
+    ['confirmReauthenticationCode', ['AB12CD'], '/v0/app/auth/reauthenticate/code/confirm', { code: 'AB12CD' }],
+  ] as const)('%s() posts to the app tree', async (method, args, path, body) => {
+    const baseFetch = vi.fn<typeof fetch>(async () => jsonResponse({ status: 200, data: {}, meta: {} }))
+    const api = new AppAuthApi('https://auth.example.test', { getToken: () => 't', setToken: vi.fn(), baseFetch })
+    await (api[method] as (...a: unknown[]) => Promise<unknown>)(...args)
+    const [request] = baseFetch.mock.calls[0] as unknown as [Request]
+    expect(request.method).toBe('POST')
+    expect(request.url).toBe(`https://auth.example.test${path}`)
+    expect(await request.json()).toEqual(body)
+  })
 })

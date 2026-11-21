@@ -212,3 +212,28 @@ describe('the ways to prove who you are', () => {
       expect(screen.getByRole('button', { name: `Confirm with ${provider.name}` })).toBeTruthy()
   })
 })
+
+describe('proving with a code', () => {
+  // With and without the recipients allauth may leave out, each in every run.
+  for (const withRecipients of [true, false])
+    test.prop([address, sitePath])(
+      `offers a code to each verified address: ${withRecipients ? 'named' : 'unnamed'}`,
+      (email, next) => {
+        freshDom()
+        const flow = withRecipients
+          ? { id: 'reauthenticate_by_code', recipients: [{ email }] }
+          : { id: 'reauthenticate_by_code' }
+        render(
+          <ProveContent
+            flows={[flow] as never}
+            next={next}
+            providerAction="http://auth.test-project.test/x"
+            callbackUrl="http://test-project.test/y"
+          />
+        )
+        expect(screen.queryAllByRole('button').map((button) => button.textContent)).toEqual(
+          withRecipients ? [`Send a code to ${email}`] : []
+        )
+      }
+    )
+})

@@ -6,6 +6,13 @@ import fc from 'fast-check'
 
 const password = fc.string({ minLength: 1, maxLength: 24 })
 
+// The build's EXPO_PUBLIC_SOCIAL_LOGIN_ONLY, unset meaning the answer given at generation.
+function build(only: string | undefined): boolean {
+  if (only === undefined) delete process.env.EXPO_PUBLIC_SOCIAL_LOGIN_ONLY
+  else process.env.EXPO_PUBLIC_SOCIAL_LOGIN_ONLY = only
+  return (only ?? '{{ cookiecutter.social_login_only|lower }}') === 'true'
+}
+
 describe('the change password screen', () => {
   // One property per answer, so each refusal is met in every run.
   it.each<'saved' | Refused>(['saved', ...REFUSED])(
@@ -46,4 +53,25 @@ describe('the change password screen', () => {
       )
     }
   )
+
+  it('sends anybody who reaches it back to the profile when nobody signs in with a password', async () => {
+    try {
+      await fc.assert(
+        fc.asyncProperty(fc.constantFrom<string | undefined>('true', 'false', undefined), async (only) => {
+          const withoutPasswords = build(only)
+          const view = await render(<ProfilePassword />)
+          if (withoutPasswords) {
+            expect(view.getByTestId('redirect').props.accessibilityHint).toBe('/profile')
+            expect(view.queryByTestId('current-password-input')).toBeNull()
+          } else {
+            expect(view.queryByTestId('redirect')).toBeNull()
+            expect(view.getByTestId('current-password-input')).toBeTruthy()
+          }
+          await view.unmount()
+        })
+      )
+    } finally {
+      process.env.EXPO_PUBLIC_SOCIAL_LOGIN_ONLY = 'false'
+    }
+  })
 })

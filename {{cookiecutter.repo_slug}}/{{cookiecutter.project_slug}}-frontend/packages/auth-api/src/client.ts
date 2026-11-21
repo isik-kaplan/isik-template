@@ -77,6 +77,14 @@ export class AuthApi {
     return this.client.POST('/v0/browser/auth/reauthenticate', { body: { password } })
   }
 
+  async requestReauthenticationCode(recipient: { email: string } | { phone: string }) {
+    return this.client.POST('/v0/browser/auth/reauthenticate/code/request', { body: recipient })
+  }
+
+  async confirmReauthenticationCode(code: string) {
+    return this.client.POST('/v0/browser/auth/reauthenticate/code/confirm', { body: { code } })
+  }
+
   async requestPasswordReset(email: string) {
     return this.client.POST('/v0/browser/auth/password/request', { body: { email } })
   }

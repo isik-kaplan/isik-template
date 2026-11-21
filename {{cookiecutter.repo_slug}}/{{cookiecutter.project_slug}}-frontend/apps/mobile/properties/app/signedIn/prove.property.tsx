@@ -75,6 +75,74 @@ describe('the prove-it-is-you screen', () => {
     )
   })
 
+  // One property per answer, so each is met in every run: a refused send never reaches the code.
+  it.each<['sent', 'proved' | Refused] | [Refused, 'proved']>([
+    ...REFUSED.map((refused) => [refused, 'proved'] as [Refused, 'proved']),
+    ...(['proved', ...REFUSED] as const).map((outcome) => ['sent', outcome] as ['sent', 'proved' | Refused]),
+  ])(
+    'without passwords, sends a code to the address and goes back once it proves it, otherwise says why: %s, %s',
+    async (sending, proving) => {
+      process.env.EXPO_PUBLIC_SOCIAL_LOGIN_ONLY = 'true'
+      try {
+        await fc.assert(
+          fc.asyncProperty(
+            email,
+            fc.stringMatching(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/),
+            refusalDetails,
+            async (address, code, details) => {
+              forgetNavigation()
+              const calls = serve(({ method, path }) => {
+                if (method === 'GET') return ok({ user: { email: address, has_usable_password: false } })
+                if (path.endsWith('/code/request')) return sending === 'sent' ? ok({}) : refusal(sending, details)
+                return proving === 'proved' ? ok({}) : refusal(proving, details)
+              })
+              const view = await render(<Prove />)
+              await waitFor(() => expect(screen.getByTestId('prove-code-send')).toBeTruthy())
+              await fireEvent.press(screen.getByTestId('prove-code-send'))
+              expect(calls[1]).toMatchObject({
+                method: 'POST',
+                path: '/v0/app/auth/reauthenticate/code/request',
+                body: { email: address },
+              })
+              if (sending !== 'sent') {
+                await waitFor(() =>
+                  expect(screen.getByTestId('prove-error').props.children).toBe(
+                    said(sending, details, 'proveCodeSendError')
+                  )
+                )
+                expect(screen.queryByTestId('prove-code-input')).toBeNull()
+                await view.unmount()
+                return
+              }
+              await waitFor(() => expect(screen.getByTestId('prove-code-input')).toBeTruthy())
+              await fireEvent.changeText(screen.getByTestId('prove-code-input'), ` ${code} `)
+              await fireEvent.press(screen.getByTestId('prove-code-submit'))
+              await waitFor(() => expect(calls).toHaveLength(3))
+              expect(calls[2]).toMatchObject({
+                method: 'POST',
+                path: '/v0/app/auth/reauthenticate/code/confirm',
+                body: { code },
+              })
+              if (proving === 'proved') {
+                await waitFor(() => expect(navigation.back).toHaveBeenCalledTimes(1))
+              } else {
+                await waitFor(() =>
+                  expect(screen.getByTestId('prove-error').props.children).toBe(
+                    said(proving, details, 'proveCodeError')
+                  )
+                )
+                expect(navigation.back).not.toHaveBeenCalled()
+              }
+              await view.unmount()
+            }
+          )
+        )
+      } finally {
+        process.env.EXPO_PUBLIC_SOCIAL_LOGIN_ONLY = 'false'
+      }
+    }
+  )
+
   it('waits for the session, and offers nothing once the screen has gone', async () => {
     await fc.assert(
       fc.asyncProperty(account, async (user) => {

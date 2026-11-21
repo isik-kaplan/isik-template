@@ -17,6 +17,9 @@ vi.mock('@/config/phone', () => ({
   },
 }))
 
+const passwords = vi.hoisted(() => ({ signIn: true }))
+vi.mock('@/lib/passwords', () => ({ passwordsSignIn: () => passwords.signIn }))
+
 vi.mock('next/navigation', () => ({
   usePathname: () => pathname,
   useRouter: () => ({ push }),
@@ -28,6 +31,17 @@ describe('ProfileTabsList', () => {
     pathname = '/profile/details'
     CONFIG.OAUTH_PROVIDER.MODE = 'off'
     phone.current = 'none'
+    passwords.signIn = true
+  })
+
+  it('offers the password tab while a password signs in, and not otherwise', () => {
+    const { unmount } = render(<ProfileTabsList />)
+    expect(screen.getByRole('tab', { name: 'Password' })).toBeTruthy()
+    unmount()
+
+    passwords.signIn = false
+    render(<ProfileTabsList />)
+    expect(screen.queryByRole('tab', { name: 'Password' })).toBeNull()
   })
 
   it('has no applications tab while the backend is not an OAuth provider', () => {

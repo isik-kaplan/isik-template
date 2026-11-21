@@ -9,15 +9,18 @@ import { render } from '@testing-library/react'
 import fc from 'fast-check'
 import { beforeAll, describe, expect, vi } from 'vitest'
 
-// Applications switched off, and a legal document missing or only in English: neither is drawn by the backend.
+// Applications switched off, a legal document missing or only in English, and sign-in through providers
+// only: none is drawn by the backend.
 const project = vi.hoisted(() => ({
   applications: true,
+  passwords: true,
   legal: 'translated' as 'translated' | 'in another language' | 'unwritten',
 }))
 vi.mock('@/lib/access', async (actual) => ({
   ...(await actual<typeof import('@/lib/access')>()),
   applicationsAreOn: () => project.applications,
 }))
+vi.mock('@/lib/passwords', () => ({ passwordsSignIn: () => project.passwords }))
 // The document in a language other than the reader's, even where the project speaks one only.
 const otherThan = vi.hoisted(() => (language: string) => (language === 'en' ? 'xx' : 'en'))
 vi.mock('@/lib/readLegalDocument', () => ({
@@ -64,6 +67,7 @@ const asked = fc.record(
 
 type Given = {
   applications: boolean
+  passwords: boolean
   legal: typeof project.legal
   visitor: Visitor
   answering: Answers
@@ -78,6 +82,7 @@ type Given = {
 async function visit(route: (typeof routes)[number], given: Given) {
   freshDom()
   project.applications = given.applications
+  project.passwords = given.passwords
   project.legal = given.legal
   requestHeaders.value = new Headers({
     host: 'test-project.test',
@@ -105,6 +110,7 @@ async function visit(route: (typeof routes)[number], given: Given) {
 
 const given = fc.record({
   applications: fc.boolean(),
+  passwords: fc.boolean(),
   legal: fc.constantFrom<Given['legal']>('translated', 'in another language', 'unwritten'),
   visitor: fc.constantFrom<Visitor>('anonymous', 'member', 'staff', 'superuser', 'finishing signup', 'owing a factor'),
   answering: fc.constantFrom<Answers>('everything', 'no collections', 'nothing at all'),

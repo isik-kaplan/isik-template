@@ -6,6 +6,8 @@ fc.configureGlobal({ numRuns: 25 })
 
 process.env.EXPO_PUBLIC_AUTH_ORIGIN = 'http://auth.test-project.test'
 process.env.EXPO_PUBLIC_API_ORIGIN = 'http://api.test-project.test'
+// Whatever the build holds; a property without passwords sets it to 'true' itself.
+process.env.EXPO_PUBLIC_SOCIAL_LOGIN_ONLY = 'false'
 
 // Each property resets these itself, at the top of its predicate: a hook would run once for all 25 examples.
 jest.mock('expo-router', () => {

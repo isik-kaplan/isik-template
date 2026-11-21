@@ -4,6 +4,7 @@ import { Button, ErrorText, Heading, Screen, TextField } from '@/components'
 
 import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
+import { passwordsSignIn } from '@/lib/socialProviders'
 import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 
 import { errorsOf } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
@@ -14,7 +15,8 @@ import { Text } from 'react-native'
 
 type Account = { email: string; hasPassword: boolean }
 
-/** A passwordless account is offered setting one by email: a provider round trip needs a browser. */
+/** A passwordless account is offered setting one by email: a provider round trip needs a browser. With
+ * SOCIAL_LOGIN__ONLY nobody has a password, and a code by email proves it instead. */
 export default function Prove() {
   const { t } = useTranslation()
   const [account, setAccount] = useState<Account | null>(null)
@@ -22,6 +24,7 @@ export default function Prove() {
   const [error, setError] = useState<string | undefined>()
   const [submitting, setSubmitting] = useState(false)
   const [sent, setSent] = useState(false)
+  const [code, setCode] = useState('')
   const isMounted = useIsMounted()
 
   useEffect(() => {
@@ -57,7 +60,68 @@ export default function Prove() {
     setSent(true)
   }
 
+  async function sendCode(email: string) {
+    setSubmitting(true)
+    setError(undefined)
+    const { error: response, response: http } = await getAuthApi().requestReauthenticationCode({ email })
+    setSubmitting(false)
+    if (response) {
+      setError(tooManyRequestsMessage(t, http) ?? errorsOf(response)?.[0]?.message ?? t('proveCodeSendError'))
+      return
+    }
+    setSent(true)
+  }
+
+  async function proveWithCode() {
+    setSubmitting(true)
+    setError(undefined)
+    const { data, error: response, response: http } = await getAuthApi().confirmReauthenticationCode(code.trim())
+    setSubmitting(false)
+    if (data) {
+      router.back()
+      return
+    }
+    setError(tooManyRequestsMessage(t, http) ?? errorsOf(response)?.[0]?.message ?? t('proveCodeError'))
+  }
+
   if (!account) return <Screen testID="prove-loading">{null}</Screen>
+
+  if (!passwordsSignIn()) {
+    return (
+      <Screen testID="prove-code">
+        <Heading testID="prove-heading">{t('proveHeading')}</Heading>
+        {sent ? (
+          <>
+            <Text testID="prove-code-sent">{t('proveCodeSent', { email: account.email })}</Text>
+            <TextField
+              testID="prove-code-input"
+              placeholder={t('proveCodePlaceholder')}
+              autoCapitalize="characters"
+              autoComplete="one-time-code"
+              value={code}
+              onChangeText={setCode}
+            />
+            <Button
+              testID="prove-code-submit"
+              labelTestID="prove-code-submit-label"
+              disabled={submitting}
+              onPress={proveWithCode}
+              label={t('proveSubmit')}
+            />
+          </>
+        ) : (
+          <Button
+            testID="prove-code-send"
+            labelTestID="prove-code-send-label"
+            disabled={submitting}
+            onPress={() => sendCode(account.email)}
+            label={t('proveCodeSend', { email: account.email })}
+          />
+        )}
+        {error && <ErrorText testID="prove-error">{error}</ErrorText>}
+      </Screen>
+    )
+  }
 
   if (!account.hasPassword) {
     return (

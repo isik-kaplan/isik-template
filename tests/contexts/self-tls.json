@@ -1,6 +1,6 @@
 {
   "project_name": "Self TLS Project",
-  "description": "Validates self TLS termination, a worker with no scheduler, and an external S3.",
+  "description": "Validates self TLS termination, no scheduler, an external S3, and providers-only sign-in.",
   "author_name": "Test Author",
   "author_email": "test@example.test",
   "domain": "selftls.test",
@@ -9,5 +9,6 @@
   "background_jobs": "celery",
   "storage": "s3",
   "cache": "database",
-  "webhooks": "users"
+  "webhooks": "users",
+  "social_login_only": true
 }

@@ -7,6 +7,11 @@ jest.mock('@/lib/session', () => ({
   getAuthApi: () => ({ changePassword: (...args: unknown[]) => mockChangePassword(...args) }),
 }))
 
+jest.mock('expo-router', () => {
+  const { Text } = jest.requireActual('react-native')
+  return { Redirect: ({ href }: { href: string }) => <Text testID="redirect">{href}</Text> }
+})
+
 describe('ProfilePassword', () => {
   beforeEach(() => jest.clearAllMocks())
 
@@ -158,5 +163,21 @@ describe('ProfilePassword', () => {
         'Too many requests. Wait a moment, then try again.'
       )
     )
+  })
+})
+
+describe('ProfilePassword without passwords', () => {
+  beforeEach(() => {
+    process.env.EXPO_PUBLIC_SOCIAL_LOGIN_ONLY = 'true'
+  })
+  afterEach(() => {
+    process.env.EXPO_PUBLIC_SOCIAL_LOGIN_ONLY = 'false'
+  })
+
+  it('sends anybody who reaches it back to the profile', async () => {
+    await render(<ProfilePassword />)
+
+    expect(screen.getByTestId('redirect').props.children).toBe('/profile')
+    expect(screen.queryByTestId('profile-password-form')).toBeNull()
   })
 })
