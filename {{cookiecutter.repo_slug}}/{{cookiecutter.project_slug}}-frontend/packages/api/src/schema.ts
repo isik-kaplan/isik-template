@@ -1024,6 +1024,34 @@ export interface components {
              */
             readonly granted_at: string;
         };
+        /** @description A setting holding a bool value, or None. */
+        BoolOrNullSetting: {
+            /** @description The setting's name - the key it's changed by. */
+            name: string;
+            /**
+             * @description What kind of value it holds. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "bool_or_null";
+            /** @description Its name, as a person reads it. */
+            label: string | null;
+            /** @description What it does. */
+            description: string | null;
+            /** @description Why it's this value: forced, for want of a feature, limited, yours, or the default. */
+            origin: components["schemas"]["Origin"];
+            /** @description Why it was forced, if you may read it. */
+            forced_reason: string | null;
+            /** @description Whether you may change it. */
+            may_change: boolean;
+            /** @description The feature it needs, where you may see it - else none. */
+            requires_feature: string | null;
+            value: boolean | null;
+            default: boolean | null;
+            /** @description Your own choice, or none yet. */
+            chosen: boolean | null;
+            /** @description What None is, as a person reads it. */
+            null_label: string;
+        };
         /** @description A setting holding a bool value. */
         BoolSetting: {
             /** @description The setting's name - the key it's changed by. */
@@ -1077,6 +1105,34 @@ export interface components {
             /** @description What a person reads. */
             label: string;
         };
+        /** @description A setting holding a choice value, or None. */
+        ChoiceOrNullSetting: {
+            /** @description The setting's name - the key it's changed by. */
+            name: string;
+            /**
+             * @description What kind of value it holds. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "choice_or_null";
+            /** @description Its name, as a person reads it. */
+            label: string | null;
+            /** @description What it does. */
+            description: string | null;
+            /** @description Why it's this value: forced, for want of a feature, limited, yours, or the default. */
+            origin: components["schemas"]["Origin"];
+            /** @description Why it was forced, if you may read it. */
+            forced_reason: string | null;
+            /** @description Whether you may change it. */
+            may_change: boolean;
+            /** @description The feature it needs, where you may see it - else none. */
+            requires_feature: string | null;
+            value: unknown;
+            default: unknown;
+            /** @description Your own choice, or none yet. */
+            chosen: unknown;
+            /** @description What it may be - None among them, with its label, where it may be None. */
+            choices: components["schemas"]["Choice"][];
+        };
         /** @description A setting holding a choice value. */
         ChoiceSetting: {
             /** @description The setting's name - the key it's changed by. */
@@ -1102,8 +1158,45 @@ export interface components {
             default: unknown;
             /** @description Your own choice, or none yet. */
             chosen: unknown;
-            /** @description What it may be. */
+            /** @description What it may be - None among them, with its label, where it may be None. */
             choices: components["schemas"]["Choice"][];
+        };
+        /** @description A setting holding a decimal value, or None. */
+        DecimalOrNullSetting: {
+            /** @description The setting's name - the key it's changed by. */
+            name: string;
+            /**
+             * @description What kind of value it holds. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "decimal_or_null";
+            /** @description Its name, as a person reads it. */
+            label: string | null;
+            /** @description What it does. */
+            description: string | null;
+            /** @description Why it's this value: forced, for want of a feature, limited, yours, or the default. */
+            origin: components["schemas"]["Origin"];
+            /** @description Why it was forced, if you may read it. */
+            forced_reason: string | null;
+            /** @description Whether you may change it. */
+            may_change: boolean;
+            /** @description The feature it needs, where you may see it - else none. */
+            requires_feature: string | null;
+            /** Format: decimal */
+            value: string | null;
+            /** Format: decimal */
+            default: string | null;
+            /**
+             * Format: decimal
+             * @description Your own choice, or none yet.
+             */
+            chosen: string | null;
+            /** @description What None is, as a person reads it. */
+            null_label: string;
+            /** Format: decimal */
+            minimum: string | null;
+            /** Format: decimal */
+            maximum: string | null;
         };
         /** @description A setting holding a decimal value. */
         DecimalSetting: {
@@ -1252,6 +1345,34 @@ export interface components {
             /** @description The app's bundle identifier, where it isn't the project's one. */
             app_id?: string;
         };
+        /** @description A setting holding a duration value, or None. */
+        DurationOrNullSetting: {
+            /** @description The setting's name - the key it's changed by. */
+            name: string;
+            /**
+             * @description What kind of value it holds. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "duration_or_null";
+            /** @description Its name, as a person reads it. */
+            label: string | null;
+            /** @description What it does. */
+            description: string | null;
+            /** @description Why it's this value: forced, for want of a feature, limited, yours, or the default. */
+            origin: components["schemas"]["Origin"];
+            /** @description Why it was forced, if you may read it. */
+            forced_reason: string | null;
+            /** @description Whether you may change it. */
+            may_change: boolean;
+            /** @description The feature it needs, where you may see it - else none. */
+            requires_feature: string | null;
+            value: string | null;
+            default: string | null;
+            /** @description Your own choice, or none yet. */
+            chosen: string | null;
+            /** @description What None is, as a person reads it. */
+            null_label: string;
+        };
         /** @description A setting holding a duration value. */
         DurationSetting: {
             /** @description The setting's name - the key it's changed by. */
@@ -1346,6 +1467,43 @@ export interface components {
             held: boolean;
             /** @description Its grants in force now or to come. */
             grants: components["schemas"]["Grant"][];
+        };
+        /** @description A setting holding a float value, or None. */
+        FloatOrNullSetting: {
+            /** @description The setting's name - the key it's changed by. */
+            name: string;
+            /**
+             * @description What kind of value it holds. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "float_or_null";
+            /** @description Its name, as a person reads it. */
+            label: string | null;
+            /** @description What it does. */
+            description: string | null;
+            /** @description Why it's this value: forced, for want of a feature, limited, yours, or the default. */
+            origin: components["schemas"]["Origin"];
+            /** @description Why it was forced, if you may read it. */
+            forced_reason: string | null;
+            /** @description Whether you may change it. */
+            may_change: boolean;
+            /** @description The feature it needs, where you may see it - else none. */
+            requires_feature: string | null;
+            /** Format: double */
+            value: number | null;
+            /** Format: double */
+            default: number | null;
+            /**
+             * Format: double
+             * @description Your own choice, or none yet.
+             */
+            chosen: number | null;
+            /** @description What None is, as a person reads it. */
+            null_label: string;
+            /** Format: double */
+            minimum: number | null;
+            /** Format: double */
+            maximum: number | null;
         };
         /** @description A setting holding a float value. */
         FloatSetting: {
@@ -1452,6 +1610,36 @@ export interface components {
             readonly label: string | null;
             readonly variant: string | null;
 {%- endif %}
+        };
+        /** @description A setting holding a int value, or None. */
+        IntOrNullSetting: {
+            /** @description The setting's name - the key it's changed by. */
+            name: string;
+            /**
+             * @description What kind of value it holds. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "int_or_null";
+            /** @description Its name, as a person reads it. */
+            label: string | null;
+            /** @description What it does. */
+            description: string | null;
+            /** @description Why it's this value: forced, for want of a feature, limited, yours, or the default. */
+            origin: components["schemas"]["Origin"];
+            /** @description Why it was forced, if you may read it. */
+            forced_reason: string | null;
+            /** @description Whether you may change it. */
+            may_change: boolean;
+            /** @description The feature it needs, where you may see it - else none. */
+            requires_feature: string | null;
+            value: number | null;
+            default: number | null;
+            /** @description Your own choice, or none yet. */
+            chosen: number | null;
+            /** @description What None is, as a person reads it. */
+            null_label: string;
+            minimum: number | null;
+            maximum: number | null;
         };
         /** @description A setting holding a int value. */
         IntSetting: {
@@ -1764,6 +1952,15 @@ export interface components {
             requested_scopes?: string[];
         };
         /** @description What a PATCH names, whatever the setting's type - each type's own serializer adds its typed value. */
+        PatchedBoolOrNullSettingValueRequest: {
+            /**
+             * @description The setting's type, as listed. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "bool_or_null";
+            value?: boolean | null;
+        };
+        /** @description What a PATCH names, whatever the setting's type - each type's own serializer adds its typed value. */
         PatchedBoolSettingValueRequest: {
             /**
              * @description The setting's type, as listed. (enum property replaced by openapi-typescript)
@@ -1771,6 +1968,15 @@ export interface components {
              */
             type: "bool";
             value?: boolean;
+        };
+        /** @description What a PATCH names, whatever the setting's type - each type's own serializer adds its typed value. */
+        PatchedChoiceOrNullSettingValueRequest: {
+            /**
+             * @description The setting's type, as listed. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "choice_or_null";
+            value?: unknown;
         };
         /** @description What a PATCH names, whatever the setting's type - each type's own serializer adds its typed value. */
         PatchedChoiceSettingValueRequest: {
@@ -1782,6 +1988,16 @@ export interface components {
             value?: unknown;
         };
         /** @description What a PATCH names, whatever the setting's type - each type's own serializer adds its typed value. */
+        PatchedDecimalOrNullSettingValueRequest: {
+            /**
+             * @description The setting's type, as listed. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "decimal_or_null";
+            /** Format: decimal */
+            value?: string | null;
+        };
+        /** @description What a PATCH names, whatever the setting's type - each type's own serializer adds its typed value. */
         PatchedDecimalSettingValueRequest: {
             /**
              * @description The setting's type, as listed. (enum property replaced by openapi-typescript)
@@ -1790,6 +2006,15 @@ export interface components {
             type: "decimal";
             /** Format: decimal */
             value?: string;
+        };
+        /** @description What a PATCH names, whatever the setting's type - each type's own serializer adds its typed value. */
+        PatchedDurationOrNullSettingValueRequest: {
+            /**
+             * @description The setting's type, as listed. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "duration_or_null";
+            value?: string | null;
         };
         /** @description What a PATCH names, whatever the setting's type - each type's own serializer adds its typed value. */
         PatchedDurationSettingValueRequest: {
@@ -1813,6 +2038,16 @@ export interface components {
 {%- endif %}
         };
         /** @description What a PATCH names, whatever the setting's type - each type's own serializer adds its typed value. */
+        PatchedFloatOrNullSettingValueRequest: {
+            /**
+             * @description The setting's type, as listed. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "float_or_null";
+            /** Format: double */
+            value?: number | null;
+        };
+        /** @description What a PATCH names, whatever the setting's type - each type's own serializer adds its typed value. */
         PatchedFloatSettingValueRequest: {
             /**
              * @description The setting's type, as listed. (enum property replaced by openapi-typescript)
@@ -1821,6 +2056,15 @@ export interface components {
             type: "float";
             /** Format: double */
             value?: number;
+        };
+        /** @description What a PATCH names, whatever the setting's type - each type's own serializer adds its typed value. */
+        PatchedIntOrNullSettingValueRequest: {
+            /**
+             * @description The setting's type, as listed. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "int_or_null";
+            value?: number | null;
         };
         /** @description What a PATCH names, whatever the setting's type - each type's own serializer adds its typed value. */
         PatchedIntSettingValueRequest: {
@@ -1851,7 +2095,16 @@ export interface components {
             /** @description What they were granted, as permission names - not what that implies. */
             permissions?: components["schemas"]["Permissions"][];
         };
-        PatchedSettingValueRequest: components["schemas"]["PatchedBoolSettingValueRequest"] | components["schemas"]["PatchedIntSettingValueRequest"] | components["schemas"]["PatchedDecimalSettingValueRequest"] | components["schemas"]["PatchedFloatSettingValueRequest"] | components["schemas"]["PatchedDurationSettingValueRequest"] | components["schemas"]["PatchedTextSettingValueRequest"] | components["schemas"]["PatchedChoiceSettingValueRequest"];
+        PatchedSettingValueRequest: components["schemas"]["PatchedBoolSettingValueRequest"] | components["schemas"]["PatchedIntSettingValueRequest"] | components["schemas"]["PatchedDecimalSettingValueRequest"] | components["schemas"]["PatchedFloatSettingValueRequest"] | components["schemas"]["PatchedDurationSettingValueRequest"] | components["schemas"]["PatchedTextSettingValueRequest"] | components["schemas"]["PatchedChoiceSettingValueRequest"] | components["schemas"]["PatchedBoolOrNullSettingValueRequest"] | components["schemas"]["PatchedIntOrNullSettingValueRequest"] | components["schemas"]["PatchedDecimalOrNullSettingValueRequest"] | components["schemas"]["PatchedFloatOrNullSettingValueRequest"] | components["schemas"]["PatchedDurationOrNullSettingValueRequest"] | components["schemas"]["PatchedTextOrNullSettingValueRequest"] | components["schemas"]["PatchedChoiceOrNullSettingValueRequest"];
+        /** @description What a PATCH names, whatever the setting's type - each type's own serializer adds its typed value. */
+        PatchedTextOrNullSettingValueRequest: {
+            /**
+             * @description The setting's type, as listed. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "text_or_null";
+            value?: string | null;
+        };
         /** @description What a PATCH names, whatever the setting's type - each type's own serializer adds its typed value. */
         PatchedTextSettingValueRequest: {
             /**
@@ -2020,7 +2273,7 @@ export interface components {
             /** @description Shown once, here. It is stored hashed, so this is the only copy. */
             readonly client_secret: string;
         };
-        Setting: components["schemas"]["BoolSetting"] | components["schemas"]["IntSetting"] | components["schemas"]["DecimalSetting"] | components["schemas"]["FloatSetting"] | components["schemas"]["DurationSetting"] | components["schemas"]["TextSetting"] | components["schemas"]["ChoiceSetting"];
+        Setting: components["schemas"]["BoolSetting"] | components["schemas"]["IntSetting"] | components["schemas"]["DecimalSetting"] | components["schemas"]["FloatSetting"] | components["schemas"]["DurationSetting"] | components["schemas"]["TextSetting"] | components["schemas"]["ChoiceSetting"] | components["schemas"]["BoolOrNullSetting"] | components["schemas"]["IntOrNullSetting"] | components["schemas"]["DecimalOrNullSetting"] | components["schemas"]["FloatOrNullSetting"] | components["schemas"]["DurationOrNullSetting"] | components["schemas"]["TextOrNullSetting"] | components["schemas"]["ChoiceOrNullSetting"];
         /** @description A 400's body: the type named isn't the setting's, or the value isn't one it takes. */
         SettingInvalidValue: {
             type?: string[];
@@ -2073,6 +2326,34 @@ export interface components {
             channel?: string | null;
             /** @description Whether the user gets the kind. */
             enabled?: boolean;
+        };
+        /** @description A setting holding a text value, or None. */
+        TextOrNullSetting: {
+            /** @description The setting's name - the key it's changed by. */
+            name: string;
+            /**
+             * @description What kind of value it holds. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "text_or_null";
+            /** @description Its name, as a person reads it. */
+            label: string | null;
+            /** @description What it does. */
+            description: string | null;
+            /** @description Why it's this value: forced, for want of a feature, limited, yours, or the default. */
+            origin: components["schemas"]["Origin"];
+            /** @description Why it was forced, if you may read it. */
+            forced_reason: string | null;
+            /** @description Whether you may change it. */
+            may_change: boolean;
+            /** @description The feature it needs, where you may see it - else none. */
+            requires_feature: string | null;
+            value: string | null;
+            default: string | null;
+            /** @description Your own choice, or none yet. */
+            chosen: string | null;
+            /** @description What None is, as a person reads it. */
+            null_label: string;
         };
         /** @description A setting holding a text value. */
         TextSetting: {
