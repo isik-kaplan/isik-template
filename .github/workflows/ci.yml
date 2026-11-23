@@ -50,8 +50,8 @@ jobs:
   # Runs the generated ci.yml for real in a sandbox repo, which also catches bugs in the workflow file itself.
   bake-real-ci:
     runs-on: ubuntu-latest
-    # The script polls unbounded; cold backend-mutation alone has taken 76-94 minutes.
-    timeout-minutes: 150
+    # The script polls unbounded; cold backend-mutation alone has taken up to 153 minutes, both phases.
+    timeout-minutes: 240
     concurrency:
       group: bake-real-ci
       cancel-in-progress: true
