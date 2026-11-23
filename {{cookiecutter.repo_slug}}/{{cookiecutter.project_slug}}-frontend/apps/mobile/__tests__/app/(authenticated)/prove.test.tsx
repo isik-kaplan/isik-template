@@ -213,6 +213,7 @@ describe('Prove without passwords', () => {
     mockConfirmCode.mockResolvedValue({ data: {}, error: undefined })
     await render(<Prove />)
     await waitFor(() => expect(screen.getByTestId('prove-code')).toBeTruthy())
+    expect(screen.getByTestId('prove-heading').props.children).toBe("Confirm it's you")
     expect(screen.getByTestId('prove-code-send-label').props.children).toBe('Send a code to alice@example.test')
 
     await fireEvent.press(screen.getByTestId('prove-code-send'))
@@ -222,6 +223,8 @@ describe('Prove without passwords', () => {
       )
     )
     expect(screen.getByTestId('prove-code-input').props.placeholder).toBe('Code')
+    expect(screen.getByTestId('prove-code-input').props.value).toBe('')
+    expect(screen.getByTestId('prove-code-submit-label').props.children).toBe('Confirm')
     await fireEvent.changeText(screen.getByTestId('prove-code-input'), ' BCDF-GHJK ')
     await fireEvent.press(screen.getByTestId('prove-code-submit'))
 
@@ -234,6 +237,7 @@ describe('Prove without passwords', () => {
   it.each([
     ['the server says why', { errors: [{ message: 'Address not verified.' }] }, 'Address not verified.'],
     ['the server gives no reason', {}, 'We could not send a code. Wait a moment and try again.'],
+    ['the server lists no error', { errors: [] }, 'We could not send a code. Wait a moment and try again.'],
   ])('stays on the offer when the code is not sent and %s', async (_label, error, shown) => {
     mockRequestCode.mockResolvedValue({ data: undefined, error, response: new Response(null, { status: 400 }) })
 
@@ -247,6 +251,7 @@ describe('Prove without passwords', () => {
   it.each([
     ['the server says why', { errors: [{ message: 'Incorrect code.' }] }, 'Incorrect code.'],
     ['the server gives no reason', {}, 'That code is not right, or it expired. Ask for a new one.'],
+    ['the server lists no error', { errors: [] }, 'That code is not right, or it expired. Ask for a new one.'],
   ])('stays put on a code that proves nothing when %s', async (_label, error, shown) => {
     mockRequestCode.mockResolvedValue({ data: {}, error: undefined })
     mockConfirmCode.mockResolvedValue({ data: undefined, error, response: new Response(null, { status: 400 }) })
@@ -258,6 +263,40 @@ describe('Prove without passwords', () => {
 
     await waitFor(() => expect(screen.getByTestId('prove-error').props.children).toBe(shown))
     expect(mockBack).not.toHaveBeenCalled()
+    expect(screen.getByTestId('prove-code-submit').props.accessibilityState.disabled).toBe(false)
+  })
+
+  it('cannot ask for a second code while the first is on its way, and clears an earlier refusal', async () => {
+    const asked = deferred<unknown>()
+    mockRequestCode.mockResolvedValueOnce({ data: undefined, error: {}, response: new Response(null, { status: 400 }) })
+    mockRequestCode.mockReturnValueOnce(asked.promise)
+    await sendTheCode()
+    await waitFor(() => expect(screen.getByTestId('prove-error')).toBeTruthy())
+
+    fireEvent.press(screen.getByTestId('prove-code-send'))
+
+    await waitFor(() => expect(screen.getByTestId('prove-code-send').props.accessibilityState.disabled).toBe(true))
+    expect(screen.queryByTestId('prove-error')).toBeNull()
+    asked.resolve({ data: {}, error: undefined })
+    await waitFor(() => expect(screen.getByTestId('prove-code-input')).toBeTruthy())
+  })
+
+  it('cannot try a second code while the first is checked, and clears an earlier refusal', async () => {
+    const checked = deferred<unknown>()
+    mockRequestCode.mockResolvedValue({ data: {}, error: undefined })
+    mockConfirmCode.mockResolvedValueOnce({ data: undefined, error: {}, response: new Response(null, { status: 400 }) })
+    mockConfirmCode.mockReturnValueOnce(checked.promise)
+    await sendTheCode()
+    await waitFor(() => expect(screen.getByTestId('prove-code-input')).toBeTruthy())
+    await fireEvent.press(screen.getByTestId('prove-code-submit'))
+    await waitFor(() => expect(screen.getByTestId('prove-error')).toBeTruthy())
+
+    fireEvent.press(screen.getByTestId('prove-code-submit'))
+
+    await waitFor(() => expect(screen.getByTestId('prove-code-submit').props.accessibilityState.disabled).toBe(true))
+    expect(screen.queryByTestId('prove-error')).toBeNull()
+    checked.resolve({ data: {}, error: undefined })
+    await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1))
   })
 
   it('says to wait when the code is asked for too often', async () => {

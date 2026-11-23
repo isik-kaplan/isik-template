@@ -280,7 +280,17 @@
         "below is equivalent too."
       ]
     }
-  ]{% if cookiecutter.phone != "none" %},
+  ]{% if not cookiecutter.social_login_only %},
+  "lib/socialProviders.ts": [
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "4ebd8fb9d344",
+      "reason": [
+        "equivalent mutant while the generated default is off: '' is no more 'true' than 'false' is, so",
+        "an unset EXPO_PUBLIC_SOCIAL_LOGIN_ONLY keeps passwords either way."
+      ]
+    }
+  ]{% endif %}{% if cookiecutter.phone != "none" %},
   "app/(authenticated)/profile/phone.tsx": [
     {
       "mutator": "ConditionalExpression",

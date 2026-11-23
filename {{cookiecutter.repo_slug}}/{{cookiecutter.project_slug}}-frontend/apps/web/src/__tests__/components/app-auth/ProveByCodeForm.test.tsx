@@ -40,6 +40,7 @@ describe('ProveByCodeForm', () => {
       .mockResolvedValueOnce(jsonResponse(200, { status: 200, data: { user: {} }, meta: {} }))
     const user = userEvent.setup()
     render(<ProveByCodeForm recipients={recipients} next="/profile/emails" />)
+    expect(screen.queryByText('We could not send a code. Wait a moment and try again.')).toBeNull()
 
     await user.click(screen.getByRole('button', { name: 'Send a code to +14155550100' }))
     expect(await screen.findByText('We sent a code to +14155550100. Enter it below.')).toBeTruthy()
@@ -47,6 +48,8 @@ describe('ProveByCodeForm', () => {
     await user.click(screen.getByRole('button', { name: 'Confirm' }))
 
     await vi.waitFor(() => expect(replace).toHaveBeenCalledWith('/profile/emails'))
+    // The screen is leaving, so the button stays shut rather than offering a second submit.
+    expect(screen.getByRole('button', { name: 'Confirm' })).toHaveProperty('disabled', true)
     expect(await bodyOf(0)).toEqual({
       url: expect.stringContaining('/v0/browser/auth/reauthenticate/code/request'),
       body: { phone: '+14155550100' },
@@ -66,6 +69,21 @@ describe('ProveByCodeForm', () => {
 
     expect(await screen.findByText('We sent a code to alice@example.test. Enter it below.')).toBeTruthy()
     expect((await bodyOf(0)).body).toEqual({ email: 'alice@example.test' })
+  })
+
+  it('holds every choice shut while a code is on its way', async () => {
+    let answer!: (response: Response) => void
+    globalThis.fetch = vi.fn(() => new Promise<Response>((resolve) => (answer = resolve)))
+    const user = userEvent.setup()
+    render(<ProveByCodeForm recipients={recipients} next="/profile" />)
+
+    await user.click(screen.getByRole('button', { name: 'Send a code to alice@example.test' }))
+
+    for (const name of ['Send a code to alice@example.test', 'Send a code to +14155550100']) {
+      expect(screen.getByRole('button', { name })).toHaveProperty('disabled', true)
+    }
+    answer(jsonResponse(200, { status: 200 }))
+    expect(await screen.findByLabelText('Code')).toBeTruthy()
   })
 
   it('stays on the choice and says so when the code could not be sent', async () => {

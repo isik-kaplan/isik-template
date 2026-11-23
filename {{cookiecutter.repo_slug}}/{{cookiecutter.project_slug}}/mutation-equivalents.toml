@@ -222,3 +222,8 @@ reason = """Writes the header as "CONTENT-LENGTH" instead of "Content-Length". D
 headers are case-insensitive when looked up, written and deleted, so every spelling names the same
 header and no test can observe which one was used."""
 verified_by = "apps/common/tests/test_library_assumptions.py::test_a_length_is_found_written_and_removed_under_any_spelling"
+
+["apps.users.headless_urls.x_served__mutmut__e1d7315334b3"]
+reason = """Rebuilds a resolver with None instead of its default_kwargs. allauth's headless resolvers carry
+none, and URLResolver stores None as {}, so the rebuilt resolver is the same either way."""
+verified_by = "apps/common/tests/test_library_assumptions.py::test_allauths_headless_resolvers_carry_no_default_kwargs"

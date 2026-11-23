@@ -8,12 +8,15 @@ from types import SimpleNamespace
 import pytest
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.account.auth_backends import AuthenticationBackend
+from allauth.headless.constants import Client
+from allauth.headless.urls import build_urlpatterns
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from celery.local import Proxy
 from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.db import connection, models, transaction
 from django.http import HttpResponse
+from django.urls import URLResolver
 
 
 class _Watched:
@@ -148,3 +151,19 @@ def test_a_model_reference_is_case_insensitive():
     assert apps.get_model(spellings[0]) is apps.get_model(spellings[1])
     first, second = (models.ForeignKey(name, on_delete=models.PROTECT).deconstruct() for name in spellings)
     assert first == second
+
+
+def test_allauths_headless_resolvers_carry_no_default_kwargs():
+    """headless_urls.served rebuilds each resolver passing its default_kwargs on, which are always empty."""
+    resolvers = []
+    for client in Client:
+        unwalked = list(build_urlpatterns(client))
+        while unwalked:
+            pattern = unwalked.pop()
+            if isinstance(pattern, URLResolver):
+                resolvers.append(pattern)
+                unwalked.extend(pattern.url_patterns)
+
+    assert resolvers
+    assert all(resolver.default_kwargs == {} for resolver in resolvers)
+    assert URLResolver(resolvers[0].pattern, [], None).default_kwargs == {}
