@@ -36,7 +36,7 @@ class UserViewSet(ProvesWhoTheyAre, HistoryMixin, BaseModelViewSet):
         IsAuthenticated,
         guarding(MayManageUsers, actions=["partial_update"], message=MayManageUsers.message),
     ]
-    # No create or delete: accounts are made by signing up and kept, deactivated rather than deleted.
+    # No create or delete: accounts are made by signing up, and deleted by their own person alone.
     http_method_names = ["get", "patch", "head", "options"]
     filterset_fields = {"is_active": ["exact"], "is_staff": ["exact"], "is_superuser": ["exact"]}
     search_fields = ["username", "email", "first_name", "last_name"]

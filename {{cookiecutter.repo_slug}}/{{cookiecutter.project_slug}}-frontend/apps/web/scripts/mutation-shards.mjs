@@ -55,6 +55,7 @@ export const SHARDS = {
   auth: [
     'src/app/auth/callback-complete/page.tsx',
     'src/app/auth/complete-signup/page.tsx',
+    'src/app/auth/deletion-scheduled/page.tsx',
     'src/app/auth/forgot-password/page.tsx',
     'src/app/auth/layout.tsx',
     'src/app/auth/login/page.tsx',
@@ -118,6 +119,7 @@ export const SHARDS = {
     'src/app/profile/page.tsx',
     'src/components/app-auth/ChangePasswordForm.tsx',
     'src/components/app-auth/AccountHistory.tsx',
+    'src/components/app-auth/DeleteAccount.tsx',
     'src/components/app-auth/AuthorizedApplicationsList.tsx',
     'src/components/app-auth/ConnectionsList.tsx',
     'src/components/app-auth/EmailsList.tsx',

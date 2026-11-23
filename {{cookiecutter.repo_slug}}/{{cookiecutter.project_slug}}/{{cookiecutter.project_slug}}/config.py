@@ -80,6 +80,12 @@ CONFIG = config(
             # Nobody signs in with a password but a superuser, in the admin. The frontend reads it too.
             "ONLY": boolean(missing_default={{ cookiecutter.social_login_only }}),
         },
+        "ACCOUNTS": {
+            # erase or anonymize: what deleting an account does once its grace period is over.
+            "DELETION": string(missing_default={{ cookiecutter.account_deletion|tojson }}),
+            # How long a person has to change their mind, by signing back in.
+            "DELETION_AFTER_DAYS": integer(missing_default=14),
+        },
         "SENTRY": {
             "DSN": string(missing_default=None),
             "TRACES_SAMPLE_RATE": string(missing_default="0"),

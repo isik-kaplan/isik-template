@@ -896,6 +896,27 @@ export interface paths {
         patch: operations["users_me_partial_update"];
         trace?: never;
     };
+    "/v0/users/me/deletion/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description What deleting the account would do, and how long there is to change one's mind. */
+        get: operations["users_me_deletion_retrieve"];
+        put?: never;
+        /**
+         * @description Signs the person out everywhere and revokes their tokens now; the account is deleted at `deletes_at`,
+         *     unless they sign in before then.
+         */
+        post: operations["users_me_deletion_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v0/users/me/reauthentication/": {
         parameters: {
             query?: never;
@@ -934,6 +955,13 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description What deleting the signed-in person's account would do, for the page that asks them. */
+        AccountDeletion: {
+            /** @description erase: the account and everything of theirs goes. anonymize: the account stays, nameless, so what it did stays attributed to it. */
+            deletion_mode: components["schemas"]["DeletionMode"];
+            /** @description How many days after asking it happens; signing in cancels it. */
+            after_days: number;
+        };
         /** @enum {string} */
         Actor: "self" | "staff" | "other";
         /**
@@ -1239,6 +1267,15 @@ export interface components {
             readonly name: string;
             /** @description What it lets the token do. */
             readonly label: string;
+        };
+        /** @enum {string} */
+        DeletionMode: "anonymize" | "erase";
+        DeletionScheduled: {
+            /**
+             * Format: date-time
+             * @description When the account is deleted, unless they sign in before.
+             */
+            deletes_at: string;
         };
 {%- if cookiecutter.webhooks != "none" %}
         Delivery: {
@@ -4777,6 +4814,63 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PreconditionRequired"];
+                };
+            };
+        };
+    };
+    users_me_deletion_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountDeletion"];
+                };
+            };
+        };
+    };
+    users_me_deletion_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeletionScheduled"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyConflict"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
                 };
             };
         };

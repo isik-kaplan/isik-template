@@ -107,6 +107,15 @@ def rotate_client_secret(application, *, revoke):
 
 
 @transaction.atomic
+def revoke_every_token_of(user):
+    """Whatever every application holds for `user`, refresh tokens first for the reason revoke_tokens gives."""
+    for refresh_token in RefreshToken.objects.filter(user=user):
+        refresh_token.revoke()
+    for access_token in AccessToken.objects.filter(user=user):
+        access_token.revoke()
+
+
+@transaction.atomic
 def revoke_tokens(application, *, user=None):
     """Refresh tokens first and through `revoke()`: deleting an access token leaves its refresh token alive."""
     refresh_tokens = RefreshToken.objects.filter(application=application)

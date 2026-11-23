@@ -1,0 +1,9 @@
+{% raw -%}
+{% extends "account/email/base/base.html" %}
+{% load i18n %}
+
+{% block content %}
+        <mj-text>{% blocktrans %}Somebody signed in to your {{ site_name }} account, which cancelled its deletion. It stays as it is.{% endblocktrans %}</mj-text>
+        <mj-text>{% blocktrans %}If that wasn't you, change your password, then ask for the deletion again from your profile.{% endblocktrans %}</mj-text>
+{% endblock content %}
+{%- endraw %}

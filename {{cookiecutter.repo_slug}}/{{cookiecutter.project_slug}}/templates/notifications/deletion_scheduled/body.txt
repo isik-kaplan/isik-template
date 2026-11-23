@@ -1,0 +1,10 @@
+{% raw -%}
+{% extends "account/email/base/base.txt" %}
+{% load i18n %}
+
+{% block content %}
+        {% blocktrans with date=data.date %}You asked for your {{ site_name }} account to be deleted. It will be deleted on {{ date }}, and you have been signed out everywhere until then.{% endblocktrans %}
+
+        {% blocktrans %}Changed your mind? Sign in before then and your account stays as it is. If you didn't ask for this, sign in and change your password.{% endblocktrans %}
+{% endblock content %}
+{%- endraw %}

@@ -51,6 +51,14 @@ export class Api {
     return this.client.GET('/v0/users/me/reauthentication/')
   }
 
+  async accountDeletion() {
+    return this.client.GET('/v0/users/me/deletion/')
+  }
+
+  async requestAccountDeletion(idempotencyKey: IdempotencyKey) {
+    return this.client.POST('/v0/users/me/deletion/', { params: { header: { 'Idempotency-Key': idempotencyKey } } })
+  }
+
   async users(query?: ApiQuery<'/v0/users/'>) {
     return this.client.GET('/v0/users/', { params: { query } })
   }

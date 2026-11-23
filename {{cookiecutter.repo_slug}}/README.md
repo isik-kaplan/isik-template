@@ -281,6 +281,26 @@ For an incident, **Site settings** in the admin holds a "who may sign in" ladder
 superusers only). Raising it signs out everybody it excludes straight away and refuses them on both
 the password and the social sign-in; only a superuser can choose the top rung.
 
+## Deleting an account
+
+Anybody may delete their own account, superusers included, from Profile > Account details on the web or
+Profile > Delete account in the app. It asks for a fresh proof first. Asking signs them out everywhere and
+revokes their personal access tokens and every application's tokens at once; the account itself is deleted
+`{{ cookiecutter.config_prefix }}__ACCOUNTS__DELETION_AFTER_DAYS` (14) days later, and signing back in before then cancels
+it. Both are told by mail.
+
+`{{ cookiecutter.config_prefix }}__ACCOUNTS__DELETION` says what deleting does, `{{ cookiecutter.account_deletion }}` here by default:
+
+- `erase`: the account goes, with everything of theirs and the history of all of it.
+- `anonymize`: the account stays, inactive and nameless, so what it did stays attributed to it. Its addresses,
+  social accounts, factors, sessions, tokens, applications{% if cookiecutter.webhooks == "users" %}, webhook endpoints{% endif %} and devices go, and the
+  personal fields are cleared in its history too.
+
+Both are isik's (`isik.django.apps.accounts`); which rows go and which stay is `apps/users/erasures.py`, and a
+model with a key to the user model that neither cascades nor is registered there fails `check`. For a backend
+of your own, any class with `delete(user)`, set `ISIK["DJANGO"]["ACCOUNTS"]["DELETION_BACKEND"]` in settings.py.
+Due accounts are deleted hourly ({% if cookiecutter.background_jobs == "celery-with-beat" %}beat{% else %}uWSGI's cron{% endif %}, `manage.py delete_due_accounts`).
+
 ## Signing in to other apps with this one
 
 `apps/oauth_provider` makes this project an OAuth 2.0 / OpenID Connect provider through

@@ -1,0 +1,3 @@
+{% raw -%}
+{% load i18n %}{% blocktrans %}Your account will be deleted{% endblocktrans %}
+{%- endraw %}

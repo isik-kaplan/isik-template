@@ -31,5 +31,6 @@ class UsersConfig(AppConfig):
         post_migrate.connect(sync_permissions, sender=self, dispatch_uid=SYNC_PERMISSIONS_UID)
         # Imported for their side effects (signal receivers, schema extensions); nothing else imports them.
         import_module("apps.users.receivers")
+        import_module("apps.users.account_deletion")
         import_module("apps.users.schema")
         import_module("apps.users.headless_spec")

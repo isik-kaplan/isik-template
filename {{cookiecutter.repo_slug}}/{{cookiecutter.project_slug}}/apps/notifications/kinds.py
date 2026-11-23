@@ -80,6 +80,25 @@ SIGNED_OUT_BY_POLICY = declare_kind(
     description=_("When signing in is restricted and you are signed out."),
     message=_("Signing in is restricted for the moment, so you were signed out."),
 )
+# By mail alone: asking signs the person out everywhere, so no inbox of theirs is open to read it in.
+DELETION_SCHEDULED = declare_kind(
+    "deletion_scheduled",
+    audience=Field("user"),
+    channels=sent_on(Policy.MANDATORY, Channel.EMAIL),
+    label=_("Account deletion scheduled"),
+    description=_("When you ask for your account to be deleted."),
+    message=_("Your account will be deleted on %(date)s. Sign in before then to keep it."),
+)
+# Mandatory: somebody else signing in with your password cancels it too.
+DELETION_CANCELLED = declare_kind(
+    "deletion_cancelled",
+    audience=Field("user"),
+    channels=sent_on(Policy.MANDATORY, Channel.INBOX, Channel.EMAIL, Channel.PUSH),
+    push=PushContent(badge=True),
+    label=_("Account deletion cancelled"),
+    description=_("When signing in cancels your account's deletion."),
+    message=_("Signing in cancelled your account's deletion, so it stays."),
+)
 NOTIFICATION_SETTINGS_FORCED = declare_kind(
     "notification_settings_forced",
     audience=Field("user"),

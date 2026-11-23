@@ -1,5 +1,6 @@
 import { AuthorizedApplicationsList } from '@/components/app-auth/AuthorizedApplicationsList'
 import { ConnectionsList } from '@/components/app-auth/ConnectionsList'
+import { DeleteAccount } from '@/components/app-auth/DeleteAccount'
 import { SessionsList } from '@/components/app-auth/SessionsList'
 
 import { words } from '../../support/arbitraries'
@@ -264,6 +265,75 @@ describe('the apps this person let in', () => {
         await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(2))
         const keys = calls(sent).map(([input]) => (input as Request).headers.get('Idempotency-Key'))
         expect(keys[1]).toBe(keys[0])
+      }
+    )
+})
+
+const deletion = fc.record({
+  deletion_mode: fc.constantFrom('erase' as const, 'anonymize' as const),
+  after_days: fc.integer({ min: 1, max: 60 }),
+})
+const deletesAt = fc
+  .date({ min: new Date('2026-01-01T00:00:00Z'), max: new Date('2030-12-31T00:00:00Z'), noInvalidDate: true })
+  .map((date) => date.toISOString())
+
+// What asking can come back as: scheduled, sent off to prove it is them first, or failed otherwise.
+function answer(outcome: 'scheduled' | 'prove first' | 'failed', at: string) {
+  if (outcome === 'scheduled') return json(202, { deletes_at: at })
+  if (outcome === 'prove first')
+    return new Response('{}', { status: 403, headers: { 'X-Reauthentication-Required': '1' } })
+  return json(500, {})
+}
+
+describe('deleting this account', () => {
+  // One property per answer: scheduled, sent off to prove it is them first, or failed otherwise.
+  for (const outcome of ['scheduled', 'prove first', 'failed'] as const)
+    test.prop([deletion, deletesAt, fc.boolean()])(
+      `says what it does, asks only once confirmed, and leaves only once scheduled: ${outcome}`,
+      async (described, at, backOut) => {
+        freshDom()
+        const location = { href: '', origin: 'http://test-project.test', pathname: '/profile/details', search: '' }
+        vi.stubGlobal('location', location)
+        const sent = vi.fn(async () => answer(outcome, at))
+        vi.stubGlobal('fetch', sent)
+        render(<DeleteAccount deletion={described} />)
+        expect(screen.queryByText(/nameless/) !== null).toBe(described.deletion_mode === 'anonymize')
+        expect(
+          screen.getByText(
+            described.after_days === 1 ? /^It happens a day/ : new RegExp(`^It happens ${described.after_days} days`)
+          )
+        ).toBeTruthy()
+
+        fireEvent.click(screen.getByRole('button', { name: 'Delete my account' }))
+        if (backOut) {
+          fireEvent.click(screen.getByRole('button', { name: 'Keep my account' }))
+          expect(screen.getByRole('button', { name: 'Delete my account' })).toBeTruthy()
+          expect(sent).not.toHaveBeenCalled()
+          vi.unstubAllGlobals()
+          return
+        }
+        fireEvent.click(screen.getByRole('button', { name: 'Yes, delete my account' }))
+
+        await vi.waitFor(() => expect(sent).toHaveBeenCalledOnce())
+        const [request] = calls(sent)[0] as [Request]
+        expect([request.method, new URL(request.url).pathname]).toEqual(['POST', '/v0/users/me/deletion/'])
+        if (outcome === 'scheduled') {
+          await vi.waitFor(() =>
+            expect(location.href).toBe(`${location.origin}/auth/deletion-scheduled?on=${encodeURIComponent(at)}`)
+          )
+          expect(toast.error).not.toHaveBeenCalled()
+        } else if (outcome === 'prove first') {
+          // The page leaves for the proof, so nothing is said here.
+          await vi.waitFor(() => expect(location.href).toBe('/auth/prove?next=%2Fprofile%2Fdetails'))
+          expect(toast.error).not.toHaveBeenCalled()
+        } else {
+          await vi.waitFor(() =>
+            expect(toast.error).toHaveBeenCalledWith('Your account could not be scheduled for deletion. Try again.')
+          )
+          expect(location.href).toBe('')
+          expect(screen.getByRole('button', { name: 'Yes, delete my account' })).toHaveProperty('disabled', false)
+        }
+        vi.unstubAllGlobals()
       }
     )
 })

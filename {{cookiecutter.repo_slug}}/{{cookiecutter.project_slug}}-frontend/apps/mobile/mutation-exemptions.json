@@ -261,6 +261,26 @@
       ]
     }
   ],
+  "app/(authenticated)/profile/delete.tsx": [
+    {
+      "mutator": "ConditionalExpression",
+      "fingerprint": "ecf809112fcf",
+      "reason": [
+        "isMounted is referentially stable (its own useCallback never changes it), so this effect's deps",
+        "array is equivalent to [] either way - and see @isikk/core/hooks' own useIsMounted for why the guard",
+        "below is equivalent too."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "1cf406907db3",
+      "reason": [
+        "isMounted is referentially stable (its own useCallback never changes it), so this effect's deps",
+        "array is equivalent to [] either way - and see @isikk/core/hooks' own useIsMounted for why the guard",
+        "below is equivalent too."
+      ]
+    }
+  ],
   "app/(authenticated)/prove.tsx": [
     {
       "mutator": "ConditionalExpression",

@@ -1,5 +1,8 @@
 from apps.common.logging.emit import ambient, audit, log
 from apps.common.logging.events import (
+    ACCOUNT_DELETED,
+    ACCOUNT_DELETION_CANCELLED,
+    ACCOUNT_DELETION_REQUESTED,
     ACCOUNT_MAIL_UNRECORDED,
     DECLARED,
     EMAIL_CHANGED,
@@ -33,6 +36,9 @@ from apps.common.logging.events import (
 
 
 __all__ = [
+    "ACCOUNT_DELETED",
+    "ACCOUNT_DELETION_CANCELLED",
+    "ACCOUNT_DELETION_REQUESTED",
     "ACCOUNT_MAIL_UNRECORDED",
     "DECLARED",
     "EMAIL_CHANGED",

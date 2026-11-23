@@ -18,7 +18,15 @@ const user = fc.record(
 )
 
 // The phone page only where accounts have numbers.
-const LINKS = ['details', 'emails', ...(PHONE === 'none' ? [] : ['phone']), 'password', 'connections', 'sessions']
+const LINKS = [
+  'details',
+  'emails',
+  ...(PHONE === 'none' ? [] : ['phone']),
+  'password',
+  'connections',
+  'sessions',
+  'delete',
+]
 
 describe('the account details screen', () => {
   it("shows the account's email, its username only when it has one, and its language or the device's", async () => {

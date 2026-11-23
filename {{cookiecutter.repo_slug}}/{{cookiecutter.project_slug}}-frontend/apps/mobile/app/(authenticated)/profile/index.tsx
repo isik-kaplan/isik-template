@@ -18,6 +18,7 @@ const LINKS = [
     href: '/profile/connections' as const,
   },
   { testID: 'profile-sessions-link', labelKey: 'profileSessionsLinkLabel', href: '/profile/sessions' as const },
+  { testID: 'profile-delete-link', labelKey: 'profileDeleteLinkLabel', href: '/profile/delete' as const },
 ] as const
 
 export default function Profile() {

@@ -1,5 +1,6 @@
 import os
 import sys
+from datetime import timedelta
 from pathlib import Path
 
 import sentry_sdk
@@ -15,6 +16,7 @@ from apps.common.logging.scrub import scrub_event
 from apps.notifications.push import push_credentials
 from apps.oauth_provider import device_codes
 from apps.oauth_provider.mode import oauth_provider_mode
+from apps.users.deletion import deletion_backend
 from apps.users.names import NameRequirement
 from apps.users.social_login import reauthentication_methods, social_login_only, social_login_provider_ids
 
@@ -41,6 +43,8 @@ ALLOWED_HOSTS = [
 
 SOCIAL_LOGIN_PROVIDER_IDS = social_login_provider_ids(config.SOCIAL_LOGIN.PROVIDERS)
 SOCIAL_LOGIN_ONLY = social_login_only(config.SOCIAL_LOGIN.ONLY, SOCIAL_LOGIN_PROVIDER_IDS, DEBUG)
+# erase or anonymize. For a backend of your own, set ISIK's DELETION_BACKEND below to its class instead.
+ACCOUNT_DELETION = config.ACCOUNTS.DELETION
 
 INSTALLED_APPS = [
     "django_hosts",
@@ -57,6 +61,7 @@ INSTALLED_APPS = [
     "pgtrigger",
     "pghistory",
     "isik.django.apps.common",
+    "isik.django.apps.accounts",
     # isik's mechanism; the tables are apps.notifications'.
     "isik.django.apps.notifications",
     "isik.django.apps.notifications.audience",
@@ -587,6 +592,12 @@ ISIK = {
                 reason="Inline means a task runs in the request that asked for it, and a webhook is one such task."
             ),
 {%- endif %}
+        },
+        "ACCOUNTS": {
+            "DELETION_AFTER": timedelta(days=config.ACCOUNTS.DELETION_AFTER_DAYS),
+            "DELETION_BACKEND": deletion_backend(ACCOUNT_DELETION),
+            # Which of a person's rows go and which stay, model by model.
+            "ERASURES": "apps.users.erasures",
         },
         "FEATURES": {
             "FEATURE_MODEL": "features.Feature",

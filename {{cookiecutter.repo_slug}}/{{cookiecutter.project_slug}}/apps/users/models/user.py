@@ -4,6 +4,7 @@ from django.contrib.auth.models import AbstractUser, UserManager, _user_has_modu
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from isik.django.apps.accounts.bases import DeletableAccount
 from isik.django.apps.common.db import if_unset, redeclare, track_events
 
 from apps.common.models.base import BaseModel
@@ -33,7 +34,7 @@ class AddressedUserManager(UserManager):
 
 
 @track_events()
-class User(AbstractUser, BaseModel):
+class User(DeletableAccount, AbstractUser, BaseModel):
     password = redeclare(
         AbstractUser.password,
         help_text="A hash of this person's password, never the password itself.",
@@ -68,7 +69,7 @@ class User(AbstractUser, BaseModel):
     is_active = redeclare(
         AbstractUser.is_active,
         help_text=if_unset("Whether this account may sign in."),
-        db_comment="False shuts the account out, sessions and tokens too; accounts are deactivated, never deleted.",
+        db_comment="False shuts the account out, sessions and tokens too; an anonymized account is left False.",
     )
     # created_at, from BaseModel and set by the database, already says when the account was made.
     date_joined = None

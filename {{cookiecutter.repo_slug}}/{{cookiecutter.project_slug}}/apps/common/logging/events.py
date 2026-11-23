@@ -93,6 +93,12 @@ LOGIN_POLICY_SWEPT = declare("login_policy.swept", logging.WARNING, ("policy", "
 EXPIRED_TOKENS_CLEARED = declare("oauth.expired_tokens_cleared", logging.INFO, ("deleted",))
 # Audited: these are accounts deleted without anybody asking.
 UNVERIFIED_ACCOUNTS_REMOVED = declare("accounts.unverified_removed", logging.INFO, ("removed",), audited=True)
+# A person deleting their own account: asked, changed their mind by signing in, or deleted when the time came.
+ACCOUNT_DELETION_REQUESTED = declare(
+    "accounts.deletion_requested", logging.INFO, ("user", "deletes_at"), audited=True
+)
+ACCOUNT_DELETION_CANCELLED = declare("accounts.deletion_cancelled", logging.INFO, ("user",), audited=True)
+ACCOUNT_DELETED = declare("accounts.deleted", logging.INFO, ("user",), audited=True)
 
 # A mail allauth added since apps/notifications/kinds.py was written: sent, but kept nowhere.
 ACCOUNT_MAIL_UNRECORDED = declare("account_mail.unrecorded", logging.WARNING, ("template",))

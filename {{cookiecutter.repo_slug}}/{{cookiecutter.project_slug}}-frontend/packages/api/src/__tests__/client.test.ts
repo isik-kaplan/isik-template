@@ -267,6 +267,16 @@ describe('Api', () => {
   })
 {%- endif %}
 
+  it('asks what deleting the account does, and asks for it at the same address', async () => {
+    const baseFetch = vi.fn<typeof fetch>(async () => new Response('{}', { status: 200 }))
+    const api = new Api('https://api.example.test', { baseFetch })
+    await api.accountDeletion()
+    await api.requestAccountDeletion(KEY)
+    const [read, ask] = baseFetch.mock.calls.map(([request]) => request as Request)
+    expect([read.method, read.url]).toEqual(['GET', 'https://api.example.test/v0/users/me/deletion/'])
+    expect([ask.method, ask.url]).toEqual(['POST', 'https://api.example.test/v0/users/me/deletion/'])
+  })
+
   it('sends the token to make as its body, under the idempotency key it was given', async () => {
     const baseFetch = vi.fn<typeof fetch>(async () => new Response('{}', { status: 201 }))
     const data = { name: 'CI', scopes: ['users:manage:user'], expires_at: '2026-12-01T00:00:00Z' }
@@ -282,6 +292,7 @@ describe('Api', () => {
     ['approveDevice', (api: Api) => api.approveDevice('BCDFGHJK', KEY)],
     ['denyDevice', (api: Api) => api.denyDevice('BCDFGHJK', KEY)],
     ['revokeAuthorizedApplication', (api: Api) => api.revokeAuthorizedApplication(7, KEY)],
+    ['requestAccountDeletion', (api: Api) => api.requestAccountDeletion(KEY)],
     ['deletePersonalAccessToken', (api: Api) => api.deletePersonalAccessToken('t1', KEY)],
     ['updateMe', (api: Api) => api.updateMe({ language: 'en' }, WRITE)],
     ['updateUser', (api: Api) => api.updateUser('u1', { is_active: false }, WRITE)],

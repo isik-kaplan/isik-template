@@ -3,6 +3,7 @@ import ApplicationsLayout from '@/app/applications/layout'
 import ApplicationsPage from '@/app/applications/page'
 import CallbackCompletePage from '@/app/auth/callback-complete/page'
 import CompleteSignupPage from '@/app/auth/complete-signup/page'
+import DeletionScheduledPage from '@/app/auth/deletion-scheduled/page'
 import OAuthAuthorizePage from '@/app/auth/oauth/authorize/page'
 import ProvePage from '@/app/auth/prove/page'
 import ProviderErrorPage from '@/app/auth/provider-error/page'
@@ -321,6 +322,20 @@ describe('the two-factor tab', () => {
   )
 })
 
+describe('the account details page', () => {
+  test.prop([answered, fc.boolean()])(
+    'offers deleting the account only once told what deleting does',
+    async (w, told) => {
+      const served = without(
+        backend(w, 'member', 'everything') as unknown as typeof fetch,
+        told ? null : /\/deletion\/$/
+      )
+      expect(await open(ProfileDetailsPage, { searchParams: Promise.resolve({}) }, served)).toBe('shown')
+      expect(screen.queryByRole('heading', { name: 'Delete account' }) !== null).toBe(told)
+    }
+  )
+})
+
 describe("this person's history", () => {
   // The history read answering and failing, each in every run.
   // Everything read, the history unread, and the account itself unread, each in every run.
@@ -334,6 +349,29 @@ describe("this person's history", () => {
       expect(await open(ProfileDetailsPage, { searchParams: Promise.resolve({}) }, served)).toBe('shown')
       expect(screen.queryByText('Nothing to show yet.') === null).toBe(answering && w.history.length > 0)
     })
+})
+
+describe('the deletion scheduled page', () => {
+  const on = fc.option(
+    fc.oneof(
+      fc
+        .date({ min: new Date('2026-01-01T00:00:00Z'), max: new Date('2030-12-31T00:00:00Z'), noInvalidDate: true })
+        .map((date) => date.toISOString()),
+      fc.string({ maxLength: 8 })
+    ),
+    { nil: undefined }
+  )
+  test.prop([answered, on])(
+    'names the day only when it was given one it can read, and always the way back',
+    async (w, when) => {
+      const served = backend(w, 'anonymous', 'everything') as unknown as typeof fetch
+      expect(await open(DeletionScheduledPage, { searchParams: Promise.resolve({ on: when }) }, served, false)).toBe(
+        'shown'
+      )
+      expect(screen.queryByText(/^It will be deleted on/) !== null).toBe(!Number.isNaN(new Date(when ?? '').getTime()))
+      expect(screen.getByRole('link', { name: 'Sign in to keep my account' }).getAttribute('href')).toBe('/auth/login')
+    }
+  )
 })
 
 describe('the second-factor page', () => {

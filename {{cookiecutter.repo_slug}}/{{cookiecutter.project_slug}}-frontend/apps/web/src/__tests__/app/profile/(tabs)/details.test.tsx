@@ -8,15 +8,19 @@ vi.mock('@/config/names', () => ({ NAME_REQUIREMENT: 'username_with_optional_ful
 const requireSession = vi.fn()
 vi.mock('@/lib/getSession', () => ({ requireSession: () => requireSession(), getLanguage: async () => 'en' }))
 const me = vi.fn()
-vi.mock('@/lib/serverApi', () => ({ serverApi: async () => ({ me }) }))
+const accountDeletion = vi.fn()
+vi.mock('@/lib/serverApi', () => ({ serverApi: async () => ({ me, accountDeletion }) }))
 const AccountHistory = vi.fn((_props: object) => <p>history</p>)
 vi.mock('@/components/app-auth/AccountHistory', () => ({ AccountHistory: (props: object) => AccountHistory(props) }))
+const DeleteAccount = vi.fn((_props: object) => <p>delete</p>)
+vi.mock('@/components/app-auth/DeleteAccount', () => ({ DeleteAccount: (props: object) => DeleteAccount(props) }))
 
 const valueOf = (label: string) => screen.getByText(label).nextElementSibling?.textContent
 
 describe('ProfileDetailsPage', () => {
   beforeEach(() => {
     requireSession.mockResolvedValue({ user: { id: 'u1', username: 'jane', email: 'jane@test.test' } })
+    accountDeletion.mockResolvedValue({ data: { deletion_mode: 'erase', after_days: 14 } })
   })
 
   it("renders the visitor's details from the API, and their history narrowed by the address bar", async () => {
@@ -31,6 +35,16 @@ describe('ProfileDetailsPage', () => {
     expect(valueOf('Last name')).toBe('Doe')
     expect(screen.getByText('history')).toBeTruthy()
     expect(AccountHistory).toHaveBeenCalledWith({ userId: 'u1', asked: { action: 'update' } })
+    expect(DeleteAccount).toHaveBeenCalledWith({ deletion: { deletion_mode: 'erase', after_days: 14 } })
+  })
+
+  it('offers no deletion it could not describe', async () => {
+    me.mockResolvedValue({ data: undefined })
+    accountDeletion.mockResolvedValue({ data: undefined })
+
+    render(await ProfileDetailsPage({ searchParams: Promise.resolve({}) }))
+
+    expect(screen.queryByText('delete')).toBeNull()
   })
 
   it("falls back to the session's own details, names unset, when the API cannot answer", async () => {

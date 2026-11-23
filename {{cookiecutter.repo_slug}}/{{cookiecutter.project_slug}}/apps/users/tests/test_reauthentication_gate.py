@@ -36,6 +36,8 @@ GATED = {
     "AuthorizedApplicationViewSet": {"destroy"},
     "ReviewedApplicationViewSet": {"approve"},
     "UserViewSet": {"partial_update"},
+    # Asking for the account to be deleted signs the person out everywhere.
+    "AccountDeletionViewSet": {"request_deletion"},
     # A token that acts as you is as good as a password.
     "PersonalAccessTokenViewSet": {"create"},
 {%- if cookiecutter.webhooks != "none" %}

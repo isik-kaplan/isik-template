@@ -1,0 +1,10 @@
+{% raw -%}
+{% extends "account/email/base/base.txt" %}
+{% load i18n %}
+
+{% block content %}
+        {% blocktrans %}Somebody signed in to your {{ site_name }} account, which cancelled its deletion. It stays as it is.{% endblocktrans %}
+
+        {% blocktrans %}If that wasn't you, change your password, then ask for the deletion again from your profile.{% endblocktrans %}
+{% endblock content %}
+{%- endraw %}

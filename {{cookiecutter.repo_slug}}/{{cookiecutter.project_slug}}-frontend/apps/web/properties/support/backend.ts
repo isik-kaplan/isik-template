@@ -236,6 +236,7 @@ function apiBody(path: string, w: World, visitor: Visitor, holding: boolean): un
   const list = <T>(items: T[]) => (holding ? items : undefined)
   const routes: [RegExp, () => unknown][] = [
     [/^\/v0\/users\/me\/reauthentication\/$/, () => list([{ id: 'reauthenticate' }])],
+    [/^\/v0\/users\/me\/deletion\/$/, () => (holding ? { deletion_mode: 'erase', after_days: 14 } : undefined)],
     [/^\/v0\/users\/me\/$/, () => me],
     [
       /^\/v0\/users\/permissions\/$/,

@@ -22,6 +22,7 @@ describe('Profile', () => {
     ['profile-password-link', '/profile/password', 'Change password'],
     ['profile-connections-link', '/profile/connections', 'Connected accounts'],
     ['profile-sessions-link', '/profile/sessions', 'Active sessions'],
+    ['profile-delete-link', '/profile/delete', 'Delete account'],
   ])('shows the right label for %s and navigates to %s', async (testID, href, label) => {
     await render(<Profile />)
     expect(screen.getByText(label)).toBeTruthy()
