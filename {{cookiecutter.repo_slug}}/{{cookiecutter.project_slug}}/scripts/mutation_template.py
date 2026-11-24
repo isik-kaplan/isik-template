@@ -6,6 +6,7 @@ running a seed test, not `migrate`, so it goes through conftest.py's `django_db_
     python scripts/mutation_template.py build
     python scripts/mutation_template.py check     # a clone against a freshly migrated database
     python scripts/mutation_template.py drop
+    python scripts/mutation_template.py name      # prints it, for MUTMUT_DB_TEMPLATE; takes no argument
 """
 
 import argparse

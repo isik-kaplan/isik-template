@@ -4,9 +4,10 @@ Skips the stats pass. Scoped tests make this an upper bound on survivors, never 
 
     python -m scripts.toolbox.hunt apps/users/adapters.py apps/users/tests/test_adapters.py
     python -m scripts.toolbox.hunt <source.py> <tests...> --only <mutant name>   # settle one mutant
-    HUNT_JOBS=6 HUNT_DB_PREFIX=abc MUTMUT_DB_TEMPLATE=... python -m scripts.toolbox.hunt ...
+    HUNT_JOBS=6 HUNT_DB_PREFIX=abc MUTMUT_DB_TEMPLATE=$(python scripts/mutation_template.py name) \\
+        python -m scripts.toolbox.hunt ...
 
-`MUTMUT_DB_TEMPLATE` (`python scripts/mutation_template.py name`) clones rather than migrates per mutant.
+`MUTMUT_DB_TEMPLATE` clones rather than migrates per mutant.
 """
 
 import argparse
