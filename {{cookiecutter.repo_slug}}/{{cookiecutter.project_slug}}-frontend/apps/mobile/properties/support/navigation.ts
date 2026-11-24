@@ -10,7 +10,11 @@ export const navigation = {
 // What useLocalSearchParams answers: the params a property routes a screen with.
 export const routeParams: { current: Record<string, string | undefined> } = { current: {} }
 
+// What useSegments answers: the route a property puts a layout on.
+export const routeSegments: { current: string[] } = { current: [] }
+
 export function forgetNavigation() {
   for (const spy of Object.values(navigation)) spy.mockClear()
   routeParams.current = {}
+  routeSegments.current = []
 }

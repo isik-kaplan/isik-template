@@ -63,14 +63,15 @@ describe('i18n', () => {
   })
 
   it("loads that language's own resource bundle rather than silently falling back to English", () => {
-    const { SUPPORTED_LANGUAGES } = loadWithLocales([{ languageCode: 'en' }])
+    const { default: english, SUPPORTED_LANGUAGES } = loadWithLocales([{ languageCode: 'en' }])
     const other = SUPPORTED_LANGUAGES.find((code: string) => code !== 'en')
     if (!other) return
+    const englishHeading = english.t('loginHeading')
 
     const { default: i18n } = loadWithLocales([{ languageCode: other }])
 
-    // Blank (untranslated), not "Log in", which would mean fallbackLng served English instead.
-    expect(i18n.t('loginHeading')).toBe('')
+    // Blank until translated, then the translation; English here would mean fallbackLng served it instead.
+    expect(i18n.t('loginHeading')).not.toBe(englishHeading)
   })
 
   describe('setLanguage', () => {

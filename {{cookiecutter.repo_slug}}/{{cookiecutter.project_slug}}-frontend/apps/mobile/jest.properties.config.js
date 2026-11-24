@@ -9,7 +9,7 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/$1',
   },
   testMatch: ['<rootDir>/properties/**/*.property.ts?(x)'],
-  setupFiles: ['<rootDir>/properties/setup.ts'],
+  setupFiles: ['<rootDir>/jest/nativeMocks.js', '<rootDir>/properties/setup.ts'],
   // Each test is 25 examples rather than one.
   testTimeout: 120000,
   collectCoverageFrom: [

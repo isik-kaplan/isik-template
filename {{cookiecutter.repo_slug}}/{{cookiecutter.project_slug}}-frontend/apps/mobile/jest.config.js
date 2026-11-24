@@ -5,7 +5,7 @@ module.exports = {
   testEnvironment: require.resolve('./jest/StopAtFirstKillEnvironment.js'),
   testSequencer: require.resolve('./jest/NarrowestFirstSequencer.js'),
   // Added to jest-expo's own setup files, not in place of them.
-  setupFiles: [require.resolve('./jest/passwordsSignIn.js')],
+  setupFiles: [require.resolve('./jest/nativeMocks.js'), require.resolve('./jest/passwordsSignIn.js')],
   // The property suite has its own config and coverage (jest.properties.config.js).
   testPathIgnorePatterns: ['/node_modules/', '<rootDir>/properties/'],
   moduleNameMapper: {
