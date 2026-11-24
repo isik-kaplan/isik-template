@@ -8,6 +8,11 @@ def _global_context():
     return {"site_name": settings.PROJECT_NAME, "site_url": settings.PARENT_HOST}
 
 
+def notice_email_context(delivery, notice):
+    """isik renders notice mails itself, so they get the site's name and domain through this hook."""
+    return _global_context()
+
+
 def mjml_template(template, context, request=None):
     return _mjml_template(template, {**_global_context(), **context}, request)
 

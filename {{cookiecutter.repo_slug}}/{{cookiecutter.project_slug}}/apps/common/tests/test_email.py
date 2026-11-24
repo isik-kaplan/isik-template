@@ -3,7 +3,7 @@ from unittest.mock import patch
 from django.conf import settings
 from django.test import RequestFactory
 
-from apps.common.email import mjml_template, text_template
+from apps.common.email import mjml_template, notice_email_context, text_template
 
 
 def test_mjml_template_adds_site_name_and_the_stored_domain():
@@ -53,3 +53,7 @@ def test_a_mail_names_the_product_as_it_is_configured_now(settings):
         text_template("t.txt", {}, None)
 
     assert mocked.call_args[0][1]["site_name"] == "Renamed"
+
+
+def test_notice_mails_get_the_same_site_name_and_domain():
+    assert notice_email_context(None, None) == {"site_name": settings.PROJECT_NAME, "site_url": settings.PARENT_HOST}

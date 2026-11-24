@@ -580,6 +580,7 @@ ISIK = {
             "ENDPOINT_OWNER_FIELD": "owner",
 {%- endif %}
             "EMAIL_SENDER": "isik.django.apps.notifications.channels.email.send_from_mjml_templates",
+            "EMAIL_CONTEXT": "apps.common.email.notice_email_context",
             "RECIPIENT_LANGUAGE": "apps.common.language.saved_language",
             "PUSH": PUSH_CREDENTIALS,
             "SUBSCRIPTION_FORCED_KIND": "notification_settings_forced",

@@ -134,6 +134,7 @@ def test_the_mail_says_when_and_how_to_keep_it(alice):
     assert sent.subject == "Your account will be deleted"
     assert deletes_at.date().isoformat() in sent.body
     assert "Sign in before then" in sent.body
+    assert f"Thank you for using {settings.PROJECT_NAME}." in sent.body
 
 
 @pytest.mark.django_db
