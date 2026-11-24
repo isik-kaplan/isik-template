@@ -1,0 +1,15 @@
+# Native projects are generated from app.config.ts by `expo prebuild`; change the config, not these.
+/ios
+/android
+.kotlin/
+*.orig.*
+
+# Signing material: keystores, push keys, certificates and provisioning profiles.
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+.metro-health-check*
+expo-env.d.ts
