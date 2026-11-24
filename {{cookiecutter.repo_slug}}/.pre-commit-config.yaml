@@ -40,6 +40,13 @@ repos:
         pass_filenames: false
         files: ^{{ cookiecutter.project_slug }}/.*\.py$
 
+      # Only comments on staged lines, so `--all-files` with nothing staged passes.
+      - id: comment-check
+        name: comment-check
+        entry: python {{ cookiecutter.project_slug }}/scripts/comment_check.py
+        language: python
+        files: \.(py|ts|tsx|js|jsx|mjs|cjs)$
+
       # TERMS_VERSION is what a signup records, so it must not lag the documents.
       - id: legal-version
         name: legal-version

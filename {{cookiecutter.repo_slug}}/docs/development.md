@@ -295,6 +295,9 @@ Each of these fails a commit (pre-commit) and CI rather than relying on review:
   the model or into a utility module (`apps/common` is that package). `layout-check` runs
   `{{ cookiecutter.project_slug }}/scripts/layout_check.py`; a deliberate exception goes in its
   `EXCEPTIONS` with the reason.
+- **Comments are short.** A comment or docstring touching a staged line says its non-obvious why in one or two
+  sentences and names nothing a reader of this repository can't open. `comment-check` runs
+  `{{ cookiecutter.project_slug }}/scripts/comment_check.py` on commits only; older comments wait until edited.
 - **Every field says what it is.** Each model field this project declares carries a `help_text` (the
   published API description) and a `db_comment` (what someone in psql sees), with no per-field way out.
   isik's check `isik.E010` refuses to start otherwise, for the fields a library's abstract model gives too:
