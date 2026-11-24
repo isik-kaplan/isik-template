@@ -5,7 +5,7 @@ from isik.django.apps.common.db.models import new_primary_key
 
 
 def primary_key(**kwargs):
-    """The key every table here has: a UUIDv7, which isik's PRIMARY_KEY makes and isik's describes as random."""
+    """isik's key, documented as the UUIDv7 it is, so API readers know ids sort by creation."""
     return models.UUIDField(
         **kwargs,
         primary_key=True,

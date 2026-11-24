@@ -46,5 +46,5 @@ class RecentlyProvedWhoTheyAre(RequestPolicy):
 
     def refused(self, request, view, response):
         log(REAUTHENTICATION_DEMANDED, user=str(request.user.pk), act=view.action)
-        # DRF drops a permission's `code`, so this is how the client knows which gate stopped it.
+        # The clients read this header the same way off allauth's answers and DRF's.
         response[REAUTHENTICATION_REQUIRED_HEADER] = "1"
