@@ -42,10 +42,35 @@ export function lastEnd(feature: Feature): string | null {
   return new Date(Math.max(...(ends as string[]).map((at) => Date.parse(at)))).toISOString()
 }
 
+/** The type a value of it has: an `_or_null` setting holds the same, or None. */
+export function baseType(setting: Setting): string {
+  return setting.type.replace('_or_null', '')
+}
+
+/** What None reads as on a setting that may be None, such as "No limit"; null on one that may not. */
+export function nullLabelOf(setting: Setting): string | null {
+  return 'null_label' in setting ? setting.null_label : null
+}
+
 /** The value a draft names, as the setting's own type; text it can't be is left to the backend to refuse. */
 export function parsed(setting: Setting, draft: string): unknown {
-  if (setting.type === 'int' || setting.type === 'float') return draft.trim() === '' ? draft : Number(draft)
+  const type = baseType(setting)
+  if (type === 'int' || type === 'float') return draft.trim() === '' ? draft : Number(draft)
   return draft
+}
+
+type Option = { value: unknown; label: string }
+
+/** What a select offers: a choice's choices (None among them, where it may be None), or yes, no and None. */
+export function optionsOf(setting: Setting, t: Translate): Option[] | null {
+  if ('choices' in setting) return setting.choices
+  const nullLabel = nullLabelOf(setting)
+  if (baseType(setting) !== 'bool' || nullLabel === null) return null
+  return [
+    { value: true, label: t('auth:profileSettingsOn') },
+    { value: false, label: t('auth:profileSettingsOff') },
+    { value: null, label: nullLabel },
+  ]
 }
 
 /** The person's settings - each says what it is and why it's that value - and the features they have. */
@@ -96,6 +121,26 @@ export function SettingsList({
 
   function control(setting: Setting) {
     const disabled = !setting.may_change || pending === setting.name
+    const options = optionsOf(setting, t)
+    const nullLabel = nullLabelOf(setting)
+    if (options) {
+      // By position: None, true and a choice's own string would all read alike as an option's value.
+      return (
+        <select
+          id={`setting_${setting.name}`}
+          className="rounded-md border border-border bg-background px-2 py-1 text-sm"
+          value={String(options.findIndex((option) => option.value === setting.value))}
+          disabled={disabled}
+          onChange={(event) => change(setting, options[Number(event.target.value)].value)}
+        >
+          {options.map((option, index) => (
+            <option key={index} value={String(index)}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      )
+    }
     if (setting.type === 'bool') {
       return (
         <input
@@ -107,21 +152,22 @@ export function SettingsList({
         />
       )
     }
-    if (setting.type === 'choice') {
+    // Only a setting with a null_label can be None.
+    if (setting.value === null && drafts[setting.name] === undefined) {
       return (
-        <select
-          id={`setting_${setting.name}`}
-          className="rounded-md border border-border bg-background px-2 py-1 text-sm"
-          value={String(setting.value)}
-          disabled={disabled}
-          onChange={(event) => change(setting, event.target.value)}
-        >
-          {setting.choices.map((choice) => (
-            <option key={String(choice.value)} value={String(choice.value)}>
-              {choice.label}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center gap-2">
+          <span className="text-sm">{nullLabel}</span>
+          {setting.may_change && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setDrafts((current) => ({ ...current, [setting.name]: '' }))}
+            >
+              {t('auth:profileSettingsSetValue')}
+            </Button>
+          )}
+        </div>
       )
     }
     const draft = drafts[setting.name] ?? String(setting.value)
@@ -134,7 +180,7 @@ export function SettingsList({
         <Input
           id={`setting_${setting.name}`}
           className="w-32"
-          inputMode={setting.type === 'int' || setting.type === 'float' ? 'numeric' : undefined}
+          inputMode={baseType(setting) === 'int' || baseType(setting) === 'float' ? 'numeric' : undefined}
           value={draft}
           disabled={disabled}
           onChange={(event) => setDrafts((current) => ({ ...current, [setting.name]: event.target.value }))}
@@ -142,6 +188,17 @@ export function SettingsList({
         {setting.may_change && drafts[setting.name] !== undefined && (
           <Button type="submit" size="sm" disabled={pending === setting.name}>
             {t('auth:profileSettingsSave')}
+          </Button>
+        )}
+        {setting.may_change && nullLabel !== null && setting.value !== null && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={pending === setting.name}
+            onClick={() => change(setting, null)}
+          >
+            {nullLabel}
           </Button>
         )}
       </form>

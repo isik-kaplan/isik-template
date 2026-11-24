@@ -1,6 +1,6 @@
 import { NOTIFICATIONS_READ, NotificationBell } from '@/components/app-auth/NotificationBell'
 import { NotificationsList, messageOf } from '@/components/app-auth/NotificationsList'
-import { SettingsList, lastEnd, parsed, whyOf } from '@/components/app-auth/SettingsList'
+import { SettingsList, lastEnd, optionsOf, parsed, whyOf } from '@/components/app-auth/SettingsList'
 
 import type { Translate } from '@/i18n/config'
 
@@ -223,6 +223,104 @@ describe("this person's settings", () => {
       expect(sent).not.toHaveBeenCalled()
     }
   )
+})
+
+// One that may be None: a number shown as its null_label until given a value, or a select offering None.
+const nullLabel = fc.constantFrom('No limit', 'Ask me')
+const nullable = fc.oneof(
+  fc.record({
+    name,
+    type: fc.constant('int_or_null' as const),
+    value: fc.option(fc.integer({ min: 0, max: 99 }), { nil: null }),
+    default: fc.constant(null),
+    chosen: fc.constant(null),
+    null_label: nullLabel,
+    ...base,
+  }),
+  fc.record({
+    name,
+    type: fc.constant('bool_or_null' as const),
+    value: fc.option(fc.boolean(), { nil: null }),
+    default: fc.constant(null),
+    chosen: fc.constant(null),
+    null_label: nullLabel,
+    ...base,
+  }),
+  fc.record({
+    name,
+    type: fc.constant('choice_or_null' as const),
+    value: fc.constantFrom('a', null),
+    default: fc.constant(null),
+    chosen: fc.constant(null),
+    null_label: nullLabel,
+    choices: fc.constant([
+      { value: 'a', label: 'Alpha' },
+      { value: null, label: 'None of them' },
+    ]),
+    ...base,
+  })
+)
+
+// One property per kind of control, so every run meets each one.
+const shownAs = {
+  'a select': (each: { type: string }) => each.type !== 'int_or_null',
+  'its null_label': (each: { type: string; value: unknown }) => each.type === 'int_or_null' && each.value === null,
+  'a value': (each: { type: string; value: unknown }) => each.type === 'int_or_null' && each.value !== null,
+}
+
+describe('a setting that may be None', () => {
+  for (const [how, drawn] of Object.entries(shownAs))
+    test.prop([nullable.filter(drawn)])(`shows itself as ${how}, offering changes only where it may change`, (each) => {
+      freshDom()
+      render(<SettingsList initialSettings={[each] as never} initialEtag='"1"' features={[]} />)
+      const control = document.getElementById(`setting_${each.name}`) as HTMLSelectElement | null
+      if (each.type !== 'int_or_null') {
+        // By position: this t names the keys, where the page shows On and Off.
+        const options = optionsOf(each as never, t) as { value: unknown }[]
+        expect(control?.selectedIndex).toBe(options.findIndex((o) => o.value === each.value))
+        expect(control?.disabled).toBe(!each.may_change)
+      } else if (each.value === null) {
+        expect(control).toBeNull()
+        expect(screen.getByText(each.null_label)).toBeTruthy()
+        expect(screen.queryByRole('button', { name: 'Set a value' }) !== null).toBe(each.may_change)
+      } else {
+        expect((control as unknown as HTMLInputElement).value).toBe(String(each.value))
+        expect(screen.queryByRole('button', { name: each.null_label }) !== null).toBe(each.may_change)
+      }
+    })
+
+  for (const [how, drawn] of Object.entries(shownAs))
+    test.prop([nullable.filter((each) => each.may_change && drawn(each))])(
+      `saves a change made through ${how}`,
+      async (each) => {
+        freshDom()
+        const sent = vi.fn(async () => json(200, each, { ETag: '"2"' }))
+        vi.stubGlobal('fetch', sent)
+        render(<SettingsList initialSettings={[each] as never} initialEtag='"1"' features={[]} />)
+        let expected: unknown
+        if (each.type !== 'int_or_null') {
+          const options = optionsOf(each as never, t) as { value: unknown }[]
+          const other = options.findIndex((o) => o.value !== each.value)
+          expected = options[other].value
+          fireEvent.change(document.getElementById(`setting_${each.name}`) as HTMLSelectElement, {
+            target: { value: String(other) },
+          })
+        } else if (each.value === null) {
+          expected = 7
+          fireEvent.click(screen.getByRole('button', { name: 'Set a value' }))
+          fireEvent.change(document.getElementById(`setting_${each.name}`) as HTMLInputElement, {
+            target: { value: '7' },
+          })
+          fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+        } else {
+          expected = null
+          fireEvent.click(screen.getByRole('button', { name: each.null_label }))
+        }
+        await vi.waitFor(() => expect(sent).toHaveBeenCalled())
+        const [patch] = sent.mock.calls[0] as unknown as [Request]
+        expect(await patch.json()).toEqual({ type: each.type, value: expected })
+      }
+    )
 })
 
 const item = fc.record({

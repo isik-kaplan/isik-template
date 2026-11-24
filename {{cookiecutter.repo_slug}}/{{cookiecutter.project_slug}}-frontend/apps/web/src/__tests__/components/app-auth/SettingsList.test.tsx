@@ -1,4 +1,12 @@
-import { SettingsList, lastEnd, parsed, whyOf } from '@/components/app-auth/SettingsList'
+import {
+  SettingsList,
+  baseType,
+  lastEnd,
+  nullLabelOf,
+  optionsOf,
+  parsed,
+  whyOf,
+} from '@/components/app-auth/SettingsList'
 
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -107,6 +115,42 @@ describe('parsed', () => {
   it('keeps text for anything else', () => {
     expect(parsed(setting({ type: 'text' } as Partial<Setting>), '42')).toBe('42')
   })
+
+  it('reads a number for a number setting that may also be None', () => {
+    expect(parsed(setting({ type: 'int_or_null' } as Partial<Setting>), '7')).toBe(7)
+  })
+})
+
+const NO_LIMIT = setting({
+  name: 'max_items',
+  type: 'int_or_null',
+  label: 'Most items',
+  description: null,
+  value: null,
+  default: null,
+  null_label: 'No limit',
+} as Partial<Setting>)
+
+describe('a setting that may be None', () => {
+  it('has the type of its values, and says what None reads as', () => {
+    expect(baseType(NO_LIMIT)).toBe('int')
+    expect(baseType(setting({}))).toBe('int')
+    expect(nullLabelOf(NO_LIMIT)).toBe('No limit')
+    expect(nullLabelOf(setting({}))).toBeNull()
+  })
+
+  it('offers yes, no and None for a switch, and a choice its own choices', () => {
+    const maybe = setting({ type: 'bool_or_null', value: null, null_label: 'Ask me' } as Partial<Setting>)
+
+    expect(optionsOf(maybe, t)).toEqual([
+      { value: true, label: 'auth:profileSettingsOn' },
+      { value: false, label: 'auth:profileSettingsOff' },
+      { value: null, label: 'Ask me' },
+    ])
+    expect(optionsOf(THEME, t)).toBe((THEME as { choices: unknown }).choices)
+    expect(optionsOf(TWO_FACTOR, t)).toBeNull()
+    expect(optionsOf(NO_LIMIT, t)).toBeNull()
+  })
 })
 
 describe('SettingsList', () => {
@@ -197,7 +241,7 @@ describe('SettingsList', () => {
     const [second] = fetchMock.mock.calls[1] as unknown as [Request]
     expect(second.headers.get('If-Match')).toBe('"after-true"')
     expect(await second.json()).toEqual({ type: 'bool', value: false })
-    expect((screen.getByLabelText('Theme') as HTMLSelectElement).value).toBe('light')
+    expect((screen.getByLabelText('Theme') as HTMLSelectElement).selectedOptions[0].textContent).toBe('Light')
     expect(toast.success).toHaveBeenCalledWith('Saved.')
   })
 
@@ -206,11 +250,11 @@ describe('SettingsList', () => {
     globalThis.fetch = fetchMock as never
     render(<SettingsList initialSettings={[THEME]} initialEtag='"v1"' features={[]} />)
 
-    await userEvent.selectOptions(screen.getByLabelText('Theme'), 'dark')
+    await userEvent.selectOptions(screen.getByLabelText('Theme'), 'Dark')
 
     const [request] = fetchMock.mock.calls[0] as unknown as [Request]
     expect(await request.json()).toEqual({ type: 'choice', value: 'dark' })
-    expect((screen.getByLabelText('Theme') as HTMLSelectElement).value).toBe('dark')
+    expect((screen.getByLabelText('Theme') as HTMLSelectElement).selectedOptions[0].textContent).toBe('Dark')
   })
 
   it('offers to save a number only once it is changed, and saves it as a number', async () => {
@@ -218,7 +262,7 @@ describe('SettingsList', () => {
     globalThis.fetch = fetchMock as never
     render(<SettingsList initialSettings={[setting({})]} initialEtag='"v1"' features={[]} />)
 
-    expect(screen.queryByRole('button', { name: 'Save' })).toBeNull()
+    expect(screen.queryAllByRole('button')).toEqual([])
     await userEvent.clear(screen.getByLabelText('Token lifetime'))
     await userEvent.type(screen.getByLabelText('Token lifetime'), '60')
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
@@ -332,5 +376,82 @@ describe('SettingsList', () => {
     expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(true)
     answer(jsonResponse(200, setting({ value: 305, origin: 'own' }), { ETag: '"v2"' }))
     await vi.waitFor(() => expect(screen.queryByRole('button', { name: 'Save' })).toBeNull())
+  })
+
+  it('shows None by its label, and offers a value in its place', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse(200, { ...NO_LIMIT, value: 3, origin: 'own' }, { ETag: '"v2"' }))
+    globalThis.fetch = fetchMock as never
+    render(<SettingsList initialSettings={[NO_LIMIT]} initialEtag='"v1"' features={[]} />)
+
+    expect(screen.getByText('No limit')).toBeTruthy()
+    expect(screen.queryByLabelText('Most items')).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Set a value' }))
+    expect((screen.getByLabelText('Most items') as HTMLInputElement).value).toBe('')
+    expect(screen.queryByRole('button', { name: 'No limit' })).toBeNull()
+    await userEvent.type(screen.getByLabelText('Most items'), '3')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    const [request] = fetchMock.mock.calls[0] as unknown as [Request]
+    expect(await request.json()).toEqual({ type: 'int_or_null', value: 3 })
+    expect((screen.getByLabelText('Most items') as HTMLInputElement).value).toBe('3')
+  })
+
+  it('sets a value back to None with the button named for it', async () => {
+    const three = { ...NO_LIMIT, value: 3, origin: 'own' }
+    const fetchMock = vi.fn(async () => jsonResponse(200, NO_LIMIT, { ETag: '"v2"' }))
+    globalThis.fetch = fetchMock as never
+    render(<SettingsList initialSettings={[three as Setting]} initialEtag='"v1"' features={[]} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'No limit' }))
+
+    const [request] = fetchMock.mock.calls[0] as unknown as [Request]
+    expect(await request.json()).toEqual({ type: 'int_or_null', value: null })
+    expect(screen.getByRole('button', { name: 'Set a value' })).toBeTruthy()
+  })
+
+  it('holds the button back to None down while its own save is on its way', async () => {
+    let answer: (response: Response) => void = () => {}
+    globalThis.fetch = vi.fn(() => new Promise<Response>((resolve) => (answer = resolve))) as never
+    render(<SettingsList initialSettings={[{ ...NO_LIMIT, value: 3 } as Setting]} initialEtag='"v1"' features={[]} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'No limit' }))
+
+    expect((screen.getByRole('button', { name: 'No limit' }) as HTMLButtonElement).disabled).toBe(true)
+    answer(jsonResponse(200, NO_LIMIT, { ETag: '"v2"' }))
+    await vi.waitFor(() => expect(screen.getByRole('button', { name: 'Set a value' })).toBeTruthy())
+  })
+
+  it('offers neither while staff hold it', () => {
+    const held = { ...NO_LIMIT, may_change: false } as Setting
+    render(
+      <SettingsList
+        initialSettings={[held, { ...held, name: 'other', label: 'Other', value: 3 } as Setting]}
+        initialEtag='"v1"'
+        features={[]}
+      />
+    )
+
+    expect(screen.queryByRole('button', { name: 'Set a value' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'No limit' })).toBeNull()
+  })
+
+  it('picks None for a switch that may be None', async () => {
+    const maybe = setting({
+      name: 'digest',
+      type: 'bool_or_null',
+      label: 'Digest',
+      value: true,
+      null_label: 'Ask me',
+    } as Partial<Setting>)
+    const fetchMock = vi.fn(async () => jsonResponse(200, { ...maybe, value: null }, { ETag: '"v2"' }))
+    globalThis.fetch = fetchMock as never
+    render(<SettingsList initialSettings={[maybe]} initialEtag='"v1"' features={[]} />)
+
+    expect((screen.getByLabelText('Digest') as HTMLSelectElement).selectedOptions[0].textContent).toBe('On')
+    await userEvent.selectOptions(screen.getByLabelText('Digest'), 'Ask me')
+
+    const [request] = fetchMock.mock.calls[0] as unknown as [Request]
+    expect(await request.json()).toEqual({ type: 'bool_or_null', value: null })
+    expect((screen.getByLabelText('Digest') as HTMLSelectElement).selectedOptions[0].textContent).toBe('Ask me')
   })
 })
