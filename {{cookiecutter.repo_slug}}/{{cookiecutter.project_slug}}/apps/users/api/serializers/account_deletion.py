@@ -12,4 +12,3 @@ class AccountDeletionSerializer(serializers.Serializer):
         "so what it did stays attributed to it.",
     )
     after_days = serializers.IntegerField(help_text="How many days after asking it happens; signing in cancels it.")
-
