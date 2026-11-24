@@ -606,6 +606,7 @@ ISIK = {
             "SWEEP_MODEL": "features.SweepCursor",
             "OVERRIDES_MODEL": "features.UserOverrides",
             "SETTINGS": "apps.features.declarations",
+            # A grant's source: given by staff, or a trial with an end.
             "GRANT_SOURCES": ("staff", "trial"),
 {%- if cookiecutter.background_jobs == "celery-with-beat" %}
             # One run at the next boundary, rather than a minute's tick that almost always finds nothing.

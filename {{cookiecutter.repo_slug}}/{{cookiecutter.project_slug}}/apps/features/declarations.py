@@ -11,8 +11,6 @@ from apps.common.api.request_policies import RecentlyProvedWhoTheyAre
 
 
 STAFF = declare_force_source("staff", label=_("Staff"), shows_reason_to_holder=True)
-# A grant's source: given by staff, or a trial with an end.
-GRANT_SOURCES = ("staff", "trial")
 
 LONG_LIVED_TOKENS = declare_feature(
     "long_lived_tokens",
