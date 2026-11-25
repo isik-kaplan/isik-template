@@ -113,11 +113,6 @@ not a different answer, as for the owner's own list."""
 reason = """prefetch_related("approved_scopes") alone instead of with "requested_scopes": a query count,
 not a different answer, as for the owner's own list."""
 
-["apps.users.api.viewsets.user.xǁUserViewSetǁget_queryset__mutmut__7aa4b59b8812"]
-reason = """prefetch_related(None) instead of prefetch_related("user_permissions"). Each account's
-granted permissions then arrive one query apiece rather than in one for the page; the permissions shown
-are the same."""
-
 ["apps.users.api.viewsets.user.xǁUserViewSetǁget_queryset__mutmut__50d0818c52cb"]
 reason = """Reads a missing may_see_every_account as None instead of False. Both are falsy, so whoever
 lacks the attribute is narrowed to their own account either way."""

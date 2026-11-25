@@ -60,15 +60,20 @@ describe('CONFIG (public)', () => {
     vi.resetModules()
   })
 
-  it('reads the social login providers and icons as lists, empty when unset', async () => {
+  it('reads the social login providers, icons and admin-only ones as lists, empty when unset', async () => {
     vi.stubEnv('{{ cookiecutter.config_prefix }}__DOMAIN', 'example.test')
-    vi.stubEnv('{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS', 'github,openid_connect')
+    vi.stubEnv('{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS', 'github,openid_connect:corp')
     vi.resetModules()
 
     const { CONFIG } = await import('@/config/public')
 
-    expect(CONFIG.SOCIAL_LOGIN.PROVIDERS).toEqual(['github', 'openid_connect'])
+    expect(CONFIG.SOCIAL_LOGIN.PROVIDERS).toEqual(['github', 'openid_connect:corp'])
     expect(CONFIG.SOCIAL_LOGIN.ICONS).toEqual([])
+    expect(CONFIG.SOCIAL_LOGIN.ADMIN_ONLY).toEqual([])
+
+    vi.stubEnv('{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__ADMIN_ONLY', 'openid_connect:corp')
+    vi.resetModules()
+    expect((await import('@/config/public')).CONFIG.SOCIAL_LOGIN.ADMIN_ONLY).toEqual(['openid_connect:corp'])
 
     vi.unstubAllEnvs()
     vi.resetModules()

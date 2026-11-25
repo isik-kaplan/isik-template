@@ -1,6 +1,8 @@
 import pytest
 from django.contrib.auth.models import Permission as PermissionRow
 from django.contrib.contenttypes.models import ContentType
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 
 from apps.common.links import api_path
 from apps.users.models.group import Group
@@ -353,3 +355,25 @@ def test_an_account_is_shown_with_the_terms_it_accepted(client, manager, bob):
     body = client.get(_detail(bob)).json()
 
     assert (body["terms_version"], body["terms_accepted_at"]) == (bob.terms_version, bob.terms_accepted_at)
+
+
+@pytest.mark.django_db
+def test_listing_people_asks_the_same_whatever_their_number(client, manager):
+    """Each row's grants and groups come in one query for the page, not one per row."""
+
+    def queries():
+        with CaptureQueriesContext(connection) as captured:
+            client.get(api_path("users:users-list"))
+        return len(captured)
+
+    def person(name):
+        user = User.objects.create_user(username=name, email=f"{name}@example.test")
+        _grant(user, MANAGE)
+        user.groups.add(Group.objects.create(name=name))
+
+    person("first")
+    once = queries()
+    person("second")
+    person("third")
+
+    assert queries() == once
