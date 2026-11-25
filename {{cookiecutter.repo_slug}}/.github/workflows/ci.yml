@@ -478,3 +478,113 @@ jobs:
       - if: always()
         working-directory: e2e
         run: docker compose down -v --remove-orphans
+{%- if cookiecutter.include_mobile %}
+
+  # The mobile auth flows (e2e/maestro), on an Android emulator against the same Docker stack the web suite uses.
+  native-android-e2e:
+    runs-on: ubuntu-latest
+    needs: [mobile]
+    steps:
+      - uses: actions/checkout@v4
+      - run: cp .env.example .env
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "{{ cookiecutter.node_version }}"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install packages
+        working-directory: {{ cookiecutter.project_slug }}-frontend
+        run: npm ci && npm run build:packages
+      # Mailpit, the texts and the emulator's DNS published to the host, beside the web suite's stack.
+      - name: Start the e2e stack
+        working-directory: e2e
+        run: |
+          echo "COMPOSE_FILE=../docker-compose.yml:docker-compose.e2e.yml:docker-compose.mailpit-for-e2e.yml:docker-compose.maestro-for-e2e.yml" >> "$GITHUB_ENV"
+          export COMPOSE_FILE=../docker-compose.yml:docker-compose.e2e.yml:docker-compose.mailpit-for-e2e.yml:docker-compose.maestro-for-e2e.yml
+          docker compose build
+          docker compose up -d --wait --wait-timeout 600
+      - name: Build the app
+        run: echo "APP=$(e2e/maestro/build.sh android)" >> "$GITHUB_ENV"
+      - name: Install Maestro
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      # The emulator needs KVM, which the runner has but doesn't open to its user.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run the flows
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          # The stack's DNS answers {{ cookiecutter.domain }} with 10.0.2.2, the host as the emulator sees it.
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -dns-server 127.0.0.1
+          script: e2e/maestro/test.sh "$APP"
+      - if: failure()
+        name: Show service logs (only reached if a step above failed)
+        working-directory: e2e
+        run: docker compose logs --no-color
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-android-report
+          path: |
+            e2e/maestro/report.xml
+            ~/.maestro/tests
+          retention-days: 7
+
+  # The same flows on the newest iOS simulator. Apple-silicon runners can't run containers, so the backend runs natively.
+  native-ios-e2e:
+    runs-on: macos-latest
+    needs: [mobile]
+    steps:
+      - uses: actions/checkout@v4
+      - run: cp .env.example .env
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "{{ cookiecutter.node_version }}"
+      - uses: astral-sh/setup-uv@v6
+      - name: Install packages
+        working-directory: {{ cookiecutter.project_slug }}-frontend
+        run: npm ci && npm run build:packages
+      - name: Start the backend
+        run: e2e/maestro/native-backend.sh
+      # The simulator resolves names as this machine does.
+      - name: Point the domain here
+        run: echo "127.0.0.1 api.{{ cookiecutter.domain }} auth.{{ cookiecutter.domain }}" | sudo tee -a /etc/hosts
+      - name: Build the app
+        run: echo "APP=$(e2e/maestro/build.sh ios)" >> "$GITHUB_ENV"
+      - name: Boot an iPhone on the newest iOS
+        run: |
+          runtime=$(xcrun simctl list runtimes iOS --json | jq -r '[.runtimes[] | select(.isAvailable)] | last | .identifier')
+          device=$(xcrun simctl list devicetypes --json | jq -r '[.devicetypes[] | select(.name | startswith("iPhone"))] | last | .identifier')
+          udid=$(xcrun simctl create e2e "$device" "$runtime")
+          xcrun simctl boot "$udid"
+          xcrun simctl bootstatus "$udid" -b
+      - name: Install Maestro
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Run the flows
+        run: e2e/maestro/test.sh "$APP"
+      - if: failure()
+        name: Show the backend's logs (only reached if a step above failed)
+        run: tail -n 200 e2e/maestro/.native/*.log
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-ios-report
+          path: |
+            e2e/maestro/report.xml
+            ~/.maestro/tests
+          retention-days: 7
+{%- endif %}

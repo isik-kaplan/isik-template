@@ -489,7 +489,7 @@ SMS_SENDERS = {
     # e2e reads codes from this file, on a volume its browser container shares.
     "file": {
         "BACKEND": "isik.django.sms.backends.filebased.SMSBackend",
-        "OPTIONS": {"file_path": "/sms/messages.jsonl"},
+        "OPTIONS": {"file_path": config.SMS.FILE_PATH},
     },
 {%- if cookiecutter.sms == "twilio" %}
     "twilio": {

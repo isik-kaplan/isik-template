@@ -1,0 +1,5 @@
+# Every flow in this directory, run in name order; scripts/ holds the JavaScript they call.
+flows:
+  - "*.yaml"
+executionOrder:
+  continueOnFailure: false

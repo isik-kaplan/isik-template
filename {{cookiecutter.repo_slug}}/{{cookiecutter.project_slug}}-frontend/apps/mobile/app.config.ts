@@ -30,6 +30,7 @@ const config: ExpoConfig = {
     '@react-native-google-signin/google-signin',
     // iOS 27 stops at launch any app that hasn't adopted the scene life cycle; Expo's own prebuild doesn't yet.
     './plugins/withSceneLifecycle',
+    ['./plugins/withPlainHttp', { origins: [process.env.EXPO_PUBLIC_API_ORIGIN, process.env.EXPO_PUBLIC_AUTH_ORIGIN] }],
   ],
 }
 

@@ -1,0 +1,20 @@
+appId: {{ cookiecutter.domain.split(".") | reverse | join(".") }}.mobile
+---
+# iOS keeps the keychain through clearState, so a session an earlier flow left behind is logged out here.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: login-form|home-heading
+    timeout: 30000
+- runFlow:
+    when:
+      visible:
+        id: logout-button
+    commands:
+      - tapOn:
+          id: logout-button
+- extendedWaitUntil:
+    visible:
+      id: login-form
+    timeout: 15000

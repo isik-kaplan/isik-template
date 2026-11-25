@@ -1,0 +1,39 @@
+# What the mobile flows reach from outside the stack: they run on the host, and the app in an emulator.
+# Added to COMPOSE_FILE by e2e/maestro/android.sh; the web suite reads all of this from inside instead.
+services:
+  # The flows read the confirmation mail's link here.
+  mailpit:
+    networks:
+      - internal
+      # Docker publishes no ports for a container on internal networks only.
+      - external
+    ports:
+      - "127.0.0.1:8025:8025"
+{%- if cookiecutter.phone != "none" %}
+
+  # The texts SMS__BACKEND=file writes, read-only, for the flows to find their codes in.
+  sms-reader:
+    image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-backend:latest
+    command: ["python", "-m", "http.server", "8026", "--directory", "/sms"]
+    volumes:
+      - sms:/sms:ro
+    networks:
+      - external
+    ports:
+      - "127.0.0.1:8026:8026"
+{%- endif %}
+
+  # The Android emulator asks this for {{ cookiecutter.domain }}: 10.0.2.2 is the host from inside the emulator,
+  # where the server's port 80 is published.
+  emulator-dns:
+    build:
+      context: ./e2e/dnsmasq
+    command:
+      - dnsmasq
+      - -k
+      - --log-facility=-
+      - --address=/{{ cookiecutter.domain }}/10.0.2.2
+    networks:
+      - external
+    ports:
+      - "127.0.0.1:53:53/udp"

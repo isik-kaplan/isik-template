@@ -21,7 +21,7 @@ is and how to run it; [SETUP.md](../SETUP.md) what to do before launch.
 {%- if cookiecutter.phone != "none" %}
 - **A phone number is allauth's**: two columns on `User`, read and written only by `AccountAdapter`'s phone
   methods, and texted through isik's `send_sms` (`ISIK["DJANGO"]["SMS"]`). Under DEBUG a text is printed in the
-  backend's log; a test reads `isik.django.sms.outbox`, and e2e reads `/sms/messages.jsonl`. A text the provider
+  backend's log; a test reads `isik.django.sms.outbox`, and e2e reads `/sms/messages.jsonl` (`SMS__FILE_PATH`). A text the provider
   refuses is logged as `sms.failed` rather than raised, so the code step stays up to resend or correct the number.
 {%- endif %}
 - **Every write (POST, PUT, PATCH, DELETE) takes an `Idempotency-Key` header** (a UUID per attempt, not
@@ -177,8 +177,22 @@ mistyped or missing key fails `npm run lint`, not the page - write keys out in f
 assembling them from a variable, which the type checker cannot follow.
 {% if cookiecutter.include_mobile %}
 `apps/mobile` has its own unit/component suite, run the same way:
-`cd {{ cookiecutter.project_slug }}-frontend/apps/mobile && npm run test`. No device/emulator e2e
-yet - see `.github/workflows/ci.yml`'s `mobile`/`mobile-mutation` jobs for what does run in CI.
+`cd {{ cookiecutter.project_slug }}-frontend/apps/mobile && npm run test`.
+
+The mobile auth flows (`e2e/maestro`, run with [Maestro](https://maestro.dev)) sign in, sign up and ask for a
+reset link on an emulator or simulator, against the e2e stack. The overlay publishes Mailpit, the texts and a DNS
+server answering {{ cookiecutter.domain }} with the host as the Android emulator sees it:
+
+```
+cd e2e && COMPOSE_FILE=../docker-compose.yml:docker-compose.e2e.yml:docker-compose.mailpit-for-e2e.yml:docker-compose.maestro-for-e2e.yml docker compose up -d --wait
+emulator -avd <avd> -dns-server 127.0.0.1               # Android; then, from the repo root:
+e2e/maestro/test.sh "$(e2e/maestro/build.sh android)"   # or ios, on a Mac
+```
+
+The iOS simulator resolves names as the Mac does, so `/etc/hosts` needs
+`127.0.0.1 api.{{ cookiecutter.domain }} auth.{{ cookiecutter.domain }}` first. `DEVICE=<udid or serial>` picks one
+when several are running. CI runs them in `native-android-e2e` and `native-ios-e2e`; macOS runners can't run
+containers, so the iOS job starts the backend natively with `e2e/maestro/native-backend.sh`.
 {% endif %}
 `.github/workflows/ci.yml` runs all of the above on every push/PR.
 

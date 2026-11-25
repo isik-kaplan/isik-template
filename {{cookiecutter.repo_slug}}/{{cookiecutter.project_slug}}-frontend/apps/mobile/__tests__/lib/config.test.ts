@@ -1,14 +1,18 @@
 import { apiOrigin, authOrigin, webOrigin } from '@/lib/config'
 
+import { readFileSync, readdirSync } from 'node:fs'
+import path from 'node:path'
+
 describe('config', () => {
-  const originalEnv = process.env
+  // Set and put back one by one: Expo's transform reads the original process.env, so replacing it changes nothing.
+  const { EXPO_PUBLIC_API_ORIGIN, EXPO_PUBLIC_AUTH_ORIGIN } = process.env
 
-  beforeEach(() => {
-    process.env = { ...originalEnv }
-  })
-
-  afterAll(() => {
-    process.env = originalEnv
+  afterEach(() => {
+    // Assigning undefined would store the string "undefined".
+    for (const [name, value] of Object.entries({ EXPO_PUBLIC_API_ORIGIN, EXPO_PUBLIC_AUTH_ORIGIN })) {
+      if (value === undefined) delete process.env[name]
+      else process.env[name] = value
+    }
   })
 
   it('reads EXPO_PUBLIC_API_ORIGIN for apiOrigin()', () => {
@@ -34,5 +38,16 @@ describe('config', () => {
   it('throws a clear error when EXPO_PUBLIC_AUTH_ORIGIN is unset', () => {
     delete process.env.EXPO_PUBLIC_AUTH_ORIGIN
     expect(() => authOrigin()).toThrow('EXPO_PUBLIC_AUTH_ORIGIN')
+  })
+
+  it('reads every variable by its full name, the only way a build inlines one', () => {
+    const root = path.join(__dirname, '../..')
+    const dynamic = ['app', 'lib', 'components', 'theme'].flatMap((dir) =>
+      (readdirSync(path.join(root, dir), { recursive: true }) as string[])
+        .filter((file) => /\.tsx?$/.test(file))
+        .filter((file) => /process\.env\[/.test(readFileSync(path.join(root, dir, file), 'utf8')))
+        .map((file) => `${dir}/${file}`)
+    )
+    expect(dynamic).toEqual([])
   })
 })

@@ -115,6 +115,8 @@ CONFIG = config(
         "SMS": {
             # Only e2e sets it, forcing the file sender despite DEBUG.
             "BACKEND": string(missing_default=""),
+            # Where the file sender appends; the mobile flows' native backend can't make /sms on macOS.
+            "FILE_PATH": string(missing_default="/sms/messages.jsonl"),
 {%- if cookiecutter.sms == "twilio" %}
             # Empty in development, where texts go to the log; isik.E024 refuses a production start without them.
             "TWILIO": {

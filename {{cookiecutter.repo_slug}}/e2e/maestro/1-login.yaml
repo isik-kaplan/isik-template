@@ -1,0 +1,30 @@
+appId: {{ cookiecutter.domain.split(".") | reverse | join(".") }}.mobile
+name: A wrong password is refused, the right one signs in, and logging out signs out
+---
+- runFlow: common/start.yaml
+- tapOn:
+    id: email-input
+- inputText: ${SUPERUSER_EMAIL}
+- tapOn:
+    id: password-input
+- inputText: not-the-password
+# Return leaves a one-line field, closing the keyboard over the button; hideKeyboard fails on iOS.
+- pressKey: Enter
+- tapOn:
+    id: login-submit
+- assertVisible:
+    id: login-error
+- tapOn:
+    id: password-input
+- eraseText: 40
+- inputText: ${SUPERUSER_PASSWORD}
+- pressKey: Enter
+- tapOn:
+    id: login-submit
+- extendedWaitUntil:
+    visible: You're logged in as ${SUPERUSER_EMAIL}
+    timeout: 15000
+- tapOn:
+    id: logout-button
+- assertVisible:
+    id: login-form

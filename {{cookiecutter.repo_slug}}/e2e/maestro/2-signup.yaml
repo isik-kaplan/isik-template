@@ -1,0 +1,102 @@
+appId: {{ cookiecutter.domain.split(".") | reverse | join(".") }}.mobile
+name: Signing up needs the address confirmed before the account can sign in
+---
+- runFlow: common/start.yaml
+- evalScript: ${output.handle = 'm' + Date.now()}
+- evalScript: ${output.email = output.handle + '@example.test'}
+{%- if cookiecutter.phone == "required" %}
+- evalScript: ${output.phone = '+1415' + String(Math.floor(Math.random() * 1e7)).padStart(7, '0')}
+{%- endif %}
+- tapOn:
+    id: signup-link
+# Whichever names this project asks for.
+- runFlow:
+    when:
+      visible:
+        id: username-input
+    commands:
+      - tapOn:
+          id: username-input
+      - inputText: ${output.handle}
+- runFlow:
+    when:
+      visible:
+        id: first-name-input
+    commands:
+      - tapOn:
+          id: first-name-input
+      - inputText: Maestro
+- runFlow:
+    when:
+      visible:
+        id: last-name-input
+    commands:
+      - tapOn:
+          id: last-name-input
+      - inputText: Tester
+- tapOn:
+    id: email-input
+- inputText: ${output.email}
+{%- if cookiecutter.phone == "required" %}
+- tapOn:
+    id: phone-input
+- inputText: ${output.phone}
+{%- endif %}
+- tapOn:
+    id: password-input
+- inputText: correct-horse-battery-staple
+# Return leaves a one-line field, closing the keyboard over the button; hideKeyboard fails on iOS.
+- pressKey: Enter
+- tapOn:
+    id: signup-submit
+{%- if cookiecutter.phone == "required" %}
+# The number's code comes before the address's mail.
+- extendedWaitUntil:
+    visible:
+      id: verify-phone-form
+    timeout: 15000
+- runScript:
+    file: scripts/sms.js
+    env:
+      SMS_TO: ${output.phone}
+- tapOn:
+    id: verify-phone-code-input
+- inputText: ${output.code}
+- pressKey: Enter
+- tapOn:
+    id: verify-phone-submit
+- extendedWaitUntil:
+    visible:
+      id: verify-phone-notice
+    timeout: 15000
+{%- else %}
+- extendedWaitUntil:
+    visible: We've sent a link to ${output.email}. Open it to finish signing up, then log in.
+    timeout: 15000
+{%- endif %}
+- runScript:
+    file: scripts/mail.js
+    env:
+      MAIL_TO: ${output.email}
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible:
+      id: login-form
+    timeout: 30000
+- tapOn:
+    id: email-input
+- inputText: ${output.email}
+- tapOn:
+    id: password-input
+- inputText: correct-horse-battery-staple
+- pressKey: Enter
+- tapOn:
+    id: login-submit
+- extendedWaitUntil:
+    visible: You're logged in as ${output.email}
+    timeout: 15000
+- tapOn:
+    id: logout-button
+- assertVisible:
+    id: login-form
