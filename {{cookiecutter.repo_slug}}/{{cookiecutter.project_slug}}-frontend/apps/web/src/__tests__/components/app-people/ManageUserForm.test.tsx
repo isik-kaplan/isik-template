@@ -69,7 +69,13 @@ describe('ManageUserForm', () => {
     expect(box(/Manage people/).checked).toBe(false)
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     const [request] = fetchMock.mock.calls[0] as unknown as [Request]
-    expect(await request.json()).toEqual({ is_active: true, is_staff: false, is_superuser: false, permissions: [] })
+    expect(await request.json()).toEqual({
+      is_active: true,
+      is_staff: false,
+      is_superuser: false,
+      permissions: [],
+      groups: [],
+    })
   })
 
   it('starts a staff superuser as one', () => {
@@ -102,6 +108,7 @@ describe('ManageUserForm', () => {
       is_staff: true,
       is_superuser: true,
       permissions: ['users:grant:rights', 'users:manage:user'],
+      groups: [],
     })
     expect(toast.success).toHaveBeenCalledWith('Saved.')
     expect(refresh).toHaveBeenCalled()
@@ -146,5 +153,33 @@ describe('ManageUserForm', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('offers no groups where there are none', () => {
+    render(<ManageUserForm user={BOB} etag={ETAG} permissions={PERMISSIONS} />)
+
+    expect(screen.queryByRole('group', { name: 'Groups' })).toBeNull()
+  })
+
+  it('puts them in groups and takes them out of others, saved with the rest', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse(200, BOB))
+    globalThis.fetch = fetchMock
+    const groups = [
+      { id: 'g1', name: 'ops' },
+      { id: 'g2', name: 'support' },
+      { id: 'g3', name: 'billing' },
+    ]
+    const member = { ...BOB, groups: ['g1', 'g3'] }
+    render(<ManageUserForm user={member} etag={ETAG} permissions={PERMISSIONS} groups={groups} />)
+
+    expect(screen.getByRole('group', { name: 'Groups' })).toBeTruthy()
+    expect(box(/ops/).checked).toBe(true)
+    await userEvent.click(box(/ops/))
+    await userEvent.click(box(/support/))
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    const [request] = fetchMock.mock.calls[0] as unknown as [Request]
+    // Leaving one keeps the others.
+    expect((await request.json()).groups).toEqual(['g3', 'g2'])
   })
 })

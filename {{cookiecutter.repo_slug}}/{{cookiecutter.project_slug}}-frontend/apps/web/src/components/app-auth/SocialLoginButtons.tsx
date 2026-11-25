@@ -1,7 +1,7 @@
 'use client'
 
 import { useClientTranslation } from '@/i18n/client'
-import { socialProviders } from '@/lib/socialProviders'
+import { signInProviders } from '@/lib/socialProviders'
 
 import { AutoFormButton } from './AutoFormButton'
 import { ProviderIcon } from './ProviderIcon'
@@ -10,11 +10,13 @@ export type SocialLoginButtonsProps = {
   // Absolute URLs, computed server-side by the page (see AutoFormButton).
   action: string
   callbackUrl: string
+  // On the admin's sign-in page, which offers the admin-only providers too.
+  admin?: boolean
 }
 
-export function SocialLoginButtons({ action, callbackUrl }: SocialLoginButtonsProps) {
+export function SocialLoginButtons({ action, callbackUrl, admin = false }: SocialLoginButtonsProps) {
   const { t } = useClientTranslation(['auth'])
-  const providers = socialProviders()
+  const providers = signInProviders(admin)
   if (providers.length === 0) return null
 
   return (

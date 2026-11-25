@@ -28,7 +28,7 @@ test('a device shows a code, somebody lets it in, and it gets one token for them
   expect(clientId).not.toBe('')
 
   const superuser = await asTheSuperuser(browser)
-  await superuser.goto('/staff/applications?approval=pending')
+  await superuser.goto('/admin/app-approvals?approval=pending')
   await superuser.getByRole('link', { name }).click()
   await act(
     superuser,

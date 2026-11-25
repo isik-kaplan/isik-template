@@ -1,6 +1,8 @@
 from django.contrib.auth import models as auth_models
 from django.contrib.auth.backends import ModelBackend
 
+from apps.users.models.group_permission import GroupPermission
+from apps.users.models.user_group import UserGroup
 from apps.users.permissions import VOCABULARY
 
 
@@ -22,6 +24,12 @@ class PermissionsBackend(ModelBackend):
                 permissions = getattr(self, f"_get_{from_name}_permissions")(user_obj)
             setattr(user_obj, cache_name, set(permissions.values_list("codename", flat=True).order_by()))
         return getattr(user_obj, cache_name)
+
+    def _get_group_permissions(self, user_obj):
+        """`ModelBackend`'s, through the project's own groups rather than auth's."""
+        groups = UserGroup.objects.filter(user=user_obj).values("group")
+        given = GroupPermission.objects.filter(group__in=groups).values("permission")
+        return auth_models.Permission.objects.filter(pk__in=given)
 
     def get_all_permissions(self, user_obj, obj=None):
         """Expanded, unlike `get_user_permissions`/`get_group_permissions`, which answer "what was granted"."""

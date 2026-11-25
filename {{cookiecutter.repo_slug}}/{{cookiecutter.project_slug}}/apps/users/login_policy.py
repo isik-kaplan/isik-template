@@ -40,8 +40,8 @@ def shut_out(policy):
 
 
 def sweep(policy):
-    """Returns how many sessions ended. Keys come from allauth's rows, since Django's would need decoding;
-    admin sessions have no such row and are ended by the backends' per-request check."""
+    """Returns how many sessions ended. Keys come from allauth's rows, since Django's would need decoding; a
+    session without one is ended by the backends' per-request check."""
     tracked = UserSession.objects.filter(user__in=shut_out(policy))
     ended, _ = Session.objects.filter(
         session_key__in=tracked.values("session_key"), expire_date__gt=timezone.now()

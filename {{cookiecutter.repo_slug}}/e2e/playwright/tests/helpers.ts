@@ -9,7 +9,7 @@ import { aNumber, codeTextedTo } from './sms'
 /** The same variable the app's containers get, so social specs run exactly when there is a button. */
 export const OIDC_CONFIGURED = (process.env.{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS ?? '')
   .split(',')
-  .some((provider) => provider.trim() === 'openid_connect')
+  .some((provider) => provider.trim() === 'openid_connect:authentik')
 
 // The login field's label: it names a phone number where one signs in.
 export const LOGIN_LABEL = '{{ "Username, email or phone number" if cookiecutter.phone == "required" else "Username or email" }}'
@@ -92,6 +92,21 @@ export async function signInAtAuthentik(page: Page, username: string) {
 
 export const SUPERUSER = process.env.{{ cookiecutter.config_prefix }}__SETUP__SUPERUSER__USERNAME ?? ''
 export const SUPERUSER_PASSWORD = process.env.{{ cookiecutter.config_prefix }}__SETUP__SUPERUSER__PASSWORD ?? ''
+
+/** admin.<domain>, which the app serves too. */
+export const ADMIN = 'http://admin.{{ cookiecutter.domain }}'
+
+/** A browser of its own, signed in to the admin as the superuser `setup` made. */
+export async function signInToAdmin(browser: Browser): Promise<Page> {
+  const page = await (await browser.newContext()).newPage()
+  await page.goto(`${ADMIN}/`)
+  await expect(page).toHaveURL(`${ADMIN}/auth/login?next=%2F`)
+  await page.getByLabel(LOGIN_LABEL).fill(SUPERUSER)
+  await page.getByLabel('Password', { exact: true }).fill(SUPERUSER_PASSWORD)
+  await page.getByRole('button', { name: 'Log in' }).click()
+  await expect(page).toHaveURL(`${ADMIN}/people`)
+  return page
+}
 
 /** Proves only if the gate asks: a proof from moments ago may still be unspent. */
 export async function act(page: Page, password: string, perform: () => Promise<void>, done: Locator) {

@@ -38,9 +38,9 @@ export function destinationsFor(me: Me | undefined, t: Translate): Destination[]
     { href: '/profile', label: t('auth:homeProfileLink') },
     { href: '/profile/notifications', label: t('auth:profileNotificationsTab') },
     ...(applicationsAreOn() ? [{ href: '/applications', label: t('auth:homeApplicationsLink') }] : []),
-    ...(me && maySeePeople(me) ? [{ href: '/staff/people', label: t('auth:homePeopleLink') }] : []),
+    ...(me && maySeePeople(me) ? [{ href: '/admin/people', label: t('auth:homePeopleLink') }] : []),
     ...(me && mayReviewApplications(me)
-      ? [{ href: '/staff/applications', label: t('auth:homeApplicationReviewsLink') }]
+      ? [{ href: '/admin/app-approvals', label: t('auth:homeApplicationReviewsLink') }]
       : []),
 {%- if cookiecutter.webhooks != "none" %}
     ...(me && mayManageWebhooks(me) ? [{ href: '/webhooks', label: t('auth:homeWebhooksLink') }] : []),
@@ -65,7 +65,7 @@ export function searchableResources(me: Me, t: Translate): SearchableResource[] 
           id: user.id,
           title: personLabel(user),
           subtitle: user.email,
-          href: `/staff/people/${user.id}`,
+          href: `/admin/people/${user.id}`,
         }))
       },
     })
@@ -95,7 +95,7 @@ export function searchableResources(me: Me, t: Translate): SearchableResource[] 
           id: String(application.id),
           title: application.name,
           subtitle: application.owner,
-          href: `/staff/applications/${application.id}`,
+          href: `/admin/app-approvals/${application.id}`,
         }))
       },
     })

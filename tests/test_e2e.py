@@ -38,8 +38,9 @@ def _switch_social_login_off(project_path):
     """With no provider named, the OIDC specs skip themselves."""
     env = project_path / "e2e" / ".env"
     text = env.read_text()
-    line = next(line for line in text.splitlines() if line.endswith("__SOCIAL_LOGIN__PROVIDERS=openid_connect"))
-    env.write_text(text.replace(line, line.removesuffix("openid_connect")))
+    issuer = "openid_connect:authentik"
+    line = next(line for line in text.splitlines() if line.endswith(f"__SOCIAL_LOGIN__PROVIDERS={issuer}"))
+    env.write_text(text.replace(line, line.removesuffix(issuer)))
 
 
 def test_generated_project_passes_its_own_e2e_suite(cookies):

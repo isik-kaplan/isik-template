@@ -71,7 +71,7 @@ carry over the `broker` and `worker` services, the `BROKER__*` settings and
 `django-celery-results`; no task changes.
 {% else %}
 Tasks are Celery tasks over RabbitMQ (`broker`), run by `worker`{% if cookiecutter.background_jobs == "celery-with-beat" %}; `scheduler` runs Celery beat
-with `django_celery_beat`'s database schedule, edited in the admin{% endif %}. Every task takes
+with `django_celery_beat`'s database schedule, filled from the beat schedule in `celery.py`{% endif %}. Every task takes
 `base=OnCommitTask`, so it is dispatched once the transaction that asked for it commits, and its
 history rows name whoever caused it.
 {% endif %}
@@ -323,15 +323,15 @@ registered as public, with no redirect URIs: it keeps no secret and is sent back
 
 Anybody signed in registers an app at `/applications` - DOT's own `Application`, swapped for
 `apps.oauth_provider.models.Application`, which carries its review state and the scopes it asks for.
-In approval mode it waits for a superuser (`/staff/applications`) before it signs anybody in; in auto
+In approval mode it waits for a superuser (the admin's App approvals) before it signs anybody in; in auto
 mode it is approved for what it asks the moment it is registered. A superuser can withdraw one, its
 owner can switch it off, and either takes every token it holds down with it; the other superusers are told
 (`application_taken_down`, which they may mute). The profile's Apps tab
 lists the apps a person let in, with a way to shut each one out (revoking its refresh tokens too).
 Those moves are `apps/oauth_provider/services.py`'s alone: triggers refuse an approval, or an approved
-scope, written from anywhere else - DOT's admin, a shell, a stray `update()` - and check constraints
+scope, written from anywhere else - a shell, a stray `update()` - and check constraints
 keep DOT's own columns from skipping the consent question or naming a grant this project does not
-serve. DOT's application admin is kept for looking things up and deleting, and changes nothing. Expired
+serve. Expired
 tokens and spent grants are deleted daily ({% if cookiecutter.background_jobs == "celery-with-beat" %}beat{% else %}uWSGI's cron{% endif %}, `manage.py clear_expired_tokens`).
 
 Beyond signing somebody in, an app can ask to act for them on the API. Its scopes are this project's
@@ -428,8 +428,17 @@ their history, in the same transaction.
 (`apps.users.backends.permissions.PermissionsBackend`, which also expands what each one `requires`). A
 superuser holds them all; anybody else holds what was granted. Granting follows one rule
 (`apps/users/granting.py`): you may hand on only what you hold yourself, and only staff holding
-`users:grant:rights` grant anything at all. `/staff/people` lists everybody's account for staff and
-holders of `users:manage:user`, who may also deactivate somebody or change what they may do.
+`users:grant:rights` grant anything at all. Groups (`apps.users.models.Group`, the project's own rather than
+`auth.Group`) give everybody in them their permissions; putting somebody in one is a grant of what it gives.
+
+## The admin
+
+`admin.{{ cookiecutter.domain }}` is the web app too, not Django's admin, which is not installed: the proxy
+(`apps/web/src/proxy.ts`) serves `src/app/admin/` there and sends any other path back to the app, whose
+`/admin/...` addresses lead the other way. It shows each visitor the parts they may use: **People** (everybody's
+account, for staff and holders of `users:manage:user`, who may also deactivate somebody, change what they may do and
+put them in groups), **Groups**, **App approvals** (superusers, while the OAuth provider is on) and **Site settings**
+(staff). Signing in there is the app's own page, which with `SOCIAL_LOGIN__ONLY` still takes a superuser's password.
 
 ## Legal pages and cookies
 

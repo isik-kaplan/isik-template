@@ -11,7 +11,8 @@ const providers = vi.hoisted(() => [
   { id: 'okta', name: 'Okta', icon: 'https://example.test/okta.svg' },
 ])
 
-vi.mock('@/lib/socialProviders', () => ({ socialProviders: () => providers }))
+const signInProviders = vi.hoisted(() => vi.fn((_admin: boolean) => providers))
+vi.mock('@/lib/socialProviders', () => ({ signInProviders }))
 
 const action = 'https://auth.example.test/v0/browser/auth/provider/redirect'
 const callbackUrl = 'https://example.test/auth/callback-complete?next=%2F'
@@ -52,12 +53,19 @@ describe('SocialLoginButtons', () => {
     const oktaButton = screen.getByRole('button', { name: 'Continue with Okta' })
     expect(oktaButton.querySelector('img')?.getAttribute('src')).toBe('https://example.test/okta.svg')
   })
+
+  it("offers the admin's providers on the admin's page, and the app's elsewhere", () => {
+    render(<SocialLoginButtons action={action} callbackUrl={callbackUrl} admin />)
+    expect(signInProviders).toHaveBeenLastCalledWith(true)
+    render(<SocialLoginButtons action={action} callbackUrl={callbackUrl} />)
+    expect(signInProviders).toHaveBeenLastCalledWith(false)
+  })
 })
 
 describe('SocialLoginButtons with no providers configured', () => {
   it('renders nothing', async () => {
     vi.resetModules()
-    vi.doMock('@/lib/socialProviders', () => ({ socialProviders: () => [] }))
+    vi.doMock('@/lib/socialProviders', () => ({ signInProviders: () => [] }))
     const { SocialLoginButtons: EmptySocialLoginButtons } = await import('@/components/app-auth/SocialLoginButtons')
 
     const { container } = render(<EmptySocialLoginButtons action={action} callbackUrl={callbackUrl} />)

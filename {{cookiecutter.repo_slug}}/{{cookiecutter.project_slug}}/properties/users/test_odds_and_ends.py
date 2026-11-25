@@ -155,3 +155,8 @@ def test_a_sign_out_of_an_expired_session_names_nobody(logged, sent_with):
     user_logged_out.send(sender=User, request=sent_with, user=None)
 
     assert [line for line in logged if line["event"] == "logout.succeeded"] == []
+
+
+@given(credentials=st.dictionaries(st.sampled_from(["username", "email", "password"]), st.text(max_size=12)))
+def test_the_permission_backend_signs_nobody_in_whatever_it_is_handed(credentials):
+    assert PermissionsBackend().authenticate(None, **credentials) is None

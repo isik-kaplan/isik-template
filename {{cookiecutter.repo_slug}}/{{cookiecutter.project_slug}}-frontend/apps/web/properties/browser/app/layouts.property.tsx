@@ -18,7 +18,7 @@ const layouts = Object.entries(found).map(([file, load]) => ({
 }))
 
 // The segments a visitor must be signed in to see anything of: pinned, so a gate dropped is a failure here.
-const GATED = ['applications', 'profile', 'staff', 'webhooks']
+const GATED = ['admin', 'applications', 'profile', 'webhooks']
 
 const MARKER = 'the page this layout wraps'
 
@@ -67,7 +67,19 @@ describe('every layout', () => {
       for (const layout of layouts) {
         const wrapped = await wrap(layout, visitor, 'everything', w)
         expect(wrapped.stopped || wrapped.leaked, layout.segment).toBe(true)
-        if (!layout.segment.startsWith('applications')) expect(wrapped.leaked, layout.segment).toBe(true)
+        // Each of these asks the backend whether there is anything for this visitor, and stops when the answer is no.
+        if (!['applications', 'admin'].some((segment) => layout.segment.startsWith(segment)))
+          expect(wrapped.leaked, layout.segment).toBe(true)
+      }
+    }
+  )
+
+  test.prop([world, fc.constantFrom<Visitor>('member', 'staff', 'superuser')])(
+    'keeps the admin from somebody signed in whom the backend could not say who they are',
+    async (w, visitor) => {
+      for (const layout of layouts.filter((l) => l.segment.startsWith('admin'))) {
+        const wrapped = await wrap(layout, visitor, 'nothing at all', w)
+        expect(wrapped.leaked, layout.segment).toBe(false)
       }
     }
   )

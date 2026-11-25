@@ -18,7 +18,7 @@ const mayManageWebhooks = ((access as Record<string, unknown>).mayManageWebhooks
 const config = vi.hoisted(() => ({
   DOMAIN: 'test-project.test',
   OAUTH_PROVIDER: { MODE: 'approval' },
-  SOCIAL_LOGIN: { PROVIDERS: [], ICONS: [] },
+  SOCIAL_LOGIN: { PROVIDERS: [], ICONS: [], ADMIN_ONLY: [] },
 }))
 vi.mock('@/config/public', () => ({ CONFIG: config }))
 
@@ -74,10 +74,10 @@ describe('the command palette', () => {
     const hrefs = destinationsFor(me as never, t).map((destination) => destination.href)
     expect(hrefs.slice(0, 3)).toEqual(['/', '/profile', '/profile/notifications'])
     expect(hrefs.includes('/applications')).toBe(applicationsAreOn())
-    expect(hrefs.includes('/staff/people')).toBe(maySeePeople(me as never))
-    expect(hrefs.includes('/staff/applications')).toBe(mayReviewApplications(me as never))
+    expect(hrefs.includes('/admin/people')).toBe(maySeePeople(me as never))
+    expect(hrefs.includes('/admin/app-approvals')).toBe(mayReviewApplications(me as never))
     expect(hrefs.includes('/webhooks')).toBe(mayManageWebhooks(me as never))
-    expect(destinationsFor(undefined, t).map((destination) => destination.href)).not.toContain('/staff/people')
+    expect(destinationsFor(undefined, t).map((destination) => destination.href)).not.toContain('/admin/people')
   })
 
   // Every read answering: a failed one is the same as no collection, which each example asks for too.
@@ -113,7 +113,7 @@ describe('the command palette', () => {
           expect(hits).toHaveLength(expected)
           for (const hit of hits)
             expect(hit.href).toMatch(
-              /^\/(staff\/people|applications|staff\/applications|profile\/notifications|webhooks)/
+              /^\/(admin\/people|applications|admin\/app-approvals|profile\/notifications|webhooks)/
             )
         }
       }

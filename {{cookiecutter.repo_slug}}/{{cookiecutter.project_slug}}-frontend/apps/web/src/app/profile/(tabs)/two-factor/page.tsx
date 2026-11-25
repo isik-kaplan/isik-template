@@ -4,6 +4,7 @@ import { PasskeyList } from '@/components/app-auth/PasskeyList'
 import { RecoveryCodesSection } from '@/components/app-auth/RecoveryCodesSection'
 import { TotpSetup } from '@/components/app-auth/TotpSetup'
 
+import { siblingOrigin } from '@/lib/hosts'
 import { REAUTHENTICATION_REQUIRED_HEADER, provePath } from '@/lib/reauthentication'
 import { requestOrigin } from '@/lib/requestOrigin'
 import { visitorFetch } from '@/lib/visitor'
@@ -15,7 +16,7 @@ import { detailOf } from '@isikk/core/allauth'
 export default async function ProfileTwoFactorPage() {
   // Gating already happened one level up, in profile/layout.tsx.
   const requestHeaders = await headers()
-  const authOrigin = requestOrigin(requestHeaders).replace('://', '://auth.')
+  const authOrigin = siblingOrigin(requestOrigin(requestHeaders), 'auth')
   const authApi = new AuthApi(authOrigin, {
     cookieHeader: requestHeaders.get('cookie') ?? undefined,
     baseFetch: visitorFetch(requestHeaders),

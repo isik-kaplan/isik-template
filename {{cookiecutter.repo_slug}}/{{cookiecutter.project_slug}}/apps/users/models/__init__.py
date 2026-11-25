@@ -1,3 +1,5 @@
+from apps.users.models.group import Group
+from apps.users.models.group_permission import GroupPermission
 from apps.users.models.personal_access_token import PersonalAccessToken
 from apps.users.models.personal_access_token_scope import PersonalAccessTokenScope
 from apps.users.models.protected_content_type import ProtectedContentType
@@ -9,6 +11,8 @@ from apps.users.models.user_permission import UserPermission
 
 
 __all__ = [
+    "Group",
+    "GroupPermission",
     "PersonalAccessToken",
     "PersonalAccessTokenScope",
     "ProtectedContentType",

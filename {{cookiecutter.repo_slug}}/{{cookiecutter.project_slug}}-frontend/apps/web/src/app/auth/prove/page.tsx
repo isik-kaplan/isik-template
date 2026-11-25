@@ -6,6 +6,7 @@ import { ProveContent } from '@/components/app-auth/ProveContent'
 
 import { sUseTranslation } from '@/i18n'
 import { requireSession } from '@/lib/getSession'
+import { siblingOrigin } from '@/lib/hosts'
 import { provePath, safeNext } from '@/lib/reauthentication'
 import { requestOrigin } from '@/lib/requestOrigin'
 import { visitorFetch } from '@/lib/visitor'
@@ -26,7 +27,7 @@ export default async function ProvePage({
 
   const requestHeaders = await headers()
   const origin = requestOrigin(requestHeaders)
-  const api = new Api(origin.replace('://', '://api.'), {
+  const api = new Api(siblingOrigin(origin, 'api'), {
     cookieHeader: requestHeaders.get('cookie') ?? undefined,
     baseFetch: visitorFetch(requestHeaders),
   })
@@ -47,7 +48,7 @@ export default async function ProvePage({
         flows={flows ?? []}
         next={next}
         error={error}
-        providerAction={`${origin.replace('://', '://auth.')}${PROVIDER_REAUTHENTICATE_PATH}`}
+        providerAction={`${siblingOrigin(origin, 'auth')}${PROVIDER_REAUTHENTICATE_PATH}`}
         callbackUrl={`${origin}${provePath(next)}`}
       />
     </AuthCard>

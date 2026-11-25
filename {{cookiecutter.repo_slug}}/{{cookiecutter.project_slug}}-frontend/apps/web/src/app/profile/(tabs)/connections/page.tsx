@@ -2,6 +2,7 @@ import { headers } from 'next/headers'
 
 import { ConnectionsList } from '@/components/app-auth/ConnectionsList'
 
+import { siblingOrigin } from '@/lib/hosts'
 import { requestOrigin } from '@/lib/requestOrigin'
 import { visitorFetch } from '@/lib/visitor'
 
@@ -15,7 +16,7 @@ export default async function ProfileConnectionsPage({
   // Gating already happened one level up, in profile/layout.tsx.
   const requestHeaders = await headers()
   const origin = requestOrigin(requestHeaders)
-  const authOrigin = origin.replace('://', '://auth.')
+  const authOrigin = siblingOrigin(origin, 'auth')
   const authApi = new AuthApi(authOrigin, {
     cookieHeader: requestHeaders.get('cookie') ?? undefined,
     baseFetch: visitorFetch(requestHeaders),

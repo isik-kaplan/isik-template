@@ -6,7 +6,7 @@ import pytest
 from django.urls import NoReverseMatch
 from django_hosts.resolvers import get_host
 
-from apps.common.links import admin_path, api_path, auth_path
+from apps.common.links import api_path, auth_path
 
 
 ID = uuid.UUID("01900000-0000-7000-8000-000000000000")
@@ -34,17 +34,13 @@ def test_auth_path_names_the_auth_host():
     assert auth_path("headless:browser:account:login") == "/v0/browser/auth/login"
 
 
-def test_admin_path_names_the_admin_host():
-    assert admin_path("admin:users_user_change", ID) == f"/users/user/{ID}/change/"
-
-
-@pytest.mark.parametrize(("helper", "name"), [(api_path, "admin:index"), (auth_path, "users-list")])
+@pytest.mark.parametrize(("helper", "name"), [(api_path, "headless:browser:account:login"), (auth_path, "users-list")])
 def test_a_name_only_another_host_mounts_is_not_found(helper, name):
     with pytest.raises(NoReverseMatch):
         helper(name)
 
 
-@pytest.mark.parametrize(("helper", "host"), [(api_path, "api"), (auth_path, "auth"), (admin_path, "admin")])
+@pytest.mark.parametrize(("helper", "host"), [(api_path, "api"), (auth_path, "auth")])
 def test_each_hands_reverse_its_hosts_urlconf_and_every_argument(monkeypatch, helper, host):
     calls = []
     monkeypatch.setattr("apps.common.links.reverse", lambda *args, **kwargs: calls.append((args, kwargs)))

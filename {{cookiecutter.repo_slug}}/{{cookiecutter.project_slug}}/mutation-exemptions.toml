@@ -12,29 +12,17 @@
 # scripts/check_mutants.py and scripts/confirm_survivors.py enforce this file in CI, and every entry
 # is re-run on every push by the mutation job's re-check step.
 
-["{{ cookiecutter.project_slug }}.settings.x__social_app_config"]
-reason = """Genuinely covered, not equivalent: apps' tests/test_settings.py calls this function
-directly and asserts on its return value for every branch (default provider, missing env vars,
-the openid_connect-only fields). Manually breaking the function (e.g. changing "key": "" to
-"key": "x") makes those tests fail, confirmed by hand.
-
-mutmut's own trampoline never attributes any hit here to a test, though. The only call site inside
-this module is SOCIALACCOUNT_PROVIDERS' dict comprehension, which runs once during Django's own
-settings-module import (django.setup(), inside pytest-django's pytest_configure hook) - before
-mutmut's per-test attribution in pytest_runtest_teardown has anywhere to attach the hit to. Calling
-the function again from a test does execute its trampoline, but the mutmut version pinned here
-(3.7.x) still reports "no tests" for it - a tooling limitation with Django settings modules, not a
-real coverage gap. Revisit if a mutmut upgrade changes this."""
-
 ["{{ cookiecutter.project_slug }}.settings.x__origins"]
 reason = """Genuinely covered, not equivalent: tests/test_settings.py calls this function directly for
 both branches (DEBUG answers http and https, a deployment https only) and checks CSRF_TRUSTED_ORIGINS
 and CORS_ALLOWED_ORIGINS against it. Manually breaking it (misspelling the "https" scheme, or answering
 None outside DEBUG) makes those tests fail, confirmed by hand.
 
-The same settings-module tooling limitation as x__social_app_config above: its only call sites run once
-during Django's settings import, and mutmut reports "no tests" for every mutant and phase two sees none
-of them killed, however directly a test calls it."""
+mutmut's own trampoline never attributes any hit here to a test, though: its only call sites run once
+during Django's settings import (django.setup(), inside pytest-django's pytest_configure hook), before
+mutmut's per-test attribution has anywhere to attach a hit, and the mutmut version pinned here (3.7.x)
+still reports "no tests" when a test calls it again - a tooling limitation with Django settings modules,
+not a real coverage gap. Revisit if a mutmut upgrade changes this."""
 
 ["{{ cookiecutter.project_slug }}.celery_task.xǁOnCommitTaskǁworker_history_context"]
 reason = """Genuinely covered, not equivalent: the two mutants rename the "version" key ("XXversionXX",

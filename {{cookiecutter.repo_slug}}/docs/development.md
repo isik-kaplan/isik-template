@@ -290,7 +290,7 @@ a file the shard owes (`--shard all` after a whole-tree run).
 Each of these fails a commit (pre-commit) and CI rather than relying on review:
 
 - **One of a thing per file.** A module named for a kind (`serializers`, `viewsets`, `views`, `models`,
-  `filters`, `fields`, `permissions`, `adapters`, `middleware`, `admin`, ...) becomes a folder with one
+  `filters`, `fields`, `permissions`, `adapters`, `middleware`, ...) becomes a folder with one
   member per file once it holds two, and a governed file holds nothing but its kind - a helper goes onto
   the model or into a utility module (`apps/common` is that package). `layout-check` runs
   `{{ cookiecutter.project_slug }}/scripts/layout_check.py`; a deliberate exception goes in its

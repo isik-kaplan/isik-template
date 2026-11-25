@@ -44,7 +44,7 @@ test('an application is approved, signs somebody in, acts for them, and is shut 
   const { clientId, clientSecret } = await registerApplication(page, name)
 
   const superuser = await asTheSuperuser(browser)
-  await superuser.goto('/staff/applications?approval=pending')
+  await superuser.goto('/admin/app-approvals?approval=pending')
   await superuser.getByRole('link', { name }).click()
   await act(
     superuser,
@@ -52,7 +52,7 @@ test('an application is approved, signs somebody in, acts for them, and is shut 
     () => superuser.getByRole('button', { name: 'Approve' }).click(),
     superuser.getByText('Approved', { exact: true })
   )
-  await superuser.goto('/staff/people')
+  await superuser.goto('/admin/people')
   await superuser.getByRole('link', { name: username, exact: true }).click()
   await act(
     superuser,

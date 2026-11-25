@@ -254,7 +254,7 @@ describe('CommandPalette', () => {
     expect(within(second).getByRole('button').childElementCount).toBe(1)
 
     await userEvent.keyboard('{ArrowDown}{Enter}')
-    expect(push).toHaveBeenCalledWith('/staff/people/u2')
+    expect(push).toHaveBeenCalledWith('/admin/people/u2')
   })
 
   it('counts the records on from the pages, so the arrows walk both as one list', async () => {
@@ -298,7 +298,7 @@ describe('CommandPalette', () => {
     expect(selected()?.textContent).toContain('ada@a.test')
     await userEvent.click(hit)
 
-    expect(push).toHaveBeenCalledWith('/staff/people/u1')
+    expect(push).toHaveBeenCalledWith('/admin/people/u1')
   })
 
   it('searches nothing for one letter', async () => {

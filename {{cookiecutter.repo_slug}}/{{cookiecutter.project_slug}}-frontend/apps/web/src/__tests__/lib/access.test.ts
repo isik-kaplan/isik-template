@@ -1,4 +1,14 @@
-import { applicationsAreOn, {% if cookiecutter.webhooks != "none" %}mayManageWebhooks, {% endif %}mayReviewApplications, maySeePeople } from '@/lib/access'
+import {
+  applicationsAreOn,
+  mayChangeGroups,
+  mayChangeSiteSettings,
+  mayEnterAdmin,
+{%- if cookiecutter.webhooks != "none" %}
+  mayManageWebhooks,
+{%- endif %}
+  mayReviewApplications,
+  maySeePeople,
+} from '@/lib/access'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -31,6 +41,25 @@ describe('access', () => {
     expect(maySeePeople(me({ permissions: ['users:manage:user'] }))).toBe(true)
     expect(maySeePeople(me({ permissions: ['users:grant:rights'] }))).toBe(false)
     expect(maySeePeople(me())).toBe(false)
+  })
+
+  it('has staff and superusers change the site settings', () => {
+    expect(mayChangeSiteSettings(me({ is_staff: true }))).toBe(true)
+    expect(mayChangeSiteSettings(me({ is_superuser: true }))).toBe(true)
+    expect(mayChangeSiteSettings(me({ permissions: ['users:manage:user'] }))).toBe(false)
+  })
+
+  it('has whoever may grant change the groups: superusers, and staff holding users:grant:rights', () => {
+    expect(mayChangeGroups(me({ is_superuser: true }))).toBe(true)
+    expect(mayChangeGroups(me({ is_staff: true, permissions: ['users:grant:rights'] }))).toBe(true)
+    expect(mayChangeGroups(me({ is_staff: true }))).toBe(false)
+    expect(mayChangeGroups(me({ permissions: ['users:grant:rights'] }))).toBe(false)
+  })
+
+  it('lets into the admin whoever has a part of it to see', () => {
+    expect(mayEnterAdmin(me({ permissions: ['users:manage:user'] }))).toBe(true)
+    expect(mayEnterAdmin(me({ is_superuser: true }))).toBe(true)
+    expect(mayEnterAdmin(me())).toBe(false)
   })
 
   it('has superusers review applications, while there are any', () => {

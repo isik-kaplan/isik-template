@@ -180,6 +180,28 @@ const authenticator = fc.oneof(
   })
 )
 
+// What a group gives may be left out of an answer, as the API document allows.
+const group = fc.record(
+  {
+    id: fc.uuid(),
+    name: text,
+    permissions: fc.subarray(['users:manage:user', 'users:grant:rights']),
+    created_at: when,
+    updated_at: when,
+  },
+  { requiredKeys: ['id', 'name', 'created_at', 'updated_at'] }
+)
+
+const siteSettings = fc.record(
+  {
+    login_policy: fc.constantFrom('everyone', 'staff', 'superusers'),
+    signed_out: fc.constant(null),
+    created_at: when,
+    updated_at: when,
+  },
+  { requiredKeys: ['signed_out', 'created_at', 'updated_at'] }
+)
+
 /** One backend's whole state, drawn per example: every read answers from it. */
 export const world = fc.record({
   me: person,
@@ -194,6 +216,8 @@ export const world = fc.record({
   devices: rows(device),
   authorized: rows(authorizedApplication),
   history: rows(historyEvent),
+  groups: rows(group),
+  siteSettings,
   // The code a device showed, or none the backend knows.
   device: fc.option(deviceAuthorization, { nil: null }),
   authenticators: fc.array(authenticator, { maxLength: 3 }),
@@ -260,6 +284,9 @@ function apiBody(path: string, w: World, visitor: Visitor, holding: boolean): un
     [/^\/v0\/notifications\/inbox\/$/, () => page(w.inbox, holding)],
     [/^\/v0\/notifications\/endpoints\/$/, () => page(w.endpoints, holding)],
     [/^\/v0\/notifications\/devices\/$/, () => page(w.devices, holding)],
+    [/^\/v0\/groups\/[^/]+\/$/, () => w.groups[0] ?? fc.sample(group, 1)[0]],
+    [/^\/v0\/groups\/$/, () => page(w.groups, holding)],
+    [/^\/v0\/site-settings\/$/, () => w.siteSettings],
   ]
   const found = routes.findIndex(([pattern]) => pattern.test(path))
   if (found >= 0 && w.down.includes(found)) return DOWN

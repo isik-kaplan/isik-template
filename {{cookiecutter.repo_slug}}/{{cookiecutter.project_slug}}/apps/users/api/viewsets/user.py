@@ -57,7 +57,7 @@ class UserViewSet(ProvesWhoTheyAre, HistoryMixin, BaseModelViewSet):
         return super().get_serializer_class()
 
     def get_queryset(self):
-        queryset = super().get_queryset().prefetch_related("user_permissions")
+        queryset = super().get_queryset().prefetch_related("user_permissions", "groups")
         # Narrowed rather than refused, so somebody else's id is a 404, not a hint it exists.
         if not getattr(self.request.user, "may_see_every_account", False):
             return queryset.filter(pk=self.request.user.pk)

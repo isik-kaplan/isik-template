@@ -31,7 +31,7 @@ import { describe, expect, vi } from 'vitest'
 const config = vi.hoisted(() => ({
   DOMAIN: 'test-project.test',
   OAUTH_PROVIDER: { MODE: 'approval' },
-  SOCIAL_LOGIN: { PROVIDERS: [] as string[], ICONS: [] as string[] },
+  SOCIAL_LOGIN: { PROVIDERS: [] as string[], ICONS: [] as string[], ADMIN_ONLY: [] as string[] },
 }))
 vi.mock('@/config/public', () => ({ CONFIG: config }))
 const project = vi.hoisted(() => ({ phone: 'required' as 'none' | 'optional' | 'required' }))

@@ -7,6 +7,7 @@ import { SocialLoginSection } from '@/components/app-auth/SocialLoginSection'
 import { sUseTranslation } from '@/i18n'
 import { afterSignIn } from '@/lib/afterSignIn'
 import { redirectIfAuthenticated } from '@/lib/getSession'
+import { isAdminHost, siblingOrigin } from '@/lib/hosts'
 import { passwordsSignIn } from '@/lib/passwords'
 import { requestOrigin } from '@/lib/requestOrigin'
 
@@ -17,30 +18,37 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   await redirectIfAuthenticated(next)
   const { t } = await sUseTranslation(['auth'])
   const origin = requestOrigin(await headers())
+  const admin = isAdminHost(new URL(origin).host)
   const passwords = passwordsSignIn()
+  // Without passwords a superuser's still opens the admin, so a provider outage never locks everybody out.
+  const passwordForm = passwords || admin
 
   return (
     <AuthCard
-      title={t('auth:loginTitle')}
+      title={admin ? t('auth:adminLoginTitle') : t('auth:loginTitle')}
       footer={
-        <p className="text-muted-foreground text-center text-sm">
-          {t('auth:noAccountLink')}
-          <AuthCardFooterLink href="/auth/signup">{t('auth:signupLink')}</AuthCardFooterLink>
-        </p>
+        admin ? undefined : (
+          <p className="text-muted-foreground text-center text-sm">
+            {t('auth:noAccountLink')}
+            <AuthCardFooterLink href="/auth/signup">{t('auth:signupLink')}</AuthCardFooterLink>
+          </p>
+        )
       }
     >
       <SocialLoginSection
-        action={`${origin.replace('://', '://auth.')}${PROVIDER_REDIRECT_PATH}`}
+        action={`${siblingOrigin(origin, 'auth')}${PROVIDER_REDIRECT_PATH}`}
         callbackUrl={`${origin}/auth/callback-complete?next=${encodeURIComponent(next)}`}
-        dividerText={passwords ? t('auth:orDivider') : undefined}
+        dividerText={passwordForm ? t('auth:orDivider') : undefined}
+        admin={admin}
       />
+      {passwordForm && <LoginForm redirectTo={next} />}
+      {!passwords && admin && (
+        <p className="text-muted-foreground text-center text-sm">{t('auth:adminLoginSuperusersOnly')}</p>
+      )}
       {passwords && (
-        <>
-          <LoginForm redirectTo={next} />
-          <AuthCardFooterLink href="/auth/forgot-password" className="block text-center">
-            {t('auth:forgotPasswordLink')}
-          </AuthCardFooterLink>
-        </>
+        <AuthCardFooterLink href="/auth/forgot-password" className="block text-center">
+          {t('auth:forgotPasswordLink')}
+        </AuthCardFooterLink>
       )}
     </AuthCard>
   )

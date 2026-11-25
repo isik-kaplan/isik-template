@@ -1,5 +1,5 @@
 """What this project adds to isik's account deletion: tokens revoked on asking, a cancel on signing in, the
-notices, and the audit trail. Signals, so the admin's login cancels a deletion as any other does."""
+notices, and the audit trail. Signals, so every way of signing in cancels a deletion."""
 
 from django.contrib.auth.signals import user_logged_in
 from django.dispatch import receiver

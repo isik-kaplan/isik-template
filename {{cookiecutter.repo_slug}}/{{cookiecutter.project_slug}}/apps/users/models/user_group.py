@@ -17,7 +17,7 @@ class UserGroup(BaseModel):
         db_comment="The member; leaving goes with the account.",
     )
     group = models.ForeignKey(
-        "auth.Group",
+        "users.Group",
         on_delete=models.CASCADE,
         related_name="+",
         verbose_name=_("group"),

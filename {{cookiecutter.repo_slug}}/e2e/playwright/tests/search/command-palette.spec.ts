@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 
-import { asTheSuperuser, signUpAndVerify } from '../helpers'
+import { ADMIN, asTheSuperuser, signUpAndVerify } from '../helpers'
 
 // The only place the palette meets a real API document, queryset and permission check: every unit test
 // stubs the clients below the component.
@@ -28,7 +28,8 @@ test('slash opens the palette with the caret already in it, and a page is a word
   await palette(page).fill('people')
   await page.keyboard.press('Enter')
 
-  await expect(page).toHaveURL(/\/staff\/people$/)
+  // The admin is a host of its own, which the app's /admin addresses lead to.
+  await expect(page).toHaveURL(`${ADMIN}/people`)
 })
 
 test('finds a person and narrows by a field the API declares', async ({ page, browser }) => {
@@ -40,7 +41,7 @@ test('finds a person and narrows by a field the API declares', async ({ page, br
   await openWithSlash(staff)
   await palette(staff).fill(person)
   await staff.getByRole('listbox').getByRole('button', { name: new RegExp(person) }).click()
-  await expect(staff).toHaveURL(/\/staff\/people\/[0-9a-f-]+$/)
+  await expect(staff).toHaveURL(new RegExp(`^${ADMIN}/people/[0-9a-f-]+$`))
 
   await openWithSlash(staff)
   await palette(staff).fill(`is_staff:true ${person}`)

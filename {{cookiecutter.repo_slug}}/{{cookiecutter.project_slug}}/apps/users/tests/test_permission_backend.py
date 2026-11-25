@@ -1,11 +1,12 @@
 """Only one backend answers permissions: a second would silently add `auth.<name>` beside each bare name."""
 
 import pytest
-from django.contrib.auth.models import AnonymousUser, Group
+from django.contrib.auth.models import AnonymousUser
 from django.contrib.auth.models import Permission as PermissionRow
 from django.contrib.contenttypes.models import ContentType
 
 from apps.users.backends import AuthenticationBackend, PermissionsBackend
+from apps.users.models.group import Group
 from apps.users.models.user import User
 from apps.users.permissions import Declaration, Permission, Vocabulary
 

@@ -27,6 +27,7 @@ from apps.notifications.models import Delivery, Device, Endpoint, EndpointKind, 
 from apps.notifications.models import Delivery, Device
 {%- endif %}
 from apps.oauth_provider import services
+from apps.users.models.group import Group
 from apps.users.models.user import User
 from apps.users.personal_access_tokens import make_token
 from conftest import give_authentication_records
@@ -75,6 +76,7 @@ def caller(client, settings, db):
     EndpointKind.objects.create(endpoint=endpoint, kind=NoticeKindPolicy.objects.get(name="token_created"))
 {%- endif %}
     make_token(user=person, scopes=[], name="fuzzed")
+    Group.objects.create(name="fuzzed")
     application = services.register_application(
         user=person, name="Fuzzed", redirect_uris="https://client.example.test/cb", requested_scopes=[]
     )

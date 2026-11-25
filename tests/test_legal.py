@@ -80,7 +80,7 @@ def test_setup_md_follows_the_answers_that_change_what_there_is_to_set_up(cookie
     # Social login is configured at runtime, so every project gets the same walkthrough.
     assert "TEST_PROJECT__SOCIAL_LOGIN__PROVIDERS" in default
     assert "MINIMAL_PROJECT__SOCIAL_LOGIN__PROVIDERS" in bare
-    assert "/v0/provider-callback/oidc/<PROVIDER_ID>/login/callback/" in bare
+    assert "/v0/provider-callback/oidc/<issuer>/login/callback/" in bare
     assert "## 9. Translations" in default and "Translations" not in bare
     assert "## 10. The mobile app" in default and "mobile app" not in bare
     assert "certbot" in self_tls and "certbot" not in default

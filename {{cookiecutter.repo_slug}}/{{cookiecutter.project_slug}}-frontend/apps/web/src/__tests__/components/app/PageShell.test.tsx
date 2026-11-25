@@ -35,4 +35,14 @@ describe('PageShell', () => {
 
     expect(screen.getByRole('main').querySelectorAll('header p')).toHaveLength(0)
   })
+
+  it('leaves the way back out where the page around it is the way back', () => {
+    render(
+      <PageShell title="People">
+        <p>the content</p>
+      </PageShell>
+    )
+
+    expect(screen.queryAllByRole('link')).toHaveLength(0)
+  })
 })

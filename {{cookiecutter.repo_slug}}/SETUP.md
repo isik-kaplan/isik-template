@@ -21,7 +21,7 @@ this is the checklist.
 
 ## 1. Reach the app on its domain
 
-Session and CSRF cookies are shared across `api.`, `admin.` and `auth.{{ cookiecutter.domain }}`, so the app needs a
+Session and CSRF cookies are shared across the app, `api.`, `admin.` and `auth.{{ cookiecutter.domain }}`, so it needs a
 real registrable domain and is never served at plain `localhost`. Locally, add to `/etc/hosts`:
 
 ```
@@ -93,11 +93,17 @@ asks for both). A provider without credentials still shows its button, but its f
 
 - **Most providers**: `{{ cookiecutter.config_prefix }}__OAUTH__<ID>__CLIENT_ID` and `..._CLIENT_SECRET`, `<ID>` being the
   provider id upper-cased. Redirect URI: `https://auth.{{ cookiecutter.domain }}/v0/provider-callback/<id>/login/callback/`.
-- **openid_connect** (your own identity provider) also needs `..._SERVER_URL` (the issuer) and
-  `..._PROVIDER_ID`. Redirect URI:
-  `https://auth.{{ cookiecutter.domain }}/v0/provider-callback/oidc/<PROVIDER_ID>/login/callback/`. The frontend
-  has no brand icon for it; `{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__ICONS=openid_connect=<url or path>`
-  gives it one.
+- **OpenID Connect** (your own identity provider, or several): list each issuer as `openid_connect:<issuer>`,
+  e.g. `openid_connect:corp`, lowercase. Its variables are named for the issuer, `..._OAUTH__CORP__CLIENT_ID`,
+  `..._CLIENT_SECRET` and `..._SERVER_URL` (the issuer's URL), and `..._NAME` names its button. Redirect URI:
+  `https://auth.{{ cookiecutter.domain }}/v0/provider-callback/oidc/<issuer>/login/callback/`. The frontend has
+  no brand icon for one;
+  `{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__ICONS=corp=<url or path>` gives it one.
+
+`{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__ADMIN_ONLY`
+lists those whose button shows only on the admin's sign-in page, such as a company's own identity provider
+beside the ones customers use. It decides where the button shows, nothing more: anybody with an account
+connected to that provider still signs in through it.
 
 `{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__ONLY=true` turns passwords off: no password login, signup, reset or
 change, on the web or in the app (whose build reads `EXPO_PUBLIC_SOCIAL_LOGIN_ONLY`). Proving it is you before a
@@ -117,7 +123,7 @@ The other direction, also optional: this project as an OAuth 2.0 / OpenID Connec
 `..._APPLICATIONS_PER_USER` (10), and `{{ cookiecutter.config_prefix }}__OAUTH_PROVIDER__MODE` decides what happens next:
 
 - **off** (the default): nothing of it is served.
-- **approval**: a new app waits until a superuser approves it, at `/staff/applications`, and with it which of the
+- **approval**: a new app waits until a superuser approves it, in the admin's App approvals, and with it which of the
   permissions it asked for it may ask people for.
 - **auto**: a new app is approved for everything it asks for the moment it is registered.
 
@@ -191,7 +197,7 @@ describes a generic app, not this one: read it, fill in what it leaves generic, 
 qualified before launch.
 
 **What a signup records.** Each new account stores `terms_version` (a hash of every document file) and
-`terms_accepted_at`, both visible on the user's admin page. Accounts created while no document exists record neither,
+`terms_accepted_at`, both on the person's page in the admin. Accounts created while no document exists record neither,
 since there was nothing to agree to. The `legal-version` pre-commit hook rewrites `apps/users/terms.py` whenever a
 document changes; stage that file with the documents. Asking existing users to accept a new version is left for the
 day a project needs it: compare their `terms_version` with the current one.

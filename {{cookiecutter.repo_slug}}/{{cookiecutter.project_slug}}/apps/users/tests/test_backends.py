@@ -8,7 +8,7 @@ from apps.users.tests.conftest import PASSWORD
 
 @pytest.mark.django_db
 def test_an_email_signs_in_wherever_django_authenticates(alice):
-    """The admin's login form passes whatever was typed as `username`."""
+    """Django's own callers, a test client's login among them, pass whatever was typed as `username`."""
     assert authenticate(None, username=alice.email, password=PASSWORD) == alice
 
 

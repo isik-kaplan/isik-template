@@ -21,10 +21,9 @@ app_name = "headless"
 PHONE_ROUTES = frozenset({"manage_phone", "verify_phone", "resend_phone_verification_code"})
 {%- endif %}
 
-# Everything a password is typed or set through; with SOCIAL_LOGIN_ONLY each is not found.
-PASSWORD_ROUTES = frozenset(
-    {"login", "signup", "reauthenticate", "request_password_reset", "reset_password", "change_password"}
-)
+# Everything a password is typed or set through but login, which the admin's sign-in page needs: with
+# SOCIAL_LOGIN_ONLY each is not found, and the backends let a superuser's password alone through login.
+PASSWORD_ROUTES = frozenset({"signup", "reauthenticate", "request_password_reset", "reset_password", "change_password"})
 
 
 def with_passwords_only(view):

@@ -1,9 +1,18 @@
+import ReviewPage from '@/app/admin/app-approvals/[id]/page'
+import ReviewsPage from '@/app/admin/app-approvals/page'
+import GroupPage from '@/app/admin/groups/[id]/page'
+import NewGroupPage from '@/app/admin/groups/new/page'
+import GroupsPage from '@/app/admin/groups/page'
+import PersonPage from '@/app/admin/people/[id]/page'
+import PeoplePage from '@/app/admin/people/page'
+import SiteSettingsPage from '@/app/admin/settings/page'
 import ApplicationPage from '@/app/applications/[id]/page'
 import ApplicationsLayout from '@/app/applications/layout'
 import ApplicationsPage from '@/app/applications/page'
 import CallbackCompletePage from '@/app/auth/callback-complete/page'
 import CompleteSignupPage from '@/app/auth/complete-signup/page'
 import DeletionScheduledPage from '@/app/auth/deletion-scheduled/page'
+import LoginPage from '@/app/auth/login/page'
 import OAuthAuthorizePage from '@/app/auth/oauth/authorize/page'
 import ProvePage from '@/app/auth/prove/page'
 import ProviderErrorPage from '@/app/auth/provider-error/page'
@@ -14,10 +23,6 @@ import HomePage from '@/app/page'
 import ProfileDetailsPage from '@/app/profile/(tabs)/details/page'
 import SettingsPage from '@/app/profile/(tabs)/settings/page'
 import ProfileTwoFactorPage from '@/app/profile/(tabs)/two-factor/page'
-import ReviewPage from '@/app/staff/applications/[id]/page'
-import ReviewsPage from '@/app/staff/applications/page'
-import PersonPage from '@/app/staff/people/[id]/page'
-import PeoplePage from '@/app/staff/people/page'
 import { languages } from '@/i18n/config'
 
 import { type Visitor, type World, backend, world } from '../../support/backend'
@@ -33,12 +38,18 @@ import { describe, expect, vi } from 'vitest'
 // example in dozens. Here each page is opened past its gates, varying only what that page reads.
 const project = vi.hoisted(() => ({
   applications: true,
+  // Null for the project's own setting; a page that turns on it is drawn both ways here.
+  passwords: null as boolean | null,
   legal: 'translated' as 'translated' | 'in another language' | 'unwritten',
 }))
 vi.mock('@/lib/access', async (actual) => ({
   ...(await actual<typeof import('@/lib/access')>()),
   applicationsAreOn: () => project.applications,
 }))
+vi.mock('@/lib/passwords', async (actual) => {
+  const real = await actual<typeof import('@/lib/passwords')>()
+  return { passwordsSignIn: () => project.passwords ?? real.passwordsSignIn() }
+})
 // The document in a language other than the reader's, even where the project speaks one only.
 const otherThan = vi.hoisted(() => (language: string) => (language === 'en' ? 'xx' : 'en'))
 vi.mock('@/lib/readLegalDocument', () => ({
@@ -56,9 +67,15 @@ const webhookPages = Object.values(
 
 const answered = world.map((w) => ({ ...w, me: { ...w.me, language: 'en' as const }, down: [] as number[] }))
 
-async function open(page: (props: never) => unknown, props: object, fetcher: typeof fetch, cookie = true) {
+async function open(
+  page: (props: never) => unknown,
+  props: object,
+  fetcher: typeof fetch,
+  cookie = true,
+  host = 'test-project.test'
+) {
   freshDom()
-  requestHeaders.value = new Headers({ host: 'test-project.test', ...(cookie ? { cookie: 'sessionid=abc' } : {}) })
+  requestHeaders.value = new Headers({ host, ...(cookie ? { cookie: 'sessionid=abc' } : {}) })
   requestCookies.value = cookie ? { sessionid: 'abc' } : {}
   vi.stubGlobal('fetch', fetcher)
   try {
@@ -121,15 +138,17 @@ describe('the device page', () => {
 
 describe('the home page', () => {
   test.prop([answered, fc.constantFrom<Visitor>('anonymous', 'member', 'staff', 'superuser'), fc.boolean()])(
-    'links to the staff pages only for whoever may use them',
+    'links to the admin only for whoever has a part of it to see',
     async (w, visitor, applications) => {
       project.applications = applications
       const me = { ...w.me, permissions: [] as World['me']['permissions'] }
       expect(await open(HomePage, {}, backend({ ...w, me }, visitor, 'everything') as unknown as typeof fetch)).toBe(
         'shown'
       )
-      // mayReviewApplications asks access.ts's own applicationsAreOn, which the mock above does not reach.
-      expect(screen.queryByRole('link', { name: 'App approvals' }) !== null).toBe(visitor === 'superuser')
+      // Staff read everybody and change the settings; a superuser does both whatever the applications.
+      expect(screen.queryByRole('link', { name: 'Admin' }) !== null).toBe(
+        visitor === 'staff' || visitor === 'superuser'
+      )
       project.applications = true
     }
   )
@@ -145,7 +164,7 @@ describe('the staff pages', () => {
         async (w, id) => {
           project.applications = true
           const failing = sideReadsDown
-            ? /oauth-application-reviews\/$|delegatable-scopes|users\/permissions|\/v0\/users\/$/
+            ? /oauth-application-reviews\/$|delegatable-scopes|users\/permissions|\/v0\/users\/$|\/v0\/groups\/$/
             : null
           expect(await open(ReviewsPage, { searchParams: Promise.resolve({}) }, without(staff(w), failing))).toBe(
             'shown'
@@ -457,4 +476,68 @@ describe('the provider callback', () => {
       )
     }
   )
+})
+
+describe('the admin', () => {
+  test.prop([answered, fc.subarray(['users:manage:user', 'users:grant:rights'], { minLength: 1 })])(
+    'lists every group by what it gives, saying so of one that gives nothing, and opens one',
+    async (w, given) => {
+      const row = (id: number, name: string, permissions?: string[]) => ({
+        id: `00000000-0000-1000-8000-00000000000${id}`,
+        name,
+        permissions,
+        created_at: '2020-01-01T00:00:00.000Z',
+        updated_at: '2020-01-01T00:00:00.000Z',
+      })
+      const groups = [row(1, 'giver', given), row(2, 'empty', []), row(3, 'unsaid')] as World['groups']
+      expect(await open(GroupsPage, { searchParams: Promise.resolve({}) }, staff({ ...w, groups }))).toBe('shown')
+      expect(screen.getByText(given.join(' · '))).toBeTruthy()
+      expect(screen.getAllByText('Gives nothing')).toHaveLength(2)
+      // The backend here answers any one group with the first it holds, so each is opened on its own.
+      for (const failing of [null, /users\/permissions/]) {
+        const one = without(staff({ ...w, groups: [groups[0]] }), failing)
+        expect(await open(GroupPage, { params: Promise.resolve({ id: groups[0].id }) }, one)).toBe('shown')
+        expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy()
+      }
+      // Staff who may not grant read a group, and are offered no new one.
+      for (const group of groups) {
+        const one = backend({ ...w, groups: [group] }, 'staff', 'everything') as unknown as typeof fetch
+        expect(await open(GroupPage, { params: Promise.resolve({ id: group.id }) }, one)).toBe('shown')
+        expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull()
+      }
+      const reader = backend(w, 'staff', 'everything') as unknown as typeof fetch
+      expect(await open(NewGroupPage, {}, reader)).toBe('not found')
+      expect(await open(NewGroupPage, {}, staff(w))).toBe('shown')
+      // With what there is to give unread: a group of nothing, still.
+      expect(await open(NewGroupPage, {}, without(staff(w), /users\/permissions/))).toBe('shown')
+      // A person who accepted terms, and one who had none to accept.
+      for (const terms of [{ terms_version: 'abc123', terms_accepted_at: '2026-01-02' }, {}]) {
+        const person = { ...w.me, id: '00000000-0000-1000-8000-000000000009', ...terms }
+        expect(
+          await open(PersonPage, { params: Promise.resolve({ id: person.id }) }, staff({ ...w, people: [person] }))
+        ).toBe('shown')
+        expect(screen.queryAllByText('None')).toHaveLength('terms_version' in terms ? 0 : 2)
+      }
+      expect(await open(SiteSettingsPage, {}, staff(w))).toBe('shown')
+      expect(screen.getByRole('radio', { name: 'Superusers only' })).toBeTruthy()
+    }
+  )
+
+  // One property per setting, so both are reached every run.
+  for (const passwords of [true, false])
+    test.prop([answered])(
+      `is signed in to on its own host, without signup, a password admitting superusers at least: passwords ${passwords}`,
+      async (w) => {
+        project.passwords = passwords
+        const page = { searchParams: Promise.resolve({}) }
+        expect(
+          await open(LoginPage, page, backend(w, 'anonymous', 'everything') as never, false, 'admin.test-project.test')
+        ).toBe('shown')
+        expect(screen.getByText('Sign in to the admin')).toBeTruthy()
+        expect(screen.getByLabelText('Password')).toBeTruthy()
+        expect(screen.queryByRole('link', { name: 'Sign up' })).toBeNull()
+        expect(screen.queryByText('A password signs in superusers only.') !== null).toBe(!passwords)
+        project.passwords = null
+      }
+    )
 })

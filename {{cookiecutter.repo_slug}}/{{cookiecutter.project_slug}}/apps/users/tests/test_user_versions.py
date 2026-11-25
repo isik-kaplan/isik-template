@@ -1,13 +1,12 @@
 """An account is changed against the version the page showed; a stale page is refused."""
 
 import pytest
-from django.contrib.auth.models import Group
 from django.contrib.auth.models import Permission as PermissionRow
 from django.contrib.contenttypes.models import ContentType
 from isik.django.apps.common.db.concurrency import assert_concurrency_field_changes
 
 from apps.common.links import api_path
-from apps.users.models import PersonalAccessToken, SiteSettings
+from apps.users.models import Group, PersonalAccessToken, SiteSettings
 from apps.users.models.user import User
 from apps.users.permissions import Permission
 from apps.users.personal_access_tokens import make_token
@@ -49,6 +48,11 @@ def test_every_version_moves_on_with_every_write_however_it_is_made(model, bob):
 def a_permission(db):
     sentinel = ContentType.objects.get_for_model(PermissionRow)
     return PermissionRow.objects.get(content_type=sentinel, codename=str(Permission.USERS_MANAGE_USER))
+
+
+@pytest.mark.django_db
+def test_a_groups_version_moves_on_with_its_permissions_too(a_permission):
+    assert_concurrency_field_changes(Group.objects.create(name="ops"), related={"permissions": a_permission})
 
 
 @pytest.mark.django_db

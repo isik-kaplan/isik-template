@@ -147,7 +147,7 @@ class User(DeletableAccount, AbstractUser, BaseModel):
     REQUIRED_FIELDS = []
 {%- endif %}
 
-    groups = redeclare(AbstractUser.groups, through="users.UserGroup")
+    groups = redeclare(AbstractUser.groups, to="users.Group", through="users.UserGroup")
     user_permissions = redeclare(AbstractUser.user_permissions, through="users.UserPermission")
 
     # The write version covers grants too, so a stale page can't quietly undo an admin grant.

@@ -4,7 +4,7 @@ import { LogoutButton } from '@/components/app-auth/LogoutButton'
 import { Button } from '@/components/base/button'
 
 import { sUseTranslation } from '@/i18n'
-import { applicationsAreOn, {% if cookiecutter.webhooks != "none" %}mayManageWebhooks, {% endif %}mayReviewApplications, maySeePeople } from '@/lib/access'
+import { applicationsAreOn, mayEnterAdmin{% if cookiecutter.webhooks != "none" %}, mayManageWebhooks{% endif %} } from '@/lib/access'
 import { getSession } from '@/lib/getSession'
 import { serverApi } from '@/lib/serverApi'
 
@@ -31,14 +31,10 @@ export default async function HomePage() {
                 {t('auth:homeApplicationsLink')}
               </Button>
             )}
-            {me && maySeePeople(me) && (
-              <Button variant="outline" render={<Link href="/staff/people" />}>
-                {t('auth:homePeopleLink')}
-              </Button>
-            )}
-            {me && mayReviewApplications(me) && (
-              <Button variant="outline" render={<Link href="/staff/applications" />}>
-                {t('auth:homeApplicationReviewsLink')}
+            {me && mayEnterAdmin(me) && (
+              // A plain link: the admin is another host, which /admin redirects to.
+              <Button variant="outline" render={<a href="/admin" />}>
+                {t('auth:homeAdminLink')}
               </Button>
             )}
 {%- if cookiecutter.webhooks != "none" %}

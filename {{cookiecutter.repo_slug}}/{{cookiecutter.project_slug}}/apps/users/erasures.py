@@ -2,7 +2,7 @@
 
 Erasing deletes all of them anyway, by cascade. These say what anonymizing does: the account stays as a
 tombstone with these fields cleared, and the rows below go, since each is the person or a way in as them.
-Their groups and permissions, admin.LogEntry, and feature grants stay with the tombstone, which can no longer
+Their groups and permissions, and feature grants stay with the tombstone, which can no longer
 sign in: they say what was done, and hold nothing personal.
 """
 

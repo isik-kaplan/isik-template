@@ -6,6 +6,7 @@ import type { Language } from '@/i18n/config'
 import { AuthApi, pendingMfaTypes } from '@{{ cookiecutter.repo_slug }}/auth-api'
 
 import type { Session } from './SessionContext'
+import { siblingOrigin } from './hosts'
 import { requestOrigin } from './requestOrigin'
 import { resolveLanguage } from './resolveLanguage'
 import { visitorFetch } from './visitor'
@@ -21,7 +22,7 @@ type SessionState = {
 
 async function fetchSessionState(): Promise<SessionState> {
   const requestHeaders = await headers()
-  const authOrigin = requestOrigin(requestHeaders).replace('://', '://auth.')
+  const authOrigin = siblingOrigin(requestOrigin(requestHeaders), 'auth')
   const authApi = new AuthApi(authOrigin, {
     cookieHeader: requestHeaders.get('cookie') ?? undefined,
     baseFetch: visitorFetch(requestHeaders),

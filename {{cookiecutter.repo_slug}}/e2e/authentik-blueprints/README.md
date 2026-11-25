@@ -6,8 +6,8 @@ one OAuth2/OpenID provider, one application, and one test user with a fixed pass
 `e2e/playwright/tests/auth/social-login.spec.ts` can click through a real OAuth redirect - browser,
 IdP, and all - instead of only checking that `SOCIALACCOUNT_PROVIDERS` is well-formed.
 
-Only used while `e2e/.env`'s `{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS` names `openid_connect` - see
-`{{ cookiecutter.config_prefix }}__OAUTH__OPENID_CONNECT__*` in `e2e/.env` for the client_id/secret/
+Only used while `e2e/.env`'s `{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS` names `openid_connect:authentik` - see
+`{{ cookiecutter.config_prefix }}__OAUTH__AUTHENTIK__*` in `e2e/.env` for the client_id/secret/
 provider_id/server_url that have to match this blueprint's values exactly.
 
 ## Schema verification
@@ -45,6 +45,6 @@ extract, and the login fails silently (see "Worth knowing" below).
   provider.
 - **The redirect_uri allauth builds is `/v0/provider-callback/oidc/<provider_id>/login/callback/`**
   - `oidc/` comes from allauth's own `OPENID_CONNECT_URL_PREFIX` default, and `<provider_id>` is
-  whatever `{{ cookiecutter.config_prefix }}__OAUTH__OPENID_CONNECT__PROVIDER_ID` resolves to
+  the issuer's name in `{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS`
   (`"authentik"` here) - not the literal string `"openid_connect"`. Get this wrong and Authentik
   rejects the callback with "Redirect URI Error" before your code ever runs.

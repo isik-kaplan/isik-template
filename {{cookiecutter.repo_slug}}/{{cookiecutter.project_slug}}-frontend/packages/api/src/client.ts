@@ -86,6 +86,47 @@ export class Api {
     return this.client.GET('/v0/users/{id}/history/', { params: { path: { id }, query } })
   }
 
+  async groups(query?: ApiQuery<'/v0/groups/'>) {
+    return this.client.GET('/v0/groups/', { params: { query } })
+  }
+
+  async group(id: string) {
+    return this.client.GET('/v0/groups/{id}/', { params: { path: { id } } })
+  }
+
+  async createGroup(
+    data: paths['/v0/groups/']['post']['requestBody']['content']['application/json'],
+    idempotencyKey: IdempotencyKey
+  ) {
+    return this.client.POST('/v0/groups/', { body: data, params: { header: { 'Idempotency-Key': idempotencyKey } } })
+  }
+
+  async updateGroup(
+    id: string,
+    data: NonNullable<paths['/v0/groups/{id}/']['patch']['requestBody']>['content']['application/json'],
+    headers: VersionedKeyedHeaders
+  ) {
+    return this.client.PATCH('/v0/groups/{id}/', {
+      params: { path: { id }, header: versionedKeyed(headers) },
+      body: data,
+    })
+  }
+
+  async deleteGroup(id: string, headers: VersionedKeyedHeaders) {
+    return this.client.DELETE('/v0/groups/{id}/', { params: { path: { id }, header: versionedKeyed(headers) } })
+  }
+
+  async siteSettings() {
+    return this.client.GET('/v0/site-settings/')
+  }
+
+  async updateSiteSettings(
+    data: NonNullable<paths['/v0/site-settings/']['patch']['requestBody']>['content']['application/json'],
+    headers: VersionedKeyedHeaders
+  ) {
+    return this.client.PATCH('/v0/site-settings/', { params: { header: versionedKeyed(headers) }, body: data })
+  }
+
   async oauthApplications(query?: ApiQuery<'/v0/oauth-applications/'>) {
     return this.client.GET('/v0/oauth-applications/', { params: { query } })
   }

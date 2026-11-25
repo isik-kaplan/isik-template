@@ -18,7 +18,13 @@ from apps.oauth_provider import device_codes
 from apps.oauth_provider.mode import oauth_provider_mode
 from apps.users.deletion import deletion_backend
 from apps.users.names import NameRequirement
-from apps.users.social_login import reauthentication_methods, social_login_only, social_login_provider_ids
+from apps.users.social_login import (
+    provider_of,
+    reauthentication_methods,
+    social_account_providers,
+    social_login_only,
+    social_login_provider_ids,
+)
 
 from . import __version__
 from .config import CONFIG as config  # Django thinks CONFIG is a setting if it is all caps  # NOQA
@@ -31,7 +37,8 @@ SECRET_KEY = config.SECRET_KEY
 # Not SECRET_KEY, so rotating the signing key does not cost every stored secret.
 CREDENTIAL_KEY = config.CREDENTIAL_KEY
 
-# "localhost" is only for the container-internal Docker healthcheck.
+# "localhost" is only for the container-internal Docker healthcheck. admin.<domain> is the frontend's, listed so
+# allauth takes it as a place to send somebody back to after a provider.
 ALLOWED_HOSTS = [
     config.DOMAIN,
     f"api.{config.DOMAIN}",
@@ -54,7 +61,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.postgres",
-    "django.contrib.admin",
     "django.contrib.sites",
     "whitenoise.runserver_nostatic",
     "corsheaders",
@@ -75,7 +81,8 @@ INSTALLED_APPS = [
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
-    *[f"allauth.socialaccount.providers.{provider_id}" for provider_id in SOCIAL_LOGIN_PROVIDER_IDS],
+    # Once each: several OpenID Connect issuers are one provider's apps.
+    *dict.fromkeys(f"allauth.socialaccount.providers.{provider_of(entry)}" for entry in SOCIAL_LOGIN_PROVIDER_IDS),
     "allauth.usersessions",
     "allauth.mfa",
     "allauth.headless",
@@ -90,7 +97,6 @@ INSTALLED_APPS = [
     "apps.core.apps.CoreConfig",
     "apps.users.apps.UsersConfig",
     "apps.oauth_provider.apps.OAuthProviderConfig",
-    "apps.admin.apps.AdminConfig",
     "apps.notifications.apps.NotificationsConfig",
     "apps.features.apps.FeaturesConfig",
 ]
@@ -284,28 +290,7 @@ HEADLESS_FRONTEND_URLS = {
 
 # Read from the environment, not config.py: the set of providers has no fixed schema.
 _OAUTH_PREFIX = "{{ cookiecutter.config_prefix }}__OAUTH"
-
-
-def _social_app_config(provider_id: str) -> dict:
-    prefix = f"{_OAUTH_PREFIX}__{provider_id.upper()}"
-    config = {
-        "client_id": os.environ.get(f"{prefix}__CLIENT_ID", ""),
-        "secret": os.environ.get(f"{prefix}__CLIENT_SECRET", ""),
-        "key": "",
-    }
-    if provider_id == "openid_connect":
-        # provider_id names this issuer and builds the callback URL, so it must match the IdP's
-        # registered redirect_uri.
-        config["provider_id"] = os.environ.get(f"{prefix}__PROVIDER_ID", "openid_connect")
-        config["name"] = "OpenID Connect"
-        config["settings"] = {"server_url": os.environ.get(f"{prefix}__SERVER_URL", "")}
-    return config
-
-
-# Settings, not SocialApp rows: nothing to configure in the admin or seed in e2e.
-SOCIALACCOUNT_PROVIDERS = {
-    provider_id: {"APPS": [_social_app_config(provider_id)]} for provider_id in SOCIAL_LOGIN_PROVIDER_IDS
-}
+SOCIALACCOUNT_PROVIDERS = social_account_providers(SOCIAL_LOGIN_PROVIDER_IDS, os.environ, prefix=_OAUTH_PREFIX)
 
 # Its tables exist whatever the mode, so switching it on later is a restart, never a migration.
 OAUTH_PROVIDER_MODE = oauth_provider_mode(config.OAUTH_PROVIDER.MODE, config.OAUTH_PROVIDER.SIGNING_KEY)
@@ -360,7 +345,7 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-# Not the Manifest variant: it needs collectstatic before any admin page renders, tests included.
+# Not the Manifest variant: it needs collectstatic before any page with static files renders, tests included.
 STORAGES = {
 {%- if cookiecutter.storage == "disk" %}
     "default": {
@@ -417,8 +402,9 @@ def _origins(hosts: list[str], debug: bool) -> list[str]:
 CSRF_TRUSTED_ORIGINS = _origins(
     [config.DOMAIN, f"api.{config.DOMAIN}", f"admin.{config.DOMAIN}", f"auth.{config.DOMAIN}"], DEBUG
 )
-# The frontend's JS calls api./auth.<domain> directly - same site, but a different origin.
-CORS_ALLOWED_ORIGINS = _origins([config.DOMAIN], DEBUG)
+# The frontend's JS calls api./auth.<domain> directly - same site, but a different origin. admin.<domain> is
+# the frontend too, serving the admin.
+CORS_ALLOWED_ORIGINS = _origins([config.DOMAIN, f"admin.{config.DOMAIN}"], DEBUG)
 CORS_ALLOW_CREDENTIALS = True
 # Response headers the frontend reads; cross-origin JS sees no custom header unless named here.
 CORS_EXPOSE_HEADERS = ["X-Reauthentication-Required", "X-Session-Cleared", "ETag", "X-Request-ID"]

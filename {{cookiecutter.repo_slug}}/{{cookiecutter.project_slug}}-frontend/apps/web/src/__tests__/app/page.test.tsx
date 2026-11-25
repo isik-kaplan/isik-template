@@ -63,14 +63,14 @@ describe('HomePage', () => {
 
     expect(links()).toEqual([
       ['Your profile', '/profile'],
-      ['People', '/staff/people'],
+      ['Admin', '/admin'],
 {%- if cookiecutter.webhooks != "none" %}
       ['Webhooks', '/webhooks'],
 {%- endif %}
     ])
   })
 
-  it('leads whoever reads everybody to the people, and a superuser to the app approvals', async () => {
+  it('leads whoever has a part of the admin to see to it', async () => {
     getSession.mockResolvedValue(JANE)
     asked({ is_superuser: true, permissions: ['users:manage:user'] })
 
@@ -79,8 +79,7 @@ describe('HomePage', () => {
     expect(links()).toEqual([
       ['Your profile', '/profile'],
       ['Your apps', '/applications'],
-      ['People', '/staff/people'],
-      ['App approvals', '/staff/applications'],
+      ['Admin', '/admin'],
 {%- if cookiecutter.webhooks == "users" %}
       ['Webhooks', '/webhooks'],
 {%- endif %}

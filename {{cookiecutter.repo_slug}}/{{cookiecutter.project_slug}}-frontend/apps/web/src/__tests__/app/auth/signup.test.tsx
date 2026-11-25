@@ -12,7 +12,9 @@ vi.mock('@/lib/getSession', () => ({
 vi.mock('next/headers', () => ({ headers: async () => new Headers({ host: 'test-project.test' }) }))
 vi.mock('@/config/public', () => ({ CONFIG: { DOMAIN: 'test-project.test' } }))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }))
-vi.mock('@/lib/socialProviders', () => ({ socialProviders: () => [{ id: 'google', name: 'Google', icon: '' }] }))
+vi.mock('@/lib/socialProviders', () => ({
+  signInProviders: () => [{ id: 'google', name: 'Google', icon: '', adminOnly: false }],
+}))
 const passwords = vi.hoisted(() => ({ signIn: true }))
 vi.mock('@/lib/passwords', () => ({ passwordsSignIn: () => passwords.signIn }))
 

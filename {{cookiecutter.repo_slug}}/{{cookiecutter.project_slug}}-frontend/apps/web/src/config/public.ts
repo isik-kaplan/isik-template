@@ -9,6 +9,8 @@ export const { CONFIG, PublicConfigScript } = publicConfig(
     SOCIAL_LOGIN: {
       PROVIDERS: commaSeparatedList({ missingDefault: [] }),
       ICONS: commaSeparatedList({ missingDefault: [] }),
+      // Of PROVIDERS, those whose button shows only on the admin's sign-in page. The backend never reads it.
+      ADMIN_ONLY: commaSeparatedList({ missingDefault: [] }),
       // Nobody signs in here with a password; a superuser still does, in the admin.
       ONLY: boolean({ missingDefault: {{ cookiecutter.social_login_only|lower }} }),
     },

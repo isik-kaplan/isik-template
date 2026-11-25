@@ -8,6 +8,7 @@ import { ConsentSignOut } from '@/components/app-auth/ConsentSignOut'
 import { sUseTranslation } from '@/i18n'
 import { OAUTH_AUTHORIZE_PATH } from '@/lib/afterSignIn'
 import { getSession } from '@/lib/getSession'
+import { siblingOrigin } from '@/lib/hosts'
 import { scopeLabel } from '@/lib/oauthScopes'
 import { requestOrigin } from '@/lib/requestOrigin'
 
@@ -63,7 +64,7 @@ export default async function OAuthAuthorizePage({ searchParams }: { searchParam
     if (value) fields[name] = value
   }
   const { t } = await sUseTranslation(['auth'])
-  const action = `${requestOrigin(await headers()).replace('://', '://auth.')}${OAUTH_AUTHORIZE_PATH}`
+  const action = `${siblingOrigin(requestOrigin(await headers()), 'auth')}${OAUTH_AUTHORIZE_PATH}`
   const scopes = (fields.scope ?? '').split(' ').filter(Boolean)
   const described = descriptionsOf(scopes, first(params.scopes_descriptions))
   const description = first(params.application_description)

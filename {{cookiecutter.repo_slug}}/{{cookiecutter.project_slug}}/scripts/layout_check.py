@@ -28,7 +28,6 @@ KINDS = {
     "adapters": ("Adapter",),
     "backends": ("Backend",),
     "middleware": ("Middleware",),
-    "admin": ("Admin", "Inline"),
     "models": None,
 }
 

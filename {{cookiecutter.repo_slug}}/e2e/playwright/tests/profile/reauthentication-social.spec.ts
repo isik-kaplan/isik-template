@@ -7,14 +7,14 @@ import { extractLinkFromEmail } from '../mailpit'
 const IDENTITY = 'oidc-e2e-user-3'
 const IDENTITY_EMAIL = 'oidc-e2e-user-3@example.com'
 
-test.skip(!OIDC_CONFIGURED, 'SOCIAL_LOGIN__PROVIDERS does not name openid_connect, so there is no button to press')
+test.skip(!OIDC_CONFIGURED, 'SOCIAL_LOGIN__PROVIDERS does not name openid_connect:authentik, so there is no button to press')
 
 test('somebody with no password proves it at their provider, and can set a password by email instead', async ({
   page,
 }) => {
   // Either signup path can happen, as in auth/social-login.spec.ts.
   await page.goto('/auth/login')
-  await page.getByRole('button', { name: 'Continue with Openid Connect' }).click()
+  await page.getByRole('button', { name: 'Continue with Authentik' }).click()
   await signInAtAuthentik(page, IDENTITY)
   const landed = (...paths: string[]) => page.waitForURL((url) => paths.includes(url.pathname))
   await landed('/', '/auth/login', '/auth/complete-signup')
@@ -32,7 +32,7 @@ test('somebody with no password proves it at their provider, and can set a passw
       page.getByText('That verification link is no longer valid.').waitFor(),
     ])
     await page.goto('/auth/login')
-    await page.getByRole('button', { name: 'Continue with Openid Connect' }).click()
+    await page.getByRole('button', { name: 'Continue with Authentik' }).click()
   }
   await expect(page.getByText(/Signed in as/)).toBeVisible()
 
@@ -41,7 +41,7 @@ test('somebody with no password proves it at their provider, and can set a passw
   await page.getByPlaceholder('Email').fill(`oidc-reauth-${Date.now()}@example.test`)
   await page.getByRole('button', { name: 'Add email' }).click()
   await expect(page).toHaveURL('/auth/prove?next=%2Fprofile%2Femails')
-  await expect(page.getByRole('button', { name: 'Confirm with OpenID Connect' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Confirm with Authentik' })).toBeVisible()
   // A retry meets the password its first attempt set below, so there is nothing left to show.
   if (await page.getByLabel('Password', { exact: true }).isVisible()) {
     await proveWithPassword(page, 'a-password-set-by-email')
@@ -49,7 +49,7 @@ test('somebody with no password proves it at their provider, and can set a passw
     return
   }
 
-  await page.getByRole('button', { name: 'Confirm with OpenID Connect' }).click()
+  await page.getByRole('button', { name: 'Confirm with Authentik' }).click()
   // prompt=login: the provider asks again even though its own session is still open.
   await signInAtAuthentik(page, IDENTITY)
   // Two server round trips: the provider's callback and the prove page.

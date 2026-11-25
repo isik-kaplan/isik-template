@@ -2,6 +2,7 @@ import { headers } from 'next/headers'
 
 import { EmailsList } from '@/components/app-auth/EmailsList'
 
+import { siblingOrigin } from '@/lib/hosts'
 import { requestOrigin } from '@/lib/requestOrigin'
 import { visitorFetch } from '@/lib/visitor'
 
@@ -10,7 +11,7 @@ import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
 export default async function ProfileEmailsPage() {
   // Gating already happened one level up, in profile/layout.tsx.
   const requestHeaders = await headers()
-  const authOrigin = requestOrigin(requestHeaders).replace('://', '://auth.')
+  const authOrigin = siblingOrigin(requestOrigin(requestHeaders), 'auth')
   const authApi = new AuthApi(authOrigin, {
     cookieHeader: requestHeaders.get('cookie') ?? undefined,
     baseFetch: visitorFetch(requestHeaders),

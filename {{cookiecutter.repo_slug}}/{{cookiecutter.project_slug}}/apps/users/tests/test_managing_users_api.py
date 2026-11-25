@@ -3,6 +3,7 @@ from django.contrib.auth.models import Permission as PermissionRow
 from django.contrib.contenttypes.models import ContentType
 
 from apps.common.links import api_path
+from apps.users.models.group import Group
 from apps.users.models.user import User
 from apps.users.permissions import Permission
 from conftest import versioned
@@ -19,6 +20,11 @@ def _detail(user):
 def _grant(user, *names):
     sentinel = ContentType.objects.get_for_model(PermissionRow)
     user.user_permissions.add(*PermissionRow.objects.filter(content_type=sentinel, codename__in=names))
+
+
+def _grant_group(group, *names):
+    sentinel = ContentType.objects.get_for_model(PermissionRow)
+    group.permissions.add(*PermissionRow.objects.filter(content_type=sentinel, codename__in=names))
 
 
 @pytest.fixture
@@ -288,3 +294,62 @@ def test_a_grant_names_the_declared_permission_and_no_namesake(client, granter, 
     response = _patch(client, bob, {"permissions": [MANAGE]})
 
     assert response.json()["permissions"] == [MANAGE]
+
+
+@pytest.mark.django_db
+def test_an_account_is_shown_with_its_groups(client, manager, bob):
+    ops = Group.objects.create(name="ops")
+    bob.groups.add(ops)
+
+    assert client.get(_detail(bob)).json()["groups"] == [str(ops.pk)]
+
+
+@pytest.mark.django_db
+def test_putting_somebody_in_a_group_that_gives_nothing_is_no_grant(client, manager, bob):
+    ops = Group.objects.create(name="ops")
+
+    response = _patch(client, bob, {"groups": [str(ops.pk)]})
+
+    assert response.status_code == 200
+    assert list(bob.groups.all()) == [ops]
+
+
+@pytest.mark.django_db
+def test_putting_somebody_in_a_group_grants_whatever_it_gives(client, manager, bob):
+    ops = Group.objects.create(name="ops")
+    _grant_group(ops, MANAGE)
+
+    response = _patch(client, bob, {"groups": [str(ops.pk)]})
+
+    assert response.status_code == 403
+    assert not bob.groups.exists()
+
+
+@pytest.mark.django_db
+def test_somebody_who_may_grant_puts_people_in_groups_giving_what_they_hold(client, granter, bob):
+    ops = Group.objects.create(name="ops")
+    _grant_group(ops, MANAGE)
+
+    response = _patch(client, bob, {"groups": [str(ops.pk)]})
+
+    assert response.status_code == 200
+    assert User.objects.get(pk=bob.pk).has_perm(MANAGE)
+
+
+@pytest.mark.django_db
+def test_taking_somebody_out_of_a_group_is_not_a_grant(client, manager, bob):
+    ops = Group.objects.create(name="ops")
+    _grant_group(ops, MANAGE)
+    bob.groups.add(ops)
+
+    response = _patch(client, bob, {"groups": []})
+
+    assert response.status_code == 200
+    assert not bob.groups.exists()
+
+
+@pytest.mark.django_db
+def test_an_account_is_shown_with_the_terms_it_accepted(client, manager, bob):
+    body = client.get(_detail(bob)).json()
+
+    assert (body["terms_version"], body["terms_accepted_at"]) == (bob.terms_version, bob.terms_accepted_at)

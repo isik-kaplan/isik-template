@@ -17,8 +17,9 @@ export function PageShell({
 }: {
   title: string
   description?: string
-  backHref: string
-  backLabel: string
+  // Left out where a page's way back is the navigation around it, as in the admin.
+  backHref?: string
+  backLabel?: string
   children: React.ReactNode
 }) {
   return (
@@ -29,9 +30,11 @@ export function PageShell({
         <LanguageSwitcher />
         <ThemeToggle />
       </div>
-      <Link href={backHref} className="text-sm text-muted-foreground underline underline-offset-4">
-        {backLabel}
-      </Link>
+      {backHref && (
+        <Link href={backHref} className="text-sm text-muted-foreground underline underline-offset-4">
+          {backLabel}
+        </Link>
+      )}
       <header className="flex flex-col gap-1">
         <h1 className="text-xl font-semibold">{title}</h1>
         {description && <p className="text-sm text-muted-foreground">{description}</p>}

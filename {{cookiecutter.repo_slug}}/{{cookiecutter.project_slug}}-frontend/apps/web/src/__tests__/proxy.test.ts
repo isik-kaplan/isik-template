@@ -2,12 +2,18 @@ import { NextRequest } from 'next/server'
 
 import { config, proxy } from '@/proxy'
 
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
-function requestFor(path: string, { cookie }: { cookie?: string } = {}) {
-  const headers = cookie ? { cookie } : undefined
-  return new NextRequest(new URL(path, 'https://example.test'), { headers })
+vi.mock('@/config/public', () => ({ CONFIG: { DOMAIN: 'example.test' } }))
+
+function requestFor(path: string, { cookie, host = 'example.test' }: { cookie?: string; host?: string } = {}) {
+  const headers: Record<string, string> = { host, 'x-forwarded-proto': 'https' }
+  if (cookie) headers.cookie = cookie
+  return new NextRequest(new URL(path, `https://${host}`), { headers })
 }
+
+const onAdmin = (path: string, cookie?: string) => requestFor(path, { cookie, host: 'admin.example.test' })
+const SIGNED_IN = 'sessionid=abc'
 
 describe('proxy', () => {
   it('lets an anonymous visitor through on the home page', async () => {
@@ -99,5 +105,85 @@ describe('proxy', () => {
     const response = await proxy(requestFor('/profile/emails?tab=1', { cookie: 'sessionid=abc' }))
 
     expect(response.headers.get('x-middleware-request-x-page-path')).toBe('/profile/emails?tab=1')
+  })
+
+  it('sends a visit to /admin on the bare domain to the admin host, keeping the rest of the address', async () => {
+    const response = await proxy(requestFor('/admin/people/u1?tab=1', { cookie: SIGNED_IN }))
+
+    expect(response.headers.get('location')).toBe('https://admin.example.test/people/u1?tab=1')
+  })
+
+  it("sends /admin itself to the admin host's root", async () => {
+    const response = await proxy(requestFor('/admin'))
+
+    expect(response.headers.get('location')).toBe('https://admin.example.test/')
+  })
+
+  it('leaves a path that only starts like /admin to the app', async () => {
+    const response = await proxy(requestFor('/administrators', { cookie: SIGNED_IN }))
+
+    expect(response.headers.get('location')).toBeNull()
+    expect(response.headers.get('x-middleware-rewrite')).toBeNull()
+  })
+
+  it.each([
+    ['/', '/admin'],
+    ['/people', '/admin/people'],
+    ['/groups/g1', '/admin/groups/g1'],
+    ['/app-approvals/7', '/admin/app-approvals/7'],
+    ['/settings?x=1', '/admin/settings?x=1'],
+  ])('serves %s on the admin host from the admin page %s', async (path, page) => {
+    const response = await proxy(onAdmin(path, SIGNED_IN))
+
+    expect(response.headers.get('x-middleware-rewrite')).toBe(`https://admin.example.test${page}`)
+    expect(response.headers.get('x-middleware-request-x-page-path')).toBe(path)
+  })
+
+  it("sends an app page whose path only ends like an admin page's to the app", async () => {
+    const response = await proxy(onAdmin('/profile/people', SIGNED_IN))
+
+    expect(response.headers.get('location')).toBe('https://example.test/profile/people')
+  })
+
+  it('sends an app page asked of the admin host to the app, keeping the rest of the address', async () => {
+    const response = await proxy(onAdmin('/profile/notifications?all=1', SIGNED_IN))
+
+    expect(response.headers.get('location')).toBe('https://example.test/profile/notifications?all=1')
+  })
+
+  it('serves signing in, the documents and the page that says to wait on the admin host as they are', async () => {
+    for (const path of ['/auth/login', '/legal/terms-of-service', '/too-many-requests']) {
+      const response = await proxy(onAdmin(path))
+
+      expect(response.headers.get('location')).toBeNull()
+      expect(response.headers.get('x-middleware-rewrite')).toBeNull()
+    }
+  })
+
+  it("leaves Next's own files on the admin host where they are", async () => {
+    const response = await proxy(onAdmin('/_next/data/x.json', SIGNED_IN))
+
+    expect(response.headers.get('location')).toBeNull()
+  })
+
+  it('sends an anonymous visitor to the admin host to sign in there, the root included', async () => {
+    const response = await proxy(onAdmin('/'))
+
+    expect(response.headers.get('location')).toBe('https://admin.example.test/auth/login?next=%2F')
+  })
+
+  it('takes the host from the Host header, which behind nginx is the one the browser asked for', async () => {
+    const headers = { host: 'admin.example.test', cookie: SIGNED_IN }
+    const response = await proxy(new NextRequest('http://0.0.0.0:3000/people', { headers }))
+
+    expect(response.headers.get('x-middleware-rewrite')).toBe('http://0.0.0.0:3000/admin/people')
+  })
+
+  it('falls back to the address asked for when no Host header came with it', async () => {
+    const response = await proxy(
+      new NextRequest('https://admin.example.test/people', { headers: { cookie: SIGNED_IN } })
+    )
+
+    expect(response.headers.get('x-middleware-rewrite')).toBe('https://admin.example.test/admin/people')
   })
 })

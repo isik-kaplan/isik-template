@@ -1,5 +1,5 @@
 """Every URL reversed here names its host. The API's urlconf is also ROOT_URLCONF, so a bare reverse() answers
-for the API whatever was meant, and the auth and admin hosts each mount names the others don't."""
+for the API whatever was meant, and the auth host mounts names the API doesn't."""
 
 from django.urls import reverse
 from django_hosts.resolvers import get_host
@@ -17,8 +17,3 @@ def api_path(name, *args, **kwargs):
 def auth_path(name, *args, **kwargs):
     """A path on auth.<domain>."""
     return _on("auth", name, args, kwargs)
-
-
-def admin_path(name, *args, **kwargs):
-    """A path on admin.<domain>."""
-    return _on("admin", name, args, kwargs)

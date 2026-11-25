@@ -2,6 +2,7 @@ import json
 import re
 
 import pytest
+from allauth.account.models import EmailAddress
 from allauth.socialaccount.models import SocialAccount
 from django.conf import settings
 from django.contrib.auth import authenticate
@@ -12,11 +13,10 @@ from apps.users import headless_urls
 from apps.users.models.user import User
 from apps.users.reauthentication.gate import REAUTHENTICATION_REQUIRED_HEADER
 from apps.users.reauthentication.proof import PROVIDER_FLOW
-from apps.users.tests.conftest import OIDC_PROVIDER_ID, PASSWORD
+from apps.users.tests.conftest import OIDC_PROVIDER_ID, PASSWORD{{ ", SIGNS_IN" if cookiecutter.phone == "required" }}
 
 
 AUTH_HOST = f"auth.{settings.PARENT_HOST}"
-ADMIN_HOST = f"admin.{settings.PARENT_HOST}"
 WAYS_TO_PROVE = api_path("users:users-reauthentication")
 # allauth's codes are capitals and digits, dashed by default, on a line of their own.
 CODE = re.compile(r"^\s*([A-Z0-9]+(?:-[A-Z0-9]+)*)\s*$", re.MULTILINE)
@@ -59,16 +59,16 @@ def test_without_passwords_only_a_superuser_signs_in_with_one(social_login_only,
 
 
 @pytest.mark.django_db
-def test_a_superuser_signs_in_to_the_admin_with_a_password_and_staff_do_not(client, social_login_only):
+def test_a_superuser_signs_in_with_a_password_and_staff_do_not(client, headless, social_login_only):
     User.objects.create_user(username="staff", email="staff@example.test", password=PASSWORD, is_staff=True)
-    User.objects.create_superuser(username="root", email="root@example.test", password=PASSWORD)
+    root = User.objects.create_superuser(username="root", email="root@example.test", password=PASSWORD{{ ", **SIGNS_IN" if cookiecutter.phone == "required" }})
+    EmailAddress.objects.create(user=root, email=root.email, verified=True, primary=True)
 
-    refused = client.post("/login/", {"username": "staff@example.test", "password": PASSWORD}, HTTP_HOST=ADMIN_HOST)
-    admitted = client.post("/login/", {"username": "root@example.test", "password": PASSWORD}, HTTP_HOST=ADMIN_HOST)
+    refused = headless.call("POST", "account:login", {"email": "staff@example.test", "password": PASSWORD})
+    admitted = headless.call("POST", "account:login", {"email": "root@example.test", "password": PASSWORD})
 
-    assert refused.status_code == 200
-    assert "_auth_user_id" not in refused.wsgi_request.session
-    assert admitted.status_code == 302
+    assert refused.status_code == 400
+    assert admitted.status_code == 200
 
 
 @pytest.mark.django_db
@@ -92,7 +92,7 @@ def test_without_passwords_a_code_by_email_is_offered_in_place_of_setting_one(
 
 
 @pytest.mark.django_db
-def test_a_superusers_password_is_no_proof_outside_the_admin(client, social_login_only):
+def test_a_superusers_password_is_no_proof_without_passwords(client, social_login_only):
     root = User.objects.create_superuser(username="root", email="root@example.test", password=PASSWORD)
     client.force_login(root)
 

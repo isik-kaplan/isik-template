@@ -13,7 +13,7 @@ entries:
       client_type: confidential
       client_id: e2e-oidc-client-id
       client_secret: e2e-oidc-client-secret-not-a-real-secret
-      # "authentik" must match {{ cookiecutter.config_prefix }}__OAUTH__OPENID_CONNECT__PROVIDER_ID in e2e/.env.
+      # "authentik" must match the issuer in e2e/.env's {{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS, openid_connect:authentik.
       redirect_uris:
         - matching_mode: strict
           url: http://auth.{{ cookiecutter.domain }}/v0/provider-callback/oidc/authentik/login/callback/

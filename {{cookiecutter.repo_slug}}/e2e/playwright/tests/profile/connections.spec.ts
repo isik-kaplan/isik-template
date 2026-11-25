@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 import { OIDC_CONFIGURED, login, proveWithPassword, signUpAndVerify } from '../helpers'
 
-test.skip(!OIDC_CONFIGURED, 'SOCIAL_LOGIN__PROVIDERS does not name openid_connect, so there is no button to press')
+test.skip(!OIDC_CONFIGURED, 'SOCIAL_LOGIN__PROVIDERS does not name openid_connect:authentik, so there is no button to press')
 
 // A retry finds its identity already linked to its first attempt's account, which allauth silently
 // refuses to link again, so the spec follows either outcome.
@@ -16,7 +16,7 @@ test('connecting the OIDC test IdP either links it and can be undone, or is sile
   await expect(page.getByText(`Signed in as ${username}.`)).toBeVisible()
 
   await page.goto('/profile/connections')
-  const oidcRow = page.getByRole('listitem').filter({ hasText: 'Openid Connect' })
+  const oidcRow = page.getByRole('listitem').filter({ hasText: 'Authentik' })
   await expect(oidcRow.getByText('Not connected')).toBeVisible()
 
   // exact: "Connected" is a substring of "Not connected", and "Connect" of "Disconnect".

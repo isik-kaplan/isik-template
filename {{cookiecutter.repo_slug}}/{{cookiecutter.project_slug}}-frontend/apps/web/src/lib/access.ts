@@ -18,6 +18,21 @@ export function maySeePeople(me: Me): boolean {
 export function mayReviewApplications(me: Me): boolean {
   return me.is_superuser && applicationsAreOn()
 }
+
+/** Staff and superusers - the backend's IsStaff, which guards the site settings. */
+export function mayChangeSiteSettings(me: Me): boolean {
+  return me.is_staff || me.is_superuser
+}
+
+/** Changing a group is a grant to everybody in it - the backend's may_grant. */
+export function mayChangeGroups(me: Me): boolean {
+  return me.is_superuser || (me.is_staff && me.permissions.includes('users:grant:rights'))
+}
+
+/** Whoever has any part of the admin to see. */
+export function mayEnterAdmin(me: Me): boolean {
+  return maySeePeople(me) || mayReviewApplications(me) || mayChangeSiteSettings(me)
+}
 {%- if cookiecutter.webhooks == "staff" %}
 
 /** Staff: the endpoints are the deployment's, and receive everybody's notices - the backend's MayManageEndpoints. */

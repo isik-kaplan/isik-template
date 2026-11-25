@@ -25,6 +25,6 @@ class Command(BaseCommand):
                 phone_verified=True,
 {%- endif %}
             )
-            # Without a verified address the account could sign in only to the admin.
+            # Without a verified address allauth would hold the sign-in for a confirmation mail first.
             EmailAddress.objects.create(user=user, email=user.email, verified=True, primary=True)
         self.stdout.write(self.style.SUCCESS(f"Created superuser '{config.SETUP.SUPERUSER.EMAIL}'."))

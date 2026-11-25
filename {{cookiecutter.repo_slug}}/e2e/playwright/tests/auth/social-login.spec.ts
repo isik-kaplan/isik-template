@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 import { AWAITING_MAIL, OIDC_CONFIGURED, finishSocialSignup } from '../helpers'
 
-test.skip(!OIDC_CONFIGURED, 'SOCIAL_LOGIN__PROVIDERS does not name openid_connect, so there is no button to press')
+test.skip(!OIDC_CONFIGURED, 'SOCIAL_LOGIN__PROVIDERS does not name openid_connect:authentik, so there is no button to press')
 
 const AUTHORIZE_PATH = '/application/o/authorize/'
 
@@ -12,7 +12,7 @@ test('logging in with the OIDC test IdP provisions an account pending email veri
   await page.goto('/auth/login')
   const scheme = new URL(page.url()).protocol
   const authorize = page.waitForRequest((request) => new URL(request.url()).pathname === AUTHORIZE_PATH)
-  await page.getByRole('button', { name: 'Continue with Openid Connect' }).click()
+  await page.getByRole('button', { name: 'Continue with Authentik' }).click()
 
   // allauth builds redirect_uri from the forwarded scheme; behind a TLS proxy it must stay https.
   const redirectUri = new URL((await authorize).url()).searchParams.get('redirect_uri') ?? ''

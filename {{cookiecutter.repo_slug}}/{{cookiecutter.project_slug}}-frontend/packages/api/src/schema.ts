@@ -106,6 +106,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v0/groups/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Named sets of permissions. Read by whoever reads every account, changed by whoever may grant. */
+        get: operations["groups_list"];
+        put?: never;
+        /** @description Named sets of permissions. Read by whoever reads every account, changed by whoever may grant. */
+        post: operations["groups_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/groups/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Named sets of permissions. Read by whoever reads every account, changed by whoever may grant. */
+        get: operations["groups_retrieve"];
+        put?: never;
+        post?: never;
+        /** @description Named sets of permissions. Read by whoever reads every account, changed by whoever may grant. */
+        delete: operations["groups_destroy"];
+        options?: never;
+        head?: never;
+        /** @description Named sets of permissions. Read by whoever reads every account, changed by whoever may grant. */
+        patch: operations["groups_partial_update"];
+        trace?: never;
+    };
 {%- if cookiecutter.webhooks != "none" %}
     "/v0/notifications/deliveries/": {
         parameters: {
@@ -791,6 +828,24 @@ export interface paths {
         head?: never;
         /** @description Sets your own value of one setting. Name the settings' version you read, in If-Match. */
         patch: operations["settings_partial_update"];
+        trace?: never;
+    };
+    "/v0/site-settings/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The site-wide settings, one row, for staff. */
+        get: operations["site_settings_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Raising the ladder signs out everybody it no longer admits, straight away. */
+        patch: operations["site_settings_partial_update"];
         trace?: never;
     };
     "/v0/users/": {
@@ -1593,6 +1648,42 @@ export interface components {
             /** @description The source's reference, where shown. */
             reference: string | null;
         };
+        /** @description A named set of permissions, which everybody in it holds. */
+        Group: {
+            /**
+             * Format: uuid
+             * @description Identifies this record. A UUIDv7, so ids sort roughly by when they were created.
+             */
+            readonly id: string;
+            /** @description What the group is called. */
+            name: string;
+            /** @description What everybody in the group holds, as permission names. */
+            permissions?: components["schemas"]["Permissions"][];
+            /**
+             * Format: date-time
+             * @description When the row was created, by the database's clock. Never changes.
+             */
+            readonly created_at: string;
+            /**
+             * Format: date-time
+             * @description When the row last changed, by the database's clock.
+             */
+            readonly updated_at: string;
+        };
+        /** @description A 412's body: the object as it is now, in `current`. */
+        GroupPreconditionFailed: {
+            detail: string;
+            /** @description Always precondition_failed. */
+            code: string;
+            current: components["schemas"]["Group"];
+        };
+        /** @description A named set of permissions, which everybody in it holds. */
+        GroupRequest: {
+            /** @description What the group is called. */
+            name: string;
+            /** @description What everybody in the group holds, as permission names. */
+            permissions?: components["schemas"]["Permissions"][];
+        };
         IdempotencyKeyConflict: {
             detail: string;
             /** @description One of idempotency_key_in_flight, idempotency_key_not_replayable. */
@@ -1741,11 +1832,20 @@ export interface components {
             is_superuser?: boolean;
             /** @description What they were granted, as permission names - not what that implies. */
             permissions?: components["schemas"]["Permissions"][];
+            /** @description The groups they are in, whose permissions they hold too. */
+            groups?: string[];
             /**
              * Format: date-time
              * @description When this person last signed in, or empty if they never have.
              */
             readonly last_login: string | null;
+            /** @description The version of the legal documents this user agreed to at signup, or blank if none were published. */
+            readonly terms_version: string;
+            /**
+             * Format: date-time
+             * @description When this user agreed to the legal documents, or empty if none were published at signup.
+             */
+            readonly terms_accepted_at: string | null;
             /**
              * Format: date-time
              * @description When the row was created, by the database's clock. Never changes.
@@ -1861,6 +1961,24 @@ export interface components {
             total_pages: number;
             results: components["schemas"]["Endpoint"][];
 {%- endif %}
+        };
+        PaginatedGroupList: {
+            /**
+             * @description Total number of items available.
+             * @example 1102
+             */
+            count: number;
+            /**
+             * @description Number of results to return per page.
+             * @example 100
+             */
+            page_size: number;
+            /**
+             * @description Total number of pages.
+             * @example 17
+             */
+            total_pages: number;
+            results: components["schemas"]["Group"][];
         };
         PaginatedInboxItemList: {
             /**
@@ -2094,6 +2212,13 @@ export interface components {
             /** Format: double */
             value?: number;
         };
+        /** @description A named set of permissions, which everybody in it holds. */
+        PatchedGroupRequest: {
+            /** @description What the group is called. */
+            name?: string;
+            /** @description What everybody in the group holds, as permission names. */
+            permissions?: components["schemas"]["Permissions"][];
+        };
         /** @description What a PATCH names, whatever the setting's type - each type's own serializer adds its typed value. */
         PatchedIntOrNullSettingValueRequest: {
             /**
@@ -2131,8 +2256,23 @@ export interface components {
             is_superuser?: boolean;
             /** @description What they were granted, as permission names - not what that implies. */
             permissions?: components["schemas"]["Permissions"][];
+            /** @description The groups they are in, whose permissions they hold too. */
+            groups?: string[];
         };
         PatchedSettingValueRequest: components["schemas"]["PatchedBoolSettingValueRequest"] | components["schemas"]["PatchedIntSettingValueRequest"] | components["schemas"]["PatchedDecimalSettingValueRequest"] | components["schemas"]["PatchedFloatSettingValueRequest"] | components["schemas"]["PatchedDurationSettingValueRequest"] | components["schemas"]["PatchedTextSettingValueRequest"] | components["schemas"]["PatchedChoiceSettingValueRequest"] | components["schemas"]["PatchedBoolOrNullSettingValueRequest"] | components["schemas"]["PatchedIntOrNullSettingValueRequest"] | components["schemas"]["PatchedDecimalOrNullSettingValueRequest"] | components["schemas"]["PatchedFloatOrNullSettingValueRequest"] | components["schemas"]["PatchedDurationOrNullSettingValueRequest"] | components["schemas"]["PatchedTextOrNullSettingValueRequest"] | components["schemas"]["PatchedChoiceOrNullSettingValueRequest"];
+        /** @description The site-wide settings: for now, who may sign in at all. */
+        PatchedSiteSettingsRequest: {
+            /**
+             * Who may sign in
+             * @description Raising it signs out everybody it no longer admits, straight away.
+             */
+            login_policy?: components["schemas"]["SiteSettingsLoginPolicy"];
+            /**
+             * @description Whether to email the people a raised ladder signs out; leave it off during a breach.
+             * @default false
+             */
+            mail_the_people_signed_out: boolean;
+        };
         /** @description What a PATCH names, whatever the setting's type - each type's own serializer adds its typed value. */
         PatchedTextOrNullSettingValueRequest: {
             /**
@@ -2335,6 +2475,35 @@ export interface components {
             /** @description Always null: read the settings again. */
             current: unknown;
         };
+        /** @description The site-wide settings: for now, who may sign in at all. */
+        SiteSettings: {
+            /**
+             * Who may sign in
+             * @description Raising it signs out everybody it no longer admits, straight away.
+             */
+            login_policy?: components["schemas"]["SiteSettingsLoginPolicy"];
+            /** @description How many sessions this change ended; null outside the answer to a change. */
+            readonly signed_out: number | null;
+            /**
+             * Format: date-time
+             * @description When the row was created, by the database's clock. Never changes.
+             */
+            readonly created_at: string;
+            /**
+             * Format: date-time
+             * @description When the row last changed, by the database's clock.
+             */
+            readonly updated_at: string;
+        };
+        /** @enum {string} */
+        SiteSettingsLoginPolicy: "everyone" | "staff" | "superusers";
+        /** @description A 412's body: the object as it is now, in `current`. */
+        SiteSettingsPreconditionFailed: {
+            detail: string;
+            /** @description Always precondition_failed. */
+            code: string;
+            current: components["schemas"]["SiteSettings"];
+        };
         Subscription: {
             /**
              * Format: uuid
@@ -2503,6 +2672,13 @@ export interface components {
              * @description When this person last signed in, or empty if they never have.
              */
             readonly last_login: string | null;
+            /** @description The version of the legal documents this user agreed to at signup, or blank if none were published. */
+            readonly terms_version: string;
+            /**
+             * Format: date-time
+             * @description When this user agreed to the legal documents, or empty if none were published at signup.
+             */
+            readonly terms_accepted_at: string | null;
             /**
              * Format: date-time
              * @description When the row was created, by the database's clock. Never changes.
@@ -2707,6 +2883,266 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Feature"][];
+                };
+            };
+        };
+    };
+    groups_list: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedGroupList"];
+                };
+            };
+        };
+    };
+    groups_create: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+            };
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GroupRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["GroupRequest"];
+                "multipart/form-data": components["schemas"]["GroupRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Group"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+        };
+    };
+    groups_retrieve: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+            };
+            header?: {
+                /** @description The ETag of the version already held - a 304 with no body if it's still current. */
+                "If-None-Match"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Group"];
+                };
+            };
+            /** @description The version If-None-Match named is still current. */
+            304: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    groups_destroy: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+            };
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+                /** @description The ETag of the version this request was made against, or * for whatever is current. */
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            412: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupPreconditionFailed"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreconditionRequired"];
+                };
+            };
+        };
+    };
+    groups_partial_update: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+            };
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+                /** @description The ETag of the version this request was made against, or * for whatever is current. */
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedGroupRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedGroupRequest"];
+                "multipart/form-data": components["schemas"]["PatchedGroupRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Group"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            412: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupPreconditionFailed"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreconditionRequired"];
                 };
             };
         };
@@ -4497,6 +4933,115 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SettingRefusal"];
+                };
+            };
+        };
+    };
+    site_settings_retrieve: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+            };
+            header?: {
+                /** @description The ETag of the version already held - a 304 with no body if it's still current. */
+                "If-None-Match"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteSettings"];
+                };
+            };
+            /** @description The version If-None-Match named is still current. */
+            304: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    site_settings_partial_update: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+            };
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+                /** @description The ETag of the version this request was made against, or * for whatever is current. */
+                "If-Match": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedSiteSettingsRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedSiteSettingsRequest"];
+                "multipart/form-data": components["schemas"]["PatchedSiteSettingsRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteSettings"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            412: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteSettingsPreconditionFailed"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreconditionRequired"];
                 };
             };
         };

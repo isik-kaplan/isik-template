@@ -210,16 +210,16 @@ if [ -n "$social_login_providers" ]; then
   # The list comes in on fd 3: the prompts inside the loop need stdin, or they would read the list.
   while IFS= read -r provider <&3; do
     [ -z "$provider" ] && continue
-    key="$(echo "$provider" | tr '[:lower:]' '[:upper:]')"
+    # An OpenID Connect issuer's variables are named for the issuer: openid_connect:corp is CORP.
+    key="$(echo "${provider#openid_connect:}" | tr '[:lower:]-' '[:upper:]_')"
     client_id="$(ask "  $provider client ID" "")"
     if [ -n "$client_id" ]; then
       set_var "${PREFIX}__OAUTH__${key}__CLIENT_ID" "$client_id"
       set_var "${PREFIX}__OAUTH__${key}__CLIENT_SECRET" "$(ask_secret "  $provider client secret")"
     fi
   done 3<<< "$(echo "$social_login_providers" | tr ',' '\n' | tr -d ' ')"
-  if echo ",$social_login_providers," | tr -d ' ' | grep -q ",openid_connect,"; then
-    echo "  openid_connect also needs ${PREFIX}__OAUTH__OPENID_CONNECT__SERVER_URL and"
-    echo "  ...__PROVIDER_ID - set those in $ENV_FILE directly."
+  if echo ",$social_login_providers," | tr -d ' ' | grep -q ",openid_connect:"; then
+    echo "  Each openid_connect:<issuer> also needs ${PREFIX}__OAUTH__<ISSUER>__SERVER_URL - set it in $ENV_FILE directly."
   fi
 fi
 

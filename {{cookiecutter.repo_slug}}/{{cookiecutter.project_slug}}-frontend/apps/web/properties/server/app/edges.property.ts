@@ -59,6 +59,51 @@ describe('the proxy in front of every page', () => {
   })
 })
 
+describe('the proxy in front of the admin', () => {
+  const ADMIN = 'http://admin.test-project.test'
+  const adminPage = fc.tuple(
+    fc.constantFrom('people', 'groups', 'app-approvals', 'settings'),
+    fc.array(segment, { maxLength: 2 })
+  )
+
+  test.prop([adminPage, fc.boolean()])(
+    "serves the admin's pages from under /admin, and sends a bare-domain /admin address to them",
+    async ([section, rest], viaApp) => {
+      const path = ['', section, ...rest].join('/')
+      const signedIn = { headers: { cookie: 'sessionid=abc' } }
+      if (viaApp) {
+        const redirected = await proxy(new NextRequest(`http://test-project.test/admin${path}`, signedIn))
+        expect(redirected.headers.get('location')).toBe(`${ADMIN}${path}`)
+      }
+      const served = await proxy(new NextRequest(`${ADMIN}${path}`, signedIn))
+      expect(served.headers.get('x-middleware-rewrite')).toBe(`${ADMIN}/admin${path}`)
+      // As Next sees it behind nginx: its own address, and the browser's host in the header.
+      const behind = { headers: { ...signedIn.headers, host: 'admin.test-project.test' } }
+      const proxied = await proxy(new NextRequest(`http://0.0.0.0:3000${path}`, behind))
+      expect(proxied.headers.get('x-middleware-rewrite')).toBe(`http://0.0.0.0:3000/admin${path}`)
+    }
+  )
+
+  test('sends /admin itself to the admin, which opens at its root', async () => {
+    const signedIn = { headers: { cookie: 'sessionid=abc' } }
+    const redirected = await proxy(new NextRequest('http://test-project.test/admin', signedIn))
+    expect(redirected.headers.get('location')).toBe(`${ADMIN}/`)
+    const served = await proxy(new NextRequest(`${ADMIN}/`, signedIn))
+    expect(served.headers.get('x-middleware-rewrite')).toBe(`${ADMIN}/admin`)
+  })
+
+  test.prop([privatePath, fc.boolean()])(
+    'sends anything else asked of the admin host to the app, keeping what it shares with it',
+    async (path, signedIn) => {
+      fc.pre(!/^\/(people|groups|app-approvals|settings)(\/|$)/.test(path))
+      const request = new NextRequest(`${ADMIN}${path}`, { headers: signedIn ? { cookie: 'sessionid=abc' } : {} })
+      const location = (await proxy(request)).headers.get('location')
+      if (/^\/(auth|legal|too-many-requests)(\/|$)/.test(path)) expect(location).toBeNull()
+      else expect(location).toBe(`http://test-project.test${path}`)
+    }
+  )
+})
+
 describe('the brand icon', () => {
   test('is drawn at every size the tab, the install prompt and an Apple device ask for', async () => {
     expect(generateImageMetadata().map((entry) => entry.size.width)).toEqual(ICON_SIZES)

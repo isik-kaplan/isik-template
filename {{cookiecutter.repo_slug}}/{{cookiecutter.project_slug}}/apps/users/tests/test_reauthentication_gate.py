@@ -14,7 +14,6 @@ from apps.common.api.request_policies import RecentlyProvedWhoTheyAre
 from apps.users.reauthentication.gate import ProvesWhoTheyAre as HeadlessProvesWhoTheyAre
 
 
-# The admin is left out: it is behind its own login.
 URLCONFS = ("{{ cookiecutter.project_slug }}.urls.api", "{{ cookiecutter.project_slug }}.urls.auth")
 
 # view -> methods (allauth) or actions (DRF) that ask for a proof.
@@ -36,6 +35,10 @@ GATED = {
     "AuthorizedApplicationViewSet": {"destroy"},
     "ReviewedApplicationViewSet": {"approve"},
     "UserViewSet": {"partial_update"},
+    # A group's permissions are a grant to everybody in it.
+    "GroupViewSet": {"create", "partial_update", "destroy"},
+    # Who may sign in; raising it signs people out.
+    "SiteSettingsViewSet": {"update_current"},
     # Asking for the account to be deleted signs the person out everywhere.
     "AccountDeletionViewSet": {"request_deletion"},
     # A token that acts as you is as good as a password.

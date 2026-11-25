@@ -33,15 +33,21 @@ const managed = fc.record({
   is_staff: fc.oneof(fc.constant(undefined), fc.boolean()),
   is_superuser: fc.oneof(fc.constant(undefined), fc.boolean()),
   permissions: fc.oneof(fc.constant(undefined), fc.constant([] as string[])),
+  // In the first group offered or not, so clicking each both joins and leaves.
+  groups: fc.oneof(fc.constant(undefined), fc.constant([] as string[]), fc.constant(['g0'])),
   last_login: fc.constant(null),
   created_at: fc.constant(''),
   updated_at: fc.constant(''),
 })
+// Named apart from every permission's label, so a checkbox is found by its group's name alone.
+const offeredGroups = fc
+  .integer({ min: 0, max: 2 })
+  .map((count) => Array.from({ length: count }, (_, index) => ({ id: `g${index}`, name: `group ${index}` })))
 
 describe('managing somebody', () => {
-  test.prop([managed, permissions, fc.subarray([...FLAGS]), fc.constantFrom(200, 412, 400)])(
-    'sends every flag and grant as the form holds them, against the version read, under a key',
-    async (user, offered, flipped, status) => {
+  test.prop([managed, permissions, offeredGroups, fc.subarray([...FLAGS]), fc.constantFrom(200, 412, 400)])(
+    'sends every flag, grant and group as the form holds them, against the version read, under a key',
+    async (user, offered, groups, flipped, status) => {
       freshDom()
       const sent = vi.fn(async () =>
         json(
@@ -58,7 +64,7 @@ describe('managing somebody', () => {
         )
       )
       vi.stubGlobal('fetch', sent)
-      render(<ManageUserForm user={user as never} etag='"1"' permissions={offered} />)
+      render(<ManageUserForm user={user as never} etag='"1"' permissions={offered} groups={groups} />)
       const held = {
         is_active: user.is_active ?? true,
         is_staff: user.is_staff ?? false,
@@ -70,6 +76,7 @@ describe('managing somebody', () => {
       const granted = offered.slice(0, 1)
       for (const scope of granted)
         fireEvent.click(screen.getByRole('checkbox', { name: new RegExp(`^${scope.label} `) }))
+      for (const group of groups) fireEvent.click(screen.getByRole('checkbox', { name: group.name }))
       fireEvent.click(screen.getByRole('button', { name: 'Save' }))
       await vi.waitFor(() => expect(sent).toHaveBeenCalled())
       const request = calls(sent)[0][0] as Request
@@ -78,6 +85,10 @@ describe('managing somebody', () => {
       expect(await request.json()).toEqual({
         ...Object.fromEntries(FLAGS.map((flag) => [flag, flipped.includes(flag) ? !held[flag] : held[flag]])),
         permissions: granted.map((scope) => scope.name),
+        groups: groups
+          .map((group) => group.id)
+          .filter((id) => !(user.groups ?? []).includes(id))
+          .concat((user.groups ?? []).filter((id) => !groups.some((group) => group.id === id))),
       })
       if (status === 400) await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('Not yours to change.'))
       else await vi.waitFor(() => expect(navigation.refresh).toHaveBeenCalled())

@@ -9,14 +9,17 @@ vi.mock('@/lib/getSession', () => ({
   redirectIfAuthenticated: (...args: unknown[]) => redirectIfAuthenticated(...args),
   getLanguage: async () => 'en',
 }))
-vi.mock('next/headers', () => ({ headers: async () => new Headers({ host: 'test-project.test' }) }))
+const request = vi.hoisted(() => ({ host: 'test-project.test' }))
+vi.mock('next/headers', () => ({ headers: async () => new Headers({ host: request.host }) }))
 const push = vi.fn()
 // Pinned: the form's fields follow the generated requirement and phone option.
 vi.mock('@/config/names', () => ({ NAME_REQUIREMENT: 'username_with_optional_full' }))
 vi.mock('@/config/phone', () => ({ PHONE: 'none' }))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }))
 vi.mock('@/config/public', () => ({ CONFIG: { DOMAIN: 'test-project.test' } }))
-vi.mock('@/lib/socialProviders', () => ({ socialProviders: () => [{ id: 'google', name: 'Google', icon: '' }] }))
+vi.mock('@/lib/socialProviders', () => ({
+  signInProviders: () => [{ id: 'google', name: 'Google', icon: '', adminOnly: false }],
+}))
 const passwords = vi.hoisted(() => ({ signIn: true }))
 vi.mock('@/lib/passwords', () => ({ passwordsSignIn: () => passwords.signIn }))
 
@@ -32,6 +35,7 @@ describe('LoginPage', () => {
     push.mockClear()
     document.querySelectorAll('form').forEach((form) => form.remove())
     passwords.signIn = true
+    request.host = 'test-project.test'
   })
 
   it('offers only the providers, with no divider or reset link, when nobody signs in with a password', async () => {
@@ -139,5 +143,39 @@ describe('LoginPage', () => {
     await user.click(screen.getByRole('button', { name: 'Log in' }))
 
     expect(push).toHaveBeenCalledWith('/')
+  })
+
+  describe('on the admin host', () => {
+    it('signs in to the admin, offering no signup, and comes back to the admin from a provider', async () => {
+      request.host = 'admin.test-project.test'
+      HTMLFormElement.prototype.submit = vi.fn()
+      globalThis.fetch = vi.fn(async () => new Response(null, { status: 200 }))
+      render(await LoginPage({ searchParams: Promise.resolve({}) }))
+
+      expect(screen.getByText('Sign in to the admin')).toBeTruthy()
+      expect(screen.getByLabelText('Password')).toBeTruthy()
+      expect(screen.queryByRole('link', { name: 'Sign up' })).toBeNull()
+      expect(screen.getByRole('link', { name: 'Forgot your password?' })).toBeTruthy()
+      expect(screen.queryByText('A password signs in superusers only.')).toBeNull()
+      await userEvent.click(screen.getByRole('button', { name: /Continue with Google/ }))
+      const socialForm = Array.from(document.querySelectorAll('form')).find((form) =>
+        form.elements.namedItem('provider')
+      )
+      expect(socialForm?.getAttribute('action')).toBe('http://auth.test-project.test/v0/browser/auth/provider/redirect')
+      expect((socialForm?.elements.namedItem('callback_url') as HTMLInputElement)?.value).toBe(
+        'http://admin.test-project.test/auth/callback-complete?next=%2F'
+      )
+    })
+
+    it("still takes a superuser's password when nobody else signs in with one", async () => {
+      request.host = 'admin.test-project.test'
+      passwords.signIn = false
+      render(await LoginPage({ searchParams: Promise.resolve({}) }))
+
+      expect(screen.getByLabelText('Password')).toBeTruthy()
+      expect(screen.getByText('Or')).toBeTruthy()
+      expect(screen.getByText('A password signs in superusers only.')).toBeTruthy()
+      expect(screen.queryByRole('link', { name: 'Forgot your password?' })).toBeNull()
+    })
   })
 })

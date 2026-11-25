@@ -13,7 +13,7 @@ vi.mock('@/config/public', () => ({
   CONFIG: {
     DOMAIN: 'test-project.test',
     OAUTH_PROVIDER: { MODE: 'approval' },
-    SOCIAL_LOGIN: { PROVIDERS: [], ICONS: [] },
+    SOCIAL_LOGIN: { PROVIDERS: [], ICONS: [], ADMIN_ONLY: [] },
   },
 }))
 

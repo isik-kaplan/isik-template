@@ -3,7 +3,7 @@ import { authOrigin } from '@/lib/authOrigin'
 import { isLocalDevHost } from '@/lib/isLocalDevHost'
 import { requestOrigin } from '@/lib/requestOrigin'
 import { broadcastSessionCleared, onSessionCleared } from '@/lib/sessionChannel'
-import { socialProviders } from '@/lib/socialProviders'
+import { signInProviders, socialProviders } from '@/lib/socialProviders'
 import { TOO_MANY_REQUESTS_PATH, tooManyRequestsPage } from '@/lib/tooManyRequests'
 import { tooManyRequestsMessage } from '@/lib/tooManyRequestsMessage'
 
@@ -14,18 +14,22 @@ import { describe, expect, vi } from 'vitest'
 
 const config = vi.hoisted(() => ({
   DOMAIN: 'test-project.test',
-  SOCIAL_LOGIN: { PROVIDERS: [] as string[], ICONS: [] as string[] },
+  SOCIAL_LOGIN: { PROVIDERS: [] as string[], ICONS: [] as string[], ADMIN_ONLY: [] as string[] },
 }))
 vi.mock('@/config/public', () => ({ CONFIG: config }))
 
 const providerId = fc.stringMatching(/^[a-z]{2,8}(_[a-z]{2,8}){0,2}$/)
 
 describe('the social providers', () => {
-  test.prop([fc.uniqueArray(providerId, { maxLength: 4 }), fc.nat()])(
+  test.prop([fc.uniqueArray(providerId, { maxLength: 4 }), fc.nat(), fc.boolean(), fc.boolean()])(
     'are the configured ids, each named from its own words and given the icon configured for it',
-    (ids, pick) => {
+    (ids, pick, issuers, admin) => {
       const withIcon = ids.length ? ids[pick % ids.length] : null
-      config.SOCIAL_LOGIN.PROVIDERS = ids.map((id) => ` ${id} `).concat([' '])
+      // Listed as issuers or not: either way it is the id allauth knows that the button carries.
+      const entries = ids.map((id) => (issuers ? `openid_connect:${id}` : id))
+      const adminOnly = entries.filter((_, index) => index % 2 === 1)
+      config.SOCIAL_LOGIN.PROVIDERS = entries.map((entry) => ` ${entry} `).concat([' '])
+      config.SOCIAL_LOGIN.ADMIN_ONLY = adminOnly
       config.SOCIAL_LOGIN.ICONS = withIcon ? [` ${withIcon} = /icons/${withIcon}.svg `] : []
 
       expect(socialProviders()).toEqual(
@@ -36,7 +40,11 @@ describe('the social providers', () => {
             .map((part) => part[0].toUpperCase() + part.slice(1))
             .join(' '),
           icon: id === withIcon ? `/icons/${id}.svg` : '',
+          adminOnly: adminOnly.includes(issuers ? `openid_connect:${id}` : id),
         }))
+      )
+      expect(signInProviders(admin).map((provider) => provider.id)).toEqual(
+        ids.filter((_, index) => admin || index % 2 === 0)
       )
     }
   )
@@ -45,8 +53,19 @@ describe('the social providers', () => {
     'refuse an icon entry that is not <id>=<url> rather than showing no icon',
     (entry) => {
       config.SOCIAL_LOGIN.PROVIDERS = []
+      config.SOCIAL_LOGIN.ADMIN_ONLY = []
       config.SOCIAL_LOGIN.ICONS = [entry]
       expect(() => socialProviders()).toThrow(/is not <provider id>=<url or path>/)
+    }
+  )
+
+  test.prop([fc.uniqueArray(providerId, { minLength: 1, maxLength: 3 })])(
+    'refuse an admin-only provider that is not offered at all',
+    (ids) => {
+      config.SOCIAL_LOGIN.PROVIDERS = []
+      config.SOCIAL_LOGIN.ICONS = []
+      config.SOCIAL_LOGIN.ADMIN_ONLY = ids
+      expect(() => socialProviders()).toThrow(/SOCIAL_LOGIN__ADMIN_ONLY names what SOCIAL_LOGIN__PROVIDERS does not/)
     }
   )
 })

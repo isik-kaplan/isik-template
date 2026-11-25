@@ -1,18 +1,16 @@
-"""The provider's startup checks, cleanup and admin, each stated over whatever it is handed."""
+"""The provider's startup checks and cleanup, each stated over whatever it is handed."""
 
 from datetime import timedelta
 from io import StringIO
 
 import pytest
-from django.contrib import admin
 from django.core.exceptions import ImproperlyConfigured
 from django.core.management import call_command
 from django.db import transaction
-from django.test import RequestFactory
 from django.utils import timezone
 from hypothesis import given
 from hypothesis import strategies as st
-from oauth2_provider.models import get_access_token_model, get_application_model
+from oauth2_provider.models import get_access_token_model
 
 from apps.oauth_provider import urls
 from apps.oauth_provider.checks import every_toolkit_route_is_decided
@@ -27,7 +25,6 @@ application = oauth.application
 
 
 AccessToken = get_access_token_model()
-Application = get_application_model()
 NAME = st.from_regex(r"[a-z][a-z-]{0,15}", fullmatch=True)
 
 
@@ -86,16 +83,3 @@ def test_clearing_deletes_exactly_the_expired_tokens(application, logged, throug
             sum(hours < 0 for hours in ages)
         ]
         transaction.set_rollback(True)
-
-
-@pytest.mark.django_db
-@given(superuser=st.booleans())
-def test_nobody_adds_or_changes_an_application_in_the_admin(admin_user, superuser):
-    model_admin = admin.site._registry[Application]
-    request = RequestFactory().get("/")
-    request.user = admin_user
-    admin_user.is_superuser = superuser
-
-    assert not model_admin.has_add_permission(request)
-    assert not model_admin.has_change_permission(request)
-    assert not model_admin.has_change_permission(request, Application())

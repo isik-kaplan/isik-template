@@ -6,6 +6,7 @@ import { CompleteSignupForm } from '@/components/app-auth/CompleteSignupForm'
 import { LegalConsentNotice } from '@/components/app-legal/LegalConsentNotice'
 
 import { sUseTranslation } from '@/i18n'
+import { siblingOrigin } from '@/lib/hosts'
 import { requestOrigin } from '@/lib/requestOrigin'
 import { visitorFetch } from '@/lib/visitor'
 
@@ -15,7 +16,7 @@ import { AuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api'
 // which looped with /auth/login's pending-signup check.
 export default async function CompleteSignupPage() {
   const requestHeaders = await headers()
-  const authOrigin = requestOrigin(requestHeaders).replace('://', '://auth.')
+  const authOrigin = siblingOrigin(requestOrigin(requestHeaders), 'auth')
   const authApi = new AuthApi(authOrigin, {
     cookieHeader: requestHeaders.get('cookie') ?? undefined,
     baseFetch: visitorFetch(requestHeaders),

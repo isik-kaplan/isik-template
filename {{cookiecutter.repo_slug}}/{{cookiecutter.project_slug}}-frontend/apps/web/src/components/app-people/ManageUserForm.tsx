@@ -19,17 +19,21 @@ import { useIdempotencyKey } from '@isikk/core/hooks'
 
 type ManagedUser = ApiType<'ManagedUser'>
 type Flag = 'is_active' | 'is_staff' | 'is_superuser'
+export type GroupChoice = { id: string; name: string }
 
 /** Whether somebody may sign in, their rank and grants; the backend decides what the editor may change. */
 export function ManageUserForm({
   user,
   etag,
   permissions,
+  groups = [],
 }: {
   user: ManagedUser
   // The read's ETag header: the version this form was opened on.
   etag: string | null
   permissions: Scope[]
+  // Left out where there are none to offer.
+  groups?: GroupChoice[]
 }) {
   const { t } = useClientTranslation(['auth'])
   const router = useRouter()
@@ -41,6 +45,7 @@ export function ManageUserForm({
     is_superuser: user.is_superuser ?? false,
   })
   const [granted, setGranted] = useState<string[]>(user.permissions ?? [])
+  const [memberOf, setMemberOf] = useState<string[]>(user.groups ?? [])
 
   // Spelled out because i18next-parser only finds a literal key.
   const labels: Record<Flag, string> = {
@@ -51,7 +56,7 @@ export function ManageUserForm({
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
-    const changes = { ...flags, permissions: granted as NonNullable<ManagedUser['permissions']> }
+    const changes = { ...flags, permissions: granted as NonNullable<ManagedUser['permissions']>, groups: memberOf }
     await submit(
       (headers) => createApi(apiOrigin()).updateUser(user.id, changes, { ...headers, ...saving.headerFor(changes) }),
       {
@@ -90,6 +95,25 @@ export function ManageUserForm({
         value={granted}
         onChange={setGranted}
       />
+      {groups.length > 0 && (
+        <fieldset className="flex flex-col gap-2">
+          <legend className="mb-2 text-sm font-medium">{t('auth:peopleGroupsLegend')}</legend>
+          {groups.map((group) => (
+            <label key={group.id} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={memberOf.includes(group.id)}
+                onChange={(event) =>
+                  setMemberOf((current) =>
+                    event.target.checked ? [...current, group.id] : current.filter((id) => id !== group.id)
+                  )
+                }
+              />
+              {group.name}
+            </label>
+          ))}
+        </fieldset>
+      )}
       <Button type="submit" className="self-start" disabled={isSubmitting}>
         {t('auth:peopleSave')}
       </Button>

@@ -1,4 +1,4 @@
-"""Account events. Signals rather than adapter overrides, so every flow (admin login included) is covered."""
+"""Account events. Signals rather than adapter overrides, so every flow is covered."""
 
 from allauth.account.signals import (
     email_changed,

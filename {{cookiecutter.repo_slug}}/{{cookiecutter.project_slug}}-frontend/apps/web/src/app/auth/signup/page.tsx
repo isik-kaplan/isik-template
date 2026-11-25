@@ -7,6 +7,7 @@ import { LegalConsentNotice } from '@/components/app-legal/LegalConsentNotice'
 
 import { sUseTranslation } from '@/i18n'
 import { redirectIfAuthenticated } from '@/lib/getSession'
+import { siblingOrigin } from '@/lib/hosts'
 import { passwordsSignIn } from '@/lib/passwords'
 import { requestOrigin } from '@/lib/requestOrigin'
 
@@ -29,7 +30,7 @@ export default async function SignupPage() {
       }
     >
       <SocialLoginSection
-        action={`${origin.replace('://', '://auth.')}${PROVIDER_REDIRECT_PATH}`}
+        action={`${siblingOrigin(origin, 'auth')}${PROVIDER_REDIRECT_PATH}`}
         callbackUrl={`${origin}/auth/callback-complete?next=${encodeURIComponent('/')}`}
         dividerText={passwords ? t('auth:orDivider') : undefined}
       />

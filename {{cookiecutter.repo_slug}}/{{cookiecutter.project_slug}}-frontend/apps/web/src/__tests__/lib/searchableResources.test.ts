@@ -85,7 +85,7 @@ describe('searchableResources', () => {
   })
 
   it.each([
-    ['users', '/v0/users/', [{ id: 'u1', title: 'ada', subtitle: 'ada@a.test', href: '/staff/people/u1' }]],
+    ['users', '/v0/users/', [{ id: 'u1', title: 'ada', subtitle: 'ada@a.test', href: '/admin/people/u1' }]],
     [
       'applications',
       '/v0/oauth-applications/',
@@ -94,7 +94,7 @@ describe('searchableResources', () => {
     [
       'applicationReviews',
       '/v0/oauth-application-reviews/',
-      [{ id: '8', title: 'Beta', subtitle: 'bob', href: '/staff/applications/8' }],
+      [{ id: '8', title: 'Beta', subtitle: 'bob', href: '/admin/app-approvals/8' }],
     ],
     [
       'notifications',
@@ -146,8 +146,8 @@ describe('destinationsFor', () => {
       '/profile',
       '/profile/notifications',
       '/applications',
-      '/staff/people',
-      '/staff/applications',
+      '/admin/people',
+      '/admin/app-approvals',
       ...forStaff.map(() => '/webhooks'),
     ])
     CONFIG.OAUTH_PROVIDER.MODE = 'off'
