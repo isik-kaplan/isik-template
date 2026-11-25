@@ -104,47 +104,58 @@ describe('the phone number screen', () => {
     )
   })
 
-  it('replaces the number on file only once its code comes back right, and otherwise says why', async () => {
-    await fc.assert(
-      fc.asyncProperty(
-        onFile,
-        phoneNumber,
-        code,
-        fc.constantFrom<'verified' | Refused>('verified', ...REFUSED),
-        refusalDetails,
-        async (phone, number, { typed, digits }, outcome, details) => {
-          const calls = serve(({ method, path }) => {
-            if (method === 'GET') return ok(phone ? [phone] : [])
-            if (path === PATH) return ok([{ phone: number, verified: false }])
-            return outcome === 'verified' ? ok({}) : refusal(outcome, details)
-          })
-          const view = await render(<ProfilePhone />)
-          await waitFor(() => expect(screen.getByTestId('profile-phone-current').props.children).toBe(current(phone)))
-          await sendTo(number)
-          await waitFor(() => expect(screen.getByTestId('profile-phone-code-input')).toBeTruthy())
-          await fireEvent.changeText(screen.getByTestId('profile-phone-code-input'), typed)
-          await fireEvent.press(screen.getByTestId('profile-phone-verify'))
-          await waitFor(() => expect(calls).toHaveLength(3))
-          expect(calls[2]).toMatchObject({ method: 'POST', path: '/v0/app/auth/phone/verify', body: { code: digits } })
-          if (outcome === 'verified') {
-            await waitFor(() => expect(screen.getByTestId('profile-phone-saved')).toBeTruthy())
-            expect(screen.getByTestId('profile-phone-current').props.children).toBe(number)
-            expect(screen.getByTestId('profile-phone-number-input').props.value).toBe('')
-            // Sending another number takes the saved notice away.
+  // One property per outcome, so a right code and a refused one are both reached every run.
+  it.each([
+    ['comes back right', fc.constant<'verified' | Refused>('verified')],
+    ['is refused', fc.constantFrom<'verified' | Refused>(...REFUSED)],
+  ])(
+    'replaces the number on file only once its code comes back right, and otherwise says why: %s',
+    async (_case, outcomes) => {
+      await fc.assert(
+        fc.asyncProperty(
+          onFile,
+          phoneNumber,
+          code,
+          outcomes,
+          refusalDetails,
+          async (phone, number, { typed, digits }, outcome, details) => {
+            const calls = serve(({ method, path }) => {
+              if (method === 'GET') return ok(phone ? [phone] : [])
+              if (path === PATH) return ok([{ phone: number, verified: false }])
+              return outcome === 'verified' ? ok({}) : refusal(outcome, details)
+            })
+            const view = await render(<ProfilePhone />)
+            await waitFor(() => expect(screen.getByTestId('profile-phone-current').props.children).toBe(current(phone)))
             await sendTo(number)
-            await waitFor(() => expect(screen.queryByTestId('profile-phone-saved')).toBeNull())
-          } else {
-            await waitFor(() =>
-              expect(screen.getByTestId('profile-phone-error').props.children).toBe(
-                said(outcome, details, 'verifyPhoneError')
+            await waitFor(() => expect(screen.getByTestId('profile-phone-code-input')).toBeTruthy())
+            await fireEvent.changeText(screen.getByTestId('profile-phone-code-input'), typed)
+            await fireEvent.press(screen.getByTestId('profile-phone-verify'))
+            await waitFor(() => expect(calls).toHaveLength(3))
+            expect(calls[2]).toMatchObject({
+              method: 'POST',
+              path: '/v0/app/auth/phone/verify',
+              body: { code: digits },
+            })
+            if (outcome === 'verified') {
+              await waitFor(() => expect(screen.getByTestId('profile-phone-saved')).toBeTruthy())
+              expect(screen.getByTestId('profile-phone-current').props.children).toBe(number)
+              expect(screen.getByTestId('profile-phone-number-input').props.value).toBe('')
+              // Sending another number takes the saved notice away.
+              await sendTo(number)
+              await waitFor(() => expect(screen.queryByTestId('profile-phone-saved')).toBeNull())
+            } else {
+              await waitFor(() =>
+                expect(screen.getByTestId('profile-phone-error').props.children).toBe(
+                  said(outcome, details, 'verifyPhoneError')
+                )
               )
-            )
-            expect(screen.getByTestId('profile-phone-current').props.children).toBe(current(phone))
-            expect(screen.getByTestId('profile-phone-code-input').props.value).toBe(typed)
+              expect(screen.getByTestId('profile-phone-current').props.children).toBe(current(phone))
+              expect(screen.getByTestId('profile-phone-code-input').props.value).toBe(typed)
+            }
+            await view.unmount()
           }
-          await view.unmount()
-        }
+        )
       )
-    )
-  })
+    }
+  )
 })
