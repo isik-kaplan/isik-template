@@ -497,6 +497,12 @@ jobs:
       - name: Install packages
         working-directory: {{ cookiecutter.project_slug }}-frontend
         run: npm ci && npm run build:packages
+      # Before the stack, with Gradle's daemons stopped after, so they hold none of the memory the emulator needs.
+      - name: Build the app
+        run: |
+          echo "APP=$(e2e/maestro/build.sh android)" >> "$GITHUB_ENV"
+          {{ cookiecutter.project_slug }}-frontend/apps/mobile/android/gradlew -p {{ cookiecutter.project_slug }}-frontend/apps/mobile/android --stop
+          pkill -f KotlinCompileDaemon || true
       # Mailpit, the texts and the emulator's DNS published to the host, beside the web suite's stack.
       - name: Start the e2e stack
         working-directory: e2e
@@ -505,8 +511,6 @@ jobs:
           export COMPOSE_FILE=../docker-compose.yml:docker-compose.e2e.yml:docker-compose.mailpit-for-e2e.yml:docker-compose.maestro-for-e2e.yml
           docker compose build
           docker compose up -d --wait --wait-timeout 600
-      - name: Build the app
-        run: echo "APP=$(e2e/maestro/build.sh android)" >> "$GITHUB_ENV"
       - name: Install Maestro
         run: |
           curl -Ls "https://get.maestro.mobile.dev" | bash
@@ -525,7 +529,8 @@ jobs:
           target: google_apis
           # The stack's DNS answers {{ cookiecutter.domain }} with 10.0.2.2, the host as the emulator sees it.
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -dns-server 127.0.0.1
-          script: e2e/maestro/test.sh "$APP"
+          # The device's log goes in the report when the flows fail; the emulator is gone by the next step.
+          script: e2e/maestro/test.sh "$APP" || { free -m; adb logcat -d > ~/.maestro/tests/logcat.txt; exit 1; }
       - if: failure()
         name: Show service logs (only reached if a step above failed)
         working-directory: e2e

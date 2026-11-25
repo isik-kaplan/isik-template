@@ -15,8 +15,9 @@ brew install postgresql@18 mailpit
 {%- if cookiecutter.languages.split(',') | length > 1 %} gettext{% endif %}
 
 pg="$(brew --prefix postgresql@18)/bin"
+# TCP only: a socket under the checkout would pass the 103 characters macOS allows its path.
 "$pg/initdb" -D "$state/pg" -U postgres --auth=trust >/dev/null
-"$pg/pg_ctl" -D "$state/pg" -l "$state/postgres.log" -o "-h 127.0.0.1 -k $state" -w start
+"$pg/pg_ctl" -D "$state/pg" -l "$state/postgres.log" -o "-h 127.0.0.1 -k ''" -w start
 "$pg/psql" -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 \
   -c "CREATE ROLE \"$(value DB__USER)\" LOGIN SUPERUSER PASSWORD '$(value DB__PASSWORD)'" \
   -c "CREATE DATABASE \"$(value DB__NAME)\" OWNER \"$(value DB__USER)\""

@@ -5,6 +5,8 @@ repos:
       - id: end-of-file-fixer
       - id: trailing-whitespace
       - id: check-yaml
+        # Maestro's flows put their config and their steps in two documents of one file.
+        args: [--allow-multiple-documents]
         # Authentik's !Find/!KeyOf tags; excluded rather than --unsafe, which would weaken every other file.
         exclude: ^e2e/authentik-blueprints/
       - id: check-added-large-files

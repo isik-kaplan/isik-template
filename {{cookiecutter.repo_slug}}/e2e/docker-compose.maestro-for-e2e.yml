@@ -1,5 +1,5 @@
 # What the mobile flows reach from outside the stack: they run on the host, and the app in an emulator.
-# Added to COMPOSE_FILE by e2e/maestro/android.sh; the web suite reads all of this from inside instead.
+# Added to COMPOSE_FILE for the Android flows (docs/development.md); the web suite reads all of this from inside instead.
 services:
   # The flows read the confirmation mail's link here.
   mailpit:
