@@ -8,6 +8,7 @@ import {
   NameFields,
   Screen,
   SocialLoginButtons,
+  Text,
   TextField,
 } from '@/components'
 
@@ -19,10 +20,9 @@ import { getAuthApi } from '@/lib/session'
 import { passwordsSignIn } from '@/lib/socialProviders'
 import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 
-import { errorsOf, pendingFlow } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
+import { errorsOf, hasPendingVerifyEmail, pendingFlow } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
 import { Link, router } from 'expo-router'
-import { Text } from 'react-native'
 
 export default function Signup() {
   const { t } = useTranslation()
@@ -32,6 +32,7 @@ export default function Signup() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | undefined>()
   const [submitting, setSubmitting] = useState(false)
+  const [verifying, setVerifying] = useState(false)
 
   async function submit() {
     setSubmitting(true)
@@ -55,11 +56,28 @@ export default function Signup() {
         router.push('/verify-phone')
         return
       }
+      // Mandatory email verification answers 401 although the account was made.
+      if (hasPendingVerifyEmail(response)) {
+        setVerifying(true)
+        return
+      }
       const authErrors = errorsOf(response)
       setError(authErrors?.[0]?.message ?? t('signupError'))
     } finally {
       setSubmitting(false)
     }
+  }
+
+  if (verifying) {
+    return (
+      <Screen testID="signup-verify-email">
+        <Heading testID="signup-heading">{t('signupVerifyEmailHeading')}</Heading>
+        <Text testID="signup-verify-email-message">{t('signupVerifyEmailMessage', { email })}</Text>
+        <Link href="/login" testID="login-link">
+          <Text>{t('backToLoginLink')}</Text>
+        </Link>
+      </Screen>
+    )
   }
 
   return (

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { Button, ErrorText, Heading, ListRow, Screen, TextField } from '@/components'
+import { Button, ErrorText, Heading, ListRow, Screen, Text, TextButton, TextField } from '@/components'
 
 import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
@@ -10,7 +10,7 @@ import { spacing } from '@/theme'
 import { errorsOf } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
 import { useIsMounted } from '@isikk/core/hooks'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 
 type EmailAddress = { email: string; primary: boolean; verified: boolean }
 
@@ -67,7 +67,7 @@ export default function ProfileEmails() {
   }
 
   return (
-    <Screen testID="profile-emails">
+    <Screen testID="profile-emails" back>
       <Heading testID="profile-emails-heading">{t('profileEmailsHeading')}</Heading>
       {emails.map((emailAddress) => (
         <ListRow key={emailAddress.email} testID={`email-row-${emailAddress.email}`}>
@@ -78,22 +78,25 @@ export default function ProfileEmails() {
           </Text>
           <View testID={`email-actions-${emailAddress.email}`} style={styles.actions}>
             {!emailAddress.primary && emailAddress.verified && (
-              <Pressable testID={`make-primary-${emailAddress.email}`} onPress={() => makePrimary(emailAddress.email)}>
-                <Text>{t('profileEmailsMakePrimary')}</Text>
-              </Pressable>
+              <TextButton
+                testID={`make-primary-${emailAddress.email}`}
+                label={t('profileEmailsMakePrimary')}
+                onPress={() => makePrimary(emailAddress.email)}
+              />
             )}
             {!emailAddress.verified && (
-              <Pressable
+              <TextButton
                 testID={`resend-verification-${emailAddress.email}`}
+                label={t('profileEmailsResend')}
                 onPress={() => resendVerification(emailAddress.email)}
-              >
-                <Text>{t('profileEmailsResend')}</Text>
-              </Pressable>
+              />
             )}
             {!emailAddress.primary && (
-              <Pressable testID={`remove-email-${emailAddress.email}`} onPress={() => remove(emailAddress.email)}>
-                <Text>{t('profileEmailsRemove')}</Text>
-              </Pressable>
+              <TextButton
+                testID={`remove-email-${emailAddress.email}`}
+                label={t('profileEmailsRemove')}
+                onPress={() => remove(emailAddress.email)}
+              />
             )}
           </View>
         </ListRow>

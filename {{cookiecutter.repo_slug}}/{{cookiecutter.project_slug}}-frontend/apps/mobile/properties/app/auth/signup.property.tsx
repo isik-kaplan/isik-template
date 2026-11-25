@@ -108,6 +108,16 @@ describe('the signup screen', () => {
           const view = await render(<Signup />)
           await fireEvent.press(view.getByTestId('signup-submit'))
           const destination = destinations[outcome]
+          if (outcome === 'verify_email') {
+            await waitFor(() =>
+              expect(view.getByTestId('signup-verify-email-message').props.children).toBe(
+                t('signupVerifyEmailMessage', { email: '' })
+              )
+            )
+            expect(view.queryByTestId('signup-error')).toBeNull()
+            await view.unmount()
+            continue
+          }
           if (destination) {
             await waitFor(() => expect(navigation[destination[0]]).toHaveBeenCalledWith(destination[1]))
             expect(view.queryByTestId('signup-error')).toBeNull()

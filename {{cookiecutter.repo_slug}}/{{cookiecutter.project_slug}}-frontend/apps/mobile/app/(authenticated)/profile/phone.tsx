@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { Button, ErrorText, Heading, Screen, TextField } from '@/components'
+import { Button, ErrorText, Heading, Screen, Text, TextField } from '@/components'
 
 import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
@@ -9,7 +9,6 @@ import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 import { errorsOf } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
 import { useIsMounted } from '@isikk/core/hooks'
-import { Text } from 'react-native'
 
 type PhoneNumber = { phone: string; verified: boolean }
 
@@ -58,7 +57,7 @@ export default function ProfilePhone() {
   }
 
   return (
-    <Screen testID="profile-phone">
+    <Screen testID="profile-phone" back>
       <Heading testID="profile-phone-heading">{t('profilePhoneHeading')}</Heading>
       <Text testID="profile-phone-current">
         {phone ? `${phone.phone}${phone.verified ? '' : t('profilePhoneUnverifiedSuffix')}` : t('profilePhoneNone')}

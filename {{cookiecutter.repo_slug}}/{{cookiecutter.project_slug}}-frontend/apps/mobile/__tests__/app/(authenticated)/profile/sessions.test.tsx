@@ -1,6 +1,9 @@
 import ProfileSessions from '@/app/(authenticated)/profile/sessions'
+import { look, themeOf } from '@/theme'
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native'
+
+const LIGHT = themeOf('light')
 
 const mockSessions = jest.fn()
 const mockEndSessions = jest.fn()
@@ -120,12 +123,7 @@ describe('ProfileSessions', () => {
   it('styles the screen and heading', async () => {
     mockSessions.mockResolvedValue({ data: { data: [] } })
     await render(<ProfileSessions />)
-    expect(screen.getByTestId('profile-sessions').props.style).toEqual({
-      flex: 1,
-      justifyContent: 'center',
-      padding: 24,
-      gap: 12,
-    })
-    expect(screen.getByTestId('profile-sessions-heading').props.style).toEqual({ fontSize: 24, fontWeight: 'bold' })
+    expect(screen.getByTestId('profile-sessions').props.contentContainerStyle).toEqual(look.screen())
+    expect(screen.getByTestId('profile-sessions-heading').props.style).toEqual(look.heading(LIGHT))
   })
 })

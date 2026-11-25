@@ -1,6 +1,9 @@
 import Home from '@/app/(authenticated)/home'
+import { look, themeOf } from '@/theme'
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native'
+
+const LIGHT = themeOf('light')
 
 const mockSession = jest.fn()
 const mockLogout = jest.fn()
@@ -51,30 +54,20 @@ describe('Home', () => {
   it('styles the container', async () => {
     mockSession.mockResolvedValue({ data: undefined })
     await render(<Home />)
-    expect(screen.getByTestId('home-container').props.style).toEqual({
-      flex: 1,
-      justifyContent: 'center',
-      padding: 24,
-      gap: 12,
-    })
+    expect(screen.getByTestId('home-container').props.contentContainerStyle).toEqual(look.screen())
   })
 
   it('styles the heading', async () => {
     mockSession.mockResolvedValue({ data: undefined })
     await render(<Home />)
-    expect(screen.getByTestId('home-heading').props.style).toEqual({ fontSize: 24, fontWeight: 'bold' })
+    expect(screen.getByTestId('home-heading').props.style).toEqual(look.heading(LIGHT))
   })
 
   it('styles the logout button and its label', async () => {
     mockSession.mockResolvedValue({ data: undefined })
     await render(<Home />)
-    expect(screen.getByTestId('logout-button').props.style).toEqual({
-      backgroundColor: 'black',
-      borderRadius: 8,
-      padding: 12,
-      alignItems: 'center',
-    })
-    expect(screen.getByTestId('logout-button-label').props.style).toEqual({ color: 'white' })
+    expect(screen.getByTestId('logout-button').props.style).toEqual(look.button(LIGHT))
+    expect(screen.getByTestId('logout-button-label').props.style).toEqual(look.buttonLabel(LIGHT))
   })
 
   it('logs out and navigates back to login', async () => {

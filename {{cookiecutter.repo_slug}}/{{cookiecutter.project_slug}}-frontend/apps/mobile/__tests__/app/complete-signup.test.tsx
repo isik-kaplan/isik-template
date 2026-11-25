@@ -1,8 +1,11 @@
 import CompleteSignup from '@/app/complete-signup'
 import type { NameRequirement } from '@/lib/nameRequirement'
 import type { Phone } from '@/lib/phoneOption'
+import { look, themeOf } from '@/theme'
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native'
+
+const LIGHT = themeOf('light')
 
 let mockRequirement: NameRequirement = 'username_with_optional_full'
 jest.mock('@/lib/nameRequirement', () => ({
@@ -203,13 +206,8 @@ describe('CompleteSignup', () => {
     mockPendingProviderSignup.mockResolvedValue(pending)
     await render(<CompleteSignup />)
     await waitFor(() => expect(screen.getByTestId('complete-signup-form')).toBeTruthy())
-    expect(screen.getByTestId('complete-signup-form').props.style).toEqual({
-      flex: 1,
-      justifyContent: 'center',
-      padding: 24,
-      gap: 12,
-    })
-    expect(screen.getByTestId('complete-signup-heading').props.style).toEqual({ fontSize: 24, fontWeight: 'bold' })
+    expect(screen.getByTestId('complete-signup-form').props.contentContainerStyle).toEqual(look.screen())
+    expect(screen.getByTestId('complete-signup-heading').props.style).toEqual(look.heading(LIGHT))
   })
 
   it('says to wait when refused for coming too often, rather than taking the refusal for an account made', async () => {

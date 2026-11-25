@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { Button, ErrorText, Heading, Screen } from '@/components'
+import { Button, ErrorText, Heading, Screen, Text } from '@/components'
 
 import { getApi } from '@/lib/api'
 import { useTranslation } from '@/lib/i18n'
@@ -11,7 +11,6 @@ import type { components } from '@{{ cookiecutter.repo_slug }}/api'
 import { freshIdempotencyKey } from '@isikk/core'
 import { useIsMounted } from '@isikk/core/hooks'
 import { router } from 'expo-router'
-import { Text } from 'react-native'
 
 type Deletion = components['schemas']['AccountDeletion']
 
@@ -46,10 +45,15 @@ export default function DeleteAccount() {
     router.replace({ pathname: '/deletion-scheduled', params: { on: data.deletes_at } })
   }
 
-  if (!deletion) return <Screen testID="delete-account-loading">{null}</Screen>
+  if (!deletion)
+    return (
+      <Screen testID="delete-account-loading" back>
+        {null}
+      </Screen>
+    )
 
   return (
-    <Screen testID="delete-account">
+    <Screen testID="delete-account" back>
       <Heading testID="delete-account-heading">{t('deleteAccountHeading')}</Heading>
       <Text testID="delete-account-what">
         {deletion.deletion_mode === 'anonymize' ? t('deleteAccountAnonymizes') : t('deleteAccountErases')}

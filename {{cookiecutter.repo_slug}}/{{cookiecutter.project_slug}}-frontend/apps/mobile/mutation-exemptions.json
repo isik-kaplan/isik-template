@@ -138,6 +138,24 @@
       ]
     }
   ],
+  "lib/appearance.ts": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "fe46519c184b",
+      "reason": [
+        "Equivalent: an empty dependency list never changes, and neither does a list holding one constant,",
+        "so the effect still runs once and the callback stays the same."
+      ]
+    },
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "fe46519c184b",
+      "reason": [
+        "Equivalent: an empty dependency list never changes, and neither does a list holding one constant,",
+        "so the effect still runs once and the callback stays the same."
+      ]
+    }
+  ],
 {%- if cookiecutter.languages.split(',') | length == 1 %}
   "lib/i18n.ts": [
     {

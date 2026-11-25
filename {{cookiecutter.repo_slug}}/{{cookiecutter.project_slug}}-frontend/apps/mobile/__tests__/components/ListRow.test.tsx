@@ -1,5 +1,8 @@
 import { ListRow } from '@/components'
 
+import { inTheDark } from '@/jest/inTheDark'
+import { look, themeOf } from '@/theme'
+
 import { render, screen } from '@testing-library/react-native'
 import { Text } from 'react-native'
 
@@ -13,20 +16,13 @@ describe('ListRow', () => {
     expect(screen.getByText('content')).toBeTruthy()
   })
 
-  it('applies the shared row layout', async () => {
+  it('takes the shared row look from the theme', async () => {
     await render(
       <ListRow testID="test-row">
         <Text>content</Text>
-      </ListRow>
+      </ListRow>,
+      inTheDark
     )
-    expect(screen.getByTestId('test-row').props.style).toEqual({
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 8,
-      paddingVertical: 8,
-      borderBottomWidth: 1,
-      borderBottomColor: '#e0e0e0',
-    })
+    expect(screen.getByTestId('test-row').props.style).toEqual(look.row(themeOf('dark')))
   })
 })

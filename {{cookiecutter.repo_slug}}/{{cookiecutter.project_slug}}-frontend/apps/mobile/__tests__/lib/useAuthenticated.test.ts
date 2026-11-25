@@ -3,13 +3,18 @@ import { useAuthenticated } from '@/lib/useAuthenticated'
 import { renderHook, waitFor } from '@testing-library/react-native'
 
 const mockSession = jest.fn()
-jest.mock('@/lib/session', () => ({ getAuthApi: () => ({ session: mockSession }) }))
+const mockHoldsSession = jest.fn()
+jest.mock('@/lib/session', () => ({
+  getAuthApi: () => ({ session: mockSession }),
+  holdsSession: () => mockHoldsSession(),
+}))
 const mockSetLanguage = jest.fn()
 jest.mock('@/lib/i18n', () => ({ setLanguage: (language: string) => mockSetLanguage(language) }))
 
 describe('useAuthenticated', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockHoldsSession.mockResolvedValue(false)
   })
 
   it('starts null, then resolves to what the session reports', async () => {
@@ -29,6 +34,21 @@ describe('useAuthenticated', () => {
 
   it('resolves to false when the session carries no meta at all', async () => {
     mockSession.mockResolvedValue({})
+    const { result } = await renderHook(() => useAuthenticated())
+    await waitFor(() => expect(result.current).toBe(false))
+  })
+
+  it('counts a stored session as signed in when the server could not be asked', async () => {
+    // What an unreachable server answers with: no meta either way.
+    mockSession.mockResolvedValue({ error: { status: 503 } })
+    mockHoldsSession.mockResolvedValue(true)
+    const { result } = await renderHook(() => useAuthenticated())
+    await waitFor(() => expect(result.current).toBe(true))
+  })
+
+  it('does not ask for a stored session when the server answered', async () => {
+    mockSession.mockResolvedValue({ data: { meta: { is_authenticated: false } } })
+    mockHoldsSession.mockResolvedValue(true)
     const { result } = await renderHook(() => useAuthenticated())
     await waitFor(() => expect(result.current).toBe(false))
   })

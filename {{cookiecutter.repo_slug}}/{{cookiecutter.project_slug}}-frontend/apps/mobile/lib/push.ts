@@ -1,4 +1,5 @@
 import { getApi } from './api'
+import { UNREACHABLE_STATUS } from './session'
 import * as Notifications from 'expo-notifications'
 import * as SecureStore from 'expo-secure-store'
 
@@ -21,11 +22,13 @@ export async function registerForPush(): Promise<void> {
   if (device) await SecureStore.setItemAsync(DEVICE_KEY, device.id)
 }
 
-/** Forgets this phone, so whoever signs out on it gets no more pushes here. */
+/** Forgets this phone, so whoever signs out on it gets no more pushes here. Kept while the server can't be asked:
+ *  the next sign-in on this phone moves it then. */
 export async function forgetPush(): Promise<void> {
   const id = await SecureStore.getItemAsync(DEVICE_KEY)
   if (!id) return
-  await getApi().forgetDevice(id)
+  const { response } = await getApi().forgetDevice(id)
+  if (response.status === UNREACHABLE_STATUS) return
   await SecureStore.deleteItemAsync(DEVICE_KEY)
 }
 

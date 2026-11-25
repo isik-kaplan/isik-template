@@ -2,9 +2,9 @@ import { Fragment } from 'react'
 
 import { useTranslation } from '@/lib/i18n'
 import { LEGAL_SLUGS, legalTitles, legalUrl } from '@/lib/legalDocuments'
-import { colors } from '@/theme'
+import { look, useTheme } from '@/theme'
 
-import { Linking, StyleSheet, Text } from 'react-native'
+import { Linking, Text } from 'react-native'
 
 // Placeholder for the document list, so the links go where the translation puts it.
 const LIST = '\u0000'
@@ -12,11 +12,12 @@ const LIST = '\u0000'
 /** Joined by hand: Hermes does not ship Intl.ListFormat. */
 export function LegalConsentNotice() {
   const { t } = useTranslation()
+  const theme = useTheme()
   const titles = legalTitles(t)
   const [before, after] = t('legalConsentNotice', { documents: LIST }).split(LIST)
 
   return (
-    <Text testID="legal-consent-notice" style={styles.notice}>
+    <Text testID="legal-consent-notice" style={look.notice(theme)}>
       {before}
       {LEGAL_SLUGS.map((slug, index) => (
         <Fragment key={slug}>
@@ -24,7 +25,7 @@ export function LegalConsentNotice() {
           <Text
             testID={`legal-link-${slug}`}
             accessibilityRole="link"
-            style={styles.link}
+            style={look.link()}
             onPress={() => void Linking.openURL(legalUrl(slug))}
           >
             {titles[slug]}
@@ -35,8 +36,3 @@ export function LegalConsentNotice() {
     </Text>
   )
 }
-
-const styles = StyleSheet.create({
-  notice: { color: colors.muted, fontSize: 12, textAlign: 'center' },
-  link: { textDecorationLine: 'underline' },
-})

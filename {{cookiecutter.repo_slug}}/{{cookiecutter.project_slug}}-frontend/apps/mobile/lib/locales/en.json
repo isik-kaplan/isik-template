@@ -27,6 +27,8 @@
   "signupSubmitting": "Signing up…",
   "signupError": "Could not sign up - check the fields above.",
   "signupLoginLink": "Already have an account? Log in",
+  "signupVerifyEmailHeading": "Check your email",
+  "signupVerifyEmailMessage": "We've sent a link to {{email}}. Open it to finish signing up, then log in.",
 
   "forgotPasswordHeading": "Forgot password",
   "forgotPasswordSubmit": "Send reset link",
@@ -34,6 +36,11 @@
   "forgotPasswordSentHeading": "Check your email",
   "forgotPasswordSentMessage": "If an account exists for {{email}}, we've sent a link to reset the password.",
   "backToLoginLink": "Back to log in",
+  "back": "Back",
+  "appearanceLabel": "Appearance",
+  "appearanceSystem": "System",
+  "appearanceLight": "Light",
+  "appearanceDark": "Dark",
 
   "completeSignupHeading": "Finish setting up your account",
   "completeSignupSubmit": "Finish signing up",

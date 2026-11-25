@@ -27,6 +27,7 @@ describe('push', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockRegisterDevice.mockResolvedValue({ data: { id: 'd1' } })
+    mockForgetDevice.mockResolvedValue({ response: new Response(null, { status: 204 }) })
   })
 
   afterEach(() => {
@@ -76,6 +77,20 @@ describe('push', () => {
     await forgetPush()
     expect(SecureStore.getItemAsync).toHaveBeenCalledWith('push_device')
     expect(mockForgetDevice).toHaveBeenCalledWith('d1')
+    expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('push_device')
+  })
+
+  it('keeps the id when the server could not be reached, for the next sign-in to move', async () => {
+    ;(SecureStore.getItemAsync as jest.Mock).mockResolvedValue('d1')
+    mockForgetDevice.mockResolvedValue({ response: new Response('{}', { status: 503 }) })
+    await forgetPush()
+    expect(SecureStore.deleteItemAsync).not.toHaveBeenCalled()
+  })
+
+  it('forgets the id once the server answered, even that the phone was already gone', async () => {
+    ;(SecureStore.getItemAsync as jest.Mock).mockResolvedValue('d1')
+    mockForgetDevice.mockResolvedValue({ response: new Response('{}', { status: 404 }) })
+    await forgetPush()
     expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('push_device')
   })
 

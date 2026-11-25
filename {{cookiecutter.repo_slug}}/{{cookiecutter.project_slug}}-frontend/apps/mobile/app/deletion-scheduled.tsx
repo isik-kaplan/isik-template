@@ -1,9 +1,8 @@
-import { Button, Heading, Screen } from '@/components'
+import { Button, Heading, Screen, Text } from '@/components'
 
 import { useTranslation } from '@/lib/i18n'
 
 import { router, useLocalSearchParams } from 'expo-router'
-import { Text } from 'react-native'
 
 /** Where asking to delete the account lands: signed out, and told how to keep it. */
 export default function DeletionScheduled() {

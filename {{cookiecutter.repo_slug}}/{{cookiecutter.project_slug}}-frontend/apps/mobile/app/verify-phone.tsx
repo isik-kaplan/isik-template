@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { Button, ErrorText, Heading, Screen, TextField } from '@/components'
+import { Button, ErrorText, Heading, Screen, Text, TextField } from '@/components'
 
 import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
@@ -9,7 +9,6 @@ import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 import { errorsOf, hasPendingVerifyEmail, pendingMfaTypes } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
 import { Link, router } from 'expo-router'
-import { Text } from 'react-native'
 
 /** The code allauth texted at signup, or at a login by a number never verified. */
 export default function VerifyPhone() {

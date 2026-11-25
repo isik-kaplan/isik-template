@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { Button, ErrorText, Heading, Screen, TextField } from '@/components'
+import { Button, ErrorText, Heading, Screen, Text, TextField } from '@/components'
 
 import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
@@ -9,7 +9,6 @@ import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 import { errorsOf } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
 import { Link, router } from 'expo-router'
-import { Text } from 'react-native'
 
 /** One field takes a TOTP or a recovery code; allauth tells them apart. Passkeys are web-only. */
 export default function TwoFactor() {

@@ -1,9 +1,10 @@
 import Profile from '@/app/(authenticated)/profile/index'
+import { ThemeProvider } from '@/theme'
 
 import { fireEvent, render, screen } from '@testing-library/react-native'
 
 const mockPush = jest.fn()
-jest.mock('expo-router', () => ({ router: { push: (...args: unknown[]) => mockPush(...args) } }))
+jest.mock('expo-router', () => ({ router: { push: (...args: unknown[]) => mockPush(...args), back: jest.fn() } }))
 
 describe('Profile', () => {
   beforeEach(() => jest.clearAllMocks())
@@ -28,6 +29,26 @@ describe('Profile', () => {
     expect(screen.getByText(label)).toBeTruthy()
     await fireEvent.press(screen.getByTestId(testID))
     expect(mockPush).toHaveBeenCalledWith(href)
+  })
+})
+
+describe('Profile appearance', () => {
+  it('offers the phone, light and dark, marks the one in use and hands on a new choice', async () => {
+    const choose = jest.fn()
+    await render(
+      <ThemeProvider appearance="dark" choose={choose}>
+        <Profile />
+      </ThemeProvider>
+    )
+    expect(screen.getByText('Appearance')).toBeTruthy()
+    const selected = ['system', 'light', 'dark'].map(
+      (each) => screen.getByTestId(`appearance-${each}`).props.accessibilityState.selected
+    )
+    expect(selected).toEqual([false, false, true])
+    expect(['System', 'Light', 'Dark'].every((label) => screen.queryByText(label))).toBe(true)
+    await fireEvent.press(screen.getByTestId('appearance-system'))
+    expect(choose).toHaveBeenCalledWith('system')
+    expect(screen.getByTestId('appearance-choices').props.style).toEqual({ flexDirection: 'row', gap: 12 })
   })
 })
 

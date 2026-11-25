@@ -1,8 +1,11 @@
 import Signup from '@/app/signup'
 import type { NameRequirement } from '@/lib/nameRequirement'
 import type { Phone } from '@/lib/phoneOption'
+import { look, themeOf } from '@/theme'
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native'
+
+const LIGHT = themeOf('light')
 
 let mockRequirement: NameRequirement = 'username_with_optional_full'
 jest.mock('@/lib/nameRequirement', () => ({
@@ -27,7 +30,11 @@ jest.mock('expo-router', () => {
   const { Text } = jest.requireActual('react-native')
   return {
     router: { replace: (...args: unknown[]) => mockReplace(...args), push: (...args: unknown[]) => mockPush(...args) },
-    Link: ({ children, testID }: { children: unknown; testID?: string }) => <Text testID={testID}>{children}</Text>,
+    Link: ({ children, testID, href }: { children: unknown; testID?: string; href?: string }) => (
+      <Text testID={testID} accessibilityHint={href}>
+        {children}
+      </Text>
+    ),
   }
 })
 
@@ -167,33 +174,23 @@ describe('Signup', () => {
 
   it('styles the form container', async () => {
     await render(<Signup />)
-    expect(screen.getByTestId('signup-form').props.style).toEqual({
-      flex: 1,
-      justifyContent: 'center',
-      padding: 24,
-      gap: 12,
-    })
+    expect(screen.getByTestId('signup-form').props.contentContainerStyle).toEqual(look.screen())
   })
 
   it('styles the heading', async () => {
     await render(<Signup />)
-    expect(screen.getByTestId('signup-heading').props.style).toEqual({ fontSize: 24, fontWeight: 'bold' })
+    expect(screen.getByTestId('signup-heading').props.style).toEqual(look.heading(LIGHT))
   })
 
   it('styles the submit button and its label', async () => {
     await render(<Signup />)
-    expect(screen.getByTestId('signup-submit').props.style).toEqual({
-      backgroundColor: 'black',
-      borderRadius: 8,
-      padding: 12,
-      alignItems: 'center',
-    })
-    expect(screen.getByTestId('signup-submit-label').props.style).toEqual({ color: 'white' })
+    expect(screen.getByTestId('signup-submit').props.style).toEqual(look.button(LIGHT))
+    expect(screen.getByTestId('signup-submit-label').props.style).toEqual(look.buttonLabel(LIGHT))
   })
 
   it('styles the username, email and password inputs identically', async () => {
     await render(<Signup />)
-    const expected = { borderWidth: 1, borderRadius: 8, padding: 12 }
+    const expected = look.field(LIGHT)
     expect(screen.getByTestId('username-input').props.style).toEqual(expected)
     expect(screen.getByTestId('email-input').props.style).toEqual(expected)
     expect(screen.getByTestId('password-input').props.style).toEqual(expected)
@@ -204,7 +201,7 @@ describe('Signup', () => {
     await render(<Signup />)
     await fireEvent.press(screen.getByTestId('signup-submit'))
     await waitFor(() => expect(screen.getByTestId('signup-error')).toBeTruthy())
-    expect(screen.getByTestId('signup-error').props.style).toEqual({ color: 'red' })
+    expect(screen.getByTestId('signup-error').props.style).toEqual(look.error(LIGHT))
   })
 
   it('links to the login screen', async () => {
@@ -309,6 +306,28 @@ describe('Signup', () => {
       )
       expect(mockSignup.mock.calls[0][0]).not.toHaveProperty('phone')
     })
+  })
+})
+
+describe('Signup under mandatory email verification', () => {
+  it('says the link is on its way to the address, not that sign-up failed', async () => {
+    jest.clearAllMocks()
+    mockSignup.mockResolvedValue({
+      data: undefined,
+      error: { status: 401, data: { flows: [{ id: 'verify_email', is_pending: true }] } },
+    })
+    await render(<Signup />)
+    await fireEvent.changeText(screen.getByTestId('email-input'), 'jane@test.test')
+    await fireEvent.press(screen.getByTestId('signup-submit'))
+
+    await waitFor(() => expect(screen.getByTestId('signup-verify-email')).toBeTruthy())
+    expect(screen.getByTestId('signup-heading').props.children).toBe('Check your email')
+    expect(screen.getByTestId('signup-verify-email-message').props.children).toBe(
+      "We've sent a link to jane@test.test. Open it to finish signing up, then log in."
+    )
+    expect(screen.getByTestId('login-link').props.accessibilityHint).toBe('/login')
+    expect(screen.getByText('Back to log in')).toBeTruthy()
+    expect([screen.queryByTestId('signup-error'), mockPush.mock.calls, mockReplace.mock.calls]).toEqual([null, [], []])
   })
 })
 

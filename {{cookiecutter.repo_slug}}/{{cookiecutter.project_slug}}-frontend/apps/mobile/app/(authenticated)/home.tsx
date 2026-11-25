@@ -23,7 +23,7 @@ export default function Home() {
   }, [isMounted])
 
   async function logout() {
-    // While still signed in, which forgetting the phone needs. Unreachable, it's moved at the next sign-in on it.
+    // While still signed in, which forgetting the phone needs. Kept when it can't be, and moved at the next sign-in.
     await forgetPush().catch(() => undefined)
     await getAuthApi().logout()
     router.replace('/login')

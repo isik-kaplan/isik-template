@@ -1,5 +1,8 @@
 import { TextField } from '@/components'
 
+import { inTheDark } from '@/jest/inTheDark'
+import { look, themeOf } from '@/theme'
+
 import { fireEvent, render, screen } from '@testing-library/react-native'
 
 describe('TextField', () => {
@@ -11,8 +14,12 @@ describe('TextField', () => {
     expect(onChangeText).toHaveBeenCalledWith('world')
   })
 
-  it('applies the shared input style', async () => {
-    await render(<TextField testID="test-field" value="" onChangeText={() => undefined} />)
-    expect(screen.getByTestId('test-field').props.style).toEqual({ borderWidth: 1, borderRadius: 8, padding: 12 })
+  it('takes the shared input look and a muted placeholder from the theme', async () => {
+    await render(<TextField testID="test-field" value="" onChangeText={() => undefined} />, inTheDark)
+    const field = screen.getByTestId('test-field')
+    expect([field.props.style, field.props.placeholderTextColor]).toEqual([
+      look.field(themeOf('dark')),
+      themeOf('dark').colors.muted,
+    ])
   })
 })

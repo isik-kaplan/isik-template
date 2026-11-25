@@ -1,6 +1,9 @@
 import ProfileDetails from '@/app/(authenticated)/profile/details'
+import { look, themeOf } from '@/theme'
 
 import { render, screen, waitFor } from '@testing-library/react-native'
+
+const LIGHT = themeOf('light')
 
 const mockSession = jest.fn()
 jest.mock('@/lib/session', () => ({ getAuthApi: () => ({ session: () => mockSession() }) }))
@@ -46,33 +49,20 @@ describe('ProfileDetails', () => {
   it('styles the screen', async () => {
     mockSession.mockResolvedValue({ data: undefined })
     await render(<ProfileDetails />)
-    expect(screen.getByTestId('profile-details').props.style).toEqual({
-      flex: 1,
-      justifyContent: 'center',
-      padding: 24,
-      gap: 12,
-    })
+    expect(screen.getByTestId('profile-details').props.contentContainerStyle).toEqual(look.screen())
   })
 
   it('styles the heading', async () => {
     mockSession.mockResolvedValue({ data: undefined })
     await render(<ProfileDetails />)
-    expect(screen.getByTestId('profile-details-heading').props.style).toEqual({ fontSize: 24, fontWeight: 'bold' })
+    expect(screen.getByTestId('profile-details-heading').props.style).toEqual(look.heading(LIGHT))
   })
 
   it('styles each detail row', async () => {
     mockSession.mockResolvedValue({ data: { data: { user: { username: 'jane', email: 'jane@test.test' } } } })
     await render(<ProfileDetails />)
     await waitFor(() => expect(screen.getByTestId('profile-details-username-row')).toBeTruthy())
-    const expected = {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 8,
-      paddingVertical: 8,
-      borderBottomWidth: 1,
-      borderBottomColor: '#e0e0e0',
-    }
+    const expected = look.row(LIGHT)
     expect(screen.getByTestId('profile-details-username-row').props.style).toEqual(expected)
     expect(screen.getByTestId('profile-details-email-row').props.style).toEqual(expected)
   })

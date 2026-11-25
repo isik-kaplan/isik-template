@@ -1,6 +1,9 @@
 import ForgotPassword from '@/app/forgot-password'
+import { look, themeOf } from '@/theme'
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native'
+
+const LIGHT = themeOf('light')
 
 const mockRequestPasswordReset = jest.fn()
 jest.mock('@/lib/session', () => ({
@@ -67,33 +70,23 @@ describe('ForgotPassword', () => {
 
   it('styles the form container', async () => {
     await render(<ForgotPassword />)
-    expect(screen.getByTestId('forgot-password-form').props.style).toEqual({
-      flex: 1,
-      justifyContent: 'center',
-      padding: 24,
-      gap: 12,
-    })
+    expect(screen.getByTestId('forgot-password-form').props.contentContainerStyle).toEqual(look.screen())
   })
 
   it('styles the heading', async () => {
     await render(<ForgotPassword />)
-    expect(screen.getByTestId('forgot-password-heading').props.style).toEqual({ fontSize: 24, fontWeight: 'bold' })
+    expect(screen.getByTestId('forgot-password-heading').props.style).toEqual(look.heading(LIGHT))
   })
 
   it('styles the submit button and its label', async () => {
     await render(<ForgotPassword />)
-    expect(screen.getByTestId('forgot-password-submit').props.style).toEqual({
-      backgroundColor: 'black',
-      borderRadius: 8,
-      padding: 12,
-      alignItems: 'center',
-    })
-    expect(screen.getByTestId('forgot-password-submit-label').props.style).toEqual({ color: 'white' })
+    expect(screen.getByTestId('forgot-password-submit').props.style).toEqual(look.button(LIGHT))
+    expect(screen.getByTestId('forgot-password-submit-label').props.style).toEqual(look.buttonLabel(LIGHT))
   })
 
   it('styles the email input', async () => {
     await render(<ForgotPassword />)
-    expect(screen.getByTestId('email-input').props.style).toEqual({ borderWidth: 1, borderRadius: 8, padding: 12 })
+    expect(screen.getByTestId('email-input').props.style).toEqual(look.field(LIGHT))
   })
 
   it('links back to login from the form', async () => {

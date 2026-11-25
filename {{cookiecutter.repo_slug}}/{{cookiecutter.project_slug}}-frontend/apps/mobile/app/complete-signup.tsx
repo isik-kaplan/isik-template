@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { Button, ErrorText, Heading, LegalConsentNotice, NameFields, Screen, TextField } from '@/components'
+import { Button, ErrorText, Heading, LegalConsentNotice, NameFields, Screen, Text, TextField } from '@/components'
 
 import { useTranslation } from '@/lib/i18n'
 import { type NameField, offeredNames, offeredValues } from '@/lib/names'
@@ -12,7 +12,6 @@ import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 import { errorsOf, pendingFlow } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
 import { router } from 'expo-router'
-import { Text } from 'react-native'
 
 // Re-fetches the pending signup rather than taking a route param, so a stale visit redirects to login.
 export default function CompleteSignup() {

@@ -1,12 +1,13 @@
-import { radii, spacing } from '@/theme'
+import { look, useTheme } from '@/theme'
 
-import { StyleSheet, TextInput, type TextInputProps } from 'react-native'
+import { TextInput, type TextInputProps } from 'react-native'
 
-/** Style is forced last so a caller's `style` can't drop the shared look. */
+/**
+ * Style is forced last so a caller's `style` can't drop the shared look.
+ * A focus look must keep any shadow props constant and vary only their opacity: adding them on focus rebuilds the
+ * native view on Android, and the keyboard opens and shuts at once.
+ */
 export function TextField(props: TextInputProps) {
-  return <TextInput {...props} style={styles.input} />
+  const theme = useTheme()
+  return <TextInput placeholderTextColor={theme.colors.muted} {...props} style={look.field(theme)} />
 }
-
-const styles = StyleSheet.create({
-  input: { borderWidth: 1, borderRadius: radii.sm, padding: spacing.md },
-})

@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
 
-import { colors, spacing } from '@/theme'
+import { look, useTheme } from '@/theme'
 
-import { StyleSheet, View } from 'react-native'
+import { View } from 'react-native'
 
 type ListRowProps = {
   testID?: string
@@ -11,20 +11,8 @@ type ListRowProps = {
 
 export function ListRow({ testID, children }: ListRowProps) {
   return (
-    <View testID={testID} style={styles.row}>
+    <View testID={testID} style={look.row(useTheme())}>
       {children}
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-})

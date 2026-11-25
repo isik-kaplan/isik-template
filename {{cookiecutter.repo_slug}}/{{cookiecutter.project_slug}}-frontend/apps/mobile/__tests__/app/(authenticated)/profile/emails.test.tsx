@@ -1,6 +1,9 @@
 import ProfileEmails from '@/app/(authenticated)/profile/emails'
+import { look, themeOf } from '@/theme'
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native'
+
+const LIGHT = themeOf('light')
 
 const mockEmails = jest.fn()
 const mockAddEmail = jest.fn()
@@ -239,13 +242,8 @@ describe('ProfileEmails', () => {
   it('styles the screen and heading', async () => {
     mockEmails.mockResolvedValue({ data: { data: [] } })
     await render(<ProfileEmails />)
-    expect(screen.getByTestId('profile-emails').props.style).toEqual({
-      flex: 1,
-      justifyContent: 'center',
-      padding: 24,
-      gap: 12,
-    })
-    expect(screen.getByTestId('profile-emails-heading').props.style).toEqual({ fontSize: 24, fontWeight: 'bold' })
+    expect(screen.getByTestId('profile-emails').props.contentContainerStyle).toEqual(look.screen())
+    expect(screen.getByTestId('profile-emails-heading').props.style).toEqual(look.heading(LIGHT))
   })
 
   it('says to wait when adding an email was refused for coming too often', async () => {

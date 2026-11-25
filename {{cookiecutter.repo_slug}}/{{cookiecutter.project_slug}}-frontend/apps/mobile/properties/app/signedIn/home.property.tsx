@@ -48,10 +48,10 @@ describe('the home screen', () => {
     )
   })
 
-  it('signs out to the login whatever became of forgetting this phone, and keeps it only when the server was unreachable', async () => {
+  it('signs out to the login whatever became of forgetting this phone, and keeps it only when the server was not reached', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.constantFrom('no phone kept', 'forgotten', 'already gone', 'unreachable'),
+        fc.constantFrom('no phone kept', 'forgotten', 'already gone', 'unreachable', 'aborted'),
         fc.uuid(),
         async (device, id) => {
           forgetNavigation()
@@ -61,6 +61,7 @@ describe('the home screen', () => {
           const calls = serve(({ method, path }) => {
             if (path === `${DEVICE}${id}/`) {
               if (device === 'unreachable') throw new TypeError('Network request failed')
+              if (device === 'aborted') throw Object.assign(new Error('aborted'), { name: 'AbortError' })
               return device === 'forgotten' ? new Response(null, { status: 204 }) : json(404, {})
             }
             if (method === 'DELETE') return json(401, { status: 401, meta: { is_authenticated: false } })
@@ -71,7 +72,7 @@ describe('the home screen', () => {
           await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith('/login'))
           const asked = calls.filter((call) => call.path.startsWith(DEVICE))
           expect(asked.map((call) => call.method)).toEqual(device === 'no phone kept' ? [] : ['DELETE'])
-          expect(kept.has('push_device')).toBe(device === 'unreachable')
+          expect(kept.has('push_device')).toBe(device === 'unreachable' || device === 'aborted')
           expect(kept.has('session_token')).toBe(false)
           expect(calls.at(-1)).toMatchObject({ method: 'DELETE', path: '/v0/app/auth/session' })
           await view.unmount()

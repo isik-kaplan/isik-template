@@ -1,5 +1,8 @@
 import { LegalConsentNotice } from '@/components'
 
+import { inTheDark } from '@/jest/inTheDark'
+import { look, themeOf } from '@/theme'
+
 import { fireEvent, render, screen } from '@testing-library/react-native'
 import { Linking } from 'react-native'
 
@@ -42,14 +45,10 @@ describe('LegalConsentNotice', () => {
     expect(screen.getByTestId('legal-link-terms-of-service').props.accessibilityRole).toBe('link')
   })
 
-  it('styles the notice muted and small, and the links underlined', async () => {
-    await render(<LegalConsentNotice />)
+  it('draws the notice small and muted in the theme, and the links underlined', async () => {
+    await render(<LegalConsentNotice />, inTheDark)
 
-    expect(screen.getByTestId('legal-consent-notice').props.style).toEqual({
-      color: '#666666',
-      fontSize: 12,
-      textAlign: 'center',
-    })
-    expect(screen.getByTestId('legal-link-privacy-policy').props.style).toEqual({ textDecorationLine: 'underline' })
+    expect(screen.getByTestId('legal-consent-notice').props.style).toEqual(look.notice(themeOf('dark')))
+    expect(screen.getByTestId('legal-link-privacy-policy').props.style).toEqual(look.link())
   })
 })

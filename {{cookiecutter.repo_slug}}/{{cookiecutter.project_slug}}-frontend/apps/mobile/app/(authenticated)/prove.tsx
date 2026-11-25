@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { Button, ErrorText, Heading, Screen, TextField } from '@/components'
+import { Button, ErrorText, Heading, Screen, Text, TextField } from '@/components'
 
 import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
@@ -11,7 +11,6 @@ import { errorsOf } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
 import { useIsMounted } from '@isikk/core/hooks'
 import { router } from 'expo-router'
-import { Text } from 'react-native'
 
 type Account = { email: string; hasPassword: boolean }
 

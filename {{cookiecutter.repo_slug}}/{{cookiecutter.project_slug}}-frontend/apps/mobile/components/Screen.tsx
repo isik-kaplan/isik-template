@@ -1,22 +1,29 @@
 import type { ReactNode } from 'react'
 
-import { spacing } from '@/theme'
+import { useTranslation } from '@/lib/i18n'
+import { look } from '@/theme'
 
-import { StyleSheet, View } from 'react-native'
+import { TextButton } from './TextButton'
+import { router } from 'expo-router'
+import { ScrollView, View } from 'react-native'
 
 type ScreenProps = {
   testID: string
+  // A way back for a screen pushed on top of another; the stack draws no header.
+  back?: boolean
   children: ReactNode
 }
 
-export function Screen({ testID, children }: ScreenProps) {
+export function Screen({ testID, back, children }: ScreenProps) {
+  const { t } = useTranslation()
   return (
-    <View testID={testID} style={styles.screen}>
+    <ScrollView testID={testID} contentContainerStyle={look.screen()} keyboardShouldPersistTaps="handled">
+      {back && (
+        <View style={look.backBar()}>
+          <TextButton testID="back-button" label={t('back')} onPress={() => router.back()} />
+        </View>
+      )}
       {children}
-    </View>
+    </ScrollView>
   )
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, justifyContent: 'center', padding: spacing.lg, gap: spacing.md },
-})

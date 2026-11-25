@@ -1,8 +1,11 @@
 import Login from '@/app/login'
 import type { NameRequirement } from '@/lib/nameRequirement'
 import type { Phone } from '@/lib/phoneOption'
+import { look, themeOf } from '@/theme'
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native'
+
+const LIGHT = themeOf('light')
 
 let mockRequirement: NameRequirement = 'username_with_optional_full'
 jest.mock('@/lib/nameRequirement', () => ({
@@ -146,33 +149,23 @@ describe('Login', () => {
 
   it('styles the form container', async () => {
     await render(<Login />)
-    expect(screen.getByTestId('login-form').props.style).toEqual({
-      flex: 1,
-      justifyContent: 'center',
-      padding: 24,
-      gap: 12,
-    })
+    expect(screen.getByTestId('login-form').props.contentContainerStyle).toEqual(look.screen())
   })
 
   it('styles the heading', async () => {
     await render(<Login />)
-    expect(screen.getByTestId('login-heading').props.style).toEqual({ fontSize: 24, fontWeight: 'bold' })
+    expect(screen.getByTestId('login-heading').props.style).toEqual(look.heading(LIGHT))
   })
 
   it('styles the submit button and its label', async () => {
     await render(<Login />)
-    expect(screen.getByTestId('login-submit').props.style).toEqual({
-      backgroundColor: 'black',
-      borderRadius: 8,
-      padding: 12,
-      alignItems: 'center',
-    })
-    expect(screen.getByTestId('login-submit-label').props.style).toEqual({ color: 'white' })
+    expect(screen.getByTestId('login-submit').props.style).toEqual(look.button(LIGHT))
+    expect(screen.getByTestId('login-submit-label').props.style).toEqual(look.buttonLabel(LIGHT))
   })
 
   it('styles the email and password inputs identically', async () => {
     await render(<Login />)
-    const expected = { borderWidth: 1, borderRadius: 8, padding: 12 }
+    const expected = look.field(LIGHT)
     expect(screen.getByTestId('email-input').props.style).toEqual(expected)
     expect(screen.getByTestId('password-input').props.style).toEqual(expected)
   })
@@ -182,7 +175,7 @@ describe('Login', () => {
     await render(<Login />)
     await fireEvent.press(screen.getByTestId('login-submit'))
     await waitFor(() => expect(screen.getByTestId('login-error')).toBeTruthy())
-    expect(screen.getByTestId('login-error').props.style).toEqual({ color: 'red' })
+    expect(screen.getByTestId('login-error').props.style).toEqual(look.error(LIGHT))
   })
 
   it('links to the signup screen', async () => {

@@ -1,4 +1,4 @@
-import { createAuthApi, getAuthApi, signedInFetch } from '@/lib/session'
+import { UNREACHABLE_STATUS, answered, createAuthApi, getAuthApi, holdsSession, signedInFetch } from '@/lib/session'
 
 import { AppAuthApi } from '@{{ cookiecutter.repo_slug }}/auth-api/app'
 
@@ -88,5 +88,39 @@ describe('session', () => {
     const first = getAuthApi()
     expect(first).toBeInstanceOf(AppAuthApi)
     expect(getAuthApi()).toBe(first)
+  })
+
+  it('answers a request that never reached the server with a 503 the screens already handle', async () => {
+    ;(SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null)
+    global.fetch = jest.fn(async () => {
+      throw new TypeError('Network request failed')
+    }) as unknown as typeof fetch
+
+    const response = await signedInFetch('http://api.example.test/v0/users/me/')
+
+    expect(response.status).toBe(UNREACHABLE_STATUS)
+    expect(await response.json()).toEqual({ unreachable: true })
+    expect(response.headers.get('Content-Type')).toBe('application/json')
+    expect(mockPush).not.toHaveBeenCalled()
+  })
+
+  it('passes an answer that did arrive on untouched', async () => {
+    const arrived = new Response('{}', { status: 418 })
+    expect(await answered(async () => arrived)).toBe(arrived)
+  })
+
+  it('leaves an abort, which the caller asked for, to throw', async () => {
+    const abort = Object.assign(new Error('aborted'), { name: 'AbortError' })
+    await expect(
+      answered(async () => {
+        throw abort
+      })
+    ).rejects.toBe(abort)
+  })
+
+  it('says whether this phone holds a session token', async () => {
+    ;(SecureStore.getItemAsync as jest.Mock).mockResolvedValueOnce('stored-token').mockResolvedValueOnce(null)
+    expect(await holdsSession()).toBe(true)
+    expect(await holdsSession()).toBe(false)
   })
 })

@@ -4,7 +4,7 @@ import { NameFields } from '@/components/NameFields'
 
 import { LEGAL_SLUGS, legalUrl } from '@/lib/legalDocuments'
 import type { NameField } from '@/lib/names'
-import { colors } from '@/theme'
+import { themeOf } from '@/theme'
 
 import { fireEvent, render, screen } from '@testing-library/react-native'
 import fc from 'fast-check'
@@ -22,7 +22,7 @@ describe('an error', () => {
         async (message, color) => {
           const style = { color }
           const view = await render(<ErrorText style={style}>{message}</ErrorText>)
-          expect(StyleSheet.flatten(screen.getByText(message).props.style).color).toBe(colors.error)
+          expect(StyleSheet.flatten(screen.getByText(message).props.style).color).toBe(themeOf('light').colors.error)
           await view.unmount()
         }
       )

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { Button, ErrorText, Heading, Screen, SocialLoginButtons, TextField } from '@/components'
+import { Button, ErrorText, Heading, Screen, SocialLoginButtons, Text, TextField } from '@/components'
 
 import { useTranslation } from '@/lib/i18n'
 import { handleLogsIn } from '@/lib/names'
@@ -13,7 +13,6 @@ import { errorsOf, hasPendingVerifyEmail, pendingFlow, pendingMfaTypes } from '@
 
 import { Link, router } from 'expo-router'
 import type { TFunction } from 'i18next'
-import { Text } from 'react-native'
 
 /** The identifier the backend takes the typed login as. */
 function credentialsOf(login: string, byHandle: boolean, byPhone: boolean) {

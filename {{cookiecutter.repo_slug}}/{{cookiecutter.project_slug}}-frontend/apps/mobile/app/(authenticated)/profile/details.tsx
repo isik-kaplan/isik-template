@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
 
-import { Heading, ListRow, Screen } from '@/components'
+import { Heading, ListRow, Screen, Text } from '@/components'
 
 import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
 
 import { useIsMounted } from '@isikk/core/hooks'
-import { Text } from 'react-native'
 
 export default function ProfileDetails() {
   const { t } = useTranslation()
@@ -22,7 +21,7 @@ export default function ProfileDetails() {
   }, [isMounted])
 
   return (
-    <Screen testID="profile-details">
+    <Screen testID="profile-details" back>
       <Heading testID="profile-details-heading">{t('profileDetailsHeading')}</Heading>
       {user?.username ? (
         <ListRow testID="profile-details-username-row">

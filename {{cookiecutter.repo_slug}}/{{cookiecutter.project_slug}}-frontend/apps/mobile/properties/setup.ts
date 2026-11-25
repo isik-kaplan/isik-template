@@ -24,7 +24,9 @@ jest.mock('expo-router', () => {
     Link: named('link'),
     Redirect: named('redirect'),
     Slot: named('slot'),
-    Stack: named('stack'),
+    // Its options as the value, so a property reads what every route is drawn on.
+    Stack: (props: { screenOptions?: unknown }) =>
+      createElement(Text, { testID: 'stack', accessibilityValue: { text: JSON.stringify(props.screenOptions) } }),
   }
 })
 

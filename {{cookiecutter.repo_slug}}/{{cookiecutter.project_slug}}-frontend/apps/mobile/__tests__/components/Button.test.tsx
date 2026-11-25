@@ -1,5 +1,8 @@
 import { Button } from '@/components'
 
+import { inTheDark } from '@/jest/inTheDark'
+import { look, themeOf } from '@/theme'
+
 import { fireEvent, render, screen } from '@testing-library/react-native'
 
 describe('Button', () => {
@@ -16,14 +19,12 @@ describe('Button', () => {
     expect(screen.getByTestId('test-button').props.accessibilityState.disabled).toBe(true)
   })
 
-  it('applies the shared button and label style', async () => {
-    await render(<Button testID="test-button" labelTestID="test-button-label" label="Go" onPress={() => undefined} />)
-    expect(screen.getByTestId('test-button').props.style).toEqual({
-      backgroundColor: 'black',
-      borderRadius: 8,
-      padding: 12,
-      alignItems: 'center',
-    })
-    expect(screen.getByTestId('test-button-label').props.style).toEqual({ color: 'white' })
+  it('takes the shared button and label look from the theme', async () => {
+    await render(
+      <Button testID="test-button" labelTestID="test-button-label" label="Go" onPress={() => undefined} />,
+      inTheDark
+    )
+    expect(screen.getByTestId('test-button').props.style).toEqual(look.button(themeOf('dark')))
+    expect(screen.getByTestId('test-button-label').props.style).toEqual(look.buttonLabel(themeOf('dark')))
   })
 })

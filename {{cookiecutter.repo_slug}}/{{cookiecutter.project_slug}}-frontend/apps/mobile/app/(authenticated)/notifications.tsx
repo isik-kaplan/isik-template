@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { Button, Heading, ListRow, Screen } from '@/components'
+import { Button, Heading, ListRow, Screen, Text } from '@/components'
 
 import { getApi } from '@/lib/api'
 import { useTranslation } from '@/lib/i18n'
@@ -8,7 +8,7 @@ import { useTranslation } from '@/lib/i18n'
 import type { components } from '@{{ cookiecutter.repo_slug }}/api'
 
 import { useIsMounted } from '@isikk/core/hooks'
-import { Pressable, Text } from 'react-native'
+import { Pressable } from 'react-native'
 
 type Item = components['schemas']['InboxItem']
 
@@ -42,15 +42,23 @@ export default function Notifications() {
   const unread = items.some((item) => !item.read_at)
 
   return (
-    <Screen testID="notifications">
+    <Screen testID="notifications" back>
       <Heading testID="notifications-heading">{t('notificationsHeading')}</Heading>
-      {loaded && items.length === 0 && <Text testID="notifications-empty">{t('notificationsEmpty')}</Text>}
+      {loaded && items.length === 0 && (
+        <Text testID="notifications-empty" muted>
+          {t('notificationsEmpty')}
+        </Text>
+      )}
       {items.map((item) => (
         <ListRow key={item.id} testID={`notification-${item.id}`}>
           <Pressable testID={`notification-read-${item.id}`} disabled={!!item.read_at} onPress={() => read(item.id)}>
             <Text testID={`notification-message-${item.id}`}>{item.message ?? item.kind}</Text>
           </Pressable>
-          {!item.read_at && <Text testID={`notification-unread-${item.id}`}>{t('notificationsUnread')}</Text>}
+          {!item.read_at && (
+            <Text testID={`notification-unread-${item.id}`} muted>
+              {t('notificationsUnread')}
+            </Text>
+          )}
         </ListRow>
       ))}
       {unread && (

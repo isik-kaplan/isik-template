@@ -1,6 +1,6 @@
-import { colors, radii, spacing } from '@/theme'
+import { look, useTheme } from '@/theme'
 
-import { Pressable, StyleSheet, Text } from 'react-native'
+import { Pressable, Text } from 'react-native'
 
 type ButtonProps = {
   testID: string
@@ -11,16 +11,12 @@ type ButtonProps = {
 }
 
 export function Button({ testID, labelTestID, label, onPress, disabled }: ButtonProps) {
+  const theme = useTheme()
   return (
-    <Pressable testID={testID} disabled={disabled} onPress={onPress} style={styles.button}>
-      <Text testID={labelTestID} style={styles.label}>
+    <Pressable testID={testID} disabled={disabled} onPress={onPress} style={look.button(theme)}>
+      <Text testID={labelTestID} style={look.buttonLabel(theme)}>
         {label}
       </Text>
     </Pressable>
   )
 }
-
-const styles = StyleSheet.create({
-  button: { backgroundColor: colors.primary, borderRadius: radii.sm, padding: spacing.md, alignItems: 'center' },
-  label: { color: colors.onPrimary },
-})

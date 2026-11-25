@@ -28,6 +28,8 @@ const config: ExpoConfig = {
     'expo-notifications',
     // iOS needs iosUrlScheme (from a real Google iOS client ID) added once credentials exist.
     '@react-native-google-signin/google-signin',
+    // iOS 27 stops at launch any app that hasn't adopted the scene life cycle; Expo's own prebuild doesn't yet.
+    './plugins/withSceneLifecycle',
   ],
 }
 

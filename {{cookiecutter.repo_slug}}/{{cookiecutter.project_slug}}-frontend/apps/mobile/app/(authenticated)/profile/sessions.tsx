@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
 
-import { Button, Heading, ListRow, Screen } from '@/components'
+import { Button, Heading, ListRow, Screen, Text, TextButton } from '@/components'
 
 import { useTranslation } from '@/lib/i18n'
 import { getAuthApi } from '@/lib/session'
 
 import { useIsMounted } from '@isikk/core/hooks'
-import { Pressable, Text } from 'react-native'
 
 type Session = { id: number; ip: string; is_current: boolean; user_agent: string; created_at: number }
 
@@ -34,7 +33,7 @@ export default function ProfileSessions() {
   }
 
   return (
-    <Screen testID="profile-sessions">
+    <Screen testID="profile-sessions" back>
       <Heading testID="profile-sessions-heading">{t('profileSessionsHeading')}</Heading>
       {sessions.map((session) => {
         const isPending = pending?.includes(session.id) ?? false
@@ -45,13 +44,12 @@ export default function ProfileSessions() {
               {session.is_current ? t('profileSessionsThisDeviceSuffix') : ''}
             </Text>
             {!session.is_current && (
-              <Pressable
+              <TextButton
                 testID={`revoke-session-${session.id}`}
                 disabled={isPending}
+                label={isPending ? t('profileSessionsRevoking') : t('profileSessionsRevoke')}
                 onPress={() => revoke([session.id])}
-              >
-                <Text>{isPending ? t('profileSessionsRevoking') : t('profileSessionsRevoke')}</Text>
-              </Pressable>
+              />
             )}
           </ListRow>
         )

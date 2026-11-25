@@ -1,6 +1,9 @@
 import ProfileConnections from '@/app/(authenticated)/profile/connections'
+import { look, themeOf } from '@/theme'
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native'
+
+const LIGHT = themeOf('light')
 
 const mockProviders = jest.fn()
 const mockDisconnectProvider = jest.fn()
@@ -71,12 +74,7 @@ describe('ProfileConnections', () => {
   it('styles the screen and heading', async () => {
     mockProviders.mockResolvedValue({ data: { data: [] } })
     await render(<ProfileConnections />)
-    expect(screen.getByTestId('profile-connections').props.style).toEqual({
-      flex: 1,
-      justifyContent: 'center',
-      padding: 24,
-      gap: 12,
-    })
-    expect(screen.getByTestId('profile-connections-heading').props.style).toEqual({ fontSize: 24, fontWeight: 'bold' })
+    expect(screen.getByTestId('profile-connections').props.contentContainerStyle).toEqual(look.screen())
+    expect(screen.getByTestId('profile-connections-heading').props.style).toEqual(look.heading(LIGHT))
   })
 })

@@ -1,8 +1,10 @@
 import { apiOrigin, authOrigin, webOrigin } from '@/lib/config'
+import { installCrypto } from '@/lib/crypto'
 import { LEGAL_SLUGS, legalUrl } from '@/lib/legalDocuments'
 import type { NameRequirement } from '@/lib/nameRequirement'
 import { type NameField, handleLogsIn, offeredNames, offeredValues } from '@/lib/names'
 import { phoneOf } from '@/lib/phone'
+import { UNREACHABLE_STATUS, answered } from '@/lib/session'
 import { tooManyRequestsMessage } from '@/lib/tooManyRequests'
 
 import fc from 'fast-check'
@@ -139,5 +141,42 @@ describe('the language', () => {
     setLanguage(SUPPORTED_LANGUAGES[0])
     expect(i18n.language).toBe(SUPPORTED_LANGUAGES[0])
     jest.dontMock('expo-localization')
+  })
+})
+
+describe('a runtime without Web Crypto', () => {
+  it("gets expo-crypto's, and one with its own keeps it", () => {
+    fc.assert(
+      fc.property(fc.boolean(), (hasOwn) => {
+        const own = { randomUUID: () => 'own' }
+        const runtime: { crypto?: unknown } = hasOwn ? { crypto: own } : {}
+        installCrypto(runtime)
+        if (hasOwn) expect(runtime.crypto).toBe(own)
+        else expect(Object.keys(runtime.crypto as object).sort()).toEqual(['getRandomValues', 'randomUUID'])
+      })
+    )
+  })
+})
+
+describe('a request', () => {
+  // One property per outcome, so each is reached every run.
+  it('that arrives is passed on as it came', async () => {
+    await fc.assert(
+      fc.asyncProperty(fc.integer({ min: 200, max: 599 }), async (status) => {
+        const arrived = new Response(null, { status: status === 204 ? 204 : status })
+        expect(await answered(async () => arrived)).toBe(arrived)
+      })
+    )
+  })
+
+  it('that never reaches the server is a 503, and an abort still throws', async () => {
+    await fc.assert(
+      fc.asyncProperty(fc.constantFrom('TypeError', 'Error', 'AbortError'), fc.string(), async (name, message) => {
+        const failure = Object.assign(new Error(message), { name })
+        const request = () => answered(async () => Promise.reject(failure))
+        if (name === 'AbortError') await expect(request()).rejects.toBe(failure)
+        else expect((await request()).status).toBe(UNREACHABLE_STATUS)
+      })
+    )
   })
 })
