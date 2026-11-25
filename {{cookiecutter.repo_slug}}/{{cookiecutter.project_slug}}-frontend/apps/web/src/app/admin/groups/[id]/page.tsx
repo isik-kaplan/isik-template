@@ -5,6 +5,7 @@ import { PageShell } from '@/components/app/PageShell'
 
 import { sUseTranslation } from '@/i18n'
 import { mayChangeGroups, maySeePeople } from '@/lib/access'
+import { permissionLabels } from '@/lib/permissionLabels'
 import { serverApi } from '@/lib/serverApi'
 
 import { etagOf } from '@{{ cookiecutter.repo_slug }}/api'
@@ -28,8 +29,8 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
       {mayChangeGroups(me) ? (
         <GroupForm key={etag} group={group} etag={etag} permissions={permissions ?? []} />
       ) : (
-        <p className="font-mono text-sm text-muted-foreground">
-          {(group.permissions ?? []).join(' · ') || t('auth:groupGivesNothing')}
+        <p className="text-sm text-muted-foreground">
+          {permissionLabels(group.permissions, permissions).join(' · ') || t('auth:groupGivesNothing')}
         </p>
       )}
     </PageShell>

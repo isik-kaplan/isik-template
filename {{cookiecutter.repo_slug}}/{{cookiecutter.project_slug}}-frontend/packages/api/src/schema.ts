@@ -556,7 +556,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Every application, for the superusers who approve and withdraw them. */
+        /** @description Every application, for the superusers who approve, withdraw and delete them. */
         get: operations["oauth_application_reviews_list"];
         put?: never;
         post?: never;
@@ -573,11 +573,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Every application, for the superusers who approve and withdraw them. */
+        /** @description Every application, for the superusers who approve, withdraw and delete them. */
         get: operations["oauth_application_reviews_retrieve"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** @description Every application, for the superusers who approve, withdraw and delete them. */
+        delete: operations["oauth_application_reviews_destroy"];
         options?: never;
         head?: never;
         patch?: never;
@@ -4085,6 +4086,70 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    oauth_application_reviews_destroy: {
+        parameters: {
+            query?: {
+                /** @description Drop these fields from the response - applied last, wins over only=/include=. */
+                exclude?: string[];
+                /** @description Narrow the response to just these fields (dotted paths reach into nested serializers). */
+                only?: string[];
+            };
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+                /** @description The ETag of the version this request was made against, or * for whatever is current. */
+                "If-Match": string;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            412: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewedApplicationPreconditionFailed"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreconditionRequired"];
+                };
             };
         };
     };

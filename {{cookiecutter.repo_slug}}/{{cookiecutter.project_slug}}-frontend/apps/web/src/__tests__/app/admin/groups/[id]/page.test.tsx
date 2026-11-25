@@ -59,7 +59,7 @@ describe('GroupPage', () => {
 
     render(await page())
 
-    expect(screen.getByText('users:grant:rights · users:manage:user')).toBeTruthy()
+    expect(screen.getByText('users:grant:rights · Manage people')).toBeTruthy()
     expect(screen.queryByText(/change ops/)).toBeNull()
   })
 

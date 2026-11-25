@@ -187,6 +187,7 @@ export const SHARDS = {
     'src/components/app-admin/SiteSettingsForm.tsx',
     'src/components/app-people/ManageUserForm.tsx',
     'src/lib/adminSections.ts',
+    'src/lib/permissionLabels.ts',
   ],
   // Second factors: the login challenge and the profile tab.
   factors: [

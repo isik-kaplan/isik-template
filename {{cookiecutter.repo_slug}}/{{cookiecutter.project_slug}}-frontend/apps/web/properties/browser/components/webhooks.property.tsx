@@ -86,8 +86,13 @@ describe('the webhook endpoints', () => {
         const running = target.is_active ? 'Active' : 'Paused'
         const standing = target.parked_at ? `Parked after ${target.consecutive_failures} failure` : running
         expect(item.getByText(new RegExp(`^${standing}`))).toBeTruthy()
+        // Any element but the URL's, which may happen to contain a kind's name.
         for (const { kind } of target.kinds ?? [])
-          expect(item.getByText(new RegExp(offered.find((k) => k.kind === kind)?.label ?? kind))).toBeTruthy()
+          expect(
+            item
+              .getAllByText(new RegExp(offered.find((k) => k.kind === kind)?.label ?? kind))
+              .some((element) => !element.textContent?.includes(target.url))
+          ).toBe(true)
 
         if (act === 'Send again' && !target.parked_at) {
           expect(item.queryByRole('button', { name: 'Send again' })).toBeNull()

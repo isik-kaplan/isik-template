@@ -205,6 +205,12 @@ export class Api {
     })
   }
 
+  async deleteReviewedOAuthApplication(id: number, headers: VersionedKeyedHeaders) {
+    return this.client.DELETE('/v0/oauth-application-reviews/{id}/', {
+      params: { path: { id }, header: versionedKeyed(headers) },
+    })
+  }
+
   async withdrawOAuthApplication(id: number, idempotencyKey: IdempotencyKey) {
     return this.client.POST('/v0/oauth-application-reviews/{id}/withdraw/', {
       params: { path: { id }, header: { 'Idempotency-Key': idempotencyKey } },

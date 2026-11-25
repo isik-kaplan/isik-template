@@ -5,6 +5,7 @@ from django.utils import timezone
 from oauth2_provider.models import get_access_token_model, get_application_model
 
 from apps.common.links import api_path
+from apps.oauth_provider.api.viewsets.reviewed_application import ReviewedApplicationViewSet
 from apps.oauth_provider.tests.conftest import REDIRECT_URI, make_application, permission, set_approval
 from apps.users.models.user import User
 from apps.users.permissions import Permission
@@ -247,3 +248,63 @@ def test_a_superuser_reviews_here_and_does_not_author(client, reviewer):
 @pytest.mark.django_db
 def test_one_application_is_read_by_its_id(client, superuser, provider, pending):
     assert client.get(_detail(pending)).json()["owner"] == "bob"
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("approval", ["withdrawn", "disabled"])
+def test_one_signing_nobody_in_is_deleted_with_its_tokens(client, reviewer, application, approval):
+    set_approval(application, approval)
+    token = AccessToken.objects.create(
+        user=reviewer, application=application, token="t", expires=timezone.now() + timedelta(hours=1)
+    )
+
+    response = client.delete(_detail(application), headers=versioned(application))
+
+    assert response.status_code == 204
+    assert not Application.objects.filter(pk=application.pk).exists()
+    assert not AccessToken.objects.filter(pk=token.pk).exists()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("approval", ["pending", "approved"])
+def test_one_that_may_still_sign_people_in_is_withdrawn_before_it_is_deleted(
+    client, superuser, provider, application, approval
+):
+    """Said before asking for a proof the delete would not use."""
+    set_approval(application, approval)
+
+    response = client.delete(_detail(application), headers=versioned(application))
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "detail": "Withdraw it first: deleting it is for an application nobody is using any more.",
+        "code": "withdraw_first",
+    }
+    assert Application.objects.filter(pk=application.pk).exists()
+
+
+@pytest.mark.django_db
+def test_deleting_needs_a_proof(client, superuser, provider, application):
+    set_approval(application, "withdrawn")
+
+    response = client.delete(_detail(application), headers=versioned(application))
+
+    assert response.status_code == 403
+    assert response["X-Reauthentication-Required"] == "1"
+
+
+@pytest.mark.django_db
+def test_an_id_that_is_no_number_is_simply_not_found(client, reviewer):
+    assert client.delete(api_path("oauth_provider:application-reviews-detail", "nope")).status_code == 404
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("approval", ["pending", "approved"])
+def test_the_delete_holds_even_once_proved(client, reviewer, application, approval, monkeypatch):
+    """perform_destroy checks again, in case the state moved between the early refusal and the delete."""
+    set_approval(application, approval)
+    monkeypatch.setattr(ReviewedApplicationViewSet, "refuse_before_proving", lambda self, request: None)
+
+    response = client.delete(_detail(application), headers=versioned(application))
+
+    assert (response.status_code, response.json()["code"]) == (400, "withdraw_first")

@@ -16,7 +16,8 @@ vi.mock('@/components/app/ResourcePaginator', () => ({
 }))
 const me = vi.fn()
 const groups = vi.fn()
-vi.mock('@/lib/serverApi', () => ({ serverApi: async () => ({ me, groups }) }))
+const permissions = vi.fn()
+vi.mock('@/lib/serverApi', () => ({ serverApi: async () => ({ me, groups, permissions }) }))
 
 const page = (asked: Record<string, string> = {}) => GroupsPage({ searchParams: Promise.resolve(asked) })
 const links = () => screen.queryAllByRole('link').map((link) => [link.textContent, link.getAttribute('href')])
@@ -25,6 +26,7 @@ describe('GroupsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     me.mockResolvedValue({ data: { is_staff: true, is_superuser: true, permissions: [] } })
+    permissions.mockResolvedValue({ data: [{ name: 'users:manage:user', label: 'Manage people' }] })
     groups.mockResolvedValue({
       data: {
         total_pages: 2,
@@ -61,7 +63,8 @@ describe('GroupsPage', () => {
       ['empty', '/groups/g2'],
       ['unsaid', '/groups/g3'],
     ])
-    expect(screen.getByText('users:grant:rights · users:manage:user')).toBeTruthy()
+    // In the declarations' words, and a name nothing declares as it is.
+    expect(screen.getByText('users:grant:rights · Manage people')).toBeTruthy()
     expect(screen.getAllByText('Gives nothing')).toHaveLength(2)
     expect(screen.getByText('pages 2')).toBeTruthy()
   })

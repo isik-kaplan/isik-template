@@ -7,7 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 const refresh = vi.fn()
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }))
+const push = vi.fn()
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh, push }) }))
 
 const SCOPES = [
   { name: 'users:grant:rights', label: 'Grant' },
@@ -185,19 +186,70 @@ describe('ApprovalPanel', () => {
     expect(toast.error).toHaveBeenCalledWith('Could not withdraw the app.')
   })
 
-  it('offers only approving one already withdrawn', () => {
+  it('offers approving one already withdrawn again, or deleting it', () => {
     render(<ApprovalPanel application={application('withdrawn')} etag={'"5"'} scopes={SCOPES} />)
 
     expect(screen.getByRole('button', { name: 'Approve' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Withdraw' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy()
+    expect(screen.getByText(/^It signs nobody in any more/)).toBeTruthy()
   })
 
-  it('offers only withdrawing one its owner switched off', () => {
+  it('offers withdrawing or deleting one its owner switched off, never approving it', () => {
     render(<ApprovalPanel application={application('disabled')} etag={'"5"'} scopes={SCOPES} />)
 
     expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull()
     expect(screen.queryAllByRole('checkbox')).toEqual([])
     expect(screen.getByRole('button', { name: 'Withdraw' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy()
+  })
+
+  it.each(['pending', 'approved'] as const)('offers no deleting of one %s, which still signs people in', (approval) => {
+    render(<ApprovalPanel application={application(approval)} etag={'"5"'} scopes={SCOPES} />)
+
+    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull()
+  })
+
+  it('deletes one against the version shown, then goes back to the list, held while it goes', async () => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 204 }))
+    globalThis.fetch = fetchMock
+    render(<ApprovalPanel application={application('withdrawn')} etag={'"5"'} scopes={SCOPES} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
+
+    const [request] = fetchMock.mock.calls[0] as unknown as [Request]
+    expect(request.method).toBe('DELETE')
+    expect(new URL(request.url).pathname).toBe('/v0/oauth-application-reviews/7/')
+    expect(request.headers.get('If-Match')).toBe('"5"')
+    expect(request.headers.get('Idempotency-Key')).toBeTruthy()
+    expect(toast.success).toHaveBeenCalledWith('App deleted.')
+    expect(push).toHaveBeenCalledWith('/app-approvals')
+    expect((screen.getByRole('button', { name: 'Delete' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('reads the page again rather than deleting one that changed since it loaded', async () => {
+    globalThis.fetch = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ detail: 'Changed.', code: 'precondition_failed', current: {} }), {
+          status: 412,
+          headers: { 'Content-Type': 'application/json' },
+        })
+    )
+    render(<ApprovalPanel application={application('withdrawn')} etag={'"5"'} scopes={SCOPES} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
+
+    expect(refresh).toHaveBeenCalled()
+    expect(push).not.toHaveBeenCalled()
+  })
+
+  it('says so when it could not delete', async () => {
+    globalThis.fetch = vi.fn(async () => new Response(null, { status: 500 }))
+    render(<ApprovalPanel application={application('disabled')} etag={'"5"'} scopes={SCOPES} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
+
+    expect(toast.error).toHaveBeenCalledWith('Could not delete the app.')
   })
 
   it('holds both buttons while one is out', async () => {

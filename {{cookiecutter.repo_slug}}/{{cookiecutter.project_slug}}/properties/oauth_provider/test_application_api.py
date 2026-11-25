@@ -16,6 +16,7 @@ from rest_framework.exceptions import ValidationError
 
 from apps.common.links import api_path
 from apps.oauth_provider.api.viewsets.application import ApplicationViewSet
+from apps.oauth_provider.api.viewsets.reviewed_application import ReviewedApplicationViewSet
 from apps.oauth_provider.device_codes import ALPHABET, LENGTH
 from apps.oauth_provider.models import Application
 from apps.oauth_provider.services import deciding
@@ -195,6 +196,10 @@ def _reviewed(application, action):
     return api_path(f"oauth_provider:application-reviews-{action}", application.pk)
 
 
+def _reviewed_detail(application):
+    return api_path("oauth_provider:application-reviews-detail", application.pk)
+
+
 def _under_review(requested):
     application = make_application(
         name="Bob's Planner", user=User.objects.create_user(username="bob", email="bob@example.test")
@@ -283,6 +288,37 @@ def test_a_superuser_withdraws_anything_not_already_withdrawn_and_every_token_go
             assert application.approval == "withdrawn"
             assert not AccessToken.objects.filter(application=application).exists()
             assert not RefreshToken.objects.filter(application=application, revoked__isnull=True).exists()
+        transaction.set_rollback(True)
+
+
+@pytest.mark.parametrize("approval", APPROVALS)
+# Refused early, before any proof is asked for, or (should the state move in between) by the delete itself.
+@pytest.mark.parametrize("asked_early", [True, False])
+@given(requested=st.sampled_from(DELEGATABLE), tokens=st.integers(min_value=0, max_value=3))
+def test_a_superuser_deletes_only_one_signing_nobody_in_and_its_tokens_go_with_it(
+    client, provider, alice, monkeypatch, approval, asked_early, requested, tokens
+):
+    with transaction.atomic():
+        User.objects.filter(pk=alice.pk).update(is_superuser=True)
+        alice.refresh_from_db()
+        _prove(client, alice)
+        application = _under_review(requested)
+        set_approval(application, approval)
+        for n in range(tokens):
+            _mint(application, n)
+
+        with monkeypatch.context() as patched:
+            if not asked_early:
+                patched.setattr(ReviewedApplicationViewSet, "refuse_before_proving", lambda self, request: None)
+            response = client.delete(_reviewed_detail(application), headers=versioned(application))
+
+        if approval in ("withdrawn", "disabled"):
+            assert response.status_code == 204, response.content
+            assert not Application.objects.filter(pk=application.pk).exists()
+            assert not AccessToken.objects.filter(application_id=application.pk).exists()
+        else:
+            assert (response.status_code, response.json()["code"]) == (400, "withdraw_first")
+            assert Application.objects.filter(pk=application.pk).exists()
         transaction.set_rollback(True)
 
 

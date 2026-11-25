@@ -59,6 +59,11 @@ def test_an_issuer_must_be_named_and_nothing_else_may_be(unnamed):
     )
 
 
+def test_every_unnamed_issuer_is_named_at_once():
+    with pytest.raises(ImproperlyConfigured, match=r"with a colon: github:corp, openid_connect$"):
+        social_login_provider_ids(["openid_connect", "github:corp"])
+
+
 def test_an_unknown_provider_is_named_without_its_issuer():
     with pytest.raises(ImproperlyConfigured, match="unknown providers: nope$"):
         social_login_provider_ids(["nope:corp"])
@@ -101,11 +106,14 @@ def test_an_issuer_without_a_name_of_its_own_is_called_as_its_button_is():
 
 
 def test_issuers_are_one_providers_apps_and_every_other_provider_has_its_own():
-    providers = social_account_providers(["github", "openid_connect:corp", "openid_connect:customers"], {}, PREFIX)
+    environ = {f"{PREFIX}__GITHUB__CLIENT_ID": "gh", f"{PREFIX}__CORP__CLIENT_ID": "corp-id"}
+
+    providers = social_account_providers(["github", "openid_connect:corp", "openid_connect:customers"], environ, PREFIX)
 
     assert list(providers) == ["github", "openid_connect"]
     assert [app["provider_id"] for app in providers["openid_connect"]["APPS"]] == ["corp", "customers"]
-    assert providers["github"] == {"APPS": [{"client_id": "", "secret": "", "key": ""}]}
+    assert providers["openid_connect"]["APPS"][0]["client_id"] == "corp-id"
+    assert providers["github"] == {"APPS": [{"client_id": "gh", "secret": "", "key": ""}]}
 
 
 def test_signing_in_only_through_providers_refuses_to_start_with_none():

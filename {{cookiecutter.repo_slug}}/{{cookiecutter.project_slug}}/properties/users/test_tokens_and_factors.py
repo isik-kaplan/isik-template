@@ -176,7 +176,7 @@ SHIPPED = ["github", "google", "gitlab", "openid_connect:corp", "openid_connect:
 UNNAMED = ["openid_connect", "openid_connect:Corp", "github:corp"]
 
 
-# Its own property, so every run reaches the refusal: the list below seldom draws one beside no unknown.
+# Its own property, so every run reaches the refusal; the list below draws none.
 @given(named=st.lists(st.sampled_from(SHIPPED), unique=True, max_size=3), unnamed=st.sampled_from(UNNAMED))
 def test_an_issuer_left_unnamed_is_refused_wherever_it_is_listed(named, unnamed):
     with pytest.raises(ImproperlyConfigured, match="issuer"):
@@ -185,19 +185,14 @@ def test_an_issuer_left_unnamed_is_refused_wherever_it_is_listed(named, unnamed)
 
 # A shipped provider named twice drawn on its own: a random list seldom repeats one without an unknown beside it.
 @given(
-    requested=st.lists(
-        st.sampled_from([*SHIPPED, *UNNAMED, "nope", "base", " ", ""]).map(lambda s: f" {s} "), max_size=5
-    )
+    requested=st.lists(st.sampled_from([*SHIPPED, "nope", "base", " ", ""]).map(lambda s: f" {s} "), max_size=5)
     | st.sampled_from(SHIPPED).map(lambda provider: [f" {provider} ", provider])
 )
-def test_a_provider_list_is_kept_in_order_unless_it_names_one_unknown_unnamed_or_twice(requested):
+def test_a_provider_list_is_kept_in_order_unless_it_names_one_unknown_or_twice(requested):
     ids = [each.strip() for each in requested if each.strip()]
     unknown = {each for each in ids if each.partition(":")[0] not in {entry.partition(":")[0] for entry in SHIPPED}}
     if unknown:
         with pytest.raises(ImproperlyConfigured, match="unknown"):
-            social_login_provider_ids(requested)
-    elif set(ids) & set(UNNAMED):
-        with pytest.raises(ImproperlyConfigured, match="issuer"):
             social_login_provider_ids(requested)
     elif len(set(ids)) < len(ids):
         with pytest.raises(ImproperlyConfigured, match="more than once"):

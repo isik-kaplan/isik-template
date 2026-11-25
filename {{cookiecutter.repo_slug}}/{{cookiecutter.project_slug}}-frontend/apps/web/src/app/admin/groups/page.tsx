@@ -9,6 +9,7 @@ import { Button } from '@/components/base/button'
 
 import { sUseTranslation } from '@/i18n'
 import { mayChangeGroups, maySeePeople } from '@/lib/access'
+import { permissionLabels } from '@/lib/permissionLabels'
 import { serverApi } from '@/lib/serverApi'
 
 /** Every group and what it gives, for whoever reads every account. */
@@ -18,7 +19,7 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
   if (!me || !maySeePeople(me)) notFound()
   const { t } = await sUseTranslation(['auth'])
   const asked = await searchParams
-  const { data } = await api.groups(pagedQueryFrom([], asked))
+  const [{ data }, { data: declared }] = await Promise.all([api.groups(pagedQueryFrom([], asked)), api.permissions()])
   const groups = data?.results ?? []
   // Awaited rather than nested as an element: an async element only renders under a server renderer.
   const paginator = await ResourcePaginator({ specs: [], asked, totalPages: data?.total_pages ?? 0 })
@@ -39,8 +40,8 @@ export default async function GroupsPage({ searchParams }: { searchParams: Promi
               <Link href={`/groups/${group.id}`} className="font-medium underline-offset-4 hover:underline">
                 {group.name}
               </Link>
-              <span className="font-mono text-xs text-muted-foreground">
-                {(group.permissions ?? []).join(' · ') || t('auth:groupGivesNothing')}
+              <span className="text-sm text-muted-foreground">
+                {permissionLabels(group.permissions, declared).join(' · ') || t('auth:groupGivesNothing')}
               </span>
             </li>
           ))}

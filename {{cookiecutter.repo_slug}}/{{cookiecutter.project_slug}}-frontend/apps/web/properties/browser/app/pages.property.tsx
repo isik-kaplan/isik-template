@@ -489,9 +489,11 @@ describe('the admin', () => {
         created_at: '2020-01-01T00:00:00.000Z',
         updated_at: '2020-01-01T00:00:00.000Z',
       })
-      const groups = [row(1, 'giver', given), row(2, 'empty', []), row(3, 'unsaid')] as World['groups']
+      // users.view_user is one the backend here declares, worded as its own name; the rest it declares not.
+      const gives = [...given, 'users.view_user']
+      const groups = [row(1, 'giver', gives), row(2, 'empty', []), row(3, 'unsaid')] as World['groups']
       expect(await open(GroupsPage, { searchParams: Promise.resolve({}) }, staff({ ...w, groups }))).toBe('shown')
-      expect(screen.getByText(given.join(' · '))).toBeTruthy()
+      expect(screen.getByText(gives.join(' · '))).toBeTruthy()
       expect(screen.getAllByText('Gives nothing')).toHaveLength(2)
       // The backend here answers any one group with the first it holds, so each is opened on its own.
       for (const failing of [null, /users\/permissions/]) {

@@ -133,3 +133,17 @@ def test_raising_the_ladder_mails_whoever_it_signed_out_when_asked(client, prove
 
         assert (response.json()["signed_out"], delay.call_count) == (1, 1)
         transaction.set_rollback(True)
+
+
+# Its own property, so every run reaches the refusal: the one above draws it only now and then.
+@given(was=st.sampled_from([SiteSettings.LoginPolicy.EVERYONE, SiteSettings.LoginPolicy.STAFF]))
+def test_staff_below_superuser_may_not_shut_out_everybody_but_superusers(client, proved, was):
+    with transaction.atomic():
+        settings = SiteSettings.objects.create(login_policy=was)
+        body = {"login_policy": SiteSettings.LoginPolicy.SUPERUSERS}
+
+        response = client.patch(URL, body, content_type="application/json", headers=versioned(settings))
+
+        assert response.status_code == 400
+        assert SiteSettings.current().login_policy == was
+        transaction.set_rollback(True)

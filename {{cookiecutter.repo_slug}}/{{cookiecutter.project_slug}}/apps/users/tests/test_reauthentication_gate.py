@@ -33,7 +33,7 @@ GATED = {
     "ManageWebAuthnView": {"POST", "DELETE"},
     "ApplicationViewSet": {"create", "partial_update", "destroy", "rotate_secret"},
     "AuthorizedApplicationViewSet": {"destroy"},
-    "ReviewedApplicationViewSet": {"approve"},
+    "ReviewedApplicationViewSet": {"approve", "destroy"},
     "UserViewSet": {"partial_update"},
     # A group's permissions are a grant to everybody in it.
     "GroupViewSet": {"create", "partial_update", "destroy"},

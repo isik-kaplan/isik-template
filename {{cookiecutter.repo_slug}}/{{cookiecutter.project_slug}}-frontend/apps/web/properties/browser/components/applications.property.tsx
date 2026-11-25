@@ -151,6 +151,33 @@ describe("a superuser's review", () => {
       else await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('No.'))
     }
   )
+
+  // One property per answer, so each is reached every run.
+  for (const status of [204, 412, 400] as const)
+    test.prop([application])(
+      `deletes only one signing nobody in, against the version read, leaving for the list once gone: ${status}`,
+      async (app) => {
+        freshDom()
+        const off = app.approval === 'withdrawn' || app.approval === 'disabled'
+        const sent = vi.fn(async () =>
+          status === 204
+            ? new Response(null, { status })
+            : json(status, status === 412 ? { detail: 'stale', current: app } : { detail: 'No.' })
+        )
+        vi.stubGlobal('fetch', sent)
+        const owned = { ...app, owner: 'o' } as never
+        render(<ApprovalPanel application={owned} etag='"1"' scopes={[]} />)
+        expect(screen.queryByRole('button', { name: 'Delete' }) !== null).toBe(off)
+        if (!off) return
+        fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+        await vi.waitFor(() => expect(sent).toHaveBeenCalled())
+        const request = calls(sent).at(-1)?.[0] as Request
+        expect([request.method, request.headers.get('If-Match')]).toEqual(['DELETE', '"1"'])
+        if (status === 204) await vi.waitFor(() => expect(navigation.push).toHaveBeenCalledWith('/app-approvals'))
+        else if (status === 412) await vi.waitFor(() => expect(navigation.refresh).toHaveBeenCalled())
+        else await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('No.'))
+      }
+    )
 })
 
 describe("an application's secret", () => {
