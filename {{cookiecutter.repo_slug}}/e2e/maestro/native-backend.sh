@@ -28,8 +28,13 @@ redis-server --bind 127.0.0.1 --requirepass "$(value CACHE__PASSWORD)" --daemoni
 {%- if cookiecutter.background_jobs != "inline" %}
 
 # The stack's own broker settings, which RabbitMQ 4 needs for Celery.
-RABBITMQ_CONFIG_FILE="$PWD/broker/broker.conf" rabbitmq-server -detached
-rabbitmqctl await_startup
+# In the background and polled: await_startup gives up at once on a node that hasn't registered yet.
+RABBITMQ_CONFIG_FILE="$PWD/broker/broker.conf" rabbitmq-server >"$state/rabbitmq.log" 2>&1 &
+for _ in $(seq 60); do
+  rabbitmq-diagnostics -q ping >/dev/null 2>&1 && break
+  sleep 2
+done
+rabbitmq-diagnostics -q ping >/dev/null || { cat "$state/rabbitmq.log" >&2; exit 1; }
 rabbitmqctl add_user "$(value BROKER__USER)" "$(value BROKER__PASSWORD)"
 rabbitmqctl set_permissions -p / "$(value BROKER__USER)" ".*" ".*" ".*"
 {%- endif %}
