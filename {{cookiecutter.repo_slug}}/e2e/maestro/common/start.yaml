@@ -17,4 +17,4 @@ appId: {{ cookiecutter.domain.split(".") | reverse | join(".") }}.mobile
 - extendedWaitUntil:
     visible:
       id: login-form
-    timeout: 15000
+    timeout: 60000

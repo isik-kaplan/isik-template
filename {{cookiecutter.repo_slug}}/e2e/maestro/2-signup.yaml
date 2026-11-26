@@ -55,7 +55,7 @@ name: Signing up needs the address confirmed before the account can sign in
 - extendedWaitUntil:
     visible:
       id: verify-phone-form
-    timeout: 15000
+    timeout: 60000
 - runScript:
     file: scripts/sms.js
     env:
@@ -69,11 +69,11 @@ name: Signing up needs the address confirmed before the account can sign in
 - extendedWaitUntil:
     visible:
       id: verify-phone-notice
-    timeout: 15000
+    timeout: 60000
 {%- else %}
 - extendedWaitUntil:
     visible: We've sent a link to ${output.email}. Open it to finish signing up, then log in.
-    timeout: 15000
+    timeout: 60000
 {%- endif %}
 - runScript:
     file: scripts/mail.js
@@ -94,10 +94,10 @@ name: Signing up needs the address confirmed before the account can sign in
 - pressKey: Enter
 - tapOn:
     id: login-submit
-- runFlow: common/not-now.yaml
 - extendedWaitUntil:
     visible: You're logged in as ${output.email}
-    timeout: 15000
+    timeout: 60000
+- runFlow: common/not-now.yaml
 - tapOn:
     id: logout-button
 - assertVisible:

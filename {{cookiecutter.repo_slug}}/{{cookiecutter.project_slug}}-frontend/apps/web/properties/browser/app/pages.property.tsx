@@ -537,6 +537,10 @@ describe('the admin', () => {
     expect(await open(ScheduledTasksPage, {}, staff(w))).toBe('shown')
     for (const task of w.scheduledTasks) expect(screen.getByText(task.name)).toBeTruthy()
     expect(screen.queryByText('Nothing is scheduled.') !== null).toBe(w.scheduledTasks.length === 0)
+    // A page with no results in it reads as nothing scheduled; the route sweep reaches this only by luck.
+    const empty = backend(w, 'superuser', 'no collections') as unknown as typeof fetch
+    expect(await open(ScheduledTasksPage, {}, empty)).toBe('shown')
+    expect(screen.getByText('Nothing is scheduled.')).toBeTruthy()
     const member = backend(w, 'member', 'everything') as unknown as typeof fetch
     expect(await open(ScheduledTasksPage, {}, member)).toBe('not found')
   })

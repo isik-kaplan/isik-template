@@ -10,7 +10,11 @@ env_file="$here/../../.env"
 value() { sed -n "s/^{{ cookiecutter.config_prefix }}__SETUP__SUPERUSER__$1=//p" "$env_file"; }
 device=${DEVICE:-booted}
 case "$app" in
-  *.apk) adb ${DEVICE:+-s "$DEVICE"} install -r "$app" ;;
+  *.apk)
+    adb ${DEVICE:+-s "$DEVICE"} install -r "$app"
+    # A busy emulator has the launcher stop responding, and its dialog covers the app.
+    adb ${DEVICE:+-s "$DEVICE"} shell settings put global hide_error_dialogs 1
+    ;;
   *.app)
     xcrun simctl install "$device" "$app"
     # Otherwise iOS offers to save each password over the next screen, where the flows can't reach the offer.
