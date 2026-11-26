@@ -495,6 +495,10 @@ describe('the admin', () => {
       expect(await open(GroupsPage, { searchParams: Promise.resolve({}) }, staff({ ...w, groups }))).toBe('shown')
       expect(screen.getByText(gives.join(' · '))).toBeTruthy()
       expect(screen.getAllByText('Gives nothing')).toHaveLength(2)
+      // With the groups unread, an empty list rather than a crash.
+      const unread = without(staff({ ...w, groups }), /\/v0\/groups\/$/)
+      expect(await open(GroupsPage, { searchParams: Promise.resolve({}) }, unread)).toBe('shown')
+      expect(screen.queryByText('Gives nothing')).toBeNull()
       // The backend here answers any one group with the first it holds, so each is opened on its own.
       for (const failing of [null, /users\/permissions/]) {
         const one = without(staff({ ...w, groups: [groups[0]] }), failing)

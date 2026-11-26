@@ -527,6 +527,8 @@ jobs:
           api-level: 35
           arch: x86_64
           target: google_apis
+          # A phone's screen: on the default 320x640 one the open keyboard moves the form under the flows' taps.
+          profile: pixel_7
           # The stack's DNS answers {{ cookiecutter.domain }} with 10.0.2.2, the host as the emulator sees it.
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -dns-server 127.0.0.1
           # The device's log goes in the report when the flows fail; the emulator is gone by the next step.
@@ -570,8 +572,10 @@ jobs:
         run: echo "APP=$(e2e/maestro/build.sh ios)" >> "$GITHUB_ENV"
       - name: Boot an iPhone on the newest iOS
         run: |
-          runtime=$(xcrun simctl list runtimes iOS --json | jq -r '[.runtimes[] | select(.isAvailable)] | last | .identifier')
-          device=$(xcrun simctl list devicetypes --json | jq -r '[.devicetypes[] | select(.name | startswith("iPhone"))] | last | .identifier')
+          newest=$(xcrun simctl list runtimes iOS --json | jq '[.runtimes[] | select(.isAvailable)] | last')
+          runtime=$(echo "$newest" | jq -r .identifier)
+          # An iPhone that runtime runs: the newest device type overall may need a runtime the runner doesn't have.
+          device=$(echo "$newest" | jq -r '[.supportedDeviceTypes[] | select(.productFamily == "iPhone")] | last | .identifier')
           udid=$(xcrun simctl create e2e "$device" "$runtime")
           xcrun simctl boot "$udid"
           xcrun simctl bootstatus "$udid" -b
