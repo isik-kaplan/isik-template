@@ -266,6 +266,20 @@ def main() -> None:
     # Services this project was generated without: tasks run inline, files go to disk.
     if BACKGROUND_JOBS == "inline":
         shutil.rmtree("broker")
+    # Staff controls over beat's tasks: without beat, nothing is scheduled.
+    if BACKGROUND_JOBS != "celery-with-beat":
+        shutil.rmtree(f"{PROJECT_SLUG}/apps/scheduling")
+        web = f"{PROJECT_SLUG}-frontend/apps/web/src"
+        shutil.rmtree(f"{web}/app/admin/scheduled-tasks")
+        shutil.rmtree(f"{web}/__tests__/app/admin/scheduled-tasks")
+        for module in (
+            "components/app-admin/ScheduledTaskActions.tsx",
+            "__tests__/components/app-admin/ScheduledTaskActions.test.tsx",
+            "lib/scheduledTasks.ts",
+            "__tests__/lib/scheduledTasks.test.ts",
+        ):
+            os.remove(f"{web}/{module}")
+        shutil.rmtree("e2e/playwright/tests/admin")
     if STORAGE == "disk":
         shutil.rmtree("storage")
     notification_api = f"{PROJECT_SLUG}/apps/notifications/api"

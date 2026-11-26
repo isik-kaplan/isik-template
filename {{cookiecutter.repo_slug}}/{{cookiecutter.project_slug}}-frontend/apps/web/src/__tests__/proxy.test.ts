@@ -132,6 +132,9 @@ describe('proxy', () => {
     ['/groups/g1', '/admin/groups/g1'],
     ['/app-approvals/7', '/admin/app-approvals/7'],
     ['/settings?x=1', '/admin/settings?x=1'],
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+    ['/scheduled-tasks', '/admin/scheduled-tasks'],
+{%- endif %}
   ])('serves %s on the admin host from the admin page %s', async (path, page) => {
     const response = await proxy(onAdmin(path, SIGNED_IN))
 

@@ -202,6 +202,34 @@ const siteSettings = fc.record(
   { requiredKeys: ['signed_out', 'created_at', 'updated_at'] }
 )
 
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+
+// Every so often, or at a crontab: never both, as the backend's constraint has it.
+const schedule = fc.oneof(
+  fc.record({
+    // Whole seconds, minutes, hours or days, so each way of wording one is drawn.
+    every: fc.tuple(fc.constantFrom(1, 60, 3600, 86400), fc.integer({ min: 1, max: 90 })).map(([unit, n]) => unit * n),
+    crontab: fc.constant(null),
+  }),
+  fc.record({ every: fc.constant(null), crontab: fc.constantFrom('30 4 * * *', '*/5 * * * *') })
+)
+const taskState = fc.record({ schedule, paused: fc.boolean() }).map(({ schedule, paused }) => ({
+  ...schedule,
+  paused,
+  on_restart: null,
+}))
+const scheduledTask = fc.record({
+  name: fc.constantFrom('clear_expired_tokens', 'isik.features.sweep', 'remove_unverified_accounts'),
+  task: text,
+  code: taskState,
+  saved: taskState,
+  effective: taskState,
+  may: fc.subarray(['view', 'pause', 'run_now']),
+  run_by_hand_at: fc.option(when, { nil: null }),
+  last_run_at: fc.option(when, { nil: null }),
+})
+{%- endif %}
+
 /** One backend's whole state, drawn per example: every read answers from it. */
 export const world = fc.record({
   me: person,
@@ -218,6 +246,9 @@ export const world = fc.record({
   history: rows(historyEvent),
   groups: rows(group),
   siteSettings,
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+  scheduledTasks: fc.uniqueArray(scheduledTask, { selector: (task) => task.name, maxLength: 3 }),
+{%- endif %}
   // The code a device showed, or none the backend knows.
   device: fc.option(deviceAuthorization, { nil: null }),
   authenticators: fc.array(authenticator, { maxLength: 3 }),
@@ -287,6 +318,9 @@ function apiBody(path: string, w: World, visitor: Visitor, holding: boolean): un
     [/^\/v0\/groups\/[^/]+\/$/, () => w.groups[0] ?? fc.sample(group, 1)[0]],
     [/^\/v0\/groups\/$/, () => page(w.groups, holding)],
     [/^\/v0\/site-settings\/$/, () => w.siteSettings],
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+    [/^\/v0\/scheduled-tasks\/$/, () => page(w.scheduledTasks, holding)],
+{%- endif %}
   ]
   const found = routes.findIndex(([pattern]) => pattern.test(path))
   if (found >= 0 && w.down.includes(found)) return DOWN

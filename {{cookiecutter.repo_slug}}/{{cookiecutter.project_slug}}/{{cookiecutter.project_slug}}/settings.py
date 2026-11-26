@@ -88,7 +88,7 @@ INSTALLED_APPS = [
     "allauth.headless",
     "oauth2_provider",
 {%- if cookiecutter.background_jobs == "celery-with-beat" %}
-    "django_celery_beat",
+    "isik.django.apps.scheduling",
 {%- endif %}
 {%- if cookiecutter.background_jobs != "inline" %}
     "django_celery_results",
@@ -99,6 +99,9 @@ INSTALLED_APPS = [
     "apps.oauth_provider.apps.OAuthProviderConfig",
     "apps.notifications.apps.NotificationsConfig",
     "apps.features.apps.FeaturesConfig",
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+    "apps.scheduling.apps.SchedulingConfig",
+{%- endif %}
 ]
 
 MIDDLEWARE = [
@@ -474,8 +477,6 @@ REST_FRAMEWORK = {
     ),
 }
 
-# isik's track_events already defaults to it; stated so a model tracked with pghistory.track() gets it too.
-PGHISTORY_APPEND_ONLY = True
 PUSH_CREDENTIALS = push_credentials(
     apns_team_id=config.PUSH.APNS.TEAM_ID,
     apns_key_id=config.PUSH.APNS.KEY_ID,
@@ -599,6 +600,12 @@ ISIK = {
             "SWEEP": "next_boundary",
 {%- endif %}
         },
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+        "SCHEDULING": {
+            "TASKS": "apps.scheduling.declarations",
+            "TASK_MODEL": "scheduling.ScheduledTaskState",
+        },
+{%- endif %}
     },
 }
 
@@ -627,6 +634,12 @@ CELERY_TASK_ALWAYS_EAGER = True
 # RabbitMQ's guest user is loopback-only, so real credentials are needed even locally.
 CELERY_BROKER_URL = f"amqp://{config.BROKER.USER}:{config.BROKER.PASSWORD}@{config.BROKER.HOST}:{config.BROKER.PORT}//"
 CELERY_RESULT_BACKEND = "django-db"
+{%- endif %}
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+# isik's: the declarations in apps/scheduling are beat's schedule, and staff pause or run them from the admin.
+CELERY_BEAT_SCHEDULER = "isik.django.apps.scheduling.scheduler:Scheduler"
+# How soon what staff change reaches beat, which reads their rows again this often.
+CELERY_BEAT_MAX_LOOP_INTERVAL = 30
 {%- endif %}
 
 # EMAIL__BACKEND overrides DEBUG's choice: e2e needs the provider but DEBUG=false would force secure cookies.

@@ -216,6 +216,30 @@ export class Api {
       params: { path: { id }, header: { 'Idempotency-Key': idempotencyKey } },
     })
   }
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+
+  async scheduledTasks() {
+    return this.client.GET('/v0/scheduled-tasks/')
+  }
+
+  async pauseScheduledTask(name: string, idempotencyKey: IdempotencyKey) {
+    return this.client.POST('/v0/scheduled-tasks/{name}/pause/', {
+      params: { path: { name }, header: { 'Idempotency-Key': idempotencyKey } },
+    })
+  }
+
+  async resumeScheduledTask(name: string, idempotencyKey: IdempotencyKey) {
+    return this.client.POST('/v0/scheduled-tasks/{name}/resume/', {
+      params: { path: { name }, header: { 'Idempotency-Key': idempotencyKey } },
+    })
+  }
+
+  async runScheduledTask(name: string, idempotencyKey: IdempotencyKey) {
+    return this.client.POST('/v0/scheduled-tasks/{name}/run/', {
+      params: { path: { name }, header: { 'Idempotency-Key': idempotencyKey } },
+    })
+  }
+{%- endif %}
 
   async authorizedApplications() {
     return this.client.GET('/v0/authorized-applications/')

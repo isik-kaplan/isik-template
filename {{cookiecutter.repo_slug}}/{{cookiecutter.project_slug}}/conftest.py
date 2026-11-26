@@ -83,6 +83,12 @@ def _commit_callbacks_run_where_a_request_would_commit(request, monkeypatch):
 def _tasks_run_in_process(monkeypatch):
     monkeypatch.setitem(celery_app.conf, "task_always_eager", True)
     monkeypatch.setitem(celery_app.conf, "task_eager_propagates", True)
+    # Eager mode leaves send_task (a task sent by name, as a scheduled task run now is) to the broker.
+    monkeypatch.setattr(
+        celery_app,
+        "send_task",
+        lambda name, args=(), kwargs=None, **options: celery_app.tasks[name].apply(args, kwargs),
+    )
 
 
 @pytest.fixture

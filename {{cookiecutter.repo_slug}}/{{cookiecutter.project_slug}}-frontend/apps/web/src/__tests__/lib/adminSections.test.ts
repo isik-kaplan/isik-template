@@ -16,6 +16,9 @@ describe('adminSections', () => {
       '/groups',
       '/app-approvals',
       '/settings',
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+      '/scheduled-tasks',
+{%- endif %}
     ])
   })
 

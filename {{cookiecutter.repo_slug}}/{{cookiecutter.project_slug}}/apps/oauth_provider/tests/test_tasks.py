@@ -8,14 +8,13 @@ from django.conf import settings
 {%- endif %}
 from django.core.management import call_command
 from django.utils import timezone
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+from isik.django.scheduling import beat_schedule
+{%- endif %}
 from oauth2_provider.models import get_access_token_model, get_grant_model, get_id_token_model, get_refresh_token_model
 
 from apps.oauth_provider import tasks
 from apps.oauth_provider.tasks import clear_expired_tokens
-{%- if cookiecutter.background_jobs == "celery-with-beat" %}
-
-from {{ cookiecutter.project_slug }}.celery import app
-{%- endif %}
 
 
 AccessToken = get_access_token_model()
@@ -90,7 +89,7 @@ def test_the_command_runs_the_same_cleanup(application):
 
 
 def test_the_beat_runs_it_daily():
-    entry = app.conf.beat_schedule["clear-expired-tokens"]
+    entry = beat_schedule()["clear_expired_tokens"]
 
     assert entry["task"] == clear_expired_tokens.name
     assert (entry["schedule"].hour, entry["schedule"].minute) == ({4}, {30})

@@ -8,7 +8,9 @@ def test_every_task_beat_sends_is_one_a_fresh_worker_knows():
     script = (
         "import django; django.setup(); "
         "from {{ cookiecutter.project_slug }}.celery import app; app.loader.import_default_modules(); "
-        "sent = {entry['task'] for entry in (app.conf.beat_schedule or {}).values()}; "
+        "from isik.django.scheduling import beat_schedule, uses_isiks_scheduler; "
+        "entries = beat_schedule() if uses_isiks_scheduler(app.conf) else app.conf.beat_schedule or {}; "
+        "sent = {entry['task'] for entry in entries.values()}; "
         "print(len(sent), sorted(sent - set(app.tasks)))"
     )
 

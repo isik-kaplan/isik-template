@@ -178,7 +178,7 @@ services:
 
   scheduler:
     image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-backend:latest
-    command: celery -A {{ cookiecutter.project_slug }} beat --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    command: celery -A {{ cookiecutter.project_slug }} beat
     env_file: .env
     volumes:
       - ./{{ cookiecutter.project_slug }}:/{{ cookiecutter.project_slug }}

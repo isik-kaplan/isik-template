@@ -9,6 +9,9 @@ urlpatterns = [
     path("", include("apps.oauth_provider.api.urls")),
     path("", include("apps.notifications.api.urls")),
     path("", include("apps.features.api.urls")),
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+    path("", include("apps.scheduling.api.urls")),
+{%- endif %}
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
     path("schema/swagger-ui/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     path("schema/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),

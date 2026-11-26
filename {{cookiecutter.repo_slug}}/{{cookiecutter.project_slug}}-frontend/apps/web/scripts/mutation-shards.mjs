@@ -172,7 +172,7 @@ export const SHARDS = {
     'src/lib/applicationGrant.ts',
     'src/lib/redirectUris.ts',
   ],
-  // The admin: its shell, managing people and groups, and the site settings.
+  // The admin: its shell, managing people and groups, the site settings and the scheduled tasks.
   people: [
     'src/app/admin/groups/[id]/page.tsx',
     'src/app/admin/groups/new/page.tsx',
@@ -181,13 +181,22 @@ export const SHARDS = {
     'src/app/admin/page.tsx',
     'src/app/admin/people/[id]/page.tsx',
     'src/app/admin/people/page.tsx',
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+    'src/app/admin/scheduled-tasks/page.tsx',
+{%- endif %}
     'src/app/admin/settings/page.tsx',
     'src/components/app-admin/AdminNav.tsx',
     'src/components/app-admin/GroupForm.tsx',
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+    'src/components/app-admin/ScheduledTaskActions.tsx',
+{%- endif %}
     'src/components/app-admin/SiteSettingsForm.tsx',
     'src/components/app-people/ManageUserForm.tsx',
     'src/lib/adminSections.ts',
     'src/lib/permissionLabels.ts',
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+    'src/lib/scheduledTasks.ts',
+{%- endif %}
   ],
   // Second factors: the login challenge and the profile tab.
   factors: [

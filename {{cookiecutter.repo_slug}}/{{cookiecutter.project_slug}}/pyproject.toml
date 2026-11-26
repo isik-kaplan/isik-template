@@ -4,12 +4,10 @@ dynamic = ["version"]
 description = {{ cookiecutter.description|tojson }}
 requires-python = ">={{ cookiecutter.python_version }}"
 dependencies = [
-    # The newest every dependency allows: django-celery-beat 2.9.0 caps it below 6.1. Lift it, and move mail
-    # settings to MAILERS, once a release supports 6.1.
+    # Below 6.1 until mail settings move to its MAILERS.
     "django>=6.0,<6.1",
     "psycopg[binary]>=3.2.0",
-    # Below 0.62 until the template adopts its scheduling: 0.62 removed the per-app beat helpers celery.py imports.
-    "isik[django,drf,sentry,celery,notifications,push{{ ",sms" if cookiecutter.phone != "none" }}]>={{ cookiecutter.isik_version }},<0.62",
+    "isik[django,drf,sentry,celery,notifications,push{{ ",sms" if cookiecutter.phone != "none" }}{{ ",scheduling" if cookiecutter.background_jobs == "celery-with-beat" }}]>={{ cookiecutter.isik_version }}",
     "pyuwsgi>=2.0.28",
     "python-dotenv>=1.0.0",
     "drf-spectacular>=0.27.0",
@@ -26,9 +24,6 @@ dependencies = [
     "cryptography>=49.0.0",
     "requests>=2.32.0",
     "celery>=5.5.0",
-{%- if cookiecutter.background_jobs == "celery-with-beat" %}
-    "django-celery-beat>=2.9.0",
-{%- endif %}
 {%- if cookiecutter.background_jobs != "inline" %}
     "django-celery-results>=2.6.0",
 {%- endif %}

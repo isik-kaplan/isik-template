@@ -1,38 +1,16 @@
-"""The common app's scans over what it is handed: the app registry, the trigger registry, a call stack."""
+"""The common app's scans over what it is handed: the app registry and a call stack."""
 
 import _thread
 from types import SimpleNamespace
 
-import pgtrigger
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 from isik.common.utils.strings import words_to_pascal
 
-from apps.common import checks, enum_names
+from apps.common import enum_names
 from apps.common.logging import emit
 from apps.common.logging.events import DECLARED
-
-
-@given(data=st.data())
-def test_the_check_names_exactly_the_real_event_models_missing_a_guard(data):
-    models = checks.event_models()
-    assert models
-    assert all(model._meta.managed and not model._meta.proxy for model in models)
-    shipped = list(pgtrigger.registered())
-    stripped = data.draw(st.sets(st.sampled_from(models)))
-    kept = [(model, trigger) for model, trigger in shipped if model not in stripped]
-
-    with pytest.MonkeyPatch.context() as patch:
-        patch.setattr(pgtrigger, "registered", lambda: kept)
-        errors = checks.event_models_are_append_only(app_configs=None)
-
-    if stripped:
-        (error,) = errors
-        named = sorted(model._meta.label for model in stripped)
-        assert error.msg == f"These event models are not append-only: {', '.join(named)}."
-    else:
-        assert errors == []
 
 
 CHOICE_SETS = [

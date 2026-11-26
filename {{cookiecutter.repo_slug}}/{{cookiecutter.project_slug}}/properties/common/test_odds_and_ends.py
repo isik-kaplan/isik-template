@@ -7,7 +7,6 @@ from types import SimpleNamespace
 from urllib.parse import parse_qs, urlsplit
 {%- endif %}
 
-import pgtrigger
 import pytest
 from django.core.exceptions import ImproperlyConfigured
 from django.core.files.base import ContentFile
@@ -16,11 +15,9 @@ from django.core.management import CommandError, call_command
 from drf_spectacular.drainage import GENERATOR_STATS, warn
 from hypothesis import given
 from hypothesis import strategies as st
-from isik.django.apps.common.db import APPEND_ONLY_TRIGGERS
 from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory
 
-from apps.common import checks
 from apps.common.api.request_policies import RecentlyProvedWhoTheyAre
 from apps.common.fields import EncryptedField
 from apps.common.files import serve_file
@@ -41,38 +38,6 @@ def test_the_plaintext_guard_names_its_column_and_refuses_values_without_the_pre
 
     assert f"NEW.\"{column}\" NOT LIKE '{prefix}%'" in body
     assert "RAISE EXCEPTION" in body
-
-
-# Every model guarded, or the first missing a guard: picked first, so a run has both.
-@pytest.mark.parametrize("guarded", [True, False])
-@given(
-    models=st.dictionaries(
-        NAME, st.sets(st.sampled_from([*APPEND_ONLY_TRIGGERS, "another"]), max_size=3), min_size=1, max_size=4
-    ),
-    dropped=st.sampled_from(APPEND_ONLY_TRIGGERS),
-)
-def test_every_event_model_missing_a_guard_is_named_and_only_those(monkeypatch, guarded, models, dropped):
-    first = next(iter(models))
-    if guarded:
-        models = {name: held | set(APPEND_ONLY_TRIGGERS) for name, held in models.items()}
-    else:
-        models = {**models, first: models[first] - {dropped}}
-    stubs = {name: type(name, (), {"_meta": SimpleNamespace(label=f"stub.{name}")}) for name in models}
-    with monkeypatch.context() as patched:
-        patched.setattr(checks, "event_models", lambda: list(stubs.values()))
-        patched.setattr(
-            pgtrigger,
-            "registered",
-            lambda: [(stubs[name], SimpleNamespace(name=trigger)) for name, held in models.items() for trigger in held],
-        )
-        errors = checks.event_models_are_append_only(app_configs=None)
-
-    missing = sorted(f"stub.{name}" for name, held in models.items() if not set(APPEND_ONLY_TRIGGERS) <= held)
-    if missing:
-        (error,) = errors
-        assert error.msg == f"These event models are not append-only: {', '.join(missing)}."
-    else:
-        assert errors == []
 
 
 # An enciphered-looking row drawn too: only a row without the prefix reads back as it is.

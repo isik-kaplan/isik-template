@@ -786,6 +786,7 @@ export interface paths {
         };
         /** @description What the signed-in person may give a token: the delegatable permissions they hold. */
         get: operations["personal_access_tokens_scopes_list"];
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
         put?: never;
         post?: never;
         delete?: never;
@@ -794,6 +795,131 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v0/scheduled-tasks/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The scheduled tasks, and what staff may do to each: pause, resume, run now, as its declaration allows. */
+        get: operations["scheduled_tasks_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/scheduled-tasks/{name}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description One task. */
+        get: operations["scheduled_tasks_retrieve"];
+{%- endif %}
+        put?: never;
+        post?: never;
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Reschedules the task - `every` or `crontab` - and switches its restart mode - `on_restart`. */
+        patch: operations["scheduled_tasks_partial_update"];
+        trace?: never;
+    };
+    "/v0/scheduled-tasks/{name}/pause/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Pauses the task. */
+        post: operations["scheduled_tasks_pause_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/scheduled-tasks/{name}/reset/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Sets the task's schedule and pause back to its declaration's now - as far as staff may change them. */
+        post: operations["scheduled_tasks_reset_create"];
+{%- endif %}
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+    "/v0/scheduled-tasks/{name}/reset-at-restart/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Has the next scheduler start set the task back to its declaration's - its restart mode code. */
+        post: operations["scheduled_tasks_reset_at_restart_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/scheduled-tasks/{name}/resume/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Resumes the task. */
+        post: operations["scheduled_tasks_resume_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v0/scheduled-tasks/{name}/run/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Sends the task now, as beat sends it. */
+        post: operations["scheduled_tasks_run_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+{%- endif %}
     "/v0/settings/": {
         parameters: {
             query?: never;
@@ -2052,6 +2178,26 @@ export interface components {
              */
             total_pages: number;
             results: components["schemas"]["ReviewedApplication"][];
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+        };
+        PaginatedScheduledTaskList: {
+            /**
+             * @description Total number of items available.
+             * @example 1102
+             */
+            count: number;
+            /**
+             * @description Number of results to return per page.
+             * @example 100
+             */
+            page_size: number;
+            /**
+             * @description Total number of pages.
+             * @example 17
+             */
+            total_pages: number;
+            results: components["schemas"]["ScheduledTask"][];
+{%- endif %}
         };
         PaginatedSubscriptionList: {
             /**
@@ -2125,6 +2271,15 @@ export interface components {
             type: "bool";
             value?: boolean;
         };
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+        PatchedChangeRequest: {
+            /** @description Seconds between runs. */
+            every?: number;
+            /** @description Five fields: minute hour day month weekday. */
+            crontab?: string;
+            on_restart?: components["schemas"]["ScheduledTaskStateOnRestart"];
+        };
+{%- endif %}
         /** @description What a PATCH names, whatever the setting's type - each type's own serializer adds its typed value. */
         PatchedChoiceOrNullSettingValueRequest: {
             /**
@@ -2451,6 +2606,37 @@ export interface components {
             /** @description Shown once, here. It is stored hashed, so this is the only copy. */
             readonly client_secret: string;
         };
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+        ScheduledTask: {
+            readonly name: string;
+            /** @description The Celery task it sends. */
+            readonly task: string;
+            /** @description What its declaration says - what reset/ sets back. */
+            readonly code: components["schemas"]["State"];
+            /** @description What staff saved - on_restart null for the declaration's. */
+            readonly saved: components["schemas"]["State"];
+            /** @description What the scheduler runs it as. */
+            readonly effective: components["schemas"]["State"];
+            /** @description What staff may do to it. */
+            readonly may: string[];
+            /** Format: date-time */
+            readonly run_by_hand_at: string | null;
+            /**
+             * Format: date-time
+             * @description When beat last sent it on its schedule.
+             */
+            readonly last_run_at: string | null;
+        };
+        /** @description A 412's body: the object as it is now, in `current`. */
+        ScheduledTaskPreconditionFailed: {
+            detail: string;
+            /** @description Always precondition_failed. */
+            code: string;
+            current: components["schemas"]["ScheduledTask"];
+        };
+        /** @enum {string} */
+        ScheduledTaskStateOnRestart: "code" | "database";
+{%- endif %}
         Setting: components["schemas"]["BoolSetting"] | components["schemas"]["IntSetting"] | components["schemas"]["DecimalSetting"] | components["schemas"]["FloatSetting"] | components["schemas"]["DurationSetting"] | components["schemas"]["TextSetting"] | components["schemas"]["ChoiceSetting"] | components["schemas"]["BoolOrNullSetting"] | components["schemas"]["IntOrNullSetting"] | components["schemas"]["DecimalOrNullSetting"] | components["schemas"]["FloatOrNullSetting"] | components["schemas"]["DurationOrNullSetting"] | components["schemas"]["TextOrNullSetting"] | components["schemas"]["ChoiceOrNullSetting"];
         /** @description A 400's body: the type named isn't the setting's, or the value isn't one it takes. */
         SettingInvalidValue: {
@@ -2505,6 +2691,16 @@ export interface components {
             code: string;
             current: components["schemas"]["SiteSettings"];
         };
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+        State: {
+            /** @description Seconds between runs - null at a crontab. */
+            every: number | null;
+            /** @description Five fields - null every so often. */
+            crontab: string | null;
+            paused: boolean;
+            on_restart: components["schemas"]["ScheduledTaskStateOnRestart"] | null;
+        };
+{%- endif %}
         Subscription: {
             /**
              * Format: uuid
@@ -4895,6 +5091,339 @@ export interface operations {
             };
         };
     };
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+    scheduled_tasks_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedScheduledTaskList"];
+                };
+            };
+        };
+    };
+    scheduled_tasks_retrieve: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The ETag of the version already held - a 304 with no body if it's still current. */
+                "If-None-Match"?: string;
+            };
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledTask"];
+                };
+            };
+            /** @description The version If-None-Match named is still current. */
+            304: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    scheduled_tasks_partial_update: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+                /** @description The ETag of the version this request was made against, or * for whatever is current. */
+                "If-Match": string;
+            };
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedChangeRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedChangeRequest"];
+                "multipart/form-data": components["schemas"]["PatchedChangeRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledTask"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            412: {
+                headers: {
+                    /** @description The version of the object this response shows. Send it back as it is, in If-Match. */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledTaskPreconditionFailed"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreconditionRequired"];
+                };
+            };
+        };
+    };
+    scheduled_tasks_pause_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledTask"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+        };
+    };
+    scheduled_tasks_reset_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledTask"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+        };
+    };
+    scheduled_tasks_reset_at_restart_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledTask"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+        };
+    };
+    scheduled_tasks_resume_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledTask"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+        };
+    };
+    scheduled_tasks_run_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description A UUID the client makes for this request and sends again on each retry of it - a retry answers with the first request's response rather than doing the work twice. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledTask"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyInFlight"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyKeyReused"];
+                };
+            };
+        };
+    };
+{%- endif %}
     settings_list: {
         parameters: {
             query?: {

@@ -76,7 +76,7 @@ def test_blank_and_null_are_dropped_before_hashing(monkeypatch):
 
 
 def test_a_choice_set_that_cannot_be_sorted_is_left_unnamed(monkeypatch):
-    """django-celery-beat's timezone field, for one; raising would cost every other name."""
+    """A field whose choices are objects; raising would cost every other name."""
     unsortable = [(object(), "a"), (object(), "b")]
     _registry(monkeypatch, _model("Thing", _Field("zone", unsortable), _Field("status", STATUS)))
 

@@ -1817,6 +1817,44 @@
       ]
     }
   ],
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+  "src/app/admin/scheduled-tasks/page.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "2c53237c3778",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "2c53237c3778",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
+  "src/components/app-admin/ScheduledTaskActions.tsx": [
+    {
+      "mutator": "ArrayDeclaration",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    },
+    {
+      "mutator": "StringLiteral",
+      "fingerprint": "56eb6d8002e5",
+      "reason": [
+        "equivalent mutant. Every t() call here names its full 'auth:key', so this array only matters for an",
+        "unprefixed lookup - none of them are."
+      ]
+    }
+  ],
+{%- endif %}
   "src/app/admin/settings/page.tsx": [
     {
       "mutator": "ArrayDeclaration",

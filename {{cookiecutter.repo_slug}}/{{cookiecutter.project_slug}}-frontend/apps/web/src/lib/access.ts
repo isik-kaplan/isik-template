@@ -23,6 +23,13 @@ export function mayReviewApplications(me: Me): boolean {
 export function mayChangeSiteSettings(me: Me): boolean {
   return me.is_staff || me.is_superuser
 }
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+
+/** Staff and superusers - the backend's IsStaff, which guards the scheduled tasks. */
+export function mayRunScheduledTasks(me: Me): boolean {
+  return me.is_staff || me.is_superuser
+}
+{%- endif %}
 
 /** Changing a group is a grant to everybody in it - the backend's may_grant. */
 export function mayChangeGroups(me: Me): boolean {

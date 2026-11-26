@@ -10,14 +10,13 @@ from django.conf import settings
 {%- endif %}
 from django.core.management import call_command
 from django.utils import timezone
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+from isik.django.scheduling import beat_schedule
+{%- endif %}
 
 from apps.users.models.user import User
 from apps.users.tasks import unverified
 from apps.users.tasks.unverified import remove_unverified_accounts, unverified_accounts
-{%- if cookiecutter.background_jobs == "celery-with-beat" %}
-
-from {{ cookiecutter.project_slug }}.celery import app
-{%- endif %}
 
 
 WINDOW = timedelta(days=app_settings.EMAIL_CONFIRMATION_EXPIRE_DAYS)
@@ -102,7 +101,7 @@ def test_the_command_runs_the_same_removal(monkeypatch):
 
 
 def test_the_beat_runs_it_daily():
-    entry = app.conf.beat_schedule["remove-unverified-accounts"]
+    entry = beat_schedule()["remove_unverified_accounts"]
 
     assert entry["task"] == remove_unverified_accounts.name
     assert (entry["schedule"].hour, entry["schedule"].minute) == ({4}, {45})

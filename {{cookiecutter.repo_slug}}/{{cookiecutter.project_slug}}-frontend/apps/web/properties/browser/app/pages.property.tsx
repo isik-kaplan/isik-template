@@ -5,6 +5,9 @@ import NewGroupPage from '@/app/admin/groups/new/page'
 import GroupsPage from '@/app/admin/groups/page'
 import PersonPage from '@/app/admin/people/[id]/page'
 import PeoplePage from '@/app/admin/people/page'
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+import ScheduledTasksPage from '@/app/admin/scheduled-tasks/page'
+{%- endif %}
 import SiteSettingsPage from '@/app/admin/settings/page'
 import ApplicationPage from '@/app/applications/[id]/page'
 import ApplicationsLayout from '@/app/applications/layout'
@@ -528,6 +531,16 @@ describe('the admin', () => {
       expect(screen.getByRole('radio', { name: 'Superusers only' })).toBeTruthy()
     }
   )
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+
+  test.prop([answered])('lists every scheduled task to staff, and is not found by anybody else', async (w) => {
+    expect(await open(ScheduledTasksPage, {}, staff(w))).toBe('shown')
+    for (const task of w.scheduledTasks) expect(screen.getByText(task.name)).toBeTruthy()
+    expect(screen.queryByText('Nothing is scheduled.') !== null).toBe(w.scheduledTasks.length === 0)
+    const member = backend(w, 'member', 'everything') as unknown as typeof fetch
+    expect(await open(ScheduledTasksPage, {}, member)).toBe('not found')
+  })
+{%- endif %}
 
   // One property per setting, so both are reached every run.
   for (const passwords of [true, false])

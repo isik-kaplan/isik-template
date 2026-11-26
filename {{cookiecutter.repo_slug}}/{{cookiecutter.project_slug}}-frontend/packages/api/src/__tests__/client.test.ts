@@ -118,6 +118,27 @@ describe('Api', () => {
       'POST',
       '/v0/oauth-application-reviews/7/withdraw/',
     ],
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+    ['scheduledTasks', (api: Api) => api.scheduledTasks(), 'GET', '/v0/scheduled-tasks/'],
+    [
+      'pauseScheduledTask',
+      (api: Api) => api.pauseScheduledTask('clear_expired_tokens', KEY),
+      'POST',
+      '/v0/scheduled-tasks/clear_expired_tokens/pause/',
+    ],
+    [
+      'resumeScheduledTask',
+      (api: Api) => api.resumeScheduledTask('clear_expired_tokens', KEY),
+      'POST',
+      '/v0/scheduled-tasks/clear_expired_tokens/resume/',
+    ],
+    [
+      'runScheduledTask',
+      (api: Api) => api.runScheduledTask('clear_expired_tokens', KEY),
+      'POST',
+      '/v0/scheduled-tasks/clear_expired_tokens/run/',
+    ],
+{%- endif %}
     ['users', (api: Api) => api.users(), 'GET', '/v0/users/'],
     ['permissions', (api: Api) => api.permissions(), 'GET', '/v0/users/permissions/'],
     ['user', (api: Api) => api.user('u1'), 'GET', '/v0/users/u1/'],
@@ -321,6 +342,11 @@ describe('Api', () => {
     ['updateGroup', (api: Api) => api.updateGroup('g1', { name: 'ops' }, WRITE)],
     ['deleteGroup', (api: Api) => api.deleteGroup('g1', WRITE)],
     ['updateSiteSettings', (api: Api) => api.updateSiteSettings({ mail_the_people_signed_out: false }, WRITE)],
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+    ['pauseScheduledTask', (api: Api) => api.pauseScheduledTask('clear_expired_tokens', KEY)],
+    ['resumeScheduledTask', (api: Api) => api.resumeScheduledTask('clear_expired_tokens', KEY)],
+    ['runScheduledTask', (api: Api) => api.runScheduledTask('clear_expired_tokens', KEY)],
+{%- endif %}
 {%- if cookiecutter.webhooks != "none" %}
     ['registerNotificationEndpoint', (api: Api) => api.registerNotificationEndpoint({ url: 'https://a.test' }, KEY)],
     ['updateNotificationEndpoint', (api: Api) => api.updateNotificationEndpoint('e1', { is_active: false }, WRITE)],

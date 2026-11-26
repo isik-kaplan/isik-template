@@ -7,6 +7,9 @@ import {
   mayManageWebhooks,
 {%- endif %}
   mayReviewApplications,
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+  mayRunScheduledTasks,
+{%- endif %}
   maySeePeople,
 } from '@/lib/access'
 
@@ -48,6 +51,14 @@ describe('access', () => {
     expect(mayChangeSiteSettings(me({ is_superuser: true }))).toBe(true)
     expect(mayChangeSiteSettings(me({ permissions: ['users:manage:user'] }))).toBe(false)
   })
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+
+  it("has staff and superusers run the scheduled tasks, as the backend's IsStaff does", () => {
+    expect(mayRunScheduledTasks(me({ is_staff: true }))).toBe(true)
+    expect(mayRunScheduledTasks(me({ is_superuser: true }))).toBe(true)
+    expect(mayRunScheduledTasks(me({ permissions: ['users:manage:user'] }))).toBe(false)
+  })
+{%- endif %}
 
   it('has whoever may grant change the groups: superusers, and staff holding users:grant:rights', () => {
     expect(mayChangeGroups(me({ is_superuser: true }))).toBe(true)

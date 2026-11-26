@@ -14,7 +14,11 @@ const ADMIN_PUBLIC_PATHS = [...DEFAULT_EXEMPT_PATTERNS, ...SHARED]
 // The admin's pages, which admin.<domain> serves at its root and the bare domain not at all. Named apart from the
 // app's own, so a link from either host's shared chrome reaches the right one.
 const ADMIN_SEGMENT = '/admin'
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+const ADMIN_PAGES = /^\/(people|groups|app-approvals|settings|scheduled-tasks)?(\/|$)/
+{%- else %}
 const ADMIN_PAGES = /^\/(people|groups|app-approvals|settings)?(\/|$)/
+{%- endif %}
 
 // The Host header nginx passes on: behind it, the URL Next builds names its own listening address instead.
 const onAdminHost = (request: NextRequest) => isAdminHost(request.headers.get('host') ?? request.nextUrl.host)

@@ -151,10 +151,6 @@ def test_the_served_api_document_is_in_the_language_the_clients_were_generated_i
 def test_a_view_outside_the_transaction_fails_startup_rather_than_warning():
     """Idempotency keys and version checks count on ATOMIC_REQUESTS."""
     assert settings.ISIK["DJANGO"]["CHECKS"][Check.NOT_ATOMIC] == {CheckOption.SEVERITY: Severity.ERROR}
-
-
-def test_a_model_tracked_with_pghistory_directly_is_append_only_too():
-    assert settings.PGHISTORY_APPEND_ONLY is True
 {%- if cookiecutter.storage == "s3" %}
 
 

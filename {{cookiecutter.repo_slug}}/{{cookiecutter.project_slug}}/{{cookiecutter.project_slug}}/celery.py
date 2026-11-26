@@ -1,14 +1,6 @@
 import os
-{%- if cookiecutter.background_jobs == "celery-with-beat" %}
-from datetime import timedelta
-{%- endif %}
 
 from celery import Celery
-{%- if cookiecutter.background_jobs == "celery-with-beat" %}
-from celery.schedules import crontab
-from isik.django.apps.features.schedule import merge_beat_schedule as merge_features_beat_schedule
-from isik.django.apps.notifications.schedule import merge_beat_schedule
-{%- endif %}
 
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "{{ cookiecutter.project_slug }}.settings")
@@ -21,29 +13,3 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
 app.conf.task_time_limit = 240
 app.conf.task_soft_time_limit = 120
-{%- if cookiecutter.background_jobs == "celery-with-beat" %}
-# django-celery-beat copies the schedule into its table when beat starts.
-merge_beat_schedule(app)
-# Tells a trial that ended with no write that it ended. Hourly: SWEEP next_boundary runs it at the boundary, and
-# this backstop catches a run the broker lost.
-merge_features_beat_schedule(app, sweep_every=timedelta(hours=1))
-
-
-@app.on_after_configure.connect
-def schedule_housekeeping(sender, **kwargs):
-    """Merged like isik's entries: a CELERY_BEAT_SCHEDULE setting would shadow theirs."""
-    # Here, not at the top: its module reads settings, which import this package.
-    from isik.django.apps.accounts.tasks import beat_schedule as accounts_beat_schedule
-
-    # Daily: the token tables stay correct however large they grow.
-    tokens = {"task": "clear_expired_tokens", "schedule": crontab(hour=4, minute=30)}
-    # Daily: an address held by a signup that never proved it is released within a day of its link expiring.
-    unverified = {"task": "remove_unverified_accounts", "schedule": crontab(hour=4, minute=45)}
-    sender.conf.beat_schedule = {
-        **(sender.conf.beat_schedule or {}),
-        # Hourly: an account is deleted within the hour its grace period ends.
-        **accounts_beat_schedule(timedelta(hours=1)),
-        "clear-expired-tokens": tokens,
-        "remove-unverified-accounts": unverified,
-    }
-{%- endif %}

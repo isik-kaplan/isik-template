@@ -71,7 +71,8 @@ carry over the `broker` and `worker` services, the `BROKER__*` settings and
 `django-celery-results`; no task changes.
 {% else %}
 Tasks are Celery tasks over RabbitMQ (`broker`), run by `worker`{% if cookiecutter.background_jobs == "celery-with-beat" %}; `scheduler` runs Celery beat
-with `django_celery_beat`'s database schedule, filled from the beat schedule in `celery.py`{% endif %}. Every task takes
+on isik's scheduler, from the tasks declared in `apps/scheduling/declarations.py`; staff pause or run them from the
+admin's Scheduled tasks{% endif %}. Every task takes
 `base=OnCommitTask`, so it is dispatched once the transaction that asked for it commits, and its
 history rows name whoever caused it.
 {% endif %}
@@ -387,7 +388,7 @@ language: `/v0/notifications/kinds/` lists every kind with what the caller gets 
 change it, and every inbox item carries its sentence, so a client needs no text of its own for either.
 {% if cookiecutter.background_jobs == "celery-with-beat" %}
 Fan-out, the reaper (retries due, stranded deliveries) and pruning run from `scheduler`'s beat
-(`merge_beat_schedule(app)` in `celery.py`).
+(isik declares them; `apps/scheduling/declarations.py` changes any).
 {% else %}
 There is no beat, so a write that left a notice waiting starts its fan-out once it commits
 (`FanOutAfterWritesMiddleware`, and `FAN_OUT_AFTER_TASKS` for tasks), and uWSGI runs

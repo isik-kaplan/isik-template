@@ -1,5 +1,13 @@
 import { GroupForm } from '@/components/app-admin/GroupForm'
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+import { ScheduledTaskActions } from '@/components/app-admin/ScheduledTaskActions'
+{%- endif %}
 import { SiteSettingsForm } from '@/components/app-admin/SiteSettingsForm'
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+
+import type { Translate } from '@/i18n/config'
+import { scheduleLabel } from '@/lib/scheduledTasks'
+{%- endif %}
 
 import { freshDom } from '../../support/dom'
 import { calls, navigation, toast } from '../../support/requests'
@@ -141,3 +149,59 @@ describe('the site settings', () => {
       }
     )
 })
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+
+describe('a scheduled task', () => {
+  test.prop([fc.subarray(['view', 'pause', 'run_now']), fc.boolean()])(
+    'offers exactly what its declaration allows, and each sends that act for that task',
+    async (may, paused) => {
+      freshDom()
+      const sent = answering(200, {})
+      const task = { name: 'clear_expired_tokens', may, effective: { paused } } as never
+      render(<ScheduledTaskActions task={task} />)
+      const offered = [
+        ...(may.includes('pause') ? [[paused ? 'Resume' : 'Pause', paused ? 'resume' : 'pause']] : []),
+        ...(may.includes('run_now') ? [['Run now', 'run']] : []),
+      ]
+      const labels = offered.map(([label]) => label)
+      expect(screen.queryAllByRole('button').map((button) => button.textContent)).toEqual(labels)
+      for (const [label, act] of offered) {
+        const button = screen.getByRole('button', { name: label }) as HTMLButtonElement
+        // Each waits out the one before: the buttons stay disabled while an act is on its way.
+        await vi.waitFor(() => expect(button.disabled).toBe(false))
+        sent.mockClear()
+        fireEvent.click(button)
+        await vi.waitFor(() => expect(sent).toHaveBeenCalled())
+        const request = calls(sent)[0][0] as Request
+        expect([request.method, new URL(request.url).pathname]).toEqual([
+          'POST',
+          `/v0/scheduled-tasks/clear_expired_tokens/${act}/`,
+        ])
+      }
+    }
+  )
+
+  // The key and what it was given, so the property sees the count as well as the unit.
+  const withOptions = ((key: string, options: object) => ({ key, ...options })) as unknown as Translate
+  const UNITS = { Days: 86400, Hours: 3600, Minutes: 60, Seconds: 1 } as const
+  // A whole number of each unit, each its own case: a plain integer draw almost never lands on whole hours.
+  test.each(Object.entries(UNITS))(
+    'words a whole number of %s in the largest unit it is a whole number of',
+    (_unit, size) =>
+      fc.assert(
+        fc.property(
+          fc.integer({ min: 1, max: 10_000 }).map((n) => n * size),
+          (every) => {
+            const { key, count } = scheduleLabel({ every, crontab: null }, withOptions) as unknown as {
+              key: string
+              count: number
+            }
+            const unit = key.replace('auth:scheduledTasksEvery', '') as keyof typeof UNITS
+            expect(count * UNITS[unit]).toBe(every)
+            expect(Object.values(UNITS).find((seconds) => every % seconds === 0)).toBe(UNITS[unit])
+          }
+        )
+      )
+  )
+})
+{%- endif %}

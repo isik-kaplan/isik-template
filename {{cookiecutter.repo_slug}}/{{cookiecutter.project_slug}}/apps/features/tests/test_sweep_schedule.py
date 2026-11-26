@@ -4,8 +4,7 @@
 from datetime import timedelta
 
 from django.conf import settings
-
-from {{ cookiecutter.project_slug }}.celery import app
+from isik.django.scheduling import beat_schedule
 
 
 def test_a_run_is_scheduled_at_the_next_boundary():
@@ -13,7 +12,7 @@ def test_a_run_is_scheduled_at_the_next_boundary():
 
 
 def test_the_beat_is_an_hourly_backstop_for_a_run_the_broker_lost():
-    assert app.conf.beat_schedule["isik.features.sweep"]["schedule"] == timedelta(hours=1)
+    assert beat_schedule()["isik.features.sweep"]["schedule"] == timedelta(hours=1)
 {%- else -%}
 from django.conf import settings
 

@@ -36,6 +36,9 @@ describe('AdminLayout', () => {
       ['Groups', '/groups'],
       ['App approvals', '/app-approvals'],
       ['Site settings', '/settings'],
+{%- if cookiecutter.background_jobs == "celery-with-beat" %}
+      ['Scheduled tasks', '/scheduled-tasks'],
+{%- endif %}
       ['Back to the app', 'http://example.test'],
     ])
     expect(screen.getByText('content')).toBeTruthy()

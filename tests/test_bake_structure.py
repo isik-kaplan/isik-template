@@ -573,3 +573,18 @@ def test_a_bad_icon_stops_the_bake(cookies, tmp_path):
     result = cookies.bake(extra_context={**load_context("default"), "icon": str(icon)})
 
     assert result.exit_code != 0
+
+
+@pytest.mark.parametrize(("context_name", "scheduled"), [("default", True), ("celery-disk", False)])
+def test_staff_controls_over_scheduled_tasks_come_only_with_beat(cookies, context_name, scheduled):
+    result = cookies.bake(extra_context=load_context(context_name))
+    root = result.project_path
+    slug = result.context["project_slug"]
+    web = root / f"{slug}-frontend/apps/web/src"
+
+    assert result.exit_code == 0, result.exception
+    assert (root / slug / "apps/scheduling").exists() is scheduled
+    assert (web / "app/admin/scheduled-tasks").exists() is scheduled
+    assert (web / "components/app-admin/ScheduledTaskActions.tsx").exists() is scheduled
+    assert (root / "e2e/playwright/tests/admin").exists() is scheduled
+    assert ("scheduling" in (root / slug / slug / "settings.py").read_text()) is scheduled
