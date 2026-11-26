@@ -1,8 +1,12 @@
 // Confirms the address MAIL_TO signed up with, as opening the mailed link would: the link carries allauth's key.
 // MAILPIT and AUTH_HOST come from the run; the host needn't resolve it, so the request names it in Host.
-const search = http.get(`${MAILPIT}/api/v1/search?query=${encodeURIComponent('to:' + MAIL_TO)}`)
-const messages = json(search.body).messages
-if (!messages.length) throw new Error(`No mail to ${MAIL_TO} yet`)
+// The worker sends it, a while after the screen says so on a busy machine; Maestro's scripts can't sleep, so ask again.
+const deadline = Date.now() + 60000
+let messages = []
+while (!messages.length && Date.now() < deadline) {
+  messages = json(http.get(`${MAILPIT}/api/v1/search?query=${encodeURIComponent('to:' + MAIL_TO)}`).body).messages
+}
+if (!messages.length) throw new Error(`No mail to ${MAIL_TO} in a minute`)
 const message = json(http.get(`${MAILPIT}/api/v1/message/${messages[0].ID}`).body)
 const link = (message.Text || message.HTML).match(/\/auth\/verify-email\/([^\s"'<>]+)/)
 if (!link) throw new Error(`No verification link in the mail to ${MAIL_TO}`)
