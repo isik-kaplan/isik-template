@@ -1,0 +1,10 @@
+appId: {{ cookiecutter.domain.split(".") | reverse | join(".") }}.mobile
+---
+# iOS may still offer to save the password once its form leaves the screen, over whatever comes next.
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          text: Not Now
+          optional: true

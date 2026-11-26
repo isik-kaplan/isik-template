@@ -15,6 +15,9 @@ case "$app" in
     xcrun simctl install "$device" "$app"
     # Otherwise iOS offers to save each password over the next screen, where the flows can't reach the offer.
     xcrun simctl spawn "$device" defaults write com.apple.WebUI AutoFillPasswords -bool NO
+    # A fresh simulator introduces its keyboard on first use, and the introduction swallows what is typed.
+    xcrun simctl spawn "$device" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool YES
+    xcrun simctl spawn "$device" defaults write com.apple.keyboard.preferences DidShowGestureKeyboardIntroduction -bool YES
     ;;
 esac
 maestro ${DEVICE:+--device "$DEVICE"} test "$here" \

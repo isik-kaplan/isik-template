@@ -49,6 +49,7 @@ name: Signing up needs the address confirmed before the account can sign in
 - pressKey: Enter
 - tapOn:
     id: signup-submit
+- runFlow: common/not-now.yaml
 {%- if cookiecutter.phone == "required" %}
 # The number's code comes before the address's mail.
 - extendedWaitUntil:
@@ -93,6 +94,7 @@ name: Signing up needs the address confirmed before the account can sign in
 - pressKey: Enter
 - tapOn:
     id: login-submit
+- runFlow: common/not-now.yaml
 - extendedWaitUntil:
     visible: You're logged in as ${output.email}
     timeout: 15000
