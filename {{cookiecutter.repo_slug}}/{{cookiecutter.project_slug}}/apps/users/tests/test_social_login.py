@@ -77,7 +77,12 @@ def test_an_issuer_named_twice_is_refused():
 def test_a_providers_app_reads_its_credentials_from_its_own_variables():
     environ = {f"{PREFIX}__GOOGLE__CLIENT_ID": "an-id", f"{PREFIX}__GOOGLE__CLIENT_SECRET": "a-secret"}
 
-    assert social_app("google", environ, PREFIX) == {"client_id": "an-id", "secret": "a-secret", "key": ""}
+    assert social_app("google", environ, PREFIX) == {
+        "client_id": "an-id",
+        "secret": "a-secret",
+        "key": "",
+        "settings": {"fresh_sign_in": False},
+    }
     assert social_app("github", {}, PREFIX) == {"client_id": "", "secret": "", "key": ""}
 
 
@@ -94,15 +99,51 @@ def test_an_issuers_app_reads_its_own_variables_and_is_called_by_its_name():
         "key": "",
         "provider_id": "customers-eu",
         "name": "Customer login",
-        "settings": {"server_url": "https://idp.example.test"},
+        "settings": {"fresh_sign_in": True, "server_url": "https://idp.example.test"},
     }
 
 
 def test_an_issuer_without_a_name_of_its_own_is_called_as_its_button_is():
     app = social_app("openid_connect:corp", {}, PREFIX)
 
-    assert (app["name"], app["settings"]) == ("Corp", {"server_url": ""})
+    assert (app["name"], app["settings"]) == ("Corp", {"fresh_sign_in": True, "server_url": ""})
     assert social_app("openid_connect:customer-login_eu", {}, PREFIX)["name"] == "Customer Login Eu"
+
+
+@pytest.mark.parametrize(
+    ("entry", "variable", "value", "fresh"),
+    [
+        # An issuer must report auth_time when asked, so it proves unless the deployment says it doesn't.
+        ("openid_connect:corp", "CORP", None, True),
+        ("openid_connect:corp", "CORP", "false", False),
+        # Google, only once its console sends session age claims.
+        ("google", "GOOGLE", None, False),
+        ("google", "GOOGLE", "TRUE", True),
+    ],
+)
+def test_whether_a_sign_in_at_a_provider_proves_it_is_them_is_declared_per_provider(entry, variable, value, fresh):
+    environ = {} if value is None else {f"{PREFIX}__{variable}__FRESH_SIGN_IN": value}
+
+    assert social_app(entry, environ, PREFIX)["settings"]["fresh_sign_in"] is fresh
+
+
+def test_a_provider_that_never_reports_auth_time_is_never_declared_able_to_prove():
+    """Microsoft's login is read from Graph, which has no auth_time: declared able, it would leave somebody stuck."""
+    assert "settings" not in social_app("microsoft", {f"{PREFIX}__MICROSOFT__FRESH_SIGN_IN": "false"}, PREFIX)
+    with pytest.raises(ImproperlyConfigured) as error:
+        social_app("microsoft", {f"{PREFIX}__MICROSOFT__FRESH_SIGN_IN": "true"}, PREFIX)
+
+    assert str(error.value) == (
+        f"{PREFIX}__MICROSOFT__FRESH_SIGN_IN: microsoft never reports when it last challenged anybody, "
+        "so a sign-in there can't prove it is them"
+    )
+
+
+def test_a_declaration_that_is_neither_true_nor_false_refuses_to_start():
+    with pytest.raises(ImproperlyConfigured) as error:
+        social_app("google", {f"{PREFIX}__GOOGLE__FRESH_SIGN_IN": "yes"}, PREFIX)
+
+    assert str(error.value) == f"{PREFIX}__GOOGLE__FRESH_SIGN_IN is true or false, not 'yes'"
 
 
 def test_issuers_are_one_providers_apps_and_every_other_provider_has_its_own():

@@ -9,6 +9,11 @@ OIDC = "openid_connect"
 # What an issuer is called: its callback, its credentials' variables and its button's name.
 ISSUER = re.compile(r"[a-z][a-z0-9_-]*")
 
+# The providers whose login can carry a verified `auth_time`, so a sign-in there can prove it is the person again,
+# and whether one does unless `<ID>__FRESH_SIGN_IN` says. OpenID Connect must report it when asked; Google only
+# once its console's session age claims are on. Any other (Microsoft's included, read from Graph) never carries it.
+FRESH_SIGN_IN = {OIDC: True, "google": False}
+
 
 def provider_of(entry: str) -> str:
     """The allauth provider an entry names: `openid_connect:<issuer>` is openid_connect's."""
@@ -47,13 +52,24 @@ def social_app(entry: str, environ, prefix: str) -> dict:
         "secret": environ.get(f"{variables}__CLIENT_SECRET", ""),
         "key": "",
     }
+    fresh = environ.get(f"{variables}__FRESH_SIGN_IN")
+    if fresh is not None:
+        if fresh.lower() not in ("true", "false"):
+            raise ImproperlyConfigured(f"{variables}__FRESH_SIGN_IN is true or false, not {fresh!r}")
+        if fresh.lower() == "true" and provider not in FRESH_SIGN_IN:
+            raise ImproperlyConfigured(
+                f"{variables}__FRESH_SIGN_IN: {provider} never reports when it last challenged anybody, "
+                "so a sign-in there can't prove it is them"
+            )
+    if provider in FRESH_SIGN_IN:
+        app["settings"] = {"fresh_sign_in": FRESH_SIGN_IN[provider] if fresh is None else fresh.lower() == "true"}
     if issuer:
         # The issuer's name builds its callback URL, so it must match the IdP's registered redirect_uri.
         app["provider_id"] = issuer
         # Named as the web's button names it when nothing else does: customer-login reads Customer Login.
         named = " ".join(word.capitalize() for word in re.split(r"[_-]", issuer))
         app["name"] = environ.get(f"{variables}__NAME", named)
-        app["settings"] = {"server_url": environ.get(f"{variables}__SERVER_URL", "")}
+        app["settings"]["server_url"] = environ.get(f"{variables}__SERVER_URL", "")
     return app
 
 

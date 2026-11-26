@@ -4,6 +4,8 @@ import pytest
 from allauth.account.models import EmailAddress
 from allauth.socialaccount.providers import registry
 from allauth.socialaccount.providers.github.provider import GitHubProvider
+from allauth.socialaccount.providers.google.provider import GoogleProvider
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.openid_connect.provider import OpenIDConnectProvider
 from allauth.socialaccount.providers.openid_connect.views import OpenIDConnectOAuth2Adapter
 from django.conf import settings
@@ -87,9 +89,10 @@ def signed_in(client, alice):
 
 @pytest.fixture
 def providers(settings, monkeypatch):
-    """An OIDC and a plain OAuth2 provider, registered by hand since allauth only registers installed ones."""
+    """An OIDC issuer, Google with its session age claims on, and a plain OAuth2 provider, registered by hand since
+    allauth only registers installed ones."""
     registry.load()
-    for provider_class in (OpenIDConnectProvider, GitHubProvider):
+    for provider_class in (OpenIDConnectProvider, GoogleProvider, GitHubProvider):
         monkeypatch.setitem(registry.provider_map, provider_class.id, provider_class)
     app = {"client_id": "client", "secret": "secret", "key": ""}
     settings.SOCIALACCOUNT_PROVIDERS = {
@@ -99,13 +102,15 @@ def providers(settings, monkeypatch):
                     **app,
                     "provider_id": OIDC_PROVIDER_ID,
                     "name": "Test IdP",
-                    "settings": {"server_url": "https://idp.example.test"},
+                    "settings": {"server_url": "https://idp.example.test", "fresh_sign_in": True},
                 }
             ]
         },
+        "google": {"APPS": [{**app, "settings": {"fresh_sign_in": True}}]},
         "github": {"APPS": [app]},
     }
     openid_config = {"authorization_endpoint": AUTHORIZATION_ENDPOINT, "token_endpoint": TOKEN_ENDPOINT}
     monkeypatch.setattr(OpenIDConnectOAuth2Adapter, "openid_config", property(lambda self: openid_config))
-    # Its callback route only exists where the project enables openid_connect itself.
-    monkeypatch.setattr(OpenIDConnectOAuth2Adapter, "get_callback_url", lambda self, request, app: CALLBACK_URL)
+    # Their callback routes only exist where the project enables those providers itself.
+    for adapter in (OpenIDConnectOAuth2Adapter, GoogleOAuth2Adapter):
+        monkeypatch.setattr(adapter, "get_callback_url", lambda self, request, app: CALLBACK_URL)

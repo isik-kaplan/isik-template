@@ -271,8 +271,9 @@ Acts that change who can get into an account (adding, removing or promoting an e
 password, connecting or disconnecting a provider, ending another session) ask the person to prove it
 is them again first: the API answers with `X-Reauthentication-Required: 1`, and the frontend sends
 them to `/auth/prove` and back. A proof is spent by the one act it was asked for. Somebody with a
-password types it; somebody who signed up through an OpenID Connect provider signs in there again
-(it has to report a fresh `auth_time`); anybody without a password can also set one from an emailed
+password types it; somebody who signed up through an OpenID Connect issuer, or Google with its session
+age claims on (`OAUTH__<ID>__FRESH_SIGN_IN`), signs in there again (it has to report a fresh
+`auth_time`); anybody without a password can also set one from an emailed
 link. With `{{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__ONLY` (sign-in through providers only, see SETUP.md) nobody has a
 password here, so a code emailed to a verified address takes the password's place and no link sets one. `apps/users/tests/test_reauthentication_gate.py` fails until every routed write is classified
 as gated or not an act.

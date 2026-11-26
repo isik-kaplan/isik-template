@@ -14,7 +14,6 @@ from allauth.account.authentication import get_authentication_records
 from allauth.account.internal.flows.login import record_authentication
 from allauth.account.internal.flows.reauthentication import get_reauthentication_flows
 from allauth.socialaccount.models import SocialAccount
-from allauth.socialaccount.providers.openid_connect.provider import OpenIDConnectProvider
 from django.conf import settings
 
 from apps.common.logging import REAUTHENTICATION_PROVED, REAUTHENTICATION_SPENT, log
@@ -46,15 +45,17 @@ def is_proving(sociallogin):
 
 
 def can_prove_with(provider):
-    """Only OIDC must report `auth_time`; anything else can return a silent sign-in from days ago."""
-    return isinstance(provider, OpenIDConnectProvider)
+    """Declared able to, in apps/users/social_login.py: a provider that can't report `auth_time` could return
+    a silent sign-in from days ago."""
+    return bool((provider.app.settings or {}).get("fresh_sign_in"))
 
 
 def authenticated_at_provider(sociallogin):
-    """The `auth_time` claim; id_token first, since its signature is verified."""
+    """The `auth_time` claim; id_token first, since its signature is verified. Google's login is its id_token's
+    claims themselves, told from its userinfo by their issuer."""
     extra_data = sociallogin.account.extra_data or {}
-    for source in ("id_token", "userinfo"):
-        claims = extra_data.get(source)
+    sources = [extra_data.get("id_token"), extra_data if "iss" in extra_data else None, extra_data.get("userinfo")]
+    for claims in sources:
         claimed = claims.get("auth_time") if isinstance(claims, dict) else None
         if isinstance(claimed, int | float) and not isinstance(claimed, bool):
             return claimed

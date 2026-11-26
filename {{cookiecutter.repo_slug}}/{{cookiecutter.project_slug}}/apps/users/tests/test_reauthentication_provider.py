@@ -1,3 +1,4 @@
+import json
 import time
 from urllib.parse import parse_qs, urlsplit
 
@@ -9,6 +10,7 @@ from allauth.socialaccount.internal.statekit import STATES_SESSION_KEY
 from allauth.socialaccount.models import SocialAccount, SocialLogin
 from allauth.socialaccount.providers.base.constants import AuthProcess
 from allauth.socialaccount.providers.github.provider import GitHubProvider
+from allauth.socialaccount.providers.google.provider import GoogleProvider
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.sessions.backends.db import SessionStore
@@ -62,6 +64,19 @@ def test_proving_sends_them_to_their_provider_to_be_challenged_again(client, soc
     assert state["next"] == PROVE_PAGE
     assert state["process"] == AuthProcess.LOGIN
     assert state["headless"] is True
+
+
+@pytest.mark.django_db
+def test_google_is_asked_for_auth_time_by_name_and_nothing_else_is(client, social_only):
+    """Google documents no max_age, and sends auth_time only when the claims parameter asks for it."""
+    SocialAccount.objects.create(user=social_only, provider=GoogleProvider.id, uid="3")
+
+    google = parse_qs(urlsplit(_prove_with(client, GoogleProvider.id)["Location"]).query)
+    issuer = parse_qs(urlsplit(_prove_with(client, OIDC_PROVIDER_ID)["Location"]).query)
+
+    assert json.loads(google["claims"][0]) == {"id_token": {"auth_time": {"essential": True}}}
+    assert (google["prompt"], google["max_age"]) == (["login"], ["0"])
+    assert "claims" not in issuer
 
 
 @pytest.mark.django_db

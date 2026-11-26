@@ -7,7 +7,7 @@ from allauth.account.internal.flows.login import AUTHENTICATION_METHODS_SESSION_
 from allauth.account.signals import authentication_step_completed
 from allauth.socialaccount.models import SocialAccount, SocialLogin
 from allauth.socialaccount.providers.github.provider import GitHubProvider
-from allauth.socialaccount.providers.openid_connect.provider import OpenIDConnectProvider
+from allauth.socialaccount.providers.google.provider import GoogleProvider
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.sessions.backends.db import SessionStore
 from django.test import RequestFactory
@@ -63,9 +63,12 @@ def test_only_a_round_trip_that_asked_for_a_proof_is_one(state, proving):
     assert proof.is_proving(SimpleNamespace(state=state)) is proving
 
 
-def test_only_an_openid_connect_provider_can_prove_anything():
-    assert proof.can_prove_with(OpenIDConnectProvider.__new__(OpenIDConnectProvider))
-    assert not proof.can_prove_with(GitHubProvider.__new__(GitHubProvider))
+@pytest.mark.parametrize(
+    ("declared", "proves"),
+    [({"fresh_sign_in": True}, True), ({"fresh_sign_in": False}, False), ({}, False), (None, False)],
+)
+def test_only_a_provider_declared_able_to_can_prove_anything(declared, proves):
+    assert proof.can_prove_with(SimpleNamespace(app=SimpleNamespace(settings=declared))) is proves
 
 
 @pytest.mark.parametrize(
@@ -74,6 +77,10 @@ def test_only_an_openid_connect_provider_can_prove_anything():
         ({"id_token": {"auth_time": 10}, "userinfo": {"auth_time": 20}}, 10),
         ({"userinfo": {"auth_time": 20.5}}, 20.5),
         ({"id_token": {"sub": "x"}, "userinfo": {"auth_time": 20}}, 20),
+        # Google's login is its id_token's claims, issuer and all; a userinfo answer at the top has no issuer.
+        ({"iss": "https://accounts.google.com", "auth_time": 30}, 30),
+        ({"auth_time": 30}, None),
+        ({"id_token": {"auth_time": 10}, "iss": "https://accounts.google.com", "auth_time": 30}, 10),
         ({"id_token": {"auth_time": "10"}}, None),
         ({"id_token": {"auth_time": True}}, None),
         ({"id_token": "not claims"}, None),
@@ -213,9 +220,13 @@ def test_somebody_with_no_password_proves_at_their_provider_or_sets_one_by_email
     alice.save()
     SocialAccount.objects.create(user=alice, provider=OIDC_PROVIDER_ID, uid="sub-1")
     SocialAccount.objects.create(user=alice, provider=GitHubProvider.id, uid="2")
+    SocialAccount.objects.create(user=alice, provider=GoogleProvider.id, uid="3")
 
     assert proof.ways_to_prove(_request(alice)) == [
-        {"id": proof.PROVIDER_FLOW, "providers": [{"id": OIDC_PROVIDER_ID, "name": "Test IdP"}]},
+        {
+            "id": proof.PROVIDER_FLOW,
+            "providers": [{"id": OIDC_PROVIDER_ID, "name": "Test IdP"}, {"id": GoogleProvider.id, "name": "Google"}],
+        },
         {"id": proof.SET_PASSWORD_BY_EMAIL_FLOW, "email": "alice@example.test"},
     ]
 

@@ -38,7 +38,14 @@ def providers(settings, monkeypatch):
     app = {"client_id": "client", "secret": "secret", "key": ""}
     settings.SOCIALACCOUNT_PROVIDERS = {
         "openid_connect": {
-            "APPS": [{**app, "provider_id": OIDC, "name": "Test IdP", "settings": {"server_url": "https://idp.test"}}]
+            "APPS": [
+                {
+                    **app,
+                    "provider_id": OIDC,
+                    "name": "Test IdP",
+                    "settings": {"server_url": "https://idp.test", "fresh_sign_in": True},
+                }
+            ]
         },
         "github": {"APPS": [app]},
     }
