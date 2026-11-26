@@ -584,6 +584,9 @@ jobs:
           curl -Ls "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
       - name: Run the flows
+        # Maestro's XCTest driver takes longer than its default two minutes to start on a cold runner.
+        env:
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: "600000"
         run: e2e/maestro/test.sh "$APP"
       - if: failure()
         name: Show the backend's logs (only reached if a step above failed)
