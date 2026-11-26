@@ -58,7 +58,6 @@ INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
-    "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.postgres",
     "django.contrib.sites",
@@ -73,8 +72,6 @@ INSTALLED_APPS = [
     "isik.django.apps.notifications.audience",
     # isik's mechanism again; the tables are apps.features'.
     "isik.django.apps.features",
-    "django_object_actions",
-    "dalf",
     "django_filters",
     "rest_framework",
     "drf_spectacular",
@@ -127,7 +124,6 @@ MIDDLEWARE = [
     "isik.django.apps.common.middleware.HistoryContextMiddleware",
     # Below the history context, so the actor is already on its line.
     "apps.common.middleware.request_log.RequestLogMiddleware",
-    "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_hosts.middleware.HostsResponseMiddleware",
 {%- if cookiecutter.background_jobs != "celery-with-beat" %}
@@ -179,7 +175,6 @@ TEMPLATES = [
                 "django.template.context_processors.debug",
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
-                "django.contrib.messages.context_processors.messages",
             ],
             # allauth's email templates use blocktranslate without loading i18n.
             "builtins": ["django.templatetags.i18n"],
