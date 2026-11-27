@@ -90,4 +90,3 @@ fi
 
 echo "written to $TLS_DIR - now: docker compose up -d --force-recreate server frontend"
 echo "then visit https://$DOMAIN"
-
