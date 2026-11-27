@@ -36,19 +36,17 @@ CONFIG = config(
             "PORT": string(missing_default="6379"),
             "PASSWORD": string(missing_default=""),
         },
-{%- if cookiecutter.storage != "disk" %}
         "STORAGE": {
-            "BUCKET_NAME": string(),
-            "ENDPOINT_URL": string(),
-            "ACCESS_KEY_ID": string(),
-            "SECRET_ACCESS_KEY": string(),
-            "REGION_NAME": string(),
-{%- if cookiecutter.storage == "s3" %}
+            # disk (the media volume) or s3 (a bucket: the bundled Garage's, or a provider's).
+            "BACKEND": string(missing_default={{ ("disk" if cookiecutter.storage == "disk" else "s3")|tojson }}),
+            "BUCKET_NAME": string(missing_default=""),
+            "ENDPOINT_URL": string(missing_default=""),
+            "ACCESS_KEY_ID": string(missing_default=""),
+            "SECRET_ACCESS_KEY": string(missing_default=""),
+            "REGION_NAME": string(missing_default=""),
             # The provider's answer: Garage takes only "path", AWS is moving new buckets to "virtual".
             "ADDRESSING_STYLE": string(missing_default="path"),
-{%- endif %}
         },
-{%- endif %}
         "SETUP": {
             "SUPERUSER": {
                 # Empty for no handle.

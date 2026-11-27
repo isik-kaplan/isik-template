@@ -1,6 +1,4 @@
-{% if cookiecutter.storage != "disk" -%}
 import contextlib
-{% endif -%}
 import logging
 import os
 import uuid
@@ -29,9 +27,7 @@ from apps.users.models.user import User
 from apps.users.social_login import reauthentication_methods
 
 from {{ cookiecutter.project_slug }}.celery import app as celery_app
-{%- if cookiecutter.storage != "disk" %}
 from {{ cookiecutter.project_slug }}.config import CONFIG as config
-{%- endif %}
 
 
 CONFIGURED_CACHES = django_settings.CACHES
@@ -182,50 +178,83 @@ def audited():
     yield from _collected_from(AUDIT_LOGGER)
 
 
-{% if cookiecutter.storage == "disk" -%}
-@pytest.fixture(autouse=True, scope="session")
-def _a_storage_directory_of_its_own(tmp_path_factory):
-    """A file a test writes outlives its rolled-back row. A `FileField` with a callable storage kept
-    the instance from import, so those are rebuilt."""
+@contextlib.contextmanager
+def _storing_in(default):
+    """Uploads go to `default` meanwhile. A `FileField` with a callable storage kept the instance from
+    import, so those are rebuilt, going in and coming out."""
     from django.apps import apps as django_apps
     from django.db import models
     from django.test import override_settings
 
-    default = {**django_settings.STORAGES["default"]}
-    default["OPTIONS"] = {**default["OPTIONS"], "location": str(tmp_path_factory.mktemp("media"))}
-    with override_settings(STORAGES={**django_settings.STORAGES, "default": default}):
+    def rebuild():
         for model in django_apps.get_models():
             for field in model._meta.get_fields():
                 if isinstance(field, models.FileField) and hasattr(field, "_storage_callable"):
                     field.storage = field._storage_callable()
-        yield
-{%- else -%}
-@pytest.fixture(autouse=True, scope="session")
-def _a_storage_bucket_of_its_own():
-    """An object a test writes outlives its rolled-back row. A `FileField` with a callable storage
-    kept the instance from import, so those are rebuilt."""
-    from django.apps import apps as django_apps
+
+    try:
+        with override_settings(STORAGES={**django_settings.STORAGES, "default": default}):
+            rebuild()
+            yield
+    finally:
+        rebuild()
+
+
+def _a_directory(path):
+    return {"BACKEND": "django.core.files.storage.FileSystemStorage", "OPTIONS": {"location": str(path)}}
+
+
+def _a_bucket():
+    """The bundled Garage's, one per test process, made if missing: the app never creates one."""
     from django.core.files.storage import storages
-    from django.db import models
-    from django.test import override_settings
+
+    from apps.common.storages import configured_storage
 
     suffix = (os.environ.get("MUTMUT_DB_SUFFIX"), os.environ.get("PYTEST_XDIST_WORKER"))
     bucket = "-".join(filter(None, (config.STORAGE.BUCKET_NAME, "test", *suffix)))
-    default = {**django_settings.STORAGES["default"]}
-    default["OPTIONS"] = {**default["OPTIONS"], "bucket_name": bucket}
-    with override_settings(STORAGES={**django_settings.STORAGES, "default": default}):
-        for model in django_apps.get_models():
-            for field in model._meta.get_fields():
-                if isinstance(field, models.FileField) and hasattr(field, "_storage_callable"):
-                    field.storage = field._storage_callable()
-        # The app never creates a bucket. us-east-1 is the one region S3 takes no LocationConstraint for.
+    default = configured_storage(
+        "s3",
+        bucket_name=bucket,
+        endpoint_url=config.STORAGE.ENDPOINT_URL,
+        access_key_id=config.STORAGE.ACCESS_KEY_ID,
+        secret_access_key=config.STORAGE.SECRET_ACCESS_KEY,
+        region_name=config.STORAGE.REGION_NAME,
+        addressing_style=config.STORAGE.ADDRESSING_STYLE,
+    )
+    with _storing_in(default):
+        # us-east-1 is the one region S3 takes no LocationConstraint for.
         client = storages["default"].connection.meta.client
         region = storages["default"].region_name
         options = {} if region == "us-east-1" else {"CreateBucketConfiguration": {"LocationConstraint": region}}
         with contextlib.suppress(client.exceptions.BucketAlreadyOwnedByYou):
             client.create_bucket(Bucket=bucket, **options)
+    return default
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _a_storage_of_its_own(tmp_path_factory):
+    """Wherever STORAGE__BACKEND keeps uploads, this run's own: a file a test writes outlives its
+    rolled-back row."""
+    if config.STORAGE.BACKEND == "disk":
+        default = _a_directory(tmp_path_factory.mktemp("media"))
+    else:
+        default = _a_bucket()
+    with _storing_in(default):
         yield
-{%- endif %}
+
+
+@pytest.fixture
+def on_disk(tmp_path):
+    """Uploads on disk for this test, whichever backend the project runs: both are always tested."""
+    with _storing_in(_a_directory(tmp_path)):
+        yield
+
+
+@pytest.fixture
+def in_a_bucket():
+    """Uploads in the bundled Garage for this test, whichever backend the project runs."""
+    with _storing_in(_a_bucket()):
+        yield
 
 
 # On the settings object, not a module global: mutmut re-imports this file mid-run, after

@@ -162,39 +162,52 @@ drop_profile() {
   profiles="$(sed -n 's/^COMPOSE_PROFILES=//p' .env | tr ',' '\n' | { grep -vx "$1" || true; } | paste -sd, -)"
   set_var "COMPOSE_PROFILES" "$profiles"
 }
-{%- if cookiecutter.storage != "disk" %}
 
-# The bundled Garage takes the key it is given: GK and 24 hex digits, with a 64-hex-digit secret.
-use_bundled_storage() {
-  set_var "${PREFIX}__STORAGE__ACCESS_KEY_ID" "GK$(random_hex 12)"
-  set_var "${PREFIX}__STORAGE__SECRET_ACCESS_KEY" "$(random_hex 32)"
-  set_var "${PREFIX}__STORAGE__RPC_SECRET" "$(random_hex 32)"
-  # Only the test suite makes buckets; a deployment's key reads and writes its own.
-  set_var "${PREFIX}__STORAGE__KEY_CAN_CREATE_BUCKETS" "false"
+# Puts one bundled service in COMPOSE_PROFILES, keeping the rest.
+add_profile() {
+  drop_profile "$1"
+  profiles="$(sed -n 's/^COMPOSE_PROFILES=//p' .env)"
+  set_var "COMPOSE_PROFILES" "${profiles:+$profiles,}$1"
 }
-{%- if cookiecutter.storage == "garage" %}
-use_bundled_storage
-{%- else %}
 
 echo
-echo "Object storage: the S3-compatible provider uploads go to (AWS S3, Cloudflare R2, Backblaze B2, ...)."
-storage_endpoint="$(ask "S3 endpoint URL (blank keeps the bundled Garage)" "")"
-if [ -n "$storage_endpoint" ]; then
-  # Off the local-storage profile, so the bundled Garage never starts here.
-  drop_profile local-storage
-  set_var "${PREFIX}__STORAGE__ENDPOINT_URL" "$storage_endpoint"
-  set_var "${PREFIX}__STORAGE__BUCKET_NAME" "$(ask "Bucket name" "{{ cookiecutter.repo_slug }}")"
-  set_var "${PREFIX}__STORAGE__REGION_NAME" "$(ask "Region" "us-east-1")"
-  set_var "${PREFIX}__STORAGE__ADDRESSING_STYLE" "$(ask "Addressing style, path or virtual (AWS: virtual)" "path")"
-  set_var "${PREFIX}__STORAGE__ACCESS_KEY_ID" "$(ask "Access key ID" "")"
-  set_var "${PREFIX}__STORAGE__SECRET_ACCESS_KEY" "$(ask_secret "Secret access key")"
-  echo "Create that bucket yourself: the app never creates one, so its keys need no s3:CreateBucket."
-else
-  use_bundled_storage
-  echo "Kept the bundled Garage, on this host's storage_data volume - back that volume up."
-fi
-{%- endif %}
-{%- endif %}
+echo "Uploads: disk (a volume on this host), garage (the bundled object storage) or s3 (a provider's:"
+echo "AWS S3, Cloudflare R2, Backblaze B2, ...)."
+storage="$(ask "Where uploads go" "{{ cookiecutter.storage }}")"
+case "$storage" in
+  disk)
+    set_var "${PREFIX}__STORAGE__BACKEND" "disk"
+    drop_profile local-storage
+    echo "Uploads stay on this host's media volume - back that volume up."
+    ;;
+  garage)
+    set_var "${PREFIX}__STORAGE__BACKEND" "s3"
+    add_profile local-storage
+    # The bundled Garage takes the key it is given: GK and 24 hex digits, with a 64-hex-digit secret.
+    set_var "${PREFIX}__STORAGE__ACCESS_KEY_ID" "GK$(random_hex 12)"
+    set_var "${PREFIX}__STORAGE__SECRET_ACCESS_KEY" "$(random_hex 32)"
+    set_var "${PREFIX}__STORAGE__RPC_SECRET" "$(random_hex 32)"
+    # Only the test suite makes buckets; a deployment's key reads and writes its own.
+    set_var "${PREFIX}__STORAGE__KEY_CAN_CREATE_BUCKETS" "false"
+    echo "Uploads go to the bundled Garage, on this host's storage_data volume - back that volume up."
+    ;;
+  s3)
+    set_var "${PREFIX}__STORAGE__BACKEND" "s3"
+    # Off the local-storage profile, so the bundled Garage never starts here.
+    drop_profile local-storage
+    set_var "${PREFIX}__STORAGE__ENDPOINT_URL" "$(ask "S3 endpoint URL (blank for AWS's, by region)" "")"
+    set_var "${PREFIX}__STORAGE__BUCKET_NAME" "$(ask "Bucket name" "{{ cookiecutter.repo_slug }}")"
+    set_var "${PREFIX}__STORAGE__REGION_NAME" "$(ask "Region" "us-east-1")"
+    set_var "${PREFIX}__STORAGE__ADDRESSING_STYLE" "$(ask "Addressing style, path or virtual (AWS: virtual)" "path")"
+    set_var "${PREFIX}__STORAGE__ACCESS_KEY_ID" "$(ask "Access key ID" "")"
+    set_var "${PREFIX}__STORAGE__SECRET_ACCESS_KEY" "$(ask_secret "Secret access key")"
+    echo "Create that bucket yourself: the app never creates one, so its keys need no s3:CreateBucket."
+    ;;
+  *)
+    echo "Uploads go to disk, garage or s3, not $storage." >&2
+    exit 1
+    ;;
+esac
 
 echo
 {%- if cookiecutter.social_login_only %}

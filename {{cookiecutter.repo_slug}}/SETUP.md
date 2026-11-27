@@ -147,15 +147,9 @@ the profile's Tokens tab.
 - **SMS.** With `DEBUG=true` texts are printed to the backend's log. A deployment needs
   `{{ cookiecutter.config_prefix }}__SMS__TWILIO__*`; without them the backend refuses to start.
 {%- endif %}
-{%- if cookiecutter.storage == "garage" %}
-- **Object storage.** Uploads go to the bundled Garage, on the `storage_data` volume. Back it up;
-  `setup.sh` generated its keys.
-{%- elif cookiecutter.storage == "s3" %}
-- **Object storage.** Point `{{ cookiecutter.config_prefix }}__STORAGE__*` at your S3 provider and create
-  the bucket, and leave `COMPOSE_PROFILES` without `local-storage` so the bundled Garage stays off.
-{%- else %}
-- **Object storage.** Uploads go to disk, on the `media` volume. Back it up.
-{%- endif %}
+- **Object storage.** `setup.sh` asks where uploads go and sets `{{ cookiecutter.config_prefix }}__STORAGE__*` and
+  `COMPOSE_PROFILES` to match. On disk, back up the `media` volume; in the bundled Garage, the
+  `storage_data` volume; with a provider, create the bucket yourself.
 - **Error reporting.** `{{ cookiecutter.config_prefix }}__SENTRY__DSN` (backend) and `NEXT_PUBLIC_SENTRY_DSN`
   (browser, read at build time) switch Sentry on. Neither sets a cookie.
 

@@ -79,10 +79,10 @@ def test_bundled_garage_is_the_storage_the_backend_waits_for(cookies):
     assert [volume["target"] for volume in storage["volumes"]] == ["/var/lib/garage"]
     assert [port["host_ip"] for port in storage["ports"]] == ["127.0.0.1"]
     assert "/tmp/ready" in " ".join(storage["healthcheck"]["test"])
-    assert "profiles" not in storage
+    assert storage["profiles"] == ["local-storage"]
     assert services["backend"]["depends_on"]["storage"]["condition"] == "service_healthy"
-    assert services["backend"]["depends_on"]["storage"]["required"] is True
-    assert "local-storage" not in _profiles(env_example)
+    assert services["backend"]["depends_on"]["storage"]["required"] is False
+    assert "local-storage" in _profiles(env_example)
     assert f"\n{prefix}__STORAGE__ENDPOINT_URL=http://storage:3900\n" in env_example
 
 
@@ -103,28 +103,21 @@ def test_disk_storage_runs_no_storage_service_and_mounts_a_media_volume(cookies)
     assert result.exit_code == 0
 
     services = _services(result.project_path)
+    env_example = (result.project_path / ".env.example").read_text()
+    # Garage stays defined for the tests and for switching, but off its profile it doesn't run.
     assert "storage" not in services
-    assert "storage" not in services["backend"].get("depends_on", {})
+    assert "local-storage" not in _profiles(env_example)
+    assert (result.project_path / "storage" / "Dockerfile").exists()
     assert {volume["target"] for volume in services["backend"]["volumes"]} >= {"/media"}
-    assert not (result.project_path / "storage").exists()
-    assert "STORAGE__" not in (result.project_path / ".env.example").read_text()
+    assert f"\n#{result.context['config_prefix']}__STORAGE__BACKEND=disk\n" in env_example
     media = [volume for volume in services["server"]["volumes"] if volume["target"] == "/media"]
     assert [(volume["source"], volume["read_only"]) for volume in media] == [("media", True)]
 
 
-@pytest.mark.parametrize(
-    ("context_name", "location", "absent"),
-    [
-        ("minimal", "location /internal/media/ {", "/internal/storage/"),
-        ("default", "location = /internal/storage/ {", "/internal/media/"),
-        ("self-tls", "location = /internal/storage/ {", "/internal/media/"),
-    ],
-)
-def test_nginx_sends_stored_files_only_from_an_internal_location_on_the_backend_hosts(
-    cookies, context_name, location, absent
-):
-    """serve_file() answers with an X-Accel-Redirect; these are the locations it names."""
-    result = cookies.bake(extra_context=load_context(context_name))
+@pytest.mark.parametrize("location", ["location /internal/media/ {", "location = /internal/storage/ {"])
+def test_nginx_sends_stored_files_only_from_an_internal_location_on_the_backend_hosts(cookies, location):
+    """serve_file() answers with an X-Accel-Redirect; these are the locations it names, one per backend."""
+    result = cookies.bake(extra_context=load_context("minimal"))
     assert result.exit_code == 0
     nginx = (result.project_path / f"{result.context['project_slug']}-server" / "template.nginx.conf").read_text()
 
@@ -134,7 +127,6 @@ def test_nginx_sends_stored_files_only_from_an_internal_location_on_the_backend_
     assert "add_header Content-Security-Policy \"default-src 'none'; sandbox\" always;" in found
     assert "add_header X-Content-Type-Options nosniff always;" in found
     assert nginx.count(location) == 1
-    assert absent not in nginx
 
 
 @pytest.mark.parametrize("context_name", ["default", "self-tls", "minimal"])
@@ -227,6 +219,7 @@ def test_every_pair_of_answers_bakes_a_stack_that_holds_together(
     )
     assert e2e.returncode == 0, e2e.stderr
     assert {"broker", "worker", "scheduler"} & set(services) == JOBS[background_jobs]
+    # Garage runs only under its profile, which .env.example turns on when a bucket is the default.
     assert ("storage" in services) == (storage != "disk")
     assert ("certbot" in services) == (tls_termination == "self")
     # Redis runs only under its profile, which .env.example turns on when it is the default.
@@ -238,8 +231,9 @@ def test_every_pair_of_answers_bakes_a_stack_that_holds_together(
     entrypoint = (project_path / result.context["project_slug"] / "entrypoint.sh").read_text()
     assert "createcachetable" in entrypoint
     nginx = (project_path / f"{result.context['project_slug']}-server" / "template.nginx.conf").read_text()
-    assert ("/internal/media/" in nginx) == (storage == "disk")
-    assert ("/internal/storage/" in nginx) == (storage != "disk")
+    # Both, so STORAGE__BACKEND can pick either.
+    assert "/internal/media/" in nginx
+    assert "/internal/storage/" in nginx
 
 
 def test_frontend_suites_run_in_the_dockerfile_tester_stage_only_on_request(cookies):

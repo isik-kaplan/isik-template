@@ -17,7 +17,6 @@ ICON = {{ cookiecutter.icon|tojson }}
 INCLUDE_MOBILE = {{ cookiecutter.include_mobile }}
 TLS_TERMINATION = {{ cookiecutter.tls_termination|tojson }}
 BACKGROUND_JOBS = {{ cookiecutter.background_jobs|tojson }}
-STORAGE = {{ cookiecutter.storage|tojson }}
 WEBHOOKS = {{ cookiecutter.webhooks|tojson }}
 PHONE = {{ cookiecutter.phone|tojson }}
 AUTHOR_NAME = {{ cookiecutter.author_name|tojson }}
@@ -280,8 +279,6 @@ def main() -> None:
         ):
             os.remove(f"{web}/{module}")
         shutil.rmtree("e2e/playwright/tests/admin")
-    if STORAGE == "disk":
-        shutil.rmtree("storage")
     notification_api = f"{PROJECT_SLUG}/apps/notifications/api"
     if WEBHOOKS == "none":
         for module in ("viewsets/endpoint.py", "viewsets/delivery.py"):

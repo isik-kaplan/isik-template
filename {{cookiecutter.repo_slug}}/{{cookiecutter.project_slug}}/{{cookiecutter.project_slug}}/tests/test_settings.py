@@ -8,6 +8,9 @@ from django.conf import settings
 from django.test import RequestFactory, override_settings
 from isik.django.apps.common.checks import Check, CheckOption, Severity
 
+from apps.common.storages import configured_storage
+
+from {{ cookiecutter.project_slug }} import settings as project_settings
 from {{ cookiecutter.project_slug }}.config import CONFIG as config
 from {{ cookiecutter.project_slug }}.settings import _origins
 
@@ -151,7 +154,19 @@ def test_the_served_api_document_is_in_the_language_the_clients_were_generated_i
 def test_a_view_outside_the_transaction_fails_startup_rather_than_warning():
     """Idempotency keys and version checks count on ATOMIC_REQUESTS."""
     assert settings.ISIK["DJANGO"]["CHECKS"][Check.NOT_ATOMIC] == {CheckOption.SEVERITY: Severity.ERROR}
-{%- if cookiecutter.storage == "s3" %}
+
+
+def test_uploads_go_where_the_storage_settings_say():
+    """The module's own: the suite runs on a storage of its own, swapped in over it."""
+    assert project_settings.STORAGES["default"] == configured_storage(
+        config.STORAGE.BACKEND,
+        bucket_name=config.STORAGE.BUCKET_NAME,
+        endpoint_url=config.STORAGE.ENDPOINT_URL,
+        access_key_id=config.STORAGE.ACCESS_KEY_ID,
+        secret_access_key=config.STORAGE.SECRET_ACCESS_KEY,
+        region_name=config.STORAGE.REGION_NAME,
+        addressing_style=config.STORAGE.ADDRESSING_STYLE,
+    )
 
 
 def test_the_providers_addressing_style_reaches_the_storage_backend():
@@ -159,7 +174,8 @@ def test_the_providers_addressing_style_reaches_the_storage_backend():
     name = "{{ cookiecutter.config_prefix }}__STORAGE__ADDRESSING_STYLE"
     style = "settings.STORAGES['default']['OPTIONS']['addressing_style']"
     script = f"from {{ cookiecutter.project_slug }} import settings; print({style})"
-    unset = {key: value for key, value in os.environ.items() if key != name}
+    in_a_bucket = {**os.environ, "{{ cookiecutter.config_prefix }}__STORAGE__BACKEND": "s3"}
+    unset = {key: value for key, value in in_a_bucket.items() if key != name}
     runs = [
         subprocess.run([sys.executable, "-c", script], env=env, capture_output=True, text=True, check=True)
         for env in (unset, {**unset, name: "virtual"})
@@ -167,4 +183,3 @@ def test_the_providers_addressing_style_reaches_the_storage_backend():
     styles = [run.stdout.split()[-1] for run in runs]
 
     assert styles == ["path", "virtual"]
-{%- endif %}

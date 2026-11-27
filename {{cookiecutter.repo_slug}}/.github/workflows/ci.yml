@@ -66,8 +66,8 @@ jobs:
         run: docker compose build backend
       # --no-deps below starts nothing, so this starts everything the suite talks to for real.
       - name: Start the services the suite uses
-        # The storage and cache services its profiles run, as a host with this .env would.
-        run: docker compose up -d --wait --wait-timeout 90 database $(docker compose config --services | grep -xE 'storage|cache')
+        # Garage always: the suite tests uploads in a bucket whichever backend runs. The cache its profiles run.
+        run: docker compose up -d --wait --wait-timeout 90 database storage $(docker compose config --services | grep -x cache)
       - name: Migrate
         run: docker compose run --rm --no-deps backend python manage.py migrate
       - name: Check for missing migrations
@@ -145,8 +145,8 @@ jobs:
         run: docker compose build backend
       # --no-deps below starts nothing, so this starts everything the suite talks to for real.
       - name: Start the services the suite uses
-        # The storage and cache services its profiles run, as a host with this .env would.
-        run: docker compose up -d --wait --wait-timeout 90 database $(docker compose config --services | grep -xE 'storage|cache')
+        # Garage always: the suite tests uploads in a bucket whichever backend runs. The cache its profiles run.
+        run: docker compose up -d --wait --wait-timeout 90 database storage $(docker compose config --services | grep -x cache)
       - name: Migrate
         run: docker compose run --rm --no-deps backend python manage.py migrate
 {%- if cookiecutter.languages.split(',') | length > 1 %}

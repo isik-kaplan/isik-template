@@ -14,6 +14,7 @@ from isik.django.apps.notifications.exemptions import SendsInline
 
 from apps.common.caches import configured_caches
 from apps.common.logging.scrub import scrub_event
+from apps.common.storages import configured_storage
 from apps.notifications.push import push_credentials
 from apps.oauth_provider import device_codes
 from apps.oauth_provider.mode import oauth_provider_mode
@@ -346,32 +347,15 @@ STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 # Not the Manifest variant: it needs collectstatic before any page with static files renders, tests included.
 STORAGES = {
-{%- if cookiecutter.storage == "disk" %}
-    "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
-        "OPTIONS": {"location": "/media"},
-    },
-{%- else %}
-    # Uploads go to S3 - {% if cookiecutter.storage == "garage" %}Garage{% else %}Garage locally{% endif %}.
-    "default": {
-        "BACKEND": "storages.backends.s3.S3Storage",
-        "OPTIONS": {
-            "bucket_name": config.STORAGE.BUCKET_NAME,
-            "endpoint_url": config.STORAGE.ENDPOINT_URL,
-            "access_key": config.STORAGE.ACCESS_KEY_ID,
-            "secret_key": config.STORAGE.SECRET_ACCESS_KEY,
-            "region_name": config.STORAGE.REGION_NAME,
-{%- if cookiecutter.storage == "s3" %}
-            "addressing_style": config.STORAGE.ADDRESSING_STYLE,
-{%- else %}
-            # Garage serves buckets as paths.
-            "addressing_style": "path",
-{%- endif %}
-            # boto3 still presigns with SigV2 in us-east-1, which Garage refuses.
-            "signature_version": "s3v4",
-        },
-    },
-{%- endif %}
+    "default": configured_storage(
+        config.STORAGE.BACKEND,
+        bucket_name=config.STORAGE.BUCKET_NAME,
+        endpoint_url=config.STORAGE.ENDPOINT_URL,
+        access_key_id=config.STORAGE.ACCESS_KEY_ID,
+        secret_access_key=config.STORAGE.SECRET_ACCESS_KEY,
+        region_name=config.STORAGE.REGION_NAME,
+        addressing_style=config.STORAGE.ADDRESSING_STYLE,
+    ),
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
     },

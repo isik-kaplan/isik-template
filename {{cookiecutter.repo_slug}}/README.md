@@ -77,23 +77,18 @@ admin's Scheduled tasks{% endif %}. Every task takes
 history rows name whoever caused it.
 {% endif %}
 ## Object storage
-{% if cookiecutter.storage == "disk" %}
-Uploads (`FileField`/`ImageField`, anything through `default_storage`) go to disk, under `/media` on
-the `media` volume mounted into the backend{% if cookiecutter.background_jobs != "inline" %} and the worker{% endif %}, and read-only into nginx. Back that volume up.
 
-The backend tests write to a directory of their own per pytest worker, never the volume.
-{% else %}
-Uploads (`FileField`/`ImageField`, anything through `default_storage`) go to S3 via django-storages.
-{%- if cookiecutter.storage == "garage" %}
-That is the `storage` service, a one-node [Garage](https://garagehq.deuxfleurs.fr/), in development
-and in production alike. Its data lives on the `storage_data` volume - back that volume up.
-{%- else %}
-Locally that is the `storage` service, a one-node [Garage](https://garagehq.deuxfleurs.fr/), which
-only runs under the `local-storage` compose profile `.env.example` turns on. A deployment points the
-`{{ cookiecutter.config_prefix }}__STORAGE__*` variables at its provider (AWS S3, Cloudflare R2,
-Backblaze B2, ...) and leaves the profile off - `bash scripts/setup.sh` does both, and you create the
-bucket.
-{%- endif %}
+Uploads (`FileField`/`ImageField`, anything through `default_storage`) go where
+`{{ cookiecutter.config_prefix }}__STORAGE__BACKEND` says, `{{ "disk" if cookiecutter.storage == "disk" else "s3" }}` by default:
+
+- **disk**: under `/media` on the `media` volume, mounted into the backend{% if cookiecutter.background_jobs != "inline" %} and the worker{% endif %}, and read-only into
+  nginx. Back that volume up.
+- **s3**: a bucket, through django-storages. Either the `storage` service, a one-node
+  [Garage](https://garagehq.deuxfleurs.fr/) that runs under the `local-storage` compose profile, with its
+  data on the `storage_data` volume (back it up), or a provider's (AWS S3, Cloudflare R2, Backblaze B2,
+  ...) with `{{ cookiecutter.config_prefix }}__STORAGE__*` pointed at it and the profile left off. `bash scripts/setup.sh`
+  asks which and sets both.
+
 The app never creates a bucket - `s3:CreateBucket` is a provisioning permission the web process should
 not hold - so `storage/entrypoint.sh` makes sure of the key and the bucket on every start. Only the test
 suite makes buckets of its own, so `{{ cookiecutter.config_prefix }}__STORAGE__KEY_CAN_CREATE_BUCKETS` is on in
@@ -103,12 +98,14 @@ suite makes buckets of its own, so `{{ cookiecutter.config_prefix }}__STORAGE__K
 aws --endpoint-url=http://localhost:3900 s3 ls s3://{{ cookiecutter.repo_slug }}/
 ```
 
-The backend tests write to a real Garage too, never a mock - each pytest worker gets a bucket of
-its own (`<bucket>-test-<worker>`), the way it gets a database of its own.
-{% endif %}
+The backend tests cover both backends whichever one runs, so switching the variable switches to tested
+code: each pytest worker gets a directory and a bucket of its own (`<bucket>-test-<worker>`) in a real
+Garage, never a mock, the way it gets a database of its own. So the tests need the `storage` service up
+even where uploads go to disk.
+
 Nothing is public: no URL reaches a stored file without a view deciding who may have it first. The
-view answers with `apps.common.files.serve_file()`, and nginx sends the file itself{% if cookiecutter.storage == "disk" %} off the volume{% else %}, fetched from the
-bucket over a presigned URL that lives a minute and never reaches the client{% endif %}:
+view answers with `apps.common.files.serve_file()`, and nginx sends the file itself, off the volume or fetched from the
+bucket over a presigned URL that lives a minute and never reaches the client:
 
 ```python
 def download(request, pk):

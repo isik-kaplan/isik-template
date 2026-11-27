@@ -170,22 +170,22 @@ def test_extra_languages_keep_translation_keys_typed(cookies):
     assert turkish == {key: "" for key in english}
 
 
-@pytest.mark.parametrize(
-    ("context_name", "storage_started"), [("default", True), ("self-tls", True), ("minimal", False)]
-)
-def test_object_storage_is_configured_everywhere_the_backend_runs(cookies, context_name, storage_started):
+@pytest.mark.parametrize(("context_name", "backend"), [("default", "s3"), ("self-tls", "s3"), ("minimal", "disk")])
+def test_object_storage_is_configured_everywhere_the_backend_runs(cookies, context_name, backend):
     result = cookies.bake(extra_context=load_context(context_name))
     assert result.exit_code == 0
 
     prefix = result.context["config_prefix"]
     env_example = (result.project_path / ".env.example").read_text()
+    # Garage's settings everywhere: the suite tests a bucket whichever backend runs.
     for key in ("BUCKET_NAME", "ENDPOINT_URL", "ACCESS_KEY_ID", "SECRET_ACCESS_KEY", "REGION_NAME"):
-        assert (f"\n{prefix}__STORAGE__{key}=" in env_example) == storage_started
+        assert f"\n{prefix}__STORAGE__{key}=" in env_example
+    assert f"\n#{prefix}__STORAGE__BACKEND={backend}\n" in env_example
     # The suite writes to a real Garage, so every CI job that runs it has to start one.
     ci = (result.project_path / ".github" / "workflows" / "ci.yml").read_text()
     # Whichever of them its .env's profiles run, as a host would.
     started = [line.split("--wait-timeout 90 ", 1)[1] for line in ci.splitlines() if "--wait-timeout 90 " in line]
-    assert started == ["database $(docker compose config --services | grep -xE 'storage|cache')"] * 2
+    assert started == ["database storage $(docker compose config --services | grep -x cache)"] * 2
 
 
 def test_tls_termination_self_adds_certbot_and_443(cookies):

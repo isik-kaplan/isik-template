@@ -3,9 +3,7 @@
 import uuid
 from io import StringIO
 from types import SimpleNamespace
-{%- if cookiecutter.storage != "disk" %}
 from urllib.parse import parse_qs, urlsplit
-{%- endif %}
 
 import pytest
 from django.core.exceptions import ImproperlyConfigured
@@ -86,24 +84,26 @@ def test_the_document_command_refuses_any_generator_warning(monkeypatch, message
 
 
 @pytest.fixture
-def stored():
+def stored(request, where):
+    """In `where`: on_disk or in_a_bucket, each whichever backend the project runs."""
+    request.getfixturevalue(where)
     name = default_storage.save(f"serve-file/{uuid.uuid4().hex}/stored.txt", ContentFile(b"hello"))
     yield name
     default_storage.delete(name)
 
 
+@pytest.mark.parametrize("where", ["on_disk", "in_a_bucket"])
 @pytest.mark.parametrize("as_attachment", [False, True])
 @given(filename=st.none() | st.from_regex(r"[A-Za-z0-9]{1,10}\.txt", fullmatch=True))
-def test_a_file_is_left_to_nginx_under_its_own_name_or_the_given_one(stored, as_attachment, filename):
+def test_a_file_is_left_to_nginx_under_its_own_name_or_the_given_one(stored, where, as_attachment, filename):
     response = serve_file(stored, as_attachment=as_attachment, filename=filename)
 
-{%- if cookiecutter.storage == "disk" %}
-    assert response["X-Accel-Redirect"] == f"/internal/media/{stored}"
-    assert response["Content-Type"] == "text/plain"
-{%- else %}
-    assert response["X-Accel-Redirect"] == "/internal/storage/"
-    assert parse_qs(urlsplit(response["X-Storage-Url"]).query)["X-Amz-Expires"] == ["60"]
-{%- endif %}
+    if where == "on_disk":
+        assert response["X-Accel-Redirect"] == f"/internal/media/{stored}"
+        assert response["Content-Type"] == "text/plain"
+    else:
+        assert response["X-Accel-Redirect"] == "/internal/storage/"
+        assert parse_qs(urlsplit(response["X-Storage-Url"]).query)["X-Amz-Expires"] == ["60"]
     assert response.content == b""
     disposition = response["Content-Disposition"]
     assert disposition.startswith("attachment" if as_attachment else "inline")

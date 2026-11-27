@@ -68,19 +68,15 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-{%- if cookiecutter.storage != "disk" %}
-{% if cookiecutter.storage == "garage" %}
-  # S3-compatible object storage: Garage, one node, in dev, tests and production alike.
-{%- else %}
-  # S3-compatible object storage for local dev and tests only; a deployment uses its provider's.
-{%- endif %}
+
+
+  # S3-compatible object storage: Garage, one node, under the local-storage profile. The backend's tests
+  # always use it; the app does for STORAGE__BACKEND=s3 pointed here, in dev or in production.
   storage:
     build:
       context: ./storage
     image: ${COMPOSE_PROJECT_NAME:-{{ cookiecutter.repo_slug }}}-storage:latest
-{%- if cookiecutter.storage == "s3" %}
     profiles: ["local-storage"]
-{%- endif %}
     environment:
       # The entrypoint ensures this key and bucket on every start; the app never creates one.
       BUCKET_NAME: {{ '${' + cookiecutter.config_prefix + '__STORAGE__BUCKET_NAME}' }}
@@ -105,7 +101,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-{%- endif %}
 
   backend:
     build:
@@ -117,9 +112,8 @@ services:
     env_file: .env
     volumes:
       - ./{{ cookiecutter.project_slug }}:/{{ cookiecutter.project_slug }}
-{%- if cookiecutter.storage == "disk" %}
+      # Where STORAGE__BACKEND=disk keeps uploads.
       - media:/media
-{%- endif %}
     networks:
       internal:
         # nginx targets this, not "backend": on two networks the bare name may resolve to either one.
@@ -137,14 +131,10 @@ services:
         condition: service_healthy
         # Only while the redis profile runs it.
         required: false
-{%- if cookiecutter.storage != "disk" %}
       storage:
         condition: service_healthy
-{%- if cookiecutter.storage == "s3" %}
         # Only while the local-storage profile runs it.
         required: false
-{%- endif %}
-{%- endif %}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health/"]
@@ -161,9 +151,8 @@ services:
     env_file: .env
     volumes:
       - ./{{ cookiecutter.project_slug }}:/{{ cookiecutter.project_slug }}
-{%- if cookiecutter.storage == "disk" %}
+      # Where STORAGE__BACKEND=disk keeps uploads.
       - media:/media
-{%- endif %}
     networks:
       - internal
       - external
@@ -183,9 +172,8 @@ services:
     env_file: .env
     volumes:
       - ./{{ cookiecutter.project_slug }}:/{{ cookiecutter.project_slug }}
-{%- if cookiecutter.storage == "disk" %}
+      # Where STORAGE__BACKEND=disk keeps uploads.
       - media:/media
-{%- endif %}
     networks:
       - internal
       - external
@@ -274,17 +262,13 @@ services:
       {{ cookiecutter.config_prefix }}__TRUSTED_PROXY_COUNT: {{ '${' + cookiecutter.config_prefix + '__TRUSTED_PROXY_COUNT:-' }}{% if cookiecutter.tls_termination == "self" %}1{% else %}2{% endif %}}
       {{ cookiecutter.config_prefix }}__RATE_LIMITS__ENABLED: {{ '${' + cookiecutter.config_prefix + '__RATE_LIMITS__ENABLED:-true}' }}
       {{ cookiecutter.config_prefix }}__RATE_LIMITS__REQUESTS_PER_SECOND: {{ '${' + cookiecutter.config_prefix + '__RATE_LIMITS__REQUESTS_PER_SECOND:-20}' }}
-{%- if cookiecutter.tls_termination == "self" or cookiecutter.storage == "disk" %}
     volumes:
 {%- if cookiecutter.tls_termination == "self" %}
       - letsencrypt:/etc/letsencrypt
       - acme_webroot:/var/www/certbot
 {%- endif %}
-{%- if cookiecutter.storage == "disk" %}
       # Read-only: nginx sends stored files once the backend has said who may have one.
       - media:/media:ro
-{%- endif %}
-{%- endif %}
     depends_on:
       backend:
         condition: service_healthy
@@ -305,7 +289,8 @@ services:
           - api.{{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
           - admin.{{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
           - auth.{{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
-      # Docker publishes no ports for a container on internal networks only.{% if cookiecutter.storage == "s3" %} Also nginx's way out to the provider's bucket.{% endif %}
+      # Docker publishes no ports for a container on internal networks only. Also nginx's way out to a
+      # provider's bucket.
       external:
     restart: unless-stopped
     healthcheck:
@@ -340,11 +325,8 @@ services:
 {% endif %}
 volumes:
   postgres_data:
-{%- if cookiecutter.storage == "disk" %}
   media:
-{%- else %}
   storage_data:
-{%- endif %}
 {%- if cookiecutter.tls_termination == "self" %}
   letsencrypt:
   acme_webroot:

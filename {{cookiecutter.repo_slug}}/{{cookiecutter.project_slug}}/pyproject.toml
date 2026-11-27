@@ -27,9 +27,7 @@ dependencies = [
 {%- if cookiecutter.background_jobs != "inline" %}
     "django-celery-results>=2.6.0",
 {%- endif %}
-{%- if cookiecutter.storage != "disk" %}
     "django-storages[s3]>=1.14.0",
-{%- endif %}
     "redis>=8.1.0",
 ]
 

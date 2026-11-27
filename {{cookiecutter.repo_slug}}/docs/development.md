@@ -158,7 +158,7 @@ will.
 ## Testing
 
 ```
-docker compose up -d --wait database{% if cookiecutter.storage != "disk" %} storage{% endif %}
+docker compose up -d --wait database storage
 docker compose run --rm --no-deps backend python -m pytest   # backend, 100% coverage required
 cd {{ cookiecutter.project_slug }}-frontend && npm install && npm run lint && npm run test
 cd e2e && docker compose build && docker compose up -d && docker compose run --build --rm playwright
