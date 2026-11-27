@@ -35,6 +35,8 @@ for _ in $(seq 60); do
   sleep 2
 done
 rabbitmq-diagnostics -q ping >/dev/null || { cat "$state/rabbitmq.log" >&2; exit 1; }
+# The node answers ping before its app has booted, and add_user needs the app.
+rabbitmqctl await_startup --timeout 120
 rabbitmqctl add_user "$(value BROKER__USER)" "$(value BROKER__PASSWORD)"
 rabbitmqctl set_permissions -p / "$(value BROKER__USER)" ".*" ".*" ".*"
 {%- endif %}
