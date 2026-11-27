@@ -121,12 +121,15 @@ def test_nginx_sends_stored_files_only_from_an_internal_location_on_the_backend_
     assert result.exit_code == 0
     nginx = (result.project_path / f"{result.context['project_slug']}-server" / "template.nginx.conf").read_text()
 
-    [backend_block] = [block for block in nginx.split("server {") if "proxy_pass http://backend_api;" in block]
-    found = backend_block.split(location, 1)[1].split("}", 1)[0]
-    assert "internal;" in found
-    assert "add_header Content-Security-Policy \"default-src 'none'; sandbox\" always;" in found
-    assert "add_header X-Content-Type-Options nosniff always;" in found
-    assert nginx.count(location) == 1
+    # The backend's server block in each TLS mode's section.
+    blocks = [block for block in nginx.split("server {") if "proxy_pass http://backend_api;" in block]
+    assert len(blocks) == 2
+    for block in blocks:
+        found = block.split(location, 1)[1].split("}", 1)[0]
+        assert "internal;" in found
+        assert "add_header Content-Security-Policy \"default-src 'none'; sandbox\" always;" in found
+        assert "add_header X-Content-Type-Options nosniff always;" in found
+    assert nginx.count(location) == 2
 
 
 @pytest.mark.parametrize("context_name", ["default", "self-tls", "minimal"])
@@ -320,8 +323,11 @@ def test_only_the_backend_services_receive_the_backends_secrets(cookies, context
         f"{prefix}__DOMAIN": result.context["domain"],
         # The one secret nginx holds: it checks the frontend's fetches with it.
         f"{prefix}__FRONTEND_KEY": "local-insecure-frontend-key-change-in-real-deployments",
-        # nginx alone in front, as .env.example sets for local development.
-        f"{prefix}__TRUSTED_PROXY_COUNT": "1",
+        # The overlay, when .env's COMPOSE_FILE names it, says nginx terminates TLS.
+        f"{prefix}__TLS__TERMINATION": "self" if context_name == "self-tls" else "external",
+        # Behind a load balancer, nginx alone in front for local development, as .env.example sets; unset when
+        # nginx terminates TLS, where entrypoint.sh counts nginx alone.
+        f"{prefix}__TRUSTED_PROXY_COUNT": "" if context_name == "self-tls" else "1",
         f"{prefix}__RATE_LIMITS__ENABLED": "true",
         f"{prefix}__RATE_LIMITS__REQUESTS_PER_SECOND": "20",
     }
@@ -359,13 +365,14 @@ def test_e2e_tls_proxy_override_fronts_every_name_the_browser_uses(cookies):
     assert "proxy_set_header X-Forwarded-Proto $scheme;" in (e2e_path / "tls-proxy.conf").read_text()
 
 
-def test_self_tls_bakes_no_tls_proxy_override(cookies):
+def test_every_project_keeps_the_tls_proxy_its_e2e_stack_runs_behind(cookies):
+    """The e2e stack runs nginx behind a load balancer whichever way the project deploys."""
     result = cookies.bake(extra_context=load_context("self-tls"))
     assert result.exit_code == 0
 
-    assert not (result.project_path / "e2e" / "docker-compose.tls-proxy-for-e2e.yml").exists()
-    assert not (result.project_path / "e2e" / "tls-proxy.conf").exists()
-    assert "tls-proxy" not in (result.project_path / ".github" / "workflows" / "ci.yml").read_text()
+    assert (result.project_path / "e2e" / "docker-compose.tls-proxy-for-e2e.yml").exists()
+    assert (result.project_path / "e2e" / "tls-proxy.conf").exists()
+    assert "tls-proxy" in (result.project_path / ".github" / "workflows" / "ci.yml").read_text()
 
 
 @pytest.mark.parametrize(("bind", "host_ip"), [(None, "127.0.0.1"), ("10.0.0.5", "10.0.0.5")])

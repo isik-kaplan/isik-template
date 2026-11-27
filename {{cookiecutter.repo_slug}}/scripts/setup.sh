@@ -99,21 +99,36 @@ set_var "${PREFIX}__SETUP__SUPERUSER__PASSWORD" "$superuser_password"
 
 domain="$(ask "Domain this deploys to" "{{ cookiecutter.domain }}")"
 set_var "${PREFIX}__DOMAIN" "$domain"
-{% if cookiecutter.tls_termination == "self" %}
-acme_email="$(ask "Contact email for Let's Encrypt (expiry/revocation notices)" "{{ cookiecutter.author_email }}")"
-set_var "${PREFIX}__TLS__ACME_EMAIL" "$acme_email"
-{%- else %}
+
 echo
-echo "nginx serves plain HTTP here, behind the TLS-terminating load balancer you put in front of it."
-echo "Every proxy in that chain has to append to X-Forwarded-For, not replace it."
-front_proxies="$(ask "How many proxies sit in front of nginx" "1")"
-if ! [[ "$front_proxies" =~ ^[0-9]+$ ]]; then
-  echo "Expected a whole number, got '$front_proxies'." >&2
-  exit 1
-fi
-# nginx appends too, so it counts as one more.
-set_var "${PREFIX}__TRUSTED_PROXY_COUNT" "$((front_proxies + 1))"
-{% endif %}
+echo "TLS: self (nginx terminates it, off a Let's Encrypt certificate) or external (a load balancer you put"
+echo "in front does, and sends nginx plain http)."
+tls="$(ask "Who terminates TLS" "{{ cookiecutter.tls_termination }}")"
+case "$tls" in
+  self)
+    set_var "COMPOSE_FILE" "docker-compose.yml:docker-compose.self-tls.yml"
+    set_var "${PREFIX}__HTTP_BIND" "0.0.0.0"
+    acme_email="$(ask "Contact email for Let's Encrypt (expiry/revocation notices)" "{{ cookiecutter.author_email }}")"
+    set_var "${PREFIX}__TLS__ACME_EMAIL" "$acme_email"
+    set_var "${PREFIX}__TRUSTED_PROXY_COUNT" "1"
+    ;;
+  external)
+    set_var "COMPOSE_FILE" "docker-compose.yml"
+    set_var "${PREFIX}__HTTP_BIND" "$(ask "Address nginx listens on, for the load balancer" "127.0.0.1")"
+    echo "Every proxy in that chain has to append to X-Forwarded-For, not replace it."
+    front_proxies="$(ask "How many proxies sit in front of nginx" "1")"
+    if ! [[ "$front_proxies" =~ ^[0-9]+$ ]]; then
+      echo "Expected a whole number, got '$front_proxies'." >&2
+      exit 1
+    fi
+    # nginx appends too, so it counts as one more.
+    set_var "${PREFIX}__TRUSTED_PROXY_COUNT" "$((front_proxies + 1))"
+    ;;
+  *)
+    echo "TLS is self or external, not $tls." >&2
+    exit 1
+    ;;
+esac
 superuser_email="$(ask "Superuser email" "admin@${domain}")"
 set_var "${PREFIX}__SETUP__SUPERUSER__EMAIL" "$superuser_email"
 
@@ -259,11 +274,11 @@ echo
 echo "Wrote $ENV_FILE for a real deployment."
 echo "Superuser: $superuser_email / $superuser_password - save this, it's only shown once."
 echo
-{%- if cookiecutter.tls_termination == "self" %}
-echo "Point $domain, api.$domain, admin.$domain, and auth.$domain's DNS at this host's public IP"
-echo "before running 'docker compose up -d' - certbot needs them resolving for its HTTP-01"
-echo "challenge to succeed on first boot. nginx serves a throwaway certificate until it does."
-{%- else %}
-echo "This template's nginx ({{ cookiecutter.project_slug }}-server/) serves plain HTTP only - put"
-echo "a TLS-terminating load balancer or reverse proxy in front of it before going live."
-{%- endif %}
+if [ "$tls" = self ]; then
+  echo "Point $domain, api.$domain, admin.$domain, and auth.$domain's DNS at this host's public IP"
+  echo "before running 'docker compose up -d' - certbot needs them resolving for its HTTP-01"
+  echo "challenge to succeed on first boot. nginx serves a throwaway certificate until it does."
+else
+  echo "nginx ({{ cookiecutter.project_slug }}-server/) serves plain HTTP here - put a TLS-terminating"
+  echo "load balancer or reverse proxy in front of it before going live."
+fi

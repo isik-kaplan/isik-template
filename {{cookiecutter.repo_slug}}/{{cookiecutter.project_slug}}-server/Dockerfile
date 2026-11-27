@@ -1,16 +1,11 @@
 FROM nginx:1.31-alpine
 
 WORKDIR /server
-{% if cookiecutter.tls_termination == "self" %}
-# certificate.sh's placeholder needs the openssl CLI, which the image lacks.
+# certificate.sh's placeholder, for TLS__TERMINATION=self, needs the openssl CLI, which the image lacks.
 RUN apk add --no-cache openssl
-{% endif %}
 COPY . /server/
 
-RUN chmod +x /server/entrypoint.sh{% if cookiecutter.tls_termination == "self" %} /server/certificate.sh{% endif %}
+RUN chmod +x /server/entrypoint.sh /server/certificate.sh
 
-EXPOSE 80
-{% if cookiecutter.tls_termination == "self" %}
-EXPOSE 443
-{% endif %}
+EXPOSE 80 443
 ENTRYPOINT ["/server/entrypoint.sh"]

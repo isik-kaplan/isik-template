@@ -456,7 +456,7 @@ jobs:
       - name: Run the auth e2e suite
         working-directory: e2e
         run: docker compose run --build --rm playwright npx playwright test --reporter=list
-{%- if cookiecutter.tls_termination == "external" %}
+      # The e2e stack runs nginx behind a load balancer whichever mode the project deploys in.
       - name: Run social login behind a TLS-terminating proxy
         working-directory: e2e
         run: |
@@ -464,7 +464,6 @@ jobs:
           docker compose up -d --wait tls-proxy dns
           docker compose run --rm -e E2E_BASE_URL=https://{{ cookiecutter.domain }} playwright \
             npx playwright test auth/social-login.spec.ts --reporter=list
-{%- endif %}
       # `up`/`run` report only "unhealthy"; the reason is in the service's log.
       - if: failure()
         name: Show service logs (only reached if a step above failed)

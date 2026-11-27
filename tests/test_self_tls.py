@@ -51,7 +51,7 @@ def test_self_tls_serves_a_pebble_issued_certificate_and_keeps_serving_one_after
     env = {
         **os.environ,
         "COMPOSE_PROJECT_NAME": f"{os.environ.get('COMPOSE_PROJECT_NAME', project_path.name)}-pebble",
-        "COMPOSE_FILE": "docker-compose.yml:pebble/docker-compose.pebble.yml",
+        "COMPOSE_FILE": "docker-compose.yml:docker-compose.self-tls.yml:pebble/docker-compose.pebble.yml",
         "PEBBLE_DOMAIN": domain,
     }
 

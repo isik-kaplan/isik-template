@@ -156,9 +156,17 @@ between tests; `apps/common/tests/test_cache.py` checks the configured one is sh
 was refused as empty.
 
 ## TLS
-{% if cookiecutter.tls_termination == "self" %}
+
+Who terminates TLS is a setting, not a choice made at generation: `COMPOSE_FILE` in `.env` with
+`docker-compose.self-tls.yml` after `docker-compose.yml` has nginx do it, without it a load balancer in front does.
+This project {% if cookiecutter.tls_termination == "self" %}starts out terminating its own{% else %}starts out behind a load balancer{% endif %}; `bash scripts/setup.sh` asks, and
+writes `COMPOSE_FILE`, `{{ cookiecutter.config_prefix }}__HTTP_BIND` and `{{ cookiecutter.config_prefix }}__TRUSTED_PROXY_COUNT` to match. Either
+way nginx stays in front of everything: only who holds the certificate changes.
+
+### nginx terminates it
+
 This project terminates its own TLS: nginx serves `:443` off a certificate the `certbot` service
-(see `docker-compose.yml`) obtains and renews automatically via Let's Encrypt's HTTP-01 challenge,
+(see `docker-compose.self-tls.yml`) obtains and renews automatically via Let's Encrypt's HTTP-01 challenge,
 which only works once `{{ cookiecutter.domain }}`, `api.{{ cookiecutter.domain }}`,
 `admin.{{ cookiecutter.domain }}`, and `auth.{{ cookiecutter.domain }}` resolve, over real DNS, to
 this host's public IP. Point DNS there *before* the first `docker compose up -d` - nginx starts
@@ -175,7 +183,9 @@ is meant to sit in front of it. That is also what `{{ cookiecutter.config_prefix
 to (`1`, nginx alone): nginx takes the client to be the address that many `X-Forwarded-For` entries
 from the right (see "Rate limits"), so a proxy added in front later has to append to that header and
 raise the count by one.
-{%- else %}
+
+### A load balancer terminates it
+
 This project serves plain HTTP (`:80`) only - it expects a TLS-terminating load balancer or
 reverse proxy in front of it in any real deployment (a platform's own (Fly.io/Render/Railway/an
 AWS ALB/Cloudflare), or your own nginx/Caddy on the same host), which forwards to this stack's
@@ -184,8 +194,8 @@ AWS ALB/Cloudflare), or your own nginx/Caddy on the same host), which forwards t
 wrong and `settings.py`'s `SECURE_PROXY_SSL_HEADER` trusts whatever the client sent instead,
 which lets anyone choose the scheme of an emailed password-reset link. It must pass the browser's
 `Host` through unchanged: nginx answers only this project's names and sets `X-Forwarded-Host` from
-`Host` itself, so a balancer that rewrites it gets every request dropped. Regenerate with
-`tls_termination: self` instead if you'd rather this project terminate its own TLS via certbot,
+`Host` itself, so a balancer that rewrites it gets every request dropped. Add
+`docker-compose.self-tls.yml` to `COMPOSE_FILE` instead if you'd rather nginx terminate TLS via certbot,
 with no separate proxy to run.
 
 That load balancer has to append to `X-Forwarded-For` rather than replace it, and
@@ -221,7 +231,7 @@ adds `docker-compose.dev-tls.yml` to `COMPOSE_FILE` in `.env`, which publishes `
 fetches. Plain HTTP keeps working beside it; `https://{{ cookiecutter.domain }}` is the secure one.
 Rerunning it is safe - it keeps a still-valid certificate. Never run it on a real deployment: that
 gets its TLS from the proxy in front of it.
-{%- endif %}
+
 {% if cookiecutter.include_mobile %}
 The mobile app (`{{ cookiecutter.project_slug }}-frontend/apps/mobile`) isn't part of the compose
 stack - it talks to the same backend over plain HTTP, pointed at by two env vars Expo embeds at

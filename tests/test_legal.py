@@ -83,8 +83,10 @@ def test_setup_md_follows_the_answers_that_change_what_there_is_to_set_up(cookie
     assert "/v0/provider-callback/oidc/<issuer>/login/callback/" in bare
     assert "## 9. Translations" in default and "Translations" not in bare
     assert "## 10. The mobile app" in default and "mobile app" not in bare
-    assert "certbot" in self_tls and "certbot" not in default
-    assert "TLS-terminating load balancer" in default
+    # Who terminates TLS is a setting, so both ways are set up in every project.
+    for setup in (default, self_tls):
+        assert "**nginx terminates it.**" in setup and "certbot" in setup
+        assert "**A load balancer terminates it.**" in setup
 
 
 def test_the_legal_generator_is_an_opt_in_script_that_never_vendors_the_generator(cookies):

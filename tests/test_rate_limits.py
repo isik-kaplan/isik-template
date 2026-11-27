@@ -102,8 +102,10 @@ class Stack:
         shutil.copy(project_path / ".env.example", project_path / ".env")
 
     def compose(self, *args, env=None):
+        # The overlay as .env's COMPOSE_FILE adds it; the stand-ins last, so their resets win.
+        overlay = ["-f", "docker-compose.self-tls.yml"] if self.scheme == "https" else []
         return subprocess.run(
-            ["docker", "compose", "-f", "docker-compose.yml", "-f", "stand-ins.yml", *args],
+            ["docker", "compose", "-f", "docker-compose.yml", *overlay, "-f", "stand-ins.yml", *args],
             cwd=self.path,
             env={**os.environ, "COMPOSE_PROJECT_NAME": self.name, **(env or {})},
             capture_output=True,

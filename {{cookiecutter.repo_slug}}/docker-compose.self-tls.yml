@@ -1,0 +1,40 @@
+# nginx terminates TLS itself, off a Let's Encrypt certificate: COMPOSE_FILE in .env adds this file after
+# docker-compose.yml. Without it, a load balancer in front terminates TLS and sends nginx plain http.
+services:
+  server:
+    environment:
+      {{ cookiecutter.config_prefix }}__TLS__TERMINATION: self
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - acme_webroot:/var/www/certbot
+    ports:
+      # Every interface: nothing sits in front. Port 80 too, through HTTP_BIND, for certbot's HTTP-01 challenge.
+      - "443:443"
+
+  # Issues and renews the certificate; nginx reloads periodically to pick it up from the shared volume.
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - acme_webroot:/var/www/certbot
+    depends_on:
+      server:
+        condition: service_healthy
+    restart: unless-stopped
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - >-
+        trap exit TERM;
+        certbot certonly --webroot -w /var/www/certbot
+        -d {{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
+        -d api.{{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
+        -d admin.{{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
+        -d auth.{{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
+        --email {{ '${' + cookiecutter.config_prefix + '__TLS__ACME_EMAIL}' }}
+        --agree-tos --non-interactive --keep-until-expiring;
+        while true; do certbot renew; sleep 12h; done;
+
+volumes:
+  letsencrypt:
+  acme_webroot:

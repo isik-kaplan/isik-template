@@ -60,20 +60,21 @@ docker compose run --rm backend python manage.py createsuperuser
 ```
 
 ## 4. DNS and TLS
-{% if cookiecutter.tls_termination == "self" %}
-This project terminates its own TLS through the `certbot` service. Before the first `docker compose up -d` on a
+
+`setup.sh` asks who terminates TLS (`COMPOSE_FILE`; the README's "TLS" section explains both).
+
+**nginx terminates it.** Through the `certbot` service. Before the first `docker compose up -d` on a
 server, point `{{ cookiecutter.domain }}`, `api.`, `admin.` and `auth.{{ cookiecutter.domain }}` at its public IP: Let's Encrypt's HTTP-01
 challenge needs them resolving, and until it succeeds nginx serves a throwaway self-signed certificate. Ports `80` and
 `443` must reach the host directly. `{{ cookiecutter.config_prefix }}__TLS__ACME_EMAIL` receives Let's Encrypt's expiry notices. The
 README's "TLS" section has the details.
-{% else %}
-This project serves plain HTTP and expects a TLS-terminating load balancer or reverse proxy in front of it. Point the
+
+**A load balancer terminates it.** nginx serves plain HTTP behind it. Point the
 four names (`{{ cookiecutter.domain }}`, `api.`, `admin.`, `auth.`) at that proxy, have it forward to the `server` container
 with `X-Forwarded-Proto` and `X-Forwarded-Host` set, and append to `X-Forwarded-For` rather than replace it.
 `{{ cookiecutter.config_prefix }}__TRUSTED_PROXY_COUNT` counts the proxies (2 behind one load balancer, which
 `setup.sh` writes). The README's "TLS" section explains why each of these matters, and how to get local HTTPS for
 passkeys with `scripts/dev-tls.sh`.
-{% endif %}
 
 ## 5. Social login providers
 

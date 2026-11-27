@@ -15,7 +15,6 @@ DOMAIN = {{ cookiecutter.domain|tojson }}
 # Validated in _validate.py: empty, or an absolute path to a square PNG.
 ICON = {{ cookiecutter.icon|tojson }}
 INCLUDE_MOBILE = {{ cookiecutter.include_mobile }}
-TLS_TERMINATION = {{ cookiecutter.tls_termination|tojson }}
 BACKGROUND_JOBS = {{ cookiecutter.background_jobs|tojson }}
 WEBHOOKS = {{ cookiecutter.webhooks|tojson }}
 PHONE = {{ cookiecutter.phone|tojson }}
@@ -254,14 +253,6 @@ def main() -> None:
     if not INCLUDE_MOBILE:
         shutil.rmtree(f"{PROJECT_SLUG}-frontend/apps/mobile")
     # Same trick for local https: self mode already serves :443 off its own certificate.
-    if TLS_TERMINATION == "self":
-        shutil.rmtree(f"{PROJECT_SLUG}-server/dev-tls")
-        os.remove("docker-compose.dev-tls.yml")
-        # Stands in for the load balancer external mode puts in front; self mode has none.
-        os.remove("e2e/docker-compose.tls-proxy-for-e2e.yml")
-        os.remove("e2e/tls-proxy.conf")
-    else:
-        os.remove(f"{PROJECT_SLUG}-server/certificate.sh")
     # Services this project was generated without: tasks run inline, files go to disk.
     if BACKGROUND_JOBS == "inline":
         shutil.rmtree("broker")

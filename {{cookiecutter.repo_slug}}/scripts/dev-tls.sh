@@ -1,10 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-{% if cookiecutter.tls_termination == "self" %}
-echo "tls_termination is \"self\": nginx already serves https off its own certificate (see README.md's TLS" >&2
-echo "section). This script only applies to the plain-http stack tls_termination: external generates." >&2
-exit 1
-{%- else %}
 # Local https for the dev stack, so secure-context-only browser APIs (passkeys, service workers) work.
 # Uses mkcert when installed; a self-signed certificate otherwise, which Chromium refuses for WebAuthn.
 
@@ -16,6 +11,12 @@ read_env() {
   # Not sourced: .env is not a shell script.
   sed -n "s/^$1=//p" "$ENV_FILE" | tail -n 1 | tr -d '"'
 }
+
+if [[ "$(read_env COMPOSE_FILE)" == *docker-compose.self-tls.yml* ]]; then
+  echo "COMPOSE_FILE has docker-compose.self-tls.yml: nginx already serves https off its own certificate" >&2
+  echo "(see README.md's TLS section). This script is for the plain-http stack behind a load balancer." >&2
+  exit 1
+fi
 
 DOMAIN="$(read_env {{ cookiecutter.config_prefix }}__DOMAIN)"
 : "${DOMAIN:?{{ cookiecutter.config_prefix }}__DOMAIN is not set in .env}"
@@ -89,4 +90,4 @@ fi
 
 echo "written to $TLS_DIR - now: docker compose up -d --force-recreate server frontend"
 echo "then visit https://$DOMAIN"
-{%- endif %}
+

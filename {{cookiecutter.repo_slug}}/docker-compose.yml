@@ -228,10 +228,8 @@ services:
       {{ cookiecutter.config_prefix }}_SERVER__SENTRY__TRACES_SAMPLE_RATE: {{ '${' + cookiecutter.config_prefix + '__SENTRY__TRACES_SAMPLE_RATE:-0}' }}
       # A secret, so under the server-only prefix.
       {{ cookiecutter.config_prefix }}_SERVER__FRONTEND_KEY: {{ '${' + cookiecutter.config_prefix + '__FRONTEND_KEY:-}' }}
-{%- if cookiecutter.tls_termination == "external" %}
       # Written by scripts/dev-tls.sh.
       NODE_EXTRA_CA_CERTS: {{ '${NODE_EXTRA_CA_CERTS:-}' }}
-{%- endif %}
       # Must outlast nginx's upstream keepalive_timeout, or nginx reuses connections Node already closed.
       KEEP_ALIVE_TIMEOUT: 65000
     networks:
@@ -259,14 +257,13 @@ services:
     environment:
       {{ cookiecutter.config_prefix }}__DOMAIN: {{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
       {{ cookiecutter.config_prefix }}__FRONTEND_KEY: {{ '${' + cookiecutter.config_prefix + '__FRONTEND_KEY:-}' }}
-      {{ cookiecutter.config_prefix }}__TRUSTED_PROXY_COUNT: {{ '${' + cookiecutter.config_prefix + '__TRUSTED_PROXY_COUNT:-' }}{% if cookiecutter.tls_termination == "self" %}1{% else %}2{% endif %}}
+      # external: a load balancer in front terminates TLS. docker-compose.self-tls.yml makes it self.
+      {{ cookiecutter.config_prefix }}__TLS__TERMINATION: external
+      # Empty: entrypoint.sh counts the load balancer and nginx, or nginx alone when it terminates TLS.
+      {{ cookiecutter.config_prefix }}__TRUSTED_PROXY_COUNT: {{ '${' + cookiecutter.config_prefix + '__TRUSTED_PROXY_COUNT:-}' }}
       {{ cookiecutter.config_prefix }}__RATE_LIMITS__ENABLED: {{ '${' + cookiecutter.config_prefix + '__RATE_LIMITS__ENABLED:-true}' }}
       {{ cookiecutter.config_prefix }}__RATE_LIMITS__REQUESTS_PER_SECOND: {{ '${' + cookiecutter.config_prefix + '__RATE_LIMITS__REQUESTS_PER_SECOND:-20}' }}
     volumes:
-{%- if cookiecutter.tls_termination == "self" %}
-      - letsencrypt:/etc/letsencrypt
-      - acme_webroot:/var/www/certbot
-{%- endif %}
       # Read-only: nginx sends stored files once the backend has said who may have one.
       - media:/media:ro
     depends_on:
@@ -275,13 +272,8 @@ services:
       frontend:
         condition: service_healthy
     ports:
-{%- if cookiecutter.tls_termination == "self" %}
-      # Every interface: nothing sits in front, and certbot's HTTP-01 challenge needs 80 too.
-      - "80:80"
-      - "443:443"
-{%- else %}
+      # Loopback unless HTTP_BIND says: a load balancer on this host. docker-compose.self-tls.yml adds 443.
       - "{{ '${' + cookiecutter.config_prefix + '__HTTP_BIND:-127.0.0.1}' }}:{{ '${' + cookiecutter.config_prefix + '__HTTP_PORT:-80}' }}:80"
-{%- endif %}
     networks:
       internal:
         # So the frontend's server-side fetches go through nginx like a browser's, not straight to the backend.
@@ -298,39 +290,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-{% if cookiecutter.tls_termination == "self" %}
-  # Issues and renews the certificate; nginx reloads periodically to pick it up from the shared volume.
-  certbot:
-    image: certbot/certbot:latest
-    volumes:
-      - letsencrypt:/etc/letsencrypt
-      - acme_webroot:/var/www/certbot
-    depends_on:
-      server:
-        condition: service_healthy
-    restart: unless-stopped
-    entrypoint: /bin/sh
-    command:
-      - -c
-      - >-
-        trap exit TERM;
-        certbot certonly --webroot -w /var/www/certbot
-        -d {{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
-        -d api.{{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
-        -d admin.{{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
-        -d auth.{{ '${' + cookiecutter.config_prefix + '__DOMAIN}' }}
-        --email {{ '${' + cookiecutter.config_prefix + '__TLS__ACME_EMAIL}' }}
-        --agree-tos --non-interactive --keep-until-expiring;
-        while true; do certbot renew; sleep 12h; done;
-{% endif %}
 volumes:
   postgres_data:
   media:
   storage_data:
-{%- if cookiecutter.tls_termination == "self" %}
-  letsencrypt:
-  acme_webroot:
-{%- endif %}
 
 networks:
   internal:

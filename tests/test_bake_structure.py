@@ -2,6 +2,7 @@ import ast
 import json
 import os
 import re
+import shutil
 import subprocess
 import tomllib
 from pathlib import Path
@@ -188,58 +189,63 @@ def test_object_storage_is_configured_everywhere_the_backend_runs(cookies, conte
     assert started == ["database storage $(docker compose config --services | grep -x cache)"] * 2
 
 
-def test_tls_termination_self_adds_certbot_and_443(cookies):
+def test_nginx_terminates_tls_through_the_self_tls_overlay(cookies):
     result = cookies.bake(extra_context=load_context("self-tls"))
     assert result.exit_code == 0
 
+    project = result.project_path
     server_dir = f"{result.context['project_slug']}-server"
-    compose = (result.project_path / "docker-compose.yml").read_text()
-    nginx_conf = (result.project_path / server_dir / "template.nginx.conf").read_text()
-    dockerfile = (result.project_path / server_dir / "Dockerfile").read_text()
-    env_example = (result.project_path / ".env.example").read_text()
+    prefix = result.context["config_prefix"]
+    overlay = (project / "docker-compose.self-tls.yml").read_text()
+    nginx_conf = (project / server_dir / "template.nginx.conf").read_text()
+    env_example = (project / ".env.example").read_text()
+    self_section = nginx_conf.split("# BEGIN tls=self", 1)[1].split("# END tls=self", 1)[0]
 
-    assert "certbot:" in compose
-    assert '"443:443"' in compose
-    assert "letsencrypt:" in compose
-    assert "listen 443 ssl" in nginx_conf
-    assert "acme-challenge" in nginx_conf
-    assert "apk add --no-cache openssl" in dockerfile
-    assert f"{result.context['config_prefix']}__TLS__ACME_EMAIL" in env_example
-    # Every interface already: there is no load balancer to pick an address for.
-    assert "__HTTP_BIND" not in env_example
-    # nginx is the edge, so its own scheme is the truth. Pages, static files and the backend.
-    assert nginx_conf.count("proxy_set_header X-Forwarded-Proto $scheme;") == 3
-    assert "$http_x_forwarded_proto" not in nginx_conf
+    assert "certbot:" in overlay
+    assert '"443:443"' in overlay
+    assert "letsencrypt:" in overlay
+    assert f"{prefix}__TLS__TERMINATION: self" in overlay
+    # This project starts out terminating its own; switching is the one COMPOSE_FILE line.
+    assert "\nCOMPOSE_FILE=docker-compose.yml:docker-compose.self-tls.yml\n" in env_example
+    assert f"\n{prefix}__HTTP_BIND=0.0.0.0\n" in env_example
+    assert f"\n{prefix}__TLS__ACME_EMAIL=" in env_example
+    assert "listen 443 ssl" in self_section
+    assert "acme-challenge" in self_section
+    # nginx is the edge, so its own scheme is the truth.
+    assert "map $scheme $forwarded_proto {" in self_section
     # The placeholder lives outside certbot's live directory, which certbot refuses to issue into otherwise.
-    certificate_sh = (result.project_path / server_dir / "certificate.sh").read_text()
+    certificate_sh = (project / server_dir / "certificate.sh").read_text()
     assert "/etc/letsencrypt/live" not in nginx_conf
-    assert nginx_conf.count("ssl_certificate /etc/nginx/certificate/fullchain.pem;") == 2
+    assert self_section.count("ssl_certificate /etc/nginx/certificate/fullchain.pem;") == 2
     assert "PLACEHOLDER_DIR=/etc/nginx/placeholder-cert" in certificate_sh
-    assert "/server/certificate.sh" in (result.project_path / server_dir / "entrypoint.sh").read_text()
+    assert "/server/certificate.sh" in (project / server_dir / "entrypoint.sh").read_text()
 
 
-def test_tls_termination_external_has_no_certbot_or_443(cookies):
+def test_a_load_balancer_terminates_tls_without_the_overlay(cookies):
     result = cookies.bake(extra_context=load_context("default"))
     assert result.exit_code == 0
 
+    project = result.project_path
     server_dir = f"{result.context['project_slug']}-server"
-    compose = (result.project_path / "docker-compose.yml").read_text()
-    nginx_conf = (result.project_path / server_dir / "template.nginx.conf").read_text()
-    dockerfile = (result.project_path / server_dir / "Dockerfile").read_text()
-    env_example = (result.project_path / ".env.example").read_text()
+    prefix = result.context["config_prefix"]
+    compose = (project / "docker-compose.yml").read_text()
+    nginx_conf = (project / server_dir / "template.nginx.conf").read_text()
+    env_example = (project / ".env.example").read_text()
+    external = nginx_conf.split("# BEGIN tls=external", 1)[1].split("# END tls=external", 1)[0]
 
+    # docker-compose.yml alone publishes no 443, so a host proxy on 443 never collides with it.
     assert "certbot" not in compose
-    assert "443" not in compose
-    assert "listen 443" not in nginx_conf
-    assert "acme-challenge" not in nginx_conf
-    assert "openssl" not in dockerfile
-    assert "__TLS__ACME_EMAIL" not in env_example
-    assert f"\n#{result.context['config_prefix']}__HTTP_BIND=\n" in env_example
-    assert not (result.project_path / server_dir / "certificate.sh").exists()
+    assert '"443:443"' not in compose
+    assert f"{prefix}__TLS__TERMINATION: external" in compose
+    assert "\n#COMPOSE_FILE=\n" in env_example
+    assert f"\n#{prefix}__TLS__ACME_EMAIL=" in env_example
+    assert f"\n#{prefix}__HTTP_BIND=\n" in env_example
+    assert "listen 443" not in external
+    assert "acme-challenge" not in external
     # The load balancer terminated TLS, so nginx's own $scheme is always http: its header is forwarded instead.
-    assert "map $http_x_forwarded_proto $forwarded_proto {" in nginx_conf
-    # The frontend's pages, its static files and the backend.
-    assert nginx_conf.count("proxy_set_header X-Forwarded-Proto $forwarded_proto;") == 3
+    assert "map $http_x_forwarded_proto $forwarded_proto {" in external
+    # The frontend's pages, its static files and the backend, in each section.
+    assert nginx_conf.count("proxy_set_header X-Forwarded-Proto $forwarded_proto;") == 6
     assert "X-Forwarded-Proto $scheme" not in nginx_conf
 
 
@@ -273,9 +279,10 @@ def test_external_tls_sends_no_hsts_from_nginx(cookies):
     assert result.exit_code == 0
 
     nginx_conf = (result.project_path / f"{result.context['project_slug']}-server" / "template.nginx.conf").read_text()
+    external = nginx_conf.split("# BEGIN tls=external", 1)[1].split("# END tls=external", 1)[0]
 
-    assert "Strict-Transport-Security" not in nginx_conf
-    assert "ssl_reject_handshake" not in nginx_conf
+    assert "Strict-Transport-Security" not in external
+    assert "ssl_reject_handshake" not in external
 
 
 def test_ci_checks_the_production_settings(cookies):
@@ -325,17 +332,15 @@ def test_the_answer_on_signing_in_through_providers_only_is_each_readers_default
 
 
 @pytest.mark.parametrize(
-    ("context_name", "default_count", "env_example_line", "setup_writes_count"),
+    ("context_name", "env_example_line"),
     [
-        # nginx is the edge: nothing to ask, and local development has the same shape as production.
-        ("self-tls", 1, "#{prefix}__TRUSTED_PROXY_COUNT=", False),
+        # nginx is the edge: nothing to set, and local development has the same shape as production.
+        ("self-tls", "#{prefix}__TRUSTED_PROXY_COUNT="),
         # A load balancer sits in front in production, but not in local development.
-        ("default", 2, "{prefix}__TRUSTED_PROXY_COUNT=1", True),
+        ("default", "{prefix}__TRUSTED_PROXY_COUNT=1"),
     ],
 )
-def test_trusted_proxy_count_follows_tls_termination(
-    cookies, context_name, default_count, env_example_line, setup_writes_count
-):
+def test_trusted_proxy_count_follows_who_terminates_tls(cookies, context_name, env_example_line):
     result = cookies.bake(extra_context=load_context(context_name))
     assert result.exit_code == 0
 
@@ -349,10 +354,11 @@ def test_trusted_proxy_count_follows_tls_termination(
 
     # nginx works the client out, once, and tells the backend (apps/common/client_ip.py).
     assert "TRUSTED_PROXY_COUNT" not in config_py
-    assert f"{prefix}__TRUSTED_PROXY_COUNT: ${{{prefix}__TRUSTED_PROXY_COUNT:-{default_count}}}" in compose
-    assert f'__TRUSTED_PROXY_COUNT" || echo {default_count})' in entrypoint
+    assert f"{prefix}__TRUSTED_PROXY_COUNT: ${{{prefix}__TRUSTED_PROXY_COUNT:-}}" in compose
+    # Unset: nginx alone when it terminates TLS, the load balancer plus nginx when one does.
+    assert '[ -n "$proxy_count" ] || proxy_count="$([ "$tls" = self ] && echo 1 || echo 2)"' in entrypoint
     assert env_example_line.format(prefix=prefix) in env_example
-    assert ('set_var "${PREFIX}__TRUSTED_PROXY_COUNT"' in setup_sh) is setup_writes_count
+    assert 'set_var "${PREFIX}__TRUSTED_PROXY_COUNT"' in setup_sh
 
 
 def test_credential_key_is_documented_and_generated_for_a_deployment(cookies):
@@ -462,19 +468,13 @@ def test_tls_termination_external_offers_local_https_as_an_override(cookies):
     assert "NODE_EXTRA_CA_CERTS" in env_example
 
 
-def test_tls_termination_self_has_no_local_https_override(cookies):
+def test_local_https_refuses_while_nginx_terminates_tls(cookies):
+    """Kept in every project, for switching; while the overlay is on, nginx already serves https."""
     result = cookies.bake(extra_context=load_context("self-tls"))
     assert result.exit_code == 0
 
-    server_dir = result.project_path / f"{result.context['project_slug']}-server"
-    nginx_conf = (server_dir / "template.nginx.conf").read_text()
-
-    assert not (result.project_path / "docker-compose.dev-tls.yml").exists()
-    assert not (server_dir / "dev-tls").exists()
-    assert "dev-tls" not in nginx_conf
-    assert "dev-tls" not in (result.project_path / "docker-compose.yml").read_text()
-    assert "__HTTPS_PORT" not in (result.project_path / ".env.example").read_text()
-    # Present so the README's step never hits "no such file", but it refuses.
+    shutil.copy(result.project_path / ".env.example", result.project_path / ".env")
+    assert (result.project_path / "docker-compose.dev-tls.yml").exists()
     proc = subprocess.run(["bash", "scripts/dev-tls.sh"], cwd=result.project_path, capture_output=True, text=True)
     assert proc.returncode == 1
     assert "already serves https" in proc.stderr
