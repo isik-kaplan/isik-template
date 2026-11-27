@@ -5,7 +5,7 @@
 #     npx playwright test auth/social-login.spec.ts
 services:
   tls-proxy:
-    image: nginx:1.27-alpine
+    image: nginx:1.31-alpine
     volumes:
       - ./e2e/tls-proxy.conf:/etc/nginx/conf.d/default.conf:ro
       - certs:/certs:ro

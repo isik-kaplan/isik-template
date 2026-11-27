@@ -1,4 +1,4 @@
-FROM nginx:1.27-alpine
+FROM nginx:1.31-alpine
 
 WORKDIR /server
 {% if cookiecutter.tls_termination == "self" %}
