@@ -5,11 +5,7 @@ import { editableNames, handleLogsIn, isNameRequired, offeredNames, personLabel 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const requirement = vi.hoisted(() => ({ current: 'username_with_optional_full' as NameRequirement }))
-vi.mock('@/config/names', () => ({
-  get NAME_REQUIREMENT() {
-    return requirement.current
-  },
-}))
+vi.mock('@/config/names', () => ({ nameRequirement: () => requirement.current }))
 
 describe('names', () => {
   beforeEach(() => {
@@ -69,8 +65,8 @@ describe('names', () => {
     })
   })
 
-  it('is generated as one of the five', async () => {
-    const { NAME_REQUIREMENT } = await vi.importActual<typeof import('@/config/names')>('@/config/names')
-    expect(NAME_TABLE.map(([name]) => name)).toContain(NAME_REQUIREMENT)
+  it('covers exactly the five the config accepts', async () => {
+    const { NAME_REQUIREMENTS } = await vi.importActual<typeof import('@/config/public')>('@/config/public')
+    expect(NAME_TABLE.map(([name]) => name)).toEqual([...NAME_REQUIREMENTS])
   })
 })

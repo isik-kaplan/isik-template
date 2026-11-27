@@ -1,6 +1,7 @@
-"""What a signup asks somebody to be called, chosen when the project was generated."""
+"""What a signup asks somebody to be called, as ACCOUNTS__NAME_REQUIREMENT says."""
 
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -26,6 +27,16 @@ class NameRequirement(models.TextChoices):
     @classmethod
     def current(cls):
         return cls(settings.NAME_REQUIREMENT)
+
+    @classmethod
+    def named(cls, name):
+        """Fails startup on a name that isn't one, which would otherwise surface only at the first signup."""
+        try:
+            return cls(name)
+        except ValueError:
+            raise ImproperlyConfigured(
+                f"ACCOUNTS__NAME_REQUIREMENT is {name!r}; it is one of {', '.join(cls.values)}"
+            ) from None
 
     @property
     def required(self):

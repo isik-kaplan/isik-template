@@ -85,6 +85,8 @@ CONFIG = config(
             "DELETION": string(missing_default={{ cookiecutter.account_deletion|tojson }}),
             # How long a person has to change their mind, by signing back in.
             "DELETION_AFTER_DAYS": integer(missing_default=14),
+            # What a signup asks somebody to be called: one of apps/users/names.py's NameRequirement.
+            "NAME_REQUIREMENT": string(missing_default={{ cookiecutter.name_requirement|tojson }}),
         },
         "SENTRY": {
             "DSN": string(missing_default=None),

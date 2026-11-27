@@ -3,7 +3,7 @@
 import pytest
 from allauth.account.models import EmailAddress
 from django.conf import settings as django_settings
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from rest_framework import serializers
 
 from apps.users.adapters.account import AccountAdapter
@@ -16,6 +16,8 @@ from apps.users.tests.conftest import PASSWORD, SIGNS_IN
 from apps.users.tests.conftest import PASSWORD
 {%- endif %}
 from conftest import versioned
+
+from {{ cookiecutter.project_slug }}.config import CONFIG as config
 
 
 @pytest.fixture(params=list(NameRequirement))
@@ -96,6 +98,24 @@ def test_the_project_signs_in_the_way_its_requirement_says():
 def test_the_requirement_reads_the_setting(settings):
     settings.NAME_REQUIREMENT = "full_only"
     assert NameRequirement.current() is NameRequirement.FULL_ONLY
+
+
+def test_the_setting_is_what_the_environment_names():
+    assert django_settings.NAME_REQUIREMENT is NameRequirement(config.ACCOUNTS.NAME_REQUIREMENT)
+
+
+@pytest.mark.parametrize("requirement", NameRequirement)
+def test_each_requirement_is_named_by_its_value(requirement):
+    assert NameRequirement.named(requirement.value) is requirement
+
+
+def test_a_name_that_is_no_requirement_fails_startup():
+    with pytest.raises(ImproperlyConfigured) as error:
+        NameRequirement.named("nickname")
+    assert str(error.value) == (
+        "ACCOUNTS__NAME_REQUIREMENT is 'nickname'; it is one of full_only, full_and_username, "
+        "full_with_optional_username, username_with_optional_full, username_only"
+    )
 
 
 def test_a_refusal_names_what_is_missing_and_what_was_never_asked_for():

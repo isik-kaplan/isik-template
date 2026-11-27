@@ -10,11 +10,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 vi.mock('@/lib/apiOrigin', () => ({ apiOrigin: () => 'http://api.test-project.test' }))
 
 const requirement = vi.hoisted(() => ({ current: 'username_with_optional_full' as NameRequirement }))
-vi.mock('@/config/names', () => ({
-  get NAME_REQUIREMENT() {
-    return requirement.current
-  },
-}))
+vi.mock('@/config/names', () => ({ nameRequirement: () => requirement.current }))
 
 const USER = { username: 'jane', email: 'jane@test.test', first_name: 'Jane', last_name: '', etag: '"1"' }
 const NO_HANDLE = { ...USER, username: null }

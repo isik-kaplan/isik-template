@@ -215,8 +215,8 @@ AUTHENTICATION_BACKENDS = [
     "apps.users.backends.permissions.PermissionsBackend",
 ]
 
-# What a signup asks somebody to be called; chosen when the project was generated.
-NAME_REQUIREMENT = NameRequirement.{{ cookiecutter.name_requirement.upper() }}
+# What a signup asks somebody to be called.
+NAME_REQUIREMENT = NameRequirement.named(config.ACCOUNTS.NAME_REQUIREMENT)
 {%- if cookiecutter.phone == "required" %}
 # allauth refuses phone as a login method unless signup requires one.
 ACCOUNT_LOGIN_METHODS = NAME_REQUIREMENT.login_methods | {"phone"}

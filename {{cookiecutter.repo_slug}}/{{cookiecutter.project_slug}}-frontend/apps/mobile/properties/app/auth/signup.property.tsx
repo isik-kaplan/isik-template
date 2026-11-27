@@ -25,9 +25,8 @@ import fc from 'fast-check'
 
 const mockBake: { requirement: NameRequirement; phone: Phone } = { requirement: 'full_only', phone: 'none' }
 jest.mock('@/lib/nameRequirement', () => ({
-  get NAME_REQUIREMENT() {
-    return mockBake.requirement
-  },
+  ...jest.requireActual('@/lib/nameRequirement'),
+  nameRequirement: () => mockBake.requirement,
 }))
 jest.mock('@/lib/phoneOption', () => ({
   get PHONE() {

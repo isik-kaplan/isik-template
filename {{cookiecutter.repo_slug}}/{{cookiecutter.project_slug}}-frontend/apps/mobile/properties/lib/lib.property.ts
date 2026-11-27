@@ -61,10 +61,28 @@ describe("a project's names", () => {
     )
     // The project's own requirement when none is named.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    expect(offeredNames()).toEqual(offeredNames(require('@/lib/nameRequirement').NAME_REQUIREMENT))
+    expect(offeredNames()).toEqual(offeredNames(require('@/lib/nameRequirement').nameRequirement()))
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    expect(handleLogsIn()).toBe(handleLogsIn(require('@/lib/nameRequirement').NAME_REQUIREMENT))
+    expect(handleLogsIn()).toBe(handleLogsIn(require('@/lib/nameRequirement').nameRequirement()))
     expect(offeredValues({ first_name: 'a', last_name: 'b', username: 'c' })).toBeTruthy()
+  })
+
+  it('takes a build that names a requirement, and refuses one that names anything else', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { NAME_REQUIREMENTS, nameRequirement } = require('@/lib/nameRequirement')
+    const saved = process.env.EXPO_PUBLIC_NAME_REQUIREMENT
+    try {
+      fc.assert(
+        fc.property(fc.oneof(fc.constantFrom<string>(...NAME_REQUIREMENTS), fc.string()), (value) => {
+          process.env.EXPO_PUBLIC_NAME_REQUIREMENT = value
+          if (NAME_REQUIREMENTS.includes(value)) expect(nameRequirement()).toBe(value)
+          else expect(() => nameRequirement()).toThrow(`EXPO_PUBLIC_NAME_REQUIREMENT is ${JSON.stringify(value)}`)
+        })
+      )
+    } finally {
+      if (saved === undefined) delete process.env.EXPO_PUBLIC_NAME_REQUIREMENT
+      else process.env.EXPO_PUBLIC_NAME_REQUIREMENT = saved
+    }
   })
 })
 

@@ -1,4 +1,5 @@
 import pytest
+from django.core.exceptions import ImproperlyConfigured
 from hypothesis import given
 from hypothesis import strategies as st
 
@@ -61,3 +62,12 @@ def test_a_label_is_the_name_then_the_handle_then_the_address(first, last, usern
 
     full = " ".join(part for part in (first, last) if part)
     assert label(person) == (full or username or "ada@example.test")
+
+
+@given(name=st.one_of(st.sampled_from(NameRequirement.values), st.text()))
+def test_a_configured_name_is_a_requirement_or_startup_fails(name):
+    if name in NameRequirement.values:
+        assert NameRequirement.named(name) == name
+    else:
+        with pytest.raises(ImproperlyConfigured):
+            NameRequirement.named(name)

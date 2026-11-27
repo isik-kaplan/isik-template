@@ -1,5 +1,8 @@
-export type NameRequirement =
-  'username_with_optional_full' | 'full_only' | 'full_and_username' | 'full_with_optional_username' | 'username_only'
+import { CONFIG, NAME_REQUIREMENTS, type NameRequirement } from './public'
 
-// The backend's NAME_REQUIREMENT, chosen when the project was generated.
-export const NAME_REQUIREMENT: NameRequirement = '{{ cookiecutter.name_requirement }}'
+export { NAME_REQUIREMENTS, type NameRequirement }
+
+/** The backend's ACCOUNTS__NAME_REQUIREMENT, read when asked, as the public config is per request. */
+export function nameRequirement(): NameRequirement {
+  return CONFIG.ACCOUNTS.NAME_REQUIREMENT
+}

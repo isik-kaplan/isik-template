@@ -118,11 +118,10 @@ set_var "${PREFIX}__TRUSTED_PROXY_COUNT" "$((front_proxies + 1))"
 {% endif %}
 superuser_email="$(ask "Superuser email" "admin@${domain}")"
 set_var "${PREFIX}__SETUP__SUPERUSER__EMAIL" "$superuser_email"
-{%- if cookiecutter.name_requirement != "full_only" %}
 
-superuser_username="$(ask "Superuser username" "admin")"
+
+superuser_username="$(ask "Superuser username (ignored if signups ask for no handle)" "admin")"
 set_var "${PREFIX}__SETUP__SUPERUSER__USERNAME" "$superuser_username"
-{%- endif %}
 {%- if cookiecutter.phone == "required" %}
 
 superuser_phone="$(ask "Superuser phone number, with its + and country code" "+15555550100")"

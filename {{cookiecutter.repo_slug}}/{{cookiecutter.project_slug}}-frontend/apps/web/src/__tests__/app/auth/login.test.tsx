@@ -13,7 +13,7 @@ const request = vi.hoisted(() => ({ host: 'test-project.test' }))
 vi.mock('next/headers', () => ({ headers: async () => new Headers({ host: request.host }) }))
 const push = vi.fn()
 // Pinned: the form's fields follow the generated requirement and phone option.
-vi.mock('@/config/names', () => ({ NAME_REQUIREMENT: 'username_with_optional_full' }))
+vi.mock('@/config/names', () => ({ nameRequirement: () => 'username_with_optional_full' }))
 vi.mock('@/config/phone', () => ({ PHONE: 'none' }))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }))
 vi.mock('@/config/public', () => ({ CONFIG: { DOMAIN: 'test-project.test' } }))

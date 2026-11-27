@@ -9,9 +9,8 @@ const LIGHT = themeOf('light')
 
 let mockRequirement: NameRequirement = 'username_with_optional_full'
 jest.mock('@/lib/nameRequirement', () => ({
-  get NAME_REQUIREMENT() {
-    return mockRequirement
-  },
+  ...jest.requireActual('@/lib/nameRequirement'),
+  nameRequirement: () => mockRequirement,
 }))
 
 let mockPhone: Phone = 'none'

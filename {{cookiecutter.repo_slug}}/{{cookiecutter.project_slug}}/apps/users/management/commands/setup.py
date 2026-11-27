@@ -3,6 +3,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from apps.users.models.user import User
+from apps.users.names import NameRequirement
 
 from {{ cookiecutter.project_slug }}.config import CONFIG as config
 
@@ -18,7 +19,8 @@ class Command(BaseCommand):
             user = User.objects.create_superuser(
                 email=config.SETUP.SUPERUSER.EMAIL,
                 password=config.SETUP.SUPERUSER.PASSWORD,
-                username=config.SETUP.SUPERUSER.USERNAME or None,
+                # Only where a handle is asked for at all, so the superuser looks like everybody else.
+                username=(config.SETUP.SUPERUSER.USERNAME or None) if "username" in NameRequirement.current().offered else None,
 {%- if cookiecutter.phone == "required" %}
                 # Verified for the same reason as the address: allauth turns away a login with no number.
                 phone=config.SETUP.SUPERUSER.PHONE,

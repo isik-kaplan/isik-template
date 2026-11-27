@@ -19,11 +19,7 @@ const project = vi.hoisted(() => ({
   requirement: 'username_with_optional_full' as NameRequirement,
   phone: 'none' as Phone,
 }))
-vi.mock('@/config/names', () => ({
-  get NAME_REQUIREMENT() {
-    return project.requirement
-  },
-}))
+vi.mock('@/config/names', () => ({ nameRequirement: () => project.requirement }))
 vi.mock('@/config/phone', () => ({
   get PHONE() {
     return project.phone

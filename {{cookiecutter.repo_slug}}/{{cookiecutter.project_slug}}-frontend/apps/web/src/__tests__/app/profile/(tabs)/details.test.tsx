@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // The rows shown follow the generated requirement, so it is pinned to one that shows them all.
-vi.mock('@/config/names', () => ({ NAME_REQUIREMENT: 'username_with_optional_full' }))
+vi.mock('@/config/names', () => ({ nameRequirement: () => 'username_with_optional_full' }))
 const requireSession = vi.fn()
 vi.mock('@/lib/getSession', () => ({ requireSession: () => requireSession(), getLanguage: async () => 'en' }))
 const me = vi.fn()

@@ -5,6 +5,7 @@ from allauth.account.models import EmailAddress
 from django.core.management import call_command
 
 from apps.users.models.user import User
+from apps.users.names import NameRequirement
 
 from {{ cookiecutter.project_slug }}.config import CONFIG as config
 
@@ -23,12 +24,20 @@ def test_setup_creates_a_superuser_when_none_exists():
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("requirement", NameRequirement)
+def test_setup_gives_the_superuser_a_handle_only_where_one_is_asked_for(settings, requirement):
+    settings.NAME_REQUIREMENT = requirement
+    call_command("setup")
+
+    handle = config.SETUP.SUPERUSER.USERNAME if "username" in requirement.offered else None
+    assert User.objects.get(is_superuser=True).username == handle
+
+
+@pytest.mark.django_db
 def test_setup_creates_a_superuser_with_the_configured_credentials():
     call_command("setup")
 
     user = User.objects.get(is_superuser=True)
-    # A project that asks for no handle configures none.
-    assert user.username == (config.SETUP.SUPERUSER.USERNAME or None)
     assert user.email == config.SETUP.SUPERUSER.EMAIL
     assert user.check_password(config.SETUP.SUPERUSER.PASSWORD)
 {%- if cookiecutter.phone == "required" %}

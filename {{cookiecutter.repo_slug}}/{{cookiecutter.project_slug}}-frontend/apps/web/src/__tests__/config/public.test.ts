@@ -47,6 +47,41 @@ describe('CONFIG (public)', () => {
     vi.resetModules()
   })
 
+  it.each([
+    ['full_only', 'full_only'],
+    [undefined, '{{ cookiecutter.name_requirement }}'],
+  ])(
+    'reads ACCOUNTS__NAME_REQUIREMENT=%s, defaulting to the answer given at generation',
+    async (value, requirement) => {
+      vi.stubEnv('{{ cookiecutter.config_prefix }}__DOMAIN', 'example.test')
+      vi.stubEnv('{{ cookiecutter.config_prefix }}__ACCOUNTS__NAME_REQUIREMENT', value)
+      vi.resetModules()
+
+      const { CONFIG } = await import('@/config/public')
+
+      expect(CONFIG.ACCOUNTS.NAME_REQUIREMENT).toBe(requirement)
+
+      vi.unstubAllEnvs()
+      vi.resetModules()
+    }
+  )
+
+  it('refuses a name requirement that is not one, naming the five', async () => {
+    vi.stubEnv('{{ cookiecutter.config_prefix }}__DOMAIN', 'example.test')
+    vi.stubEnv('{{ cookiecutter.config_prefix }}__ACCOUNTS__NAME_REQUIREMENT', 'nickname')
+    vi.resetModules()
+
+    const { CONFIG } = await import('@/config/public')
+
+    expect(() => CONFIG.ACCOUNTS.NAME_REQUIREMENT).toThrow(
+      'ACCOUNTS__NAME_REQUIREMENT is "nickname"; it is one of username_with_optional_full, full_only, ' +
+        'full_and_username, full_with_optional_username, username_only'
+    )
+
+    vi.unstubAllEnvs()
+    vi.resetModules()
+  })
+
   it('reads the OAuth provider mode from its own variable', async () => {
     vi.stubEnv('{{ cookiecutter.config_prefix }}__DOMAIN', 'example.test')
     vi.stubEnv('{{ cookiecutter.config_prefix }}__OAUTH_PROVIDER__MODE', 'auto')

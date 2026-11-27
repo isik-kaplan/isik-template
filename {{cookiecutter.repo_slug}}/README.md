@@ -250,6 +250,9 @@ your own real credentials: a Google OAuth iOS client ID (its reversed form as `i
 provisioning profile with the Sign in with Apple capability enabled. Until those exist, the
 buttons render but the native pickers will fail to open.
 
+`EXPO_PUBLIC_NAME_REQUIREMENT` mirrors `{{ cookiecutter.config_prefix }}__ACCOUNTS__NAME_REQUIREMENT` the same way, so the
+app's signup asks for the names the backend does; unset, both use the answer given at generation.
+
 Push needs a development build too. The app asks to notify once signed in, registers the phone's own APNs or
 FCM token with the backend (not an Expo push token) and forgets it at logout; a tapped push opens the
 Notifications screen. iOS needs the Push Notifications capability on its provisioning profile; Android needs

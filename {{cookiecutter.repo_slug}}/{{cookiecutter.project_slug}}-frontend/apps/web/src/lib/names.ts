@@ -1,4 +1,4 @@
-import { NAME_REQUIREMENT, type NameRequirement } from '@/config/names'
+import { type NameRequirement, nameRequirement } from '@/config/names'
 
 export type NameField = 'first_name' | 'last_name' | 'username'
 
@@ -22,16 +22,16 @@ const REQUIRED: Record<NameRequirement, readonly NameField[]> = {
 }
 
 /** The names a signup or a profile may carry at all. */
-export function offeredNames(requirement = NAME_REQUIREMENT): readonly NameField[] {
+export function offeredNames(requirement = nameRequirement()): readonly NameField[] {
   return OFFERED[requirement]
 }
 
-export function isNameRequired(field: NameField, requirement = NAME_REQUIREMENT): boolean {
+export function isNameRequired(field: NameField, requirement = nameRequirement()): boolean {
   return REQUIRED[requirement].includes(field)
 }
 
 /** A handle logs in only where every account made since has one. */
-export function handleLogsIn(requirement = NAME_REQUIREMENT): boolean {
+export function handleLogsIn(requirement = nameRequirement()): boolean {
   return isNameRequired('username', requirement)
 }
 
@@ -45,7 +45,7 @@ export function personLabel(person: Named): string {
 /** The names somebody may change: a handle is chosen once, so only by somebody who has none yet. */
 export function editableNames(
   person: { username?: string | null },
-  requirement = NAME_REQUIREMENT
+  requirement = nameRequirement()
 ): readonly NameField[] {
   return offeredNames(requirement).filter((name) => name !== 'username' || !person.username)
 }

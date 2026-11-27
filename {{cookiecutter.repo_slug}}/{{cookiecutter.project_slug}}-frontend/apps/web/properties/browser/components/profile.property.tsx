@@ -15,11 +15,7 @@ import fc from 'fast-check'
 import { describe, expect, vi } from 'vitest'
 
 const project = vi.hoisted(() => ({ requirement: 'username_with_optional_full' as NameRequirement }))
-vi.mock('@/config/names', () => ({
-  get NAME_REQUIREMENT() {
-    return project.requirement
-  },
-}))
+vi.mock('@/config/names', () => ({ nameRequirement: () => project.requirement }))
 
 const REQUIREMENTS: NameRequirement[] = [
   'username_with_optional_full',

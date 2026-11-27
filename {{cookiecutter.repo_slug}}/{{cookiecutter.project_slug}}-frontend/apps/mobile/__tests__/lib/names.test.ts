@@ -3,9 +3,8 @@ import { handleLogsIn, offeredNames, offeredValues } from '@/lib/names'
 
 let mockRequirement: NameRequirement = 'username_with_optional_full'
 jest.mock('@/lib/nameRequirement', () => ({
-  get NAME_REQUIREMENT() {
-    return mockRequirement
-  },
+  ...jest.requireActual('@/lib/nameRequirement'),
+  nameRequirement: () => mockRequirement,
 }))
 
 const TABLE: [NameRequirement, string[], boolean][] = [
@@ -40,8 +39,8 @@ describe('names', () => {
     })
   })
 
-  it('is generated as one of the five', () => {
-    const { NAME_REQUIREMENT } = jest.requireActual('@/lib/nameRequirement')
-    expect(TABLE.map(([name]) => name)).toContain(NAME_REQUIREMENT)
+  it('covers exactly the five a build accepts', () => {
+    const { NAME_REQUIREMENTS } = jest.requireActual('@/lib/nameRequirement')
+    expect(TABLE.map(([name]) => name).sort()).toEqual([...NAME_REQUIREMENTS].sort())
   })
 })

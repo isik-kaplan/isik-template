@@ -234,6 +234,7 @@ services:
       {{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__PROVIDERS: {{ '${' + cookiecutter.config_prefix + '__SOCIAL_LOGIN__PROVIDERS:-}' }}
       {{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__ICONS: {{ '${' + cookiecutter.config_prefix + '__SOCIAL_LOGIN__ICONS:-}' }}
       {{ cookiecutter.config_prefix }}__SOCIAL_LOGIN__ONLY: {{ '${' + cookiecutter.config_prefix + '__SOCIAL_LOGIN__ONLY:-' }}{{ cookiecutter.social_login_only|lower }}{{ '}' }}
+      {{ cookiecutter.config_prefix }}__ACCOUNTS__NAME_REQUIREMENT: {{ '${' + cookiecutter.config_prefix + '__ACCOUNTS__NAME_REQUIREMENT:-' }}{{ cookiecutter.name_requirement }}{{ '}' }}
       {{ server_sentry_dsn }}: {{ '${' + server_sentry_dsn + ':-}' }}
       {{ cookiecutter.config_prefix }}_SERVER__SENTRY__TRACES_SAMPLE_RATE: {{ '${' + cookiecutter.config_prefix + '__SENTRY__TRACES_SAMPLE_RATE:-0}' }}
       # A secret, so under the server-only prefix.

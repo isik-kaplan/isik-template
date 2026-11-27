@@ -15,11 +15,7 @@ vi.mock('next/navigation', () => ({
 }))
 
 const requirement = vi.hoisted(() => ({ current: 'username_with_optional_full' as NameRequirement }))
-vi.mock('@/config/names', () => ({
-  get NAME_REQUIREMENT() {
-    return requirement.current
-  },
-}))
+vi.mock('@/config/names', () => ({ nameRequirement: () => requirement.current }))
 
 const phone = vi.hoisted(() => ({ current: 'none' as Phone }))
 vi.mock('@/config/phone', () => ({
