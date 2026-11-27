@@ -23,10 +23,14 @@ name: A wrong password is refused, the right one signs in, and logging out signs
 - pressKey: Enter
 - tapOn:
     id: login-submit
+# iOS may offer to save the password over the page that follows, hiding it until the offer is gone.
 - extendedWaitUntil:
-    visible: You're logged in as ${SUPERUSER_EMAIL}
+    visible: You're logged in as ${SUPERUSER_EMAIL}|Not Now
     timeout: 60000
 - runFlow: common/not-now.yaml
+- extendedWaitUntil:
+    visible: You're logged in as ${SUPERUSER_EMAIL}
+    timeout: 30000
 - tapOn:
     id: logout-button
 - assertVisible:

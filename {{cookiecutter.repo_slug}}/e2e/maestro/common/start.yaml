@@ -6,7 +6,8 @@ appId: {{ cookiecutter.domain.split(".") | reverse | join(".") }}.mobile
 - extendedWaitUntil:
     visible:
       id: login-form|home-heading
-    timeout: 30000
+    # The first session check can wait on a busy backend well past half a minute.
+    timeout: 90000
 - runFlow:
     when:
       visible:

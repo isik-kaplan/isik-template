@@ -72,10 +72,10 @@ uv run python manage.py setup
 {%- if cookiecutter.background_jobs != "inline" %}
 # Threads, not forks: a forked worker on macOS can die or hang in the system's networking. From .venv, not
 # uv run, which holds uv's cache lock while it runs and leaves the job's cache save waiting on it.
-.venv/bin/celery -A {{ cookiecutter.project_slug }} worker --pool threads --loglevel INFO >"$state/worker.log" 2>&1 &
+PYTHONUNBUFFERED=1 .venv/bin/celery -A {{ cookiecutter.project_slug }} worker --pool threads --loglevel INFO >"$state/worker.log" 2>&1 &
 {%- endif %}
 # Port 80 is root's; -E keeps the settings above.
-sudo -E .venv/bin/python manage.py runserver 127.0.0.1:80 --noreload >"$state/backend.log" 2>&1 &
+sudo -E PYTHONUNBUFFERED=1 .venv/bin/python manage.py runserver 127.0.0.1:80 --noreload >"$state/backend.log" 2>&1 &
 for _ in $(seq 60); do
   curl -sf -H "Host: localhost" http://127.0.0.1/health/ >/dev/null && exit 0
   sleep 2
