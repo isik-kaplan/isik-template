@@ -15,12 +15,13 @@ class Command(BaseCommand):
         if User.objects.filter(is_superuser=True).exists():
             self.stdout.write("A superuser already exists, skipping.")
             return
+        # Only where a handle is asked for at all, so the superuser looks like everybody else.
+        asks_for_a_handle = "username" in NameRequirement.current().offered
         with transaction.atomic():
             user = User.objects.create_superuser(
                 email=config.SETUP.SUPERUSER.EMAIL,
                 password=config.SETUP.SUPERUSER.PASSWORD,
-                # Only where a handle is asked for at all, so the superuser looks like everybody else.
-                username=(config.SETUP.SUPERUSER.USERNAME or None) if "username" in NameRequirement.current().offered else None,
+                username=(config.SETUP.SUPERUSER.USERNAME or None) if asks_for_a_handle else None,
 {%- if cookiecutter.phone == "required" %}
                 # Verified for the same reason as the address: allauth turns away a login with no number.
                 phone=config.SETUP.SUPERUSER.PHONE,
