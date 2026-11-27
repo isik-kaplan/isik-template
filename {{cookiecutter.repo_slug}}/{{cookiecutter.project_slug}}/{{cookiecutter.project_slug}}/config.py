@@ -29,13 +29,13 @@ CONFIG = config(
             "PORT": string(),
         },
 {%- endif %}
-{%- if cookiecutter.cache == "redis" %}
         "CACHE": {
-            "HOST": string(),
-            "PORT": string(),
-            "PASSWORD": string(),
+            # redis or database: where rate limits count.
+            "BACKEND": string(missing_default={{ cookiecutter.cache|tojson }}),
+            "HOST": string(missing_default=""),
+            "PORT": string(missing_default="6379"),
+            "PASSWORD": string(missing_default=""),
         },
-{%- endif %}
 {%- if cookiecutter.storage != "disk" %}
         "STORAGE": {
             "BUCKET_NAME": string(),

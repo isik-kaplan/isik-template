@@ -30,9 +30,7 @@ dependencies = [
 {%- if cookiecutter.storage != "disk" %}
     "django-storages[s3]>=1.14.0",
 {%- endif %}
-{%- if cookiecutter.cache == "redis" %}
     "redis>=8.1.0",
-{%- endif %}
 ]
 
 [tool.uv]

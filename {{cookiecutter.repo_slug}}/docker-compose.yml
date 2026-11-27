@@ -38,11 +38,13 @@ services:
       retries: 10
 
 {%- endif %}
-{%- if cookiecutter.cache == "redis" %}
+
 
   # Rate-limit counts and the cache: nothing in it needs to survive a restart, so no persistence.
+  # Only under the redis profile, for CACHE__BACKEND=redis on this host.
   cache:
     image: redis:8.8-alpine
+    profiles: ["redis"]
     command:
       - redis-server
       - --requirepass
@@ -66,7 +68,6 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-{%- endif %}
 {%- if cookiecutter.storage != "disk" %}
 {% if cookiecutter.storage == "garage" %}
   # S3-compatible object storage: Garage, one node, in dev, tests and production alike.
@@ -132,10 +133,10 @@ services:
       broker:
         condition: service_healthy
 {%- endif %}
-{%- if cookiecutter.cache == "redis" %}
       cache:
         condition: service_healthy
-{%- endif %}
+        # Only while the redis profile runs it.
+        required: false
 {%- if cookiecutter.storage != "disk" %}
       storage:
         condition: service_healthy

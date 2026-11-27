@@ -147,10 +147,10 @@ nginx again, since the page load that made them already was. IPv6 addresses are 
 which one subscriber is handed whole.
 
 **The counts** live in the default cache, which every process and container shares -
-{% if cookiecutter.cache == "redis" %}Redis, the `cache` service. Nothing in it outlives a restart that matters: counts start
-again.{% else %}a table in Postgres (`createcachetable`, run by `entrypoint.sh`). It costs a query per counted request; for a
-busy site, regenerate with `cache: redis` and carry over the `cache` service and the `CACHE__*`
-settings.{% endif %} A cache of each process's own would let a caller make the limit's worth of requests to every
+`{{ cookiecutter.config_prefix }}__CACHE__BACKEND` says which. `redis` is the `cache` service (the `redis` compose profile)
+or a Redis elsewhere at `CACHE__HOST`; nothing in it outlives a restart that matters, counts start again.
+`database` is a table in Postgres (`createcachetable`, run by `entrypoint.sh`): nothing more to run, but a
+query per counted request, so a busy site wants Redis. Switching needs only the variable and the profile. A cache of each process's own would let a caller make the limit's worth of requests to every
 uwsgi process in turn. The backend tests run on a cache of each process's own instead, which they clear
 between tests; `apps/common/tests/test_cache.py` checks the configured one is shared.
 

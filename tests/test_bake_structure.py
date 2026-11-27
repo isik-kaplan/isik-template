@@ -183,13 +183,9 @@ def test_object_storage_is_configured_everywhere_the_backend_runs(cookies, conte
         assert (f"\n{prefix}__STORAGE__{key}=" in env_example) == storage_started
     # The suite writes to a real Garage, so every CI job that runs it has to start one.
     ci = (result.project_path / ".github" / "workflows" / "ci.yml").read_text()
-    expected = ["database", *(["storage"] if storage_started else [])]
-    if result.context["cache"] == "redis":
-        expected.append("cache")
-    started = [
-        line.split("--wait-timeout 90 ", 1)[1].split() for line in ci.splitlines() if "--wait-timeout 90 " in line
-    ]
-    assert started == [expected, expected]
+    # Whichever of them its .env's profiles run, as a host would.
+    started = [line.split("--wait-timeout 90 ", 1)[1] for line in ci.splitlines() if "--wait-timeout 90 " in line]
+    assert started == ["database $(docker compose config --services | grep -xE 'storage|cache')"] * 2
 
 
 def test_tls_termination_self_adds_certbot_and_443(cookies):

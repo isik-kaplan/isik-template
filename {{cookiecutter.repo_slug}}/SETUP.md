@@ -42,7 +42,7 @@ bash scripts/setup.sh
 
 - **Local development** keeps `.env.example`'s values.
 - **A real deployment** generates strong secrets (`SECRET_KEY`, `CREDENTIAL_KEY`, `FRONTEND_KEY`, the
-  database{% if cookiecutter.background_jobs != "inline" %}, broker{% endif %}{% if cookiecutter.cache == "redis" %}, cache{% endif %} and superuser
+  database{% if cookiecutter.background_jobs != "inline" %}, broker{% endif %}, cache and superuser
   passwords) and asks for the domain, SMTP, object storage, social login credentials and Sentry.
 
 Every variable is documented where it is set, in `.env.example`'s own comments. Keep `.env` out of version control.

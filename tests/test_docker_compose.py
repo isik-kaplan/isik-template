@@ -56,6 +56,12 @@ def _services(project_path, *args):
     return json.loads(proc.stdout)["services"]
 
 
+def _profiles(env_example):
+    """The bundled services .env.example turns on."""
+    line = next(line for line in env_example.splitlines() if line.startswith("COMPOSE_PROFILES="))
+    return [profile for profile in line.split("=", 1)[1].split(",") if profile]
+
+
 def test_bundled_garage_is_the_storage_the_backend_waits_for(cookies):
     """The app holds no s3:CreateBucket, so storage is healthy only once it has made the key and bucket."""
     result = cookies.bake(extra_context=load_context("default"))
@@ -76,7 +82,7 @@ def test_bundled_garage_is_the_storage_the_backend_waits_for(cookies):
     assert "profiles" not in storage
     assert services["backend"]["depends_on"]["storage"]["condition"] == "service_healthy"
     assert services["backend"]["depends_on"]["storage"]["required"] is True
-    assert "COMPOSE_PROFILES" not in env_example
+    assert "local-storage" not in _profiles(env_example)
     assert f"\n{prefix}__STORAGE__ENDPOINT_URL=http://storage:3900\n" in env_example
 
 
@@ -85,7 +91,7 @@ def test_an_external_provider_runs_garage_only_under_the_local_storage_profile(c
     assert result.exit_code == 0
     env_example = (result.project_path / ".env.example").read_text()
 
-    assert "\nCOMPOSE_PROFILES=local-storage\n" in env_example
+    assert "local-storage" in _profiles(env_example)
     assert _services(result.project_path)["storage"]["profiles"] == ["local-storage"]
     deployed = _services(result.project_path, "--env-file", "/dev/null")
     assert "storage" not in deployed
@@ -223,10 +229,14 @@ def test_every_pair_of_answers_bakes_a_stack_that_holds_together(
     assert {"broker", "worker", "scheduler"} & set(services) == JOBS[background_jobs]
     assert ("storage" in services) == (storage != "disk")
     assert ("certbot" in services) == (tls_termination == "self")
+    # Redis runs only under its profile, which .env.example turns on when it is the default.
     assert ("cache" in services) == (cache == "redis")
-    assert ("cache" in services["backend"]["depends_on"]) == (cache == "redis")
+    assert ("redis" in _profiles((project_path / ".env.example").read_text())) == (cache == "redis")
+    if "cache" in services["backend"]["depends_on"]:
+        assert services["backend"]["depends_on"]["cache"]["required"] is False
+    # Makes nothing while the cache is Redis, so it always runs: switching needs no rebuild.
     entrypoint = (project_path / result.context["project_slug"] / "entrypoint.sh").read_text()
-    assert ("createcachetable" in entrypoint) == (cache == "database")
+    assert "createcachetable" in entrypoint
     nginx = (project_path / f"{result.context['project_slug']}-server" / "template.nginx.conf").read_text()
     assert ("/internal/media/" in nginx) == (storage == "disk")
     assert ("/internal/storage/" in nginx) == (storage != "disk")

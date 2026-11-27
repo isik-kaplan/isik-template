@@ -91,9 +91,7 @@ set_var "${PREFIX}__DB__PASSWORD" "$(random_hex 24)"
 {%- if cookiecutter.background_jobs != "inline" %}
 set_var "${PREFIX}__BROKER__PASSWORD" "$(random_hex 24)"
 {%- endif %}
-{%- if cookiecutter.cache == "redis" %}
 set_var "${PREFIX}__CACHE__PASSWORD" "$(random_hex 24)"
-{%- endif %}
 set_var "${PREFIX}__FRONTEND_KEY" "$(random_hex 32)"
 
 superuser_password="$(random_hex 16)"
@@ -158,6 +156,12 @@ else
 fi
 {%- endif %}
 
+
+# Takes one bundled service out of COMPOSE_PROFILES, keeping the rest.
+drop_profile() {
+  profiles="$(sed -n 's/^COMPOSE_PROFILES=//p' .env | tr ',' '\n' | { grep -vx "$1" || true; } | paste -sd, -)"
+  set_var "COMPOSE_PROFILES" "$profiles"
+}
 {%- if cookiecutter.storage != "disk" %}
 
 # The bundled Garage takes the key it is given: GK and 24 hex digits, with a 64-hex-digit secret.
@@ -177,7 +181,7 @@ echo "Object storage: the S3-compatible provider uploads go to (AWS S3, Cloudfla
 storage_endpoint="$(ask "S3 endpoint URL (blank keeps the bundled Garage)" "")"
 if [ -n "$storage_endpoint" ]; then
   # Off the local-storage profile, so the bundled Garage never starts here.
-  set_var "COMPOSE_PROFILES" ""
+  drop_profile local-storage
   set_var "${PREFIX}__STORAGE__ENDPOINT_URL" "$storage_endpoint"
   set_var "${PREFIX}__STORAGE__BUCKET_NAME" "$(ask "Bucket name" "{{ cookiecutter.repo_slug }}")"
   set_var "${PREFIX}__STORAGE__REGION_NAME" "$(ask "Region" "us-east-1")"

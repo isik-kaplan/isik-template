@@ -12,6 +12,7 @@ from isik.django.apps.notifications.channels import Channel
 from isik.django.apps.notifications.exemptions import SendsInline
 {%- endif %}
 
+from apps.common.caches import configured_caches
 from apps.common.logging.scrub import scrub_event
 from apps.notifications.push import push_credentials
 from apps.oauth_provider import device_codes
@@ -410,23 +411,7 @@ CORS_EXPOSE_HEADERS = ["X-Reauthentication-Required", "X-Session-Cleared", "ETag
 CORS_ALLOW_HEADERS = (*default_headers, "idempotency-key", "if-match", "if-none-match")
 
 # Rate limits count here, so it must be shared: a per-process cache multiplies every limit.
-{%- if cookiecutter.cache == "redis" %}
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": f"redis://{config.CACHE.HOST}:{config.CACHE.PORT}/0",
-        "OPTIONS": {"password": config.CACHE.PASSWORD},
-    },
-}
-{%- else %}
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
-        # Made by `createcachetable` (entrypoint.sh), not a migration.
-        "LOCATION": "cache",
-    },
-}
-{%- endif %}
+CACHES = configured_caches(config.CACHE.BACKEND, config.CACHE.HOST, config.CACHE.PORT, config.CACHE.PASSWORD)
 
 THROTTLE_CLASSES = [
     "apps.common.api.throttling.AnonymousRateThrottle",

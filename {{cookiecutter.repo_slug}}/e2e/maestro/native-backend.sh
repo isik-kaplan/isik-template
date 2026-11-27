@@ -8,9 +8,11 @@ state="$PWD/e2e/maestro/.native"
 mkdir -p "$state/sms"
 [ -f .env ] || cp .env.example .env
 value() { sed -n "s/^{{ cookiecutter.config_prefix }}__$1=//p" .env; }
+# As the backend reads it: unset, the answer given at generation.
+cache="$(value CACHE__BACKEND)"
+cache="${cache:-{{ cookiecutter.cache }}}"
 
-brew install postgresql@18 mailpit
-{%- if cookiecutter.cache == "redis" %} redis{% endif %}
+brew install postgresql@18 mailpit $([ "$cache" = redis ] && echo redis)
 {%- if cookiecutter.background_jobs != "inline" %} rabbitmq{% endif %}
 {%- if cookiecutter.languages.split(',') | length > 1 %} gettext{% endif %}
 
@@ -21,10 +23,9 @@ pg="$(brew --prefix postgresql@18)/bin"
 "$pg/psql" -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 \
   -c "CREATE ROLE \"$(value DB__USER)\" LOGIN SUPERUSER PASSWORD '$(value DB__PASSWORD)'" \
   -c "CREATE DATABASE \"$(value DB__NAME)\" OWNER \"$(value DB__USER)\""
-{%- if cookiecutter.cache == "redis" %}
-
-redis-server --bind 127.0.0.1 --requirepass "$(value CACHE__PASSWORD)" --daemonize yes --logfile "$state/redis.log"
-{%- endif %}
+if [ "$cache" = redis ]; then
+  redis-server --bind 127.0.0.1 --requirepass "$(value CACHE__PASSWORD)" --daemonize yes --logfile "$state/redis.log"
+fi
 {%- if cookiecutter.background_jobs != "inline" %}
 
 # The stack's own broker settings, which RabbitMQ 4 needs for Celery.
@@ -46,9 +47,7 @@ python3 -m http.server 8026 --bind 127.0.0.1 --directory "$state/sms" >"$state/s
 
 # Where the stack's containers find each of these, here on this machine; the rest is e2e/.env's.
 export {{ cookiecutter.config_prefix }}__DB__HOST=127.0.0.1
-{%- if cookiecutter.cache == "redis" %}
 export {{ cookiecutter.config_prefix }}__CACHE__HOST=127.0.0.1
-{%- endif %}
 {%- if cookiecutter.background_jobs != "inline" %}
 export {{ cookiecutter.config_prefix }}__BROKER__HOST=127.0.0.1
 {%- endif %}
@@ -68,9 +67,7 @@ uv sync --frozen
 uv run python manage.py compilemessages -i .venv -i mutants
 {%- endif %}
 uv run python manage.py migrate
-{%- if cookiecutter.cache == "database" %}
 uv run python manage.py createcachetable
-{%- endif %}
 uv run python manage.py setup
 {%- if cookiecutter.background_jobs != "inline" %}
 # Threads, not forks: a forked worker on macOS can die or hang in the system's networking. From .venv, not

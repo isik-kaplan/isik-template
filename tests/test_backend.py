@@ -39,11 +39,11 @@ def test_the_backend_suite_passes(cookies, context_name):
         proc = subprocess.run(["docker", "compose", *args], cwd=project_path, env=env, capture_output=True, text=True)
         assert proc.returncode == 0, f"docker compose {' '.join(args)}\n{proc.stdout[-8000:]}\n{proc.stderr[-8000:]}"
 
-    services = ["database"]
-    if result.context["storage"] != "disk":
-        services.append("storage")
-    if result.context["cache"] == "redis":
-        services.append("cache")
+    # The storage and cache its profiles run, as the generated CI starts them.
+    listed = subprocess.run(
+        ["docker", "compose", "config", "--services"], cwd=project_path, env=env, capture_output=True, text=True
+    )
+    services = ["database", *(name for name in listed.stdout.split() if name in ("storage", "cache"))]
     try:
         compose("build", "backend")
         compose("up", "-d", "--wait", "--wait-timeout", "90", *services)

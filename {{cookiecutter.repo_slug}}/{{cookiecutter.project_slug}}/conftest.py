@@ -37,6 +37,18 @@ from {{ cookiecutter.project_slug }}.config import CONFIG as config
 CONFIGURED_CACHES = django_settings.CACHES
 
 
+@pytest.fixture
+def configured_cache(request, settings):
+    """The configured cache, ready as the backend finds it: a database cache's table is made first, as
+    entrypoint.sh's createcachetable makes it."""
+    if CONFIGURED_CACHES["default"]["BACKEND"] == "django.core.cache.backends.db.DatabaseCache":
+        from django.core.management import call_command
+
+        request.getfixturevalue("db")
+        settings.CACHES = CONFIGURED_CACHES
+        call_command("createcachetable")
+
+
 @pytest.fixture(autouse=True, scope="session")
 def _a_cache_of_its_own():
     """Per-process: each worker clears it between tests, which would wipe another's counts if shared."""

@@ -5,9 +5,7 @@ The rest of the suite runs on a per-process cache, so these build the configured
 
 import uuid
 
-{% if cookiecutter.cache == "database" -%}
 import pytest
-{% endif -%}
 from django.utils.module_loading import import_string
 
 from conftest import CONFIGURED_CACHES
@@ -25,22 +23,9 @@ def test_it_is_not_a_cache_of_each_process_s_own():
         "django.core.cache.backends.redis.RedisCache",
         "django.core.cache.backends.db.DatabaseCache",
     }
-{%- if cookiecutter.cache == "database" %}
 
 
-@pytest.fixture
-def cache_table(db, settings):
-    """The table entrypoint.sh's createcachetable makes before the backend starts."""
-    from django.core.management import call_command
-
-    settings.CACHES = CONFIGURED_CACHES
-    call_command("createcachetable")
-{%- endif %}
-
-
-{% if cookiecutter.cache == "database" -%}
-@pytest.mark.usefixtures("cache_table")
-{% endif -%}
+@pytest.mark.usefixtures("configured_cache")
 def test_what_one_process_counts_another_reads():
     key = f"shared-{uuid.uuid4().hex}"
     one, another = _connection(), _connection()
