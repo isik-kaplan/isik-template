@@ -73,7 +73,8 @@ uv run python manage.py createcachetable
 {%- endif %}
 uv run python manage.py setup
 {%- if cookiecutter.background_jobs != "inline" %}
-uv run celery -A {{ cookiecutter.project_slug }} worker >"$state/worker.log" 2>&1 &
+# Threads, not forks: a forked worker on macOS can die or hang in the system's networking.
+uv run celery -A {{ cookiecutter.project_slug }} worker --pool threads --loglevel INFO >"$state/worker.log" 2>&1 &
 {%- endif %}
 # Port 80 is root's; -E keeps the settings above.
 sudo -E .venv/bin/python manage.py runserver 127.0.0.1:80 --noreload >"$state/backend.log" 2>&1 &
