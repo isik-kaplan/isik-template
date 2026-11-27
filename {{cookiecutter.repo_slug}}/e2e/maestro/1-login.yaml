@@ -2,9 +2,11 @@ appId: {{ cookiecutter.domain.split(".") | reverse | join(".") }}.mobile
 name: A wrong password is refused, the right one signs in, and logging out signs out
 ---
 - runFlow: common/start.yaml
-- tapOn:
-    id: email-input
-- inputText: ${SUPERUSER_EMAIL}
+- runFlow:
+    file: common/type.yaml
+    env:
+      FIELD: email-input
+      TEXT: ${SUPERUSER_EMAIL}
 - tapOn:
     id: password-input
 - inputText: not-the-password

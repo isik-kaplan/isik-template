@@ -15,28 +15,36 @@ name: Signing up needs the address confirmed before the account can sign in
       visible:
         id: username-input
     commands:
-      - tapOn:
-          id: username-input
-      - inputText: ${output.handle}
+      - runFlow:
+          file: common/type.yaml
+          env:
+            FIELD: username-input
+            TEXT: ${output.handle}
 - runFlow:
     when:
       visible:
         id: first-name-input
     commands:
-      - tapOn:
-          id: first-name-input
-      - inputText: Maestro
+      - runFlow:
+          file: common/type.yaml
+          env:
+            FIELD: first-name-input
+            TEXT: Maestro
 - runFlow:
     when:
       visible:
         id: last-name-input
     commands:
-      - tapOn:
-          id: last-name-input
-      - inputText: Tester
-- tapOn:
-    id: email-input
-- inputText: ${output.email}
+      - runFlow:
+          file: common/type.yaml
+          env:
+            FIELD: last-name-input
+            TEXT: Tester
+- runFlow:
+    file: common/type.yaml
+    env:
+      FIELD: email-input
+      TEXT: ${output.email}
 {%- if cookiecutter.phone == "required" %}
 - tapOn:
     id: phone-input
@@ -60,9 +68,11 @@ name: Signing up needs the address confirmed before the account can sign in
     file: scripts/sms.js
     env:
       SMS_TO: ${output.phone}
-- tapOn:
-    id: verify-phone-code-input
-- inputText: ${output.code}
+- runFlow:
+    file: common/type.yaml
+    env:
+      FIELD: verify-phone-code-input
+      TEXT: ${output.code}
 - pressKey: Enter
 - tapOn:
     id: verify-phone-submit
@@ -85,9 +95,11 @@ name: Signing up needs the address confirmed before the account can sign in
     visible:
       id: login-form
     timeout: 30000
-- tapOn:
-    id: email-input
-- inputText: ${output.email}
+- runFlow:
+    file: common/type.yaml
+    env:
+      FIELD: email-input
+      TEXT: ${output.email}
 - tapOn:
     id: password-input
 - inputText: correct-horse-battery-staple

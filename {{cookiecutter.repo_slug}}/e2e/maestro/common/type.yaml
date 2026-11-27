@@ -1,0 +1,13 @@
+appId: {{ cookiecutter.domain.split(".") | reverse | join(".") }}.mobile
+---
+# iOS can drop what is typed while its keyboard is still coming up, so type until the field holds all of it.
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: ${FIELD}
+      - eraseText: 60
+      - inputText: ${TEXT}
+      - assertVisible:
+          id: ${FIELD}
+          text: ${TEXT}
