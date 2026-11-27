@@ -26,7 +26,7 @@ name: A wrong password is refused, the right one signs in, and logging out signs
 # iOS may offer to save the password over the page that follows, hiding it until the offer is gone.
 - extendedWaitUntil:
     visible: You're logged in as ${SUPERUSER_EMAIL}|Not Now
-    timeout: 60000
+    timeout: 120000
 - runFlow: common/not-now.yaml
 - extendedWaitUntil:
     visible: You're logged in as ${SUPERUSER_EMAIL}

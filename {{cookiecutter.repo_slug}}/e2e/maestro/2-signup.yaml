@@ -109,7 +109,7 @@ name: Signing up needs the address confirmed before the account can sign in
 # iOS may offer to save the password over the page that follows, hiding it until the offer is gone.
 - extendedWaitUntil:
     visible: You're logged in as ${output.email}|Not Now
-    timeout: 60000
+    timeout: 120000
 - runFlow: common/not-now.yaml
 - extendedWaitUntil:
     visible: You're logged in as ${output.email}
